@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: medorbit
+      POSTGRES_PASSWORD: medorbit
+      POSTGRES_DB: medorbit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medorbit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: bitnami/kafka:3.7
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  api-gateway:
+    build: ./services/api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me}
+      AUTH_SERVICE_URL: http://auth-service:3001
+      USER_SERVICE_URL: http://user-service:3002
+      DOCTOR_SERVICE_URL: http://doctor-service:3003
+      RATE_LIMIT_MAX: 100
+    depends_on:
+      - auth-service
+      - user-service
+      - doctor-service
+
+  auth-service:
+    build: ./services/auth-service
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://medorbit:medorbit@postgres:5432/auth_db
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me}
+      REFRESH_SECRET: ${REFRESH_SECRET:-dev_refresh_secret_change_me}
+      KAFKA_BROKERS: kafka:9092
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  user-service:
+    build: ./services/user-service
+    environment:
+      PORT: 3002
+      DATABASE_URL: postgres://medorbit:medorbit@postgres:5432/user_db
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me}
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  doctor-service:
+    build: ./services/doctor-service
+    environment:
+      PORT: 3003
+      DATABASE_URL: postgres://medorbit:medorbit@postgres:5432/doctor_db
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_me}
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+
+volumes:
+  pgdata:

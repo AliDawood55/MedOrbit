@@ -1,0 +1,23 @@
+{
+  "@@locale": "ar",
+  "appTitle": "ميد أوربت",
+  "navHome": "الرئيسية",
+  "navDoctors": "الأطباء",
+  "navLogin": "تسجيل الدخول",
+  "navRegister": "إنشاء حساب",
+  "homeTitle": "صحتك في منصة واحدة",
+  "homeSubtitle": "احجز المواعيد، واستشر الأطباء عبر الإنترنت، وأدر سجلاتك الطبية.",
+  "findDoctor": "ابحث عن طبيب",
+  "email": "البريد الإلكتروني",
+  "password": "كلمة المرور",
+  "fullName": "الاسم الكامل",
+  "phone": "رقم الهاتف",
+  "roleLabel": "أنا",
+  "rolePatient": "مريض",
+  "roleDoctor": "طبيب",
+  "loginSubmit": "دخول",
+  "registerSubmit": "تسجيل",
+  "registerSuccess": "تم التسجيل! تحقق من بريدك الإلكتروني للحصول على رمز التفعيل.",
+  "errorGeneric": "حدث خطأ ما. حاول مرة أخرى.",
+  "switchLanguage": "English"
+}

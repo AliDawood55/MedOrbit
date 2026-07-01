@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+  "appTitle": "MedOrbit",
+  "navHome": "Home",
+  "navDoctors": "Doctors",
+  "navLogin": "Login",
+  "navRegister": "Register",
+  "homeTitle": "Your health, one platform",
+  "homeSubtitle": "Book appointments, consult doctors online, and manage your medical records.",
+  "findDoctor": "Find a Doctor",
+  "email": "Email",
+  "password": "Password",
+  "fullName": "Full name",
+  "phone": "Phone",
+  "roleLabel": "I am a",
+  "rolePatient": "Patient",
+  "roleDoctor": "Doctor",
+  "loginSubmit": "Login",
+  "registerSubmit": "Register",
+  "registerSuccess": "Registered! Check your email for the verification code.",
+  "errorGeneric": "Something went wrong. Please try again.",
+  "switchLanguage": "العربية"
+}

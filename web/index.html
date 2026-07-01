@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedOrbit</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand" data-i18n="app.name">MedOrbit</div>
+    <nav class="nav-links">
+      <a href="#home" data-i18n="nav.home">Home</a>
+      <a href="#doctors" data-i18n="nav.doctors">Doctors</a>
+      <a href="#login" data-i18n="nav.login">Login</a>
+      <a href="#register" data-i18n="nav.register">Register</a>
+    </nav>
+    <button id="lang-toggle" class="lang-toggle" aria-label="Switch language">العربية</button>
+  </header>
+
+  <main id="app">
+    <section id="view-home" class="view">
+      <h1 data-i18n="home.title">Your health, one platform</h1>
+      <p data-i18n="home.subtitle">Book appointments, consult doctors online, and manage your medical records.</p>
+      <a href="#doctors" class="btn primary" data-i18n="home.cta">Find a Doctor</a>
+    </section>
+
+    <section id="view-doctors" class="view hidden">
+      <h2 data-i18n="doctors.title">Doctors</h2>
+      <div class="filters">
+        <input id="doctor-search" type="search" data-i18n-placeholder="doctors.search" placeholder="Search doctors..." />
+        <select id="specialty-filter"></select>
+      </div>
+      <div id="doctor-list" class="card-grid"></div>
+      <p id="doctors-empty" class="empty hidden" data-i18n="doctors.empty">No doctors found.</p>
+    </section>
+
+    <section id="view-login" class="view hidden">
+      <h2 data-i18n="login.title">Login</h2>
+      <form id="login-form" class="form">
+        <label data-i18n="form.email">Email</label>
+        <input name="email" type="email" required />
+        <label data-i18n="form.password">Password</label>
+        <input name="password" type="password" required />
+        <button type="submit" class="btn primary" data-i18n="login.submit">Login</button>
+        <p id="login-error" class="error hidden"></p>
+      </form>
+    </section>
+
+    <section id="view-register" class="view hidden">
+      <h2 data-i18n="register.title">Create Account</h2>
+      <form id="register-form" class="form">
+        <label data-i18n="form.fullName">Full name</label>
+        <input name="fullName" type="text" required />
+        <label data-i18n="form.email">Email</label>
+        <input name="email" type="email" required />
+        <label data-i18n="form.phone">Phone</label>
+        <input name="phone" type="tel" />
+        <label data-i18n="form.password">Password</label>
+        <input name="password" type="password" required minlength="8" />
+        <label data-i18n="form.role">I am a</label>
+        <select name="role">
+          <option value="patient" data-i18n="role.patient">Patient</option>
+          <option value="doctor" data-i18n="role.doctor">Doctor</option>
+        </select>
+        <button type="submit" class="btn primary" data-i18n="register.submit">Register</button>
+        <p id="register-error" class="error hidden"></p>
+        <p id="register-success" class="success hidden"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p data-i18n="footer.text">MedOrbit — Smart Healthcare Platform</p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
