@@ -1,0 +1,41 @@
+# Dependencies
+**/node_modules/
+**/package-lock.json
+**/yarn.lock
+
+# Environment variables
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Logs
+**/logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Uploads / temp
+**/uploads/
+**/temp/
+**/tmp/
+
+# Database backups
+*.sql.bak
+*.dump
+
+# Build outputs
+**/dist/
+**/build/
+**/.next/
+**/out/
+
+# Coverage
+**/coverage/
