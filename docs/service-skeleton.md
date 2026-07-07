@@ -251,3 +251,12 @@ The Service Skeleton serves as the foundation of the MedOrbit backend. It establ
 By separating configuration, logging, routing, and middleware into dedicated modules, the backend becomes easier to maintain, test, and extend.
 
 Future modules such as Authentication, User Management, Clinics, Doctors, Appointments, Notifications, and the AI Chatbot will all build upon this foundation.
+
+--------------------------------------------------------------------------------------------
+- # Testing using Postman:
+       - ## Test Health Endpoint:
+              - ### Collection Name: Service
+                     - #### Requst Name:[health.routes.js](https://oa0922592-3317435.postman.co/workspace/omar-abdallah's-Workspace~2e3179c7-ad31-47b2-82e7-7082c5718687/request/49494101-46edb10d-9595-4cc2-b4c7-d3834a8cf847?action=share&source=copy-link&creator=49494101):
+                            - #### Status: the test #success.
+                     - #### Request Name:[notFound.js](https://oa0922592-3317435.postman.co/workspace/omar-abdallah's-Workspace~2e3179c7-ad31-47b2-82e7-7082c5718687/request/49494101-c594109f-9c73-42f2-bf79-3e6cc83fdca7?action=share&source=copy-link&creator=49494101):
+                            - #### Status: the test #success.
