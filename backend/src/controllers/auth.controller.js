@@ -3,50 +3,95 @@
 
 const authService = require("../services/auth.service");
 
+const {
+    success,
+    error
+} = require("../utils/response");
+
 
 
 /**
- * Login controller
- *
- * POST /api/auth/login
- *
- * Request body:
- * {
- *    email,
- *    password
- * }
+ * POST /api/auth/register
  */
-async function login(req, res, next) {
+async function register(req, res, next) {
 
     try {
 
+
         const {
             email,
-            password
+            password,
+            role,
+            firstNameAr,
+            lastNameAr,
+            firstNameEn,
+            lastNameEn,
+            phone,
+            gender
         } = req.body;
 
 
-        const result =
-            await authService.login(
-                email,
-                password
+
+        // Basic validation
+
+        if (
+            !email ||
+            !password ||
+            !role ||
+            !firstNameAr ||
+            !lastNameAr ||
+            !firstNameEn ||
+            !lastNameEn
+        ) {
+
+            return error(
+                res,
+                "Missing required fields",
+                400,
+                "VALIDATION_ERROR"
             );
 
-
-        return res.status(200).json({
-
-            success: true,
-
-            message: "Login successful",
-
-            data: result
-
-        });
+        }
 
 
-    } catch (error) {
 
-        next(error);
+        const user =
+            await authService.register({
+
+                email,
+                password,
+                role,
+
+                firstNameAr,
+                lastNameAr,
+
+                firstNameEn,
+                lastNameEn,
+
+                phone,
+                gender
+
+            });
+
+
+
+        return success(
+
+            res,
+
+            user,
+
+            "Registration successful",
+
+            201
+
+        );
+
+
+
+    } catch (err) {
+
+        next(err);
 
     }
 
@@ -55,17 +100,84 @@ async function login(req, res, next) {
 
 
 
+
 /**
- * Refresh token controller
- *
+ * POST /api/auth/login
+ */
+async function login(req, res, next) {
+
+
+    try {
+
+
+        const {
+            email,
+            password
+        } = req.body;
+
+
+
+        if (!email || !password) {
+
+            return error(
+
+                res,
+
+                "Email and password required",
+
+                400,
+
+                "VALIDATION_ERROR"
+
+            );
+
+        }
+
+
+
+        const result =
+            await authService.login(
+
+                email,
+
+                password,
+
+                req
+
+            );
+
+
+
+        return success(
+
+            res,
+
+            result,
+
+            "Login successful"
+
+        );
+
+
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+}
+
+
+
+
+
+
+/**
  * POST /api/auth/refresh
- *
- * Request body:
- * {
- *    refreshToken
- * }
  */
 async function refresh(req, res, next) {
+
 
     try {
 
@@ -75,26 +187,47 @@ async function refresh(req, res, next) {
         } = req.body;
 
 
+
+        if (!refreshToken) {
+
+            return error(
+
+                res,
+
+                "Refresh token required",
+
+                401,
+
+                "UNAUTHORIZED"
+
+            );
+
+        }
+
+
+
         const result =
             await authService.refresh(
                 refreshToken
             );
 
 
-        return res.status(200).json({
 
-            success: true,
+        return success(
 
-            message: "Token refreshed successfully",
+            res,
 
-            data: result
+            result,
 
-        });
+            "Token refreshed"
+
+        );
 
 
-    } catch (error) {
 
-        next(error);
+    } catch (err) {
+
+        next(err);
 
     }
 
@@ -104,15 +237,9 @@ async function refresh(req, res, next) {
 
 
 
+
 /**
- * Logout controller
- *
  * POST /api/auth/logout
- *
- * Request body:
- * {
- *    refreshToken
- * }
  */
 async function logout(req, res, next) {
 
@@ -126,25 +253,45 @@ async function logout(req, res, next) {
 
 
 
+        if (!refreshToken) {
+
+            return error(
+
+                res,
+
+                "Refresh token required",
+
+                401,
+
+                "UNAUTHORIZED"
+
+            );
+
+        }
+
+
+
         await authService.logout(
             refreshToken
         );
 
 
 
-        return res.status(200).json({
+        return success(
 
-            success: true,
+            res,
 
-            message: "Logout successful"
+            null,
 
-        });
+            "Logout successful"
+
+        );
 
 
 
-    } catch (error) {
+    } catch (err) {
 
-        next(error);
+        next(err);
 
     }
 
@@ -153,7 +300,10 @@ async function logout(req, res, next) {
 
 
 
+
 module.exports = {
+
+    register,
 
     login,
 
