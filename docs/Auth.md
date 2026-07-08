@@ -1,0 +1,5 @@
+- # after create:
+    - ## jwt auth
+    - ## password auth
+    - ## and try to connect routes/auth.routes.js with controllers/auth.controller.js with modify to auth.service.js 
+    - ## now I getting in stuck with change the queiers in auth.controlloer.js sql queries to ineract correctly with the auth controller.
