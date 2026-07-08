@@ -19,7 +19,25 @@ const env = {
 
     jwt: {
         secret: process.env.JWT_SECRET,
+
+        accessExpiresIn:
+            process.env.JWT_ACCESS_EXPIRES_IN || "15m",
+
+        refreshExpiresIn:
+            process.env.JWT_REFRESH_EXPIRES_IN || "7d",
     },
+
+
+    security: {
+        bcryptRounds:
+            Number(process.env.BCRYPT_ROUNDS) || 12,
+    },
+
+
+    cors: {
+        origin:
+            process.env.CORS_ORIGIN || "*",
+    }
 };
 
 module.exports = env;
