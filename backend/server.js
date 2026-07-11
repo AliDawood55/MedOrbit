@@ -1,12 +1,33 @@
-require('dotenv').config();
-const app = require('./src/app');
+const app = require("./src/app");
 
-const PORT = process.env.PORT || 3001;
+const env = require("./src/config/env");
 
-app.listen(PORT, () => {
-  console.log('========================================');
-  console.log('MedOrbit API Server');
-  console.log(`Running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('========================================');
-});
+const logger = require("./src/utils/logger");
+
+
+const server = app.listen(
+  env.app.port,
+  () => {
+
+    logger.info(
+      "========================================"
+    );
+
+    logger.info(
+      `${env.app.name} API Server`
+    );
+
+    logger.info(
+      `Running on port ${env.app.port}`
+    );
+
+    logger.info(
+      `Environment: ${env.app.environment}`
+    );
+
+    logger.info(
+      "========================================"
+    );
+
+  }
+);
