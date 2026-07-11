@@ -430,21 +430,21 @@ async function login(
 async function refresh(refreshToken) {
 
 
-    const decoded =
-        verifyRefreshToken(
-            refreshToken
-        );
-
+    const decoded = verifyRefreshToken(refreshToken);
 
 
     if (!decoded) {
-
         throw new Error(
             "Invalid refresh token"
         );
-
     }
 
+
+    if (decoded.type !== "refresh") {
+        throw new Error(
+            "Invalid token type"
+        );
+    }
 
 
     const session =
