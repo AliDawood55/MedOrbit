@@ -2,6 +2,7 @@
 
 
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const env = require("../config/env");
 
@@ -38,11 +39,21 @@ function generateAccessToken(payload) {
 
 
 
+
 /**
  * Generate JWT Refresh Token
  *
  * Refresh token is used to generate
  * a new access token after expiration.
+ *
+ * A unique jti is added because:
+ *
+ * Without jti:
+ * Same user + same payload + same second
+ * = same JWT token
+ *
+ * With jti:
+ * Every login generates a unique token.
  *
  * Lifetime:
  * 7 days (configured in .env)
@@ -54,18 +65,29 @@ function generateRefreshToken(payload) {
 
 
     const token = jwt.sign(
-        payload,
+
+        {
+            ...payload,
+
+            // Unique ID for this refresh token/session
+            jti: crypto.randomUUID()
+        },
+
 
         env.jwt.secret,
+
 
         {
             expiresIn: env.jwt.refreshExpiresIn,
         }
+
     );
 
 
     return token;
 }
+
+
 
 
 
@@ -108,8 +130,14 @@ function verifyAccessToken(token) {
 
 
 
+
+
 /**
  * Verify Refresh Token
+ *
+ * Checks:
+ * - token signature
+ * - token expiration
  *
  * @param {string} token
  * @returns {Object|null}
@@ -137,6 +165,7 @@ function verifyRefreshToken(token) {
     }
 
 }
+
 
 
 
