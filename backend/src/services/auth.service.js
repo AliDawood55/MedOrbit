@@ -48,7 +48,7 @@ async function register(userData) {
         await db.query(
             `
             SELECT id 
-            FROM medorbit.users
+            FROM public.users
             WHERE email = $1
             `,
             [email]
@@ -78,7 +78,7 @@ async function register(userData) {
     const userResult =
         await db.query(
             `
-            INSERT INTO medorbit.users
+            INSERT INTO public.users
             (
                 email,
                 password_hash,
@@ -116,7 +116,7 @@ async function register(userData) {
 
     await db.query(
         `
-        INSERT INTO medorbit.user_profiles
+        INSERT INTO public.user_profiles
         (
             user_id,
             first_name_ar,
@@ -151,7 +151,7 @@ async function register(userData) {
 
         await db.query(
             `
-            INSERT INTO medorbit.patients
+            INSERT INTO public.patients
             (user_id)
 
             VALUES($1)
@@ -167,7 +167,7 @@ async function register(userData) {
 
         await db.query(
             `
-            INSERT INTO medorbit.doctors
+            INSERT INTO public.doctors
             (user_id)
 
             VALUES($1)
@@ -213,9 +213,9 @@ async function login(
                 p.first_name_ar,
                 p.last_name_en
 
-            FROM medorbit.users u
+            FROM public.users u
 
-            LEFT JOIN medorbit.user_profiles p
+            LEFT JOIN public.user_profiles p
             ON p.user_id = u.id
 
             WHERE u.email=$1
@@ -284,7 +284,7 @@ async function login(
 
         await db.query(
             `
-            UPDATE medorbit.users
+            UPDATE public.users
 
             SET failed_login_attempts =
             failed_login_attempts + 1
@@ -310,7 +310,7 @@ async function login(
 
     await db.query(
         `
-        UPDATE medorbit.users
+        UPDATE public.users
 
         SET failed_login_attempts=0,
         locked_until=NULL
@@ -358,7 +358,7 @@ async function login(
     await db.query(
 
         `
-        INSERT INTO medorbit.user_sessions
+        INSERT INTO public.user_sessions
 
         (
             user_id,
@@ -455,9 +455,9 @@ async function refresh(refreshToken) {
                 u.email,
                 u.role
 
-            FROM medorbit.user_sessions s
+            FROM public.user_sessions s
 
-            JOIN medorbit.users u
+            JOIN public.users u
 
             ON u.id=s.user_id
 
@@ -523,7 +523,7 @@ async function logout(refreshToken) {
     await db.query(
 
         `
-        DELETE FROM medorbit.user_sessions
+        DELETE FROM public.user_sessions
 
         WHERE refresh_token=$1
 
