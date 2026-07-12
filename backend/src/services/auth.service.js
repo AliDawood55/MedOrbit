@@ -18,8 +18,6 @@ const {
 
 
 
-const env = require("../config/env");
-
 
 
 /**
@@ -42,14 +40,12 @@ async function register(userData) {
 
 
 
-    // Check existing email
-
     const existing =
         await db.query(
             `
-            SELECT id 
+            SELECT id
             FROM public.users
-            WHERE email = $1
+            WHERE email=$1
             `,
             [email]
         );
@@ -66,14 +62,10 @@ async function register(userData) {
 
 
 
-    // Hash password
-
     const passwordHash =
         await hashPassword(password);
 
 
-
-    // Create user
 
     const userResult =
         await db.query(
@@ -89,11 +81,7 @@ async function register(userData) {
 
             VALUES
             (
-                $1,
-                $2,
-                $3,
-                true,
-                'ar'
+                $1,$2,$3,true,'ar'
             )
 
             RETURNING id,email,role
@@ -111,8 +99,6 @@ async function register(userData) {
         userResult.rows[0];
 
 
-
-    // Create profile
 
     await db.query(
         `
@@ -145,8 +131,6 @@ async function register(userData) {
 
 
 
-    // Role specific table
-
     if (role === "patient") {
 
         await db.query(
@@ -156,7 +140,9 @@ async function register(userData) {
 
             VALUES($1)
             `,
-            [user.id]
+            [
+                user.id
+            ]
         );
 
     }
@@ -172,7 +158,9 @@ async function register(userData) {
 
             VALUES($1)
             `,
-            [user.id]
+            [
+                user.id
+            ]
         );
 
     }
@@ -182,6 +170,9 @@ async function register(userData) {
     return user;
 
 }
+
+
+
 
 
 
@@ -197,11 +188,10 @@ async function login(
 ) {
 
 
-
     const result =
         await db.query(
             `
-            SELECT 
+            SELECT
                 u.id,
                 u.email,
                 u.password_hash,
@@ -216,11 +206,10 @@ async function login(
             FROM public.users u
 
             LEFT JOIN public.user_profiles p
-            ON p.user_id = u.id
+            ON p.user_id=u.id
 
             WHERE u.email=$1
             AND u.deleted_at IS NULL
-
             `,
             [
                 email
@@ -244,12 +233,9 @@ async function login(
 
 
 
-
     if (
         user.locked_until &&
-        new Date(user.locked_until)
-        >
-        new Date()
+        new Date(user.locked_until) > new Date()
     ) {
 
         throw new Error(
@@ -257,7 +243,6 @@ async function login(
         );
 
     }
-
 
 
 
@@ -282,6 +267,7 @@ async function login(
 
     if (!validPassword) {
 
+
         await db.query(
             `
             UPDATE public.users
@@ -305,15 +291,12 @@ async function login(
 
 
 
-
-    // Reset failed attempts
-
     await db.query(
         `
         UPDATE public.users
 
         SET failed_login_attempts=0,
-        locked_until=NULL
+            locked_until=NULL
 
         WHERE id=$1
         `,
@@ -321,6 +304,7 @@ async function login(
             user.id
         ]
     );
+
 
 
 
@@ -339,7 +323,6 @@ async function login(
 
 
 
-
     const refreshToken =
         generateRefreshToken({
 
@@ -353,30 +336,37 @@ async function login(
 
 
 
-    // Save refresh token
+    /*
+        Save session
+
+        New fields:
+        - platform
+        - device_name
+        - revoked_at
+        - last_used_at
+    */
+
 
     await db.query(
-
         `
         INSERT INTO public.user_sessions
-
         (
             user_id,
             refresh_token,
             ip_address,
             user_agent,
+            platform,
+            device_name,
             expires_at
         )
 
-
         VALUES
         (
-            $1,$2,$3,$4,
+            $1,$2,$3,$4,$5,$6,
             NOW()+INTERVAL '7 days'
         )
 
         `,
-
         [
 
             user.id,
@@ -385,16 +375,20 @@ async function login(
 
             req.ip,
 
-            req.headers["user-agent"] || null
+            req.headers["user-agent"] || null,
+
+            req.body.platform || "web",
+
+            req.body.deviceName || null
 
         ]
-
     );
 
 
 
 
     return {
+
 
         user: {
 
@@ -415,9 +409,14 @@ async function login(
 
         refreshToken
 
+
     };
 
+
 }
+
+
+
 
 
 
@@ -430,32 +429,47 @@ async function login(
 async function refresh(refreshToken) {
 
 
-    const decoded = verifyRefreshToken(refreshToken);
+
+    const decoded =
+        verifyRefreshToken(refreshToken);
+
 
 
     if (!decoded) {
+
         throw new Error(
             "Invalid refresh token"
         );
+
     }
+
 
 
     if (decoded.type !== "refresh") {
+
         throw new Error(
             "Invalid token type"
         );
+
     }
+
+
 
 
     const session =
         await db.query(
             `
-            SELECT 
+            SELECT
+
                 s.user_id,
+
                 u.email,
+
                 u.role
 
+
             FROM public.user_sessions s
+
 
             JOIN public.users u
 
@@ -466,11 +480,14 @@ async function refresh(refreshToken) {
 
             AND s.expires_at > NOW()
 
+            AND s.revoked_at IS NULL
+
             `,
             [
                 refreshToken
             ]
         );
+
 
 
 
@@ -489,6 +506,24 @@ async function refresh(refreshToken) {
 
 
 
+
+    await db.query(
+        `
+        UPDATE public.user_sessions
+
+        SET last_used_at=NOW()
+
+        WHERE refresh_token=$1
+        `,
+        [
+            refreshToken
+        ]
+    );
+
+
+
+
+
     const accessToken =
         generateAccessToken({
 
@@ -502,13 +537,19 @@ async function refresh(refreshToken) {
 
 
 
+
     return {
 
         accessToken
 
     };
 
+
 }
+
+
+
+
 
 
 
@@ -520,19 +561,19 @@ async function refresh(refreshToken) {
 async function logout(refreshToken) {
 
 
-    await db.query(
 
+    await db.query(
         `
-        DELETE FROM public.user_sessions
+        UPDATE public.user_sessions
+
+        SET revoked_at=NOW()
 
         WHERE refresh_token=$1
 
         `,
-
         [
             refreshToken
         ]
-
     );
 
 
@@ -541,8 +582,10 @@ async function logout(refreshToken) {
 
 
 
-module.exports = {
 
+
+
+module.exports = {
 
     register,
 
@@ -551,6 +594,5 @@ module.exports = {
     refresh,
 
     logout
-
 
 };
