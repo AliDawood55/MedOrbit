@@ -579,6 +579,113 @@ async function logout(refreshToken) {
 
 }
 
+/**
+ * Change user password
+ */
+async function changePassword(
+    userId,
+    currentPassword,
+    newPassword
+) {
+
+    // Find user
+
+    const result =
+        await db.query(
+            `
+            SELECT
+                password_hash
+
+            FROM public.users
+
+            WHERE id = $1
+            `,
+            [userId]
+        );
+
+
+    if (result.rows.length === 0) {
+
+        throw new Error(
+            "User not found"
+        );
+
+    }
+
+
+    const user =
+        result.rows[0];
+
+
+    // Check current password
+
+    const valid =
+        await comparePassword(
+            currentPassword,
+            user.password_hash
+        );
+
+
+    if (!valid) {
+
+        throw new Error(
+            "Current password is incorrect"
+        );
+
+    }
+
+
+    // Hash new password
+
+    const newHash =
+        await hashPassword(
+            newPassword
+        );
+
+
+    // Update password
+
+    await db.query(
+
+        `
+        UPDATE public.users
+
+        SET
+            password_hash = $1,
+            updated_at = NOW()
+
+        WHERE id = $2
+        `,
+
+        [
+            newHash,
+            userId
+        ]
+
+    );
+
+
+    // Logout every device
+
+    await db.query(
+
+        `
+        DELETE FROM public.user_sessions
+
+        WHERE user_id = $1
+        `,
+
+        [
+            userId
+        ]
+
+    );
+
+
+    return;
+
+}
+
 
 
 
@@ -593,6 +700,8 @@ module.exports = {
 
     refresh,
 
-    logout
+    logout,
+
+    changePassword
 
 };

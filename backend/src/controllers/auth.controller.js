@@ -297,6 +297,67 @@ async function logout(req, res, next) {
 
 }
 
+async function changePassword(req, res, next) {
+
+    try {
+
+        const {
+
+            currentPassword,
+
+            newPassword
+
+        } = req.body;
+
+
+        if (!currentPassword || !newPassword) {
+
+            return error(
+
+                res,
+
+                "Current password and new password are required",
+
+                400,
+
+                "VALIDATION_ERROR"
+
+            );
+
+        }
+
+
+        await authService.changePassword(
+
+            req.user.sub,
+
+            currentPassword,
+
+            newPassword
+
+        );
+
+
+        return success(
+
+            res,
+
+            null,
+
+            "Password changed successfully"
+
+        );
+
+    }
+
+    catch (err) {
+
+        next(err);
+
+    }
+
+}
+
 
 
 
@@ -309,6 +370,8 @@ module.exports = {
 
     refresh,
 
-    logout
+    logout,
+
+    changePassword
 
 };
