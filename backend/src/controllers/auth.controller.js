@@ -457,6 +457,62 @@ async function resetPassword(req, res, next) {
 
 }
 
+async function verifyEmail(req, res, next) {
+
+    try {
+
+        const {
+            token
+        } = req.body;
+
+
+        await authService.verifyEmail(token);
+
+
+        return success(
+            res,
+            null,
+            "Email verified successfully"
+        );
+
+
+    }
+    catch (err) {
+        next(err);
+    }
+
+}
+
+
+
+async function resendVerification(req, res, next) {
+
+    try {
+
+        const {
+            email
+        } = req.body;
+
+
+
+        await authService.resendVerification(email);
+
+
+
+        return success(
+            res,
+            null,
+            "Verification email sent"
+        );
+
+
+    }
+    catch (err) {
+        next(err);
+    }
+
+}
+
 
 
 
@@ -475,6 +531,9 @@ module.exports = {
 
     forgotPassword,
 
-    resetPassword
+    resetPassword,
+
+    verifyEmail,
+    resendVerification
 
 };
