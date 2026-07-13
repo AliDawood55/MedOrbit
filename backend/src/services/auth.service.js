@@ -873,6 +873,150 @@ async function resetPassword(
 
 }
 
+async function verifyEmail(token) {
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    const result =
+        await db.query(
+            `
+        SELECT
+            id,
+            user_id
+
+        FROM public.email_verification_tokens
+
+        WHERE token_hash=$1
+
+        AND expires_at > NOW()
+
+        AND verified_at IS NULL
+
+        `,
+            [
+                tokenHash
+            ]);
+
+
+
+    if (result.rows.length === 0) {
+        throw new Error(
+            "Invalid or expired verification token"
+        );
+    }
+
+
+
+    const data =
+        result.rows[0];
+
+
+
+    await db.query(
+        `
+        UPDATE public.users
+
+        SET
+            email_verified=true,
+            updated_at=NOW()
+
+        WHERE id=$1
+        `,
+        [
+            data.user_id
+        ]);
+
+
+
+    await db.query(
+        `
+        UPDATE public.email_verification_tokens
+
+        SET verified_at=NOW()
+
+        WHERE id=$1
+        `,
+        [
+            data.id
+        ]);
+
+
+
+}
+
+async function resendVerification(email) {
+
+    const result =
+        await db.query(
+            `
+        SELECT id
+
+        FROM public.users
+
+        WHERE email=$1
+
+        AND deleted_at IS NULL
+        `,
+            [
+                email
+            ]);
+
+
+
+    if (result.rows.length === 0) {
+        return;
+    }
+
+
+
+    const user =
+        result.rows[0];
+
+
+
+    const token =
+        generateToken();
+
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    await db.query(
+        `
+        INSERT INTO public.email_verification_tokens
+        (
+            user_id,
+            token_hash,
+            expires_at
+        )
+
+        VALUES
+        (
+            $1,
+            $2,
+            NOW()+INTERVAL '24 hours'
+        )
+        `,
+        [
+            user.id,
+            tokenHash
+        ]);
+
+
+
+    console.log(
+        "EMAIL VERIFICATION TOKEN:",
+        token
+    );
+
+}
+
 
 
 
@@ -893,6 +1037,9 @@ module.exports = {
 
     forgotPassword,
 
-    resetPassword
+    resetPassword,
+
+    verifyEmail,
+    resendVerification
 
 };
