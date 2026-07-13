@@ -297,6 +297,222 @@ async function logout(req, res, next) {
 
 }
 
+async function changePassword(req, res, next) {
+
+    try {
+
+        const {
+
+            currentPassword,
+
+            newPassword
+
+        } = req.body;
+
+
+        if (!currentPassword || !newPassword) {
+
+            return error(
+
+                res,
+
+                "Current password and new password are required",
+
+                400,
+
+                "VALIDATION_ERROR"
+
+            );
+
+        }
+
+
+        await authService.changePassword(
+
+            req.user.sub,
+
+            currentPassword,
+
+            newPassword
+
+        );
+
+
+        return success(
+
+            res,
+
+            null,
+
+            "Password changed successfully"
+
+        );
+
+    }
+
+    catch (err) {
+
+        next(err);
+
+    }
+
+}
+
+async function forgotPassword(req, res, next) {
+
+    try {
+
+        const {
+            email
+        } = req.body;
+
+
+        if (!email) {
+
+            return error(
+                res,
+                "Email is required",
+                400,
+                "VALIDATION_ERROR"
+            );
+
+        }
+
+
+
+        await authService.forgotPassword(
+            email
+        );
+
+
+
+        return success(
+            res,
+            null,
+            "If the email exists, a reset link has been sent"
+        );
+
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+}
+
+async function resetPassword(req, res, next) {
+
+
+    try {
+
+
+        const {
+
+            token,
+
+            newPassword
+
+        } = req.body;
+
+
+
+        if (
+            !token ||
+            !newPassword
+        ) {
+
+            return error(
+                res,
+                "Token and new password are required",
+                400,
+                "VALIDATION_ERROR"
+            );
+
+        }
+
+
+
+        await authService.resetPassword(
+            token,
+            newPassword
+        );
+
+
+
+        return success(
+            res,
+            null,
+            "Password reset successfully"
+        );
+
+
+    }
+    catch (err) {
+
+        next(err);
+
+    }
+
+
+}
+
+async function verifyEmail(req, res, next) {
+
+    try {
+
+        const {
+            token
+        } = req.body;
+
+
+        await authService.verifyEmail(token);
+
+
+        return success(
+            res,
+            null,
+            "Email verified successfully"
+        );
+
+
+    }
+    catch (err) {
+        next(err);
+    }
+
+}
+
+
+
+async function resendVerification(req, res, next) {
+
+    try {
+
+        const {
+            email
+        } = req.body;
+
+
+
+        await authService.resendVerification(email);
+
+
+
+        return success(
+            res,
+            null,
+            "Verification email sent"
+        );
+
+
+    }
+    catch (err) {
+        next(err);
+    }
+
+}
+
 
 
 
@@ -309,6 +525,15 @@ module.exports = {
 
     refresh,
 
-    logout
+    logout,
+
+    changePassword,
+
+    forgotPassword,
+
+    resetPassword,
+
+    verifyEmail,
+    resendVerification
 
 };
