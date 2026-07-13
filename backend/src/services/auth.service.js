@@ -16,6 +16,11 @@ const {
     verifyRefreshToken
 } = require("../utils/jwt");
 
+const {
+    generateToken,
+    hashToken
+} = require("../utils/token");
+
 
 
 
@@ -686,6 +691,173 @@ async function changePassword(
 
 }
 
+async function forgotPassword(email) {
+
+
+    const result =
+        await db.query(
+            `
+        SELECT id,email
+        FROM public.users
+        WHERE email=$1
+        AND deleted_at IS NULL
+        `,
+            [
+                email
+            ]);
+
+
+
+    /*
+      Security:
+      Do not reveal if email exists
+    */
+
+    if (result.rows.length === 0) {
+
+        return;
+
+    }
+
+
+    const user = result.rows[0];
+
+
+
+    const token =
+        generateToken();
+
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    await db.query(
+        `
+    INSERT INTO public.password_reset_tokens
+    (
+        user_id,
+        token_hash,
+        expires_at
+    )
+
+    VALUES
+    (
+        $1,
+        $2,
+        NOW()+INTERVAL '15 minutes'
+    )
+    `,
+        [
+            user.id,
+            tokenHash
+        ]);
+
+
+
+    /*
+       Later:
+       send email here
+
+       For testing:
+    */
+
+    console.log(
+        "PASSWORD RESET TOKEN:",
+        token
+    );
+
+
+}
+
+async function resetPassword(
+    token,
+    newPassword
+) {
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    const result =
+        await db.query(
+            `
+        SELECT
+            id,
+            user_id
+
+        FROM public.password_reset_tokens
+
+        WHERE token_hash=$1
+
+        AND expires_at > NOW()
+
+        AND used_at IS NULL
+
+        `,
+            [
+                tokenHash
+            ]);
+
+
+
+    if (result.rows.length === 0) {
+
+        throw new Error(
+            "Invalid or expired token"
+        );
+
+    }
+
+
+
+    const reset =
+        result.rows[0];
+
+
+
+    const passwordHash =
+        await hashPassword(
+            newPassword
+        );
+
+
+
+    await db.query(
+        `
+    UPDATE public.users
+
+    SET password_hash=$1
+
+    WHERE id=$2
+    `,
+        [
+            passwordHash,
+            reset.user_id
+        ]);
+
+
+
+    await db.query(
+        `
+    UPDATE public.password_reset_tokens
+
+    SET used_at=NOW()
+
+    WHERE id=$1
+    `,
+        [
+            reset.id
+        ]);
+
+
+
+}
+
 
 
 
@@ -702,6 +874,10 @@ module.exports = {
 
     logout,
 
-    changePassword
+    changePassword,
+
+    forgotPassword,
+
+    resetPassword
 
 };
