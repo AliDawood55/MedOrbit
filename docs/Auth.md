@@ -8,4 +8,9 @@
         - login 
         - refresh token
         - logout
+    - ## in July 14, I finish T009 with test:
+        - password (reset, forgot, change)
+        - verify email
+        - resend verifcation
+    - 
 
