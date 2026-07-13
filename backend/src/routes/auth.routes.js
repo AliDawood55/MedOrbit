@@ -4,8 +4,9 @@ const express = require("express");
 
 const router = express.Router();
 
-const authController =
-  require("../controllers/auth.controller");
+const authController = require("../controllers/auth.controller");
+
+const { authenticate } = require("../middleware/auth");
 
 
 // Register
@@ -33,6 +34,12 @@ router.post(
 router.post(
   "/logout",
   authController.logout
+);
+
+router.post(
+  "/change-password",
+  authenticate,
+  authController.changePassword
 );
 
 
