@@ -854,6 +854,21 @@ async function resetPassword(
             reset.id
         ]);
 
+    // Logout all existing sessions after password reset
+
+    await db.query(
+        `
+    UPDATE public.user_sessions
+
+    SET revoked_at = NOW()
+
+    WHERE user_id=$1
+    `,
+        [
+            reset.user_id
+        ]
+    );
+
 
 
 }
