@@ -358,6 +358,105 @@ async function changePassword(req, res, next) {
 
 }
 
+async function forgotPassword(req, res, next) {
+
+    try {
+
+        const {
+            email
+        } = req.body;
+
+
+        if (!email) {
+
+            return error(
+                res,
+                "Email is required",
+                400,
+                "VALIDATION_ERROR"
+            );
+
+        }
+
+
+
+        await authService.forgotPassword(
+            email
+        );
+
+
+
+        return success(
+            res,
+            null,
+            "If the email exists, a reset link has been sent"
+        );
+
+
+    } catch (err) {
+
+        next(err);
+
+    }
+
+}
+
+async function resetPassword(req, res, next) {
+
+
+    try {
+
+
+        const {
+
+            token,
+
+            newPassword
+
+        } = req.body;
+
+
+
+        if (
+            !token ||
+            !newPassword
+        ) {
+
+            return error(
+                res,
+                "Token and new password are required",
+                400,
+                "VALIDATION_ERROR"
+            );
+
+        }
+
+
+
+        await authService.resetPassword(
+            token,
+            newPassword
+        );
+
+
+
+        return success(
+            res,
+            null,
+            "Password reset successfully"
+        );
+
+
+    }
+    catch (err) {
+
+        next(err);
+
+    }
+
+
+}
+
 
 
 
@@ -372,6 +471,10 @@ module.exports = {
 
     logout,
 
-    changePassword
+    changePassword,
+
+    forgotPassword,
+
+    resetPassword
 
 };
