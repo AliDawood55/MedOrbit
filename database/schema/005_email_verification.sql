@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.email_verification_tokens
 
     user_id UUID NOT NULL,
 
-    token VARCHAR(255) NOT NULL UNIQUE,
+    token_hash VARCHAR(255) NOT NULL UNIQUE,
 
     expires_at TIMESTAMPTZ NOT NULL,
 
