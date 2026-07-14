@@ -71,5 +71,56 @@ router.post(
   authController.resendVerification
 );
 
+const {
+  queueEmail
+} = require("../services/email.service");
+
+
+
+router.post(
+  "/test-email",
+  async (req, res, next) => {
+
+    try {
+
+
+      await queueEmail(
+
+        req.body.email,
+
+        "MedOrbit Test Email",
+
+        `
+            <h1>
+            MedOrbit Email Test
+            </h1>
+
+            <p>
+            Email system works successfully.
+            </p>
+            `
+
+      );
+
+
+      res.json({
+
+        success: true,
+
+        message: "Email queued"
+
+      });
+
+
+    }
+
+    catch (err) {
+
+      next(err);
+
+    }
+
+  });
+
 
 module.exports = router;
