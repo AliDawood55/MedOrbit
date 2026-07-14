@@ -281,7 +281,7 @@ async function login(
     ) {
 
         throw new Error(
-            "Account locked"
+            "Account locked. Try again later"
         );
 
     }
@@ -312,13 +312,21 @@ async function login(
 
         await db.query(
             `
-            UPDATE public.users
+        UPDATE public.users
 
-            SET failed_login_attempts =
-            failed_login_attempts + 1
+        SET 
+            failed_login_attempts =
+                failed_login_attempts + 1,
 
-            WHERE id=$1
-            `,
+            locked_until =
+                CASE
+                    WHEN failed_login_attempts + 1 >= 5
+                    THEN NOW() + INTERVAL '15 minutes'
+                    ELSE locked_until
+                END
+
+        WHERE id=$1
+        `,
             [
                 user.id
             ]

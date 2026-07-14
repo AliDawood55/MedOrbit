@@ -14,8 +14,8 @@ router.get('/me', authenticate, async (req, res, next) => {
       `SELECT u.id, u.email, u.role, u.preferred_language, u.is_active, u.email_verified,
               p.first_name_ar, p.last_name_ar, p.first_name_en, p.last_name_en,
               p.phone, p.date_of_birth, p.gender, p.profile_image_url, p.address, p.city
-       FROM medorbit.users u
-       LEFT JOIN medorbit.user_profiles p ON p.user_id = u.id
+       FROM public.users u
+       LEFT JOIN public.user_profiles p ON p.user_id = u.id
        WHERE u.id = $1 AND u.deleted_at IS NULL`,
       [userId]
     );
@@ -38,7 +38,7 @@ router.put('/me', authenticate, async (req, res, next) => {
     const { firstNameAr, lastNameAr, firstNameEn, lastNameEn, phone, dateOfBirth, gender, address, preferredLanguage } = req.body;
 
     await db.query(
-      `UPDATE medorbit.user_profiles
+      `UPDATE public.user_profiles
        SET first_name_ar = COALESCE($1, first_name_ar),
            last_name_ar = COALESCE($2, last_name_ar),
            first_name_en = COALESCE($3, first_name_en),
@@ -53,7 +53,7 @@ router.put('/me', authenticate, async (req, res, next) => {
 
     if (preferredLanguage) {
       await db.query(
-        `UPDATE medorbit.users SET preferred_language = $1 WHERE id = $2`,
+        `UPDATE public.users SET preferred_language = $1 WHERE id = $2`,
         [preferredLanguage, userId]
       );
     }

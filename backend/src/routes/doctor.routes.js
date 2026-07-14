@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/', async (req, res, next) => {
   try {
     const { specialty, region, minRating, search, page = 1, limit = 10 } = req.query;
-    
+
     let query = `
       SELECT 
         d.id, d.user_id, d.medical_license_number, d.years_of_experience,
@@ -21,13 +21,13 @@ router.get('/', async (req, res, next) => {
         p.phone, p.profile_image_url,
         s.name_ar as specialty_ar, s.name_en as specialty_en,
         s.icon as specialty_icon
-      FROM medorbit.doctors d
-      JOIN medorbit.users u ON u.id = d.user_id
-      LEFT JOIN medorbit.user_profiles p ON p.user_id = d.user_id
-      LEFT JOIN medorbit.specialties s ON s.id = d.specialty_id
+      FROM public.doctors d
+      JOIN public.users u ON u.id = d.user_id
+      LEFT JOIN public.user_profiles p ON p.user_id = d.user_id
+      LEFT JOIN public.specialties s ON s.id = d.specialty_id
       WHERE u.is_active = true AND u.deleted_at IS NULL
     `;
-    
+
     const params = [];
     let paramIndex = 1;
 
@@ -106,10 +106,10 @@ router.get('/:id', async (req, res, next) => {
         p.phone, p.profile_image_url, p.address, p.city,
         s.name_ar as specialty_ar, s.name_en as specialty_en,
         s.description_ar, s.description_en, s.icon as specialty_icon
-      FROM medorbit.doctors d
-      JOIN medorbit.users u ON u.id = d.user_id
-      LEFT JOIN medorbit.user_profiles p ON p.user_id = d.user_id
-      LEFT JOIN medorbit.specialties s ON s.id = d.specialty_id
+      FROM public.doctors d
+      JOIN public.users u ON u.id = d.user_id
+      LEFT JOIN public.user_profiles p ON p.user_id = d.user_id
+      LEFT JOIN public.specialties s ON s.id = d.specialty_id
       WHERE d.id = $1 AND u.is_active = true AND u.deleted_at IS NULL`,
       [id]
     );
@@ -126,8 +126,8 @@ router.get('/:id', async (req, res, next) => {
         c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
         c.city, c.region, c.latitude, c.longitude, c.phone,
         dca.consultation_fee_override, dca.is_primary
-      FROM medorbit.doctor_clinic_assignments dca
-      JOIN medorbit.clinics c ON c.id = dca.clinic_id
+      FROM public.doctor_clinic_assignments dca
+      JOIN public.clinics c ON c.id = dca.clinic_id
       WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
       [id]
     );
@@ -137,7 +137,7 @@ router.get('/:id', async (req, res, next) => {
       `SELECT 
         id, clinic_id, day_of_week, specific_date,
         start_time, end_time, slot_duration, is_telemedicine
-      FROM medorbit.doctor_availability
+      FROM public.doctor_availability
       WHERE doctor_id = $1 AND is_active = true
       ORDER BY day_of_week, start_time`,
       [id]
@@ -151,9 +151,9 @@ router.get('/:id', async (req, res, next) => {
         r.created_at,
         p.first_name_ar as patient_first_name_ar,
         p.first_name_en as patient_first_name_en
-      FROM medorbit.doctor_reviews r
-      JOIN medorbit.patients pt ON pt.id = r.patient_id
-      LEFT JOIN medorbit.user_profiles p ON p.user_id = pt.user_id
+      FROM public.doctor_reviews r
+      JOIN public.patients pt ON pt.id = r.patient_id
+      LEFT JOIN public.user_profiles p ON p.user_id = pt.user_id
       WHERE r.doctor_id = $1 AND r.is_visible = true
       ORDER BY r.created_at DESC
       LIMIT 10`,
@@ -182,10 +182,10 @@ router.get('/:id/availability', async (req, res, next) => {
       SELECT 
         id, clinic_id, day_of_week, specific_date,
         start_time, end_time, slot_duration, is_telemedicine
-      FROM medorbit.doctor_availability
+      FROM public.doctor_availability
       WHERE doctor_id = $1 AND is_active = true
     `;
-    
+
     const params = [id];
 
     if (date) {
@@ -215,7 +215,7 @@ router.put('/:id', authenticate, authorize('doctor', 'admin'), async (req, res, 
     // Check ownership (unless admin)
     if (req.user.role !== 'admin') {
       const doctorCheck = await db.query(
-        'SELECT user_id FROM medorbit.doctors WHERE id = $1',
+        'SELECT user_id FROM public.doctors WHERE id = $1',
         [id]
       );
       if (doctorCheck.rows.length === 0 || doctorCheck.rows[0].user_id !== userId) {
@@ -230,7 +230,7 @@ router.put('/:id', authenticate, authorize('doctor', 'admin'), async (req, res, 
     } = req.body;
 
     await db.query(
-      `UPDATE medorbit.doctors
+      `UPDATE public.doctors
        SET years_of_experience = COALESCE($1, years_of_experience),
            consultation_fee = COALESCE($2, consultation_fee),
            consultation_duration = COALESCE($3, consultation_duration),
@@ -242,8 +242,8 @@ router.put('/:id', authenticate, authorize('doctor', 'admin'), async (req, res, 
            specialty_id = COALESCE($9, specialty_id)
        WHERE id = $10`,
       [yearsOfExperience, consultationFee, consultationDuration,
-       education, certifications, professionalBioAr, professionalBioEn,
-       isAcceptingPatients, specialtyId, id]
+        education, certifications, professionalBioAr, professionalBioEn,
+        isAcceptingPatients, specialtyId, id]
     );
 
     return success(res, null, 'Doctor profile updated');
