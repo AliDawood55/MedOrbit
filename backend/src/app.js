@@ -8,7 +8,7 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');;
 const doctorRoutes = require('./routes/doctor.routes');
-const clinicRoutes = require('./routes/clinic.routes'); 
+const clinicRoutes = require('./routes/clinic.routes');
 
 
 const app = express();
@@ -45,10 +45,15 @@ app.get('/health', (req, res) => {
   res.json({ success: true, message: 'MedOrbit API is running', timestamp: new Date().toISOString() });
 });
 
+app.use(
+  "/uploads",
+  express.static("uploads")
+);
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/doctors', doctorRoutes); 
+app.use('/api/doctors', doctorRoutes);
 app.use('/api/clinics', clinicRoutes);
 
 // 404 handler
@@ -56,5 +61,19 @@ app.use(notFound);
 
 // Error handler
 app.use(errorHandler);
+
+const {
+  processEmails
+} = require("./workers/email.worker");
+
+
+
+setInterval(
+
+  processEmails,
+
+  60000
+
+);
 
 module.exports = app;
