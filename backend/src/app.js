@@ -45,6 +45,11 @@ app.get('/health', (req, res) => {
   res.json({ success: true, message: 'MedOrbit API is running', timestamp: new Date().toISOString() });
 });
 
+app.use(
+  "/uploads",
+  express.static("uploads")
+);
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
