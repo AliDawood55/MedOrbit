@@ -15,3 +15,16 @@
     - ### main
     - ### omar
     - ## skeletonService 
+
+
+- # in T010:
+    - ## I need to create a doctor account with:
+            {
+            "yearsOfExperience":5,
+            "professionalBioEn":"Doctor profile updated"
+        }
+    - ## I solve the problem of the role based.
+
+
+- # finish T010 and T011.
+    
