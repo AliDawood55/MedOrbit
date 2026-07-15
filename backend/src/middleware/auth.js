@@ -1,38 +1,183 @@
-const jwt = require('jsonwebtoken');
-const { error } = require('../utils/response');
+const jwt = require("jsonwebtoken");
 
-// Verify JWT token
-const authenticate = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return error(res, 'Access token required', 401, 'UNAUTHORIZED');
+const {
+    error
+} = require("../utils/response");
+
+
+
+/**
+ * Verify JWT token
+ */
+const authenticate = (
+    req,
+    res,
+    next
+) => {
+
+
+    try {
+
+
+        const authHeader =
+            req.headers.authorization;
+
+
+
+        if (
+            !authHeader ||
+            !authHeader.startsWith("Bearer ")
+        ) {
+
+            return error(
+                res,
+                "Access token required",
+                401,
+                "UNAUTHORIZED"
+            );
+
+        }
+
+
+
+        const token =
+            authHeader.split(" ")[1];
+
+
+
+        const decoded =
+            jwt.verify(
+                token,
+                process.env.JWT_SECRET
+            );
+
+
+
+        req.user = decoded;
+
+
+
+        next();
+
+
+
+    }
+    catch(err)
+    {
+
+        return error(
+            res,
+            "Invalid access token",
+            401,
+            "UNAUTHORIZED"
+        );
+
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    req.user = decoded;
-    next();
-  } catch (err) {
-    next(err);
-  }
 };
 
-// Role-based access control
-const authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return error(res, 'Authentication required', 401, 'UNAUTHORIZED');
-    }
 
-    if (!roles.includes(req.user.role)) {
-      return error(res, 'Insufficient permissions', 403, 'FORBIDDEN');
-    }
 
-    next();
-  };
+
+
+/**
+ * Role authorization middleware
+ *
+ * Usage:
+ *
+ * authorize("doctor")
+ *
+ */
+const authorize = (...roles)=>{
+
+
+    return (
+        req,
+        res,
+        next
+    )=>{
+
+
+        if(!req.user)
+        {
+
+            return error(
+                res,
+                "Authentication required",
+                401,
+                "UNAUTHORIZED"
+            );
+
+        }
+
+
+
+        if(
+            !roles.includes(
+                req.user.role
+            )
+        )
+        {
+
+            return error(
+                res,
+                "You do not have permission",
+                403,
+                "FORBIDDEN"
+            );
+
+        }
+
+
+
+        next();
+
+
+    };
+
 };
 
-module.exports = { authenticate, authorize };
+
+
+module.exports={
+    authenticate,
+    authorize
+};
+// const jwt = require('jsonwebtoken');
+// const { error } = require('../utils/response');
+
+// // Verify JWT token
+// const authenticate = (req, res, next) => {
+//   try {
+//     const authHeader = req.headers.authorization;
+    
+//     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+//       return error(res, 'Access token required', 401, 'UNAUTHORIZED');
+//     }
+
+//     const token = authHeader.split(' ')[1];
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+//     req.user = decoded;
+//     next();
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
+// // Role-based access control
+// const authorize = (...roles) => {
+//   return (req, res, next) => {
+//     if (!req.user) {
+//       return error(res, 'Authentication required', 401, 'UNAUTHORIZED');
+//     }
+
+//     if (!roles.includes(req.user.role)) {
+//       return error(res, 'Insufficient permissions', 403, 'FORBIDDEN');
+//     }
+
+//     next();
+//   };
+// };
+
+// module.exports = { authenticate, authorize };
