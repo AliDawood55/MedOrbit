@@ -1,0 +1,12 @@
+{
+  "conversation_id": "4711ff14-9841-47e7-9bdd-dd2e04dcc66e",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "hello",
+      "timestamp": "2026-07-11T23:58:59.259Z",
+      "latitude": 32.131336,
+      "longitude": 35.276833
+    }
+  ]
+}

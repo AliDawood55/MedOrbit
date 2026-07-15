@@ -1,0 +1,24 @@
+{
+  "conversation_id": "d4066ce1-d053-4844-8e4e-3495b137321e",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "أقرب دكتور قلب",
+      "timestamp": "2026-07-10T14:32:00.389Z"
+    },
+    {
+      "sender": "bot",
+      "message": "👨‍⚕️ أفضل الأطباء القريبين:\n\n1. ⭐ 4.80\n🏥 Nablus Medical Hospital\n📞 +970-9-2381000\nhttps://www.google.com/maps?q=32.22340000,35.25780000\n\n2. ⭐ 4.80\n🏥 Elite Cardiac Clinic\n📞 +970-9-2345671\nhttps://www.google.com/maps?q=32.22560000,35.25230000\n\n",
+      "intent": "find_doctor",
+      "confidence": 1,
+      "entities": {
+        "specialty": "cardiology",
+        "symptoms": [],
+        "location": null,
+        "raw": "أقرب دكتور قلب",
+        "specialty_id": "4e91e306-721b-46ce-ac43-102d6cb60161"
+      },
+      "timestamp": "2026-07-10T14:32:00.458Z"
+    }
+  ]
+}
