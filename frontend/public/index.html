@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – Smart Healthcare AI</title>
+
+    <!-- Preconnect to external services -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://tile.openstreetmap.org">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/chat.css">
+    <link rel="stylesheet" href="../src/css/map.css">
+</head>
+<body data-theme="light">
+
+    <!-- Loading overlay (removed by app.js once ready) -->
+    <div class="app-loader" id="appLoader">
+        <div class="loader-content">
+            <div class="loader-logo">
+                <i class="fas fa-heartbeat"></i>
+            </div>
+            <div class="loader-text">MedOrbit</div>
+            <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- App Shell -->
+    <div class="app" id="app" style="visibility:hidden">
+
+        <!-- ===== Top Bar ===== -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>MedOrbit</h1>
+                    <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+                </div>
+            </div>
+
+            <!-- Quick search bar (visible on desktop) -->
+            <div class="header-search" id="headerSearch">
+                <i class="fas fa-search"></i>
+                <input
+                    type="text"
+                    id="quickSearch"
+                    data-i18n-placeholder="search.placeholder"
+                    placeholder="ابحث عن عيادة، صيدلية، تخصص..."
+                    autocomplete="off"
+                >
+                <kbd>⌘ K</kbd>
+            </div>
+
+            <div class="header-actions">
+                <button class="icon-btn" id="locateBtn" data-i18n-title="locate" title="موقعي">
+                    <i class="fas fa-location-crosshairs"></i>
+                </button>
+                <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                    <span id="langLabel">EN</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ===== Category Filter Bar ===== -->
+        <div class="filter-bar" id="filterBar">
+            <button class="filter-chip active" data-category="all">
+                <i class="fas fa-globe"></i>
+                <span data-i18n="filter.all">الكل</span>
+            </button>
+            <button class="filter-chip" data-category="clinic">
+                <i class="fas fa-hospital"></i>
+                <span data-i18n="filter.clinic">العيادات</span>
+            </button>
+            <button class="filter-chip" data-category="pharmacy">
+                <i class="fas fa-pills"></i>
+                <span data-i18n="filter.pharmacy">الصيدليات</span>
+            </button>
+            <button class="filter-chip" data-category="hospital">
+                <i class="fas fa-hospital-user"></i>
+                <span data-i18n="filter.hospital">المستشفيات</span>
+            </button>
+            <button class="filter-chip" data-category="doctor">
+                <i class="fas fa-user-md"></i>
+                <span data-i18n="filter.doctor">الأطباء</span>
+            </button>
+            <div class="filter-spacer"></div>
+            <div class="filter-meta" id="resultsMeta">
+                <span data-i18n="meta.results">النتائج</span>
+                <span class="meta-count" id="metaCount">0</span>
+            </div>
+        </div>
+
+        <!-- ===== Main Layout ===== -->
+        <main class="app-main">
+
+            <!-- ===== Chat Panel (Left) ===== -->
+            <section class="chat-panel" id="chatPanel">
+
+                <!-- Chat header -->
+                <div class="chat-header">
+                    <div class="chat-header-info">
+                        <div class="chat-avatar">
+                            <i class="fas fa-robot"></i>
+                            <span class="avatar-pulse"></span>
+                        </div>
+                        <div>
+                            <h3 id="chatTitle">مساعد MedOrbit</h3>
+                            <span class="chat-status">
+                                <span class="status-dot"></span>
+                                <span id="chatSubtitle">متصل الآن</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="chat-header-actions">
+                        <button class="icon-btn-sm" id="clearChatBtn" data-i18n-title="newChat" title="محادثة جديدة">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages area -->
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Rendered by chat.js -->
+                </div>
+
+                <!-- Typing indicator -->
+                <div class="chat-typing" id="chatTyping" style="display:none">
+                    <div class="typing-avatar"><i class="fas fa-robot"></i></div>
+                    <div class="typing-bubble">
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                    </div>
+                </div>
+
+                <!-- Quick reply suggestions (dynamic) -->
+                <div class="quick-replies" id="quickReplies" style="display:none"></div>
+
+                <!-- Input bar -->
+                <form class="chat-input-bar" id="chatForm">
+                    <button type="button" class="input-icon-btn" id="locationBtn" data-i18n-title="shareLocation" title="مشاركة موقعي">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </button>
+                    <div class="input-field">
+                        <input
+                            type="text"
+                            id="chatInput"
+                            data-i18n-placeholder="chat.placeholder"
+                            placeholder="اسأل عن أقرب عيادة، صيدلية، أو طبيب..."
+                            autocomplete="off"
+                            required
+                        >
+                        <button type="button" class="input-icon-btn input-clear" id="clearInputBtn" style="display:none">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <button type="submit" class="send-btn" id="sendBtn"  data-i18n-title="send" title="إرسال">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </section>
+
+            <!-- ===== Map Panel (Right) ===== -->
+            <section class="map-panel" id="mapPanel">
+
+                <!-- Map -->
+                <div id="map" class="map"></div>
+
+                <!-- Map controls (floating) -->
+                <div class="map-controls">
+                    <button class="map-control-btn" id="recenterBtn" data-i18n-title="recenter" title="إعادة التمركز">
+                        <i class="fas fa-crosshairs"></i>
+                    </button>
+                    <button class="map-control-btn" id="layerBtn" data-i18n-title="layers" title="تغيير الخريطة">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                    <button class="map-control-btn" id="fitAllBtn" data-i18n-title="fitAll" title="عرض الكل">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+
+                <!-- Status pill (top center) -->
+                <div class="map-status" id="mapStatus">
+                    <i class="fas fa-circle-info"></i>
+                    <span id="mapStatusText" data-i18n="map.statusDefault">حدد موقعك أو اسأل عن أقرب عيادة</span>
+                </div>
+
+                <!-- Empty state overlay (when no results) -->
+                <div class="map-empty" id="mapEmpty" style="display:none">
+                    <div class="map-empty-icon">
+                        <i class="fas fa-map-location-dot"></i>
+                    </div>
+                    <h3 data-i18n="map.emptyTitle">لا توجد نتائج بعد</h3>
+                    <p data-i18n="map.emptyDesc">اسأل المساعد عن أقرب عيادة أو صيدلية وستظهر النتائج هنا</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ===== Toast Container ===== -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts (load order matters) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <!-- App -->
+    
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/map.js"></script>
+    <script src="../src/js/chat.js"></script>
+    <script src="../src/js/app.js"></script>
+
+    <script src="../src/components/chatUI.js"></script>
+    <script src="../src/components/mapUI.js"></script>
+
+    
+
+</body>
+</html>

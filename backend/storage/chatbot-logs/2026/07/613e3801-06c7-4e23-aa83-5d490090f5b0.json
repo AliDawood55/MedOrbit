@@ -1,0 +1,18 @@
+{
+  "conversation_id": "613e3801-06c7-4e23-aa83-5d490090f5b0",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "Nearest pharmacy",
+      "timestamp": "2026-07-11T23:42:58.913Z"
+    },
+    {
+      "sender": "bot",
+      "message": "⚠️ عذراً، حدث خطأ في الذكاء الاصطناعي",
+      "intent": "error",
+      "confidence": 0,
+      "entities": {},
+      "timestamp": "2026-07-11T23:42:58.927Z"
+    }
+  ]
+}

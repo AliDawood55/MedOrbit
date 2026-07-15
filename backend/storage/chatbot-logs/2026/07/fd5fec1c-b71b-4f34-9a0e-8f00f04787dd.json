@@ -1,0 +1,23 @@
+{
+  "conversation_id": "fd5fec1c-b71b-4f34-9a0e-8f00f04787dd",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "أقرب صيدلية",
+      "timestamp": "2026-07-11T16:09:11.095Z"
+    },
+    {
+      "sender": "bot",
+      "message": "🏥 أقرب الأماكن الطبية:\n\n━━━━━━━━━━━━━━━━━━━━\n🔹 #1 صيدلية نابلس\n⭐ التقييم: 5.0\n📍 المسافة: قريب جداً كم\n📍 الموقع:\nhttps://www.google.com/maps?q=32.21794820,35.26708490\n\n━━━━━━━━━━━━━━━━━━━━\n🔹 #2 Red Crescent\n⭐ التقييم: 5.0\n📍 المسافة: قريب جداً كم\n📍 الموقع:\nhttps://www.google.com/maps?q=32.22592240,35.23067190\n\n━━━━━━━━━━━━━━━━━━━━\n🔹 #3 د.احسان جيطان\n⭐ التقييم: 5.0\n📍 المسافة: قريب جداً كم\n📍 الموقع:\nhttps://www.google.com/maps?q=32.19765540,35.29474960\n\n━━━━━━━━━━━━━━━━━━━━\n🔹 #4 Health Clinic\n⭐ التقييم: 5.0\n📍 المسافة: قريب جداً كم\n📍 الموقع:\nhttps://www.google.com/maps?q=32.15418230,35.27688050\n\n━━━━━━━━━━━━━━━━━━━━\n🔹 #5 Al Hilal\n⭐ التقييم: 5.0\n📍 المسافة: قريب جداً كم\n📍 الموقع:\nhttps://www.google.com/maps?q=32.20998420,35.19130440\n\n━━━━━━━━━━━━━━━━━━━━",
+      "intent": "find_nearest",
+      "confidence": 1,
+      "entities": {
+        "specialty": null,
+        "symptoms": [],
+        "location": null,
+        "raw": "أقرب صيدلية"
+      },
+      "timestamp": "2026-07-11T16:09:11.163Z"
+    }
+  ]
+}

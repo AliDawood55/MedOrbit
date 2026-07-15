@@ -1,0 +1,29 @@
+{
+  "conversation_id": "9b5644a3-dbbe-4c6c-86e6-104935a91e63",
+  "messages": [
+    {
+      "timestamp": "2026-07-13T01:16:53.468Z",
+      "intent": "error",
+      "confidence": 0,
+      "duration_ms": 8044,
+      "has_places": false,
+      "message_length": 14
+    },
+    {
+      "timestamp": "2026-07-13T01:17:12.715Z",
+      "intent": "small_talk",
+      "confidence": 1,
+      "duration_ms": 3649,
+      "has_places": false,
+      "message_length": 5
+    },
+    {
+      "timestamp": "2026-07-13T01:17:32.073Z",
+      "intent": "error",
+      "confidence": 0,
+      "duration_ms": 8028,
+      "has_places": false,
+      "message_length": 8
+    }
+  ]
+}
