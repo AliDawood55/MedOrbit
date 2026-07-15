@@ -1,0 +1,261 @@
+{
+  "specialties": {
+    "general_practice": {
+      "ar": ["طب عام", "طبيب عام", "عام", "طبيب اسرة"],
+      "en": ["general practice", "general practitioner", "gp", "family medicine", "family doctor"]
+    },
+    "cardiology": {
+      "ar": ["قلب", "طبيب قلب", "امراض القلب", "طب القلب", "قلبية"],
+      "en": ["cardio", "cardiologist", "heart doctor", "cardiology", "heart specialist"]
+    },
+    "pediatrics": {
+      "ar": ["اطفال", "طبيب اطفال", "طب اطفال", "أطفال"],
+      "en": ["pediatric", "pediatrician", "children doctor", "pediatrics", "child doctor"]
+    },
+    "obstetrics_gynecology": {
+      "ar": ["نساء", "ولادة", "نسائية", "طبيبة نساء", "دكتورة نساء"],
+      "en": ["gynecologist", "obstetrics", "obgyn", "women health", "gynecology"]
+    },
+    "orthopedics": {
+      "ar": ["عظام", "كسر", "جراحة عظام", "طبيب عظام", "كسور", "مفاصل"],
+      "en": ["orthopedic", "bone", "orthopedics", "bone doctor", "orthopedic surgeon", "joint"]
+    },
+    "ophthalmology": {
+      "ar": ["عيون", "طبيب عيون", "رمد", "نظارات", "بصر"],
+      "en": ["ophthalmologist", "eye doctor", "ophthalmology", "eye", "vision"]
+    },
+    "ent": {
+      "ar": ["انف", "اذن", "حنجرة", "انف واذن وحنجرة", "أذن", "أنف"],
+      "en": ["ent", "ear nose throat", "ent doctor", "ear doctor"]
+    },
+    "dermatology": {
+      "ar": ["جلد", "جلدية", "طبيب جلدية", "بشرة", "حساسية جلدية"],
+      "en": ["dermatologist", "dermatology", "skin doctor", "skin"]
+    },
+    "dentistry": {
+      "ar": ["اسنان", "طبيب اسنان", "دكتور اسنان", "أسنان", "تقويم", "تركيبات"],
+      "en": ["dentist", "dental", "dentistry", "teeth", "orthodontist"]
+    },
+    "neurology": {
+      "ar": ["اعصاب", "طبيب اعصاب", "طب اعصاب", "أعصاب", "نفسية عصبية"],
+      "en": ["neurologist", "neurology", "brain doctor", "nerve", "nervous system"]
+    },
+    "psychiatry": {
+      "ar": ["نفسي", "طبيب نفسي", "صحة نفسية", "اكتئاب", "قلق"],
+      "en": ["psychiatrist", "psychiatry", "mental health", "psychologist"]
+    },
+    "gastroenterology": {
+      "ar": ["هضم", "جهاز هضمي", "باطنة", "معدة", "قولون", "كبد"],
+      "en": ["gastroenterologist", "gastroenterology", "stomach doctor", "digestive"]
+    },
+    "endocrinology": {
+      "ar": ["غدد", "غدد صماء", "سكري", "درقية", "هرمونات"],
+      "en": ["endocrinologist", "endocrinology", "diabetes", "thyroid", "hormone"]
+    },
+    "nephrology": {
+      "ar": ["كلى", "طبيب كلى", "مسالك بولية", "بولية", "كلية"],
+      "en": ["nephrologist", "nephrology", "kidney", "kidney doctor"]
+    },
+    "hematology": {
+      "ar": ["دم", "امراض دم", "فقر دم", "انيميا"],
+      "en": ["hematologist", "hematology", "blood doctor", "anemia"]
+    },
+    "oncology": {
+      "ar": ["اورام", "سرطان", "علاج كيميائي", "طبيب اورام"],
+      "en": ["oncologist", "oncology", "cancer", "cancer doctor", "tumor"]
+    },
+    "pulmonology": {
+      "ar": ["رئة", "صدر", "جهاز تنفسي", "تنفس", "ربو"],
+      "en": ["pulmonologist", "pulmonology", "lung", "respiratory", "chest doctor", "asthma"]
+    },
+    "rheumatology": {
+      "ar": ["روماتيزم", "روماتويد", "مفاصل", "التهاب مفاصل"],
+      "en": ["rheumatologist", "rheumatology", "arthritis", "joint pain"]
+    },
+    "general_surgery": {
+      "ar": ["جراحة", "جراح", "جراحة عامة"],
+      "en": ["surgeon", "general surgery", "surgery"]
+    },
+    "urology": {
+      "ar": ["مسالك بولية", "جراحة مسالك", "بول"],
+      "en": ["urologist", "urology", "urinary tract"]
+    },
+    "emergency_medicine": {
+      "ar": ["طوارئ", "اسعاف", "اسعافات اولية", "طبيب طوارئ"],
+      "en": ["emergency", "emergency medicine", "emergency doctor", "er"]
+    },
+    "radiology": {
+      "ar": ["اشعة", "طبيب اشعة", "رنين", "مقطعي", "تصوير"],
+      "en": ["radiologist", "radiology", "xray", "mri", "ct scan", "ultrasound"]
+    },
+    "physiotherapy": {
+      "ar": ["علاج طبيعي", "تاهيل", "فيزيائي", "علاج فيزيائي"],
+      "en": ["physiotherapy", "physiotherapist", "physical therapy", "rehabilitation"]
+    }
+  },
+
+  "types": {
+    "clinic": {
+      "ar": ["عيادة", "مركز صحي", "مستوصف", "مركز طبي"],
+      "en": ["clinic", "medical center", "health center", "medical clinic"]
+    },
+    "hospital": {
+      "ar": ["مستشفى", "مشفى"],
+      "en": ["hospital", "private hospital", "public hospital"]
+    },
+    "pharmacy": {
+      "ar": ["صيدلية", "صيدليات", "دواء"],
+      "en": ["pharmacy", "pharmacies", "drug store"]
+    },
+    "laboratory": {
+      "ar": ["مختبر", "تحاليل", "معمل", "تحليل"],
+      "en": ["laboratory", "lab", "medical lab", "analysis lab"]
+    },
+    "radiology": {
+      "ar": ["مركز اشعة", "اشعة مقطعية", "رنين مغناطيسي", "تصوير"],
+      "en": ["radiology center", "xray center", "mri center", "imaging center"]
+    },
+    "dental": {
+      "ar": ["مركز اسنان", "عيادة اسنان", "طب اسنان", "تقويم اسنان"],
+      "en": ["dental center", "dental clinic", "dentist clinic"]
+    },
+    "emergency": {
+      "ar": ["طوارئ", "اسعاف", "غرفة طوارئ"],
+      "en": ["emergency room", "er", "emergency department", "urgent care"]
+    },
+    "vaccination": {
+      "ar": ["تطعيم", "تلقيح", "مركز تطعيم"],
+      "en": ["vaccination center", "vaccine", "immunization"]
+    },
+    "optical": {
+      "ar": ["بصريات", "نظارات", "عدسات", "مركز بصري"],
+      "en": ["optical", "optometrist", "eyeglasses", "lens"]
+    }
+  },
+
+  "symptoms": {
+    "headache": {
+      "ar": ["صداع", "وجع راس", "الم راس", "صداع نصفي"],
+      "en": ["headache", "migraine", "head pain"]
+    },
+    "fever": {
+      "ar": ["حرارة", "حمى", "سخونة"],
+      "en": ["fever", "high temperature", "hot"]
+    },
+    "cough": {
+      "ar": ["كحة", "سعال"],
+      "en": ["cough", "coughing"]
+    },
+    "fatigue": {
+      "ar": ["تعب", "ارهاق", "ضعف", "خمول", "كسل"],
+      "en": ["fatigue", "tired", "exhaustion", "weakness", "lethargy"]
+    },
+    "dizziness": {
+      "ar": ["دوخة", "دوار", "دوران"],
+      "en": ["dizziness", "dizzy", "vertigo", "lightheaded"]
+    },
+    "nausea": {
+      "ar": ["غثيان", "استفراغ", "ترجيع", "قيء"],
+      "en": ["nausea", "vomiting", "sick to stomach"]
+    },
+    "chest_pain": {
+      "ar": ["الم صدر", "وجع صدر", "ألم في الصدر", "ضيق صدر"],
+      "en": ["chest pain", "chest discomfort", "chest tightness"]
+    },
+    "shortness_of_breath": {
+      "ar": ["ضيق تنفس", "صعوبة تنفس", "نهجان", "كتمة"],
+      "en": ["shortness of breath", "difficulty breathing", "breathless"]
+    },
+    "stomach_pain": {
+      "ar": ["الم معدة", "وجع معدة", "الم بطن", "وجع بطن", "مغص"],
+      "en": ["stomach pain", "abdominal pain", "upset stomach", "cramps"]
+    },
+    "diarrhea": {
+      "ar": ["اسهال", "إسهال"],
+      "en": ["diarrhea", "loose stools"]
+    },
+    "back_pain": {
+      "ar": ["الم ظهر", "وجع ظهر", "آلام الظهر"],
+      "en": ["back pain", "lower back pain", "backache"]
+    },
+    "insomnia": {
+      "ar": ["ارق", "أرق", "صعوبة نوم", "سهر"],
+      "en": ["insomnia", "sleepless", "can't sleep", "trouble sleeping"]
+    },
+    "anxiety": {
+      "ar": ["قلق", "توتر", "خوف"],
+      "en": ["anxiety", "anxious", "nervous", "stress"]
+    },
+    "skin_rash": {
+      "ar": ["طفح جلدي", "حساسية", "هرش", "حكة"],
+      "en": ["rash", "skin rash", "itching", "hives"]
+    }
+  },
+
+  "locations": {
+    "nablus": {
+      "ar": ["نابلس"],
+      "en": ["nablus", "nabulus"]
+    },
+    "rafidia": {
+      "ar": ["رفيديا"],
+      "en": ["rafidia"]
+    },
+    "old_city": {
+      "ar": ["المدينة القديمة", "البلدة القديمة"],
+      "en": ["old city"]
+    },
+    "ein_beit_el_ma": {
+      "ar": ["عين بيت الماء"],
+      "en": ["ein beit el ma"]
+    },
+    "al_khalidiyah": {
+      "ar": ["الخالدية"],
+      "en": ["al khalidiyah"]
+    },
+    "al_nazha": {
+      "ar": ["النزهة"],
+      "en": ["al nazha"]
+    },
+    "al_iskans": {
+      "ar": ["الاسكان", "الإسكان"],
+      "en": ["al iskan"]
+    },
+    "al_batin": {
+      "ar": ["الباذنجان", "الباطن"],
+      "en": ["al batin"]
+    },
+    "street_60": {
+      "ar": ["شارع 60", "شارع ستين"],
+      "en": ["60 street"]
+    }
+  },
+
+  "medications": {
+    "panadol": {
+      "ar": ["بانادول", "بنادول"],
+      "en": ["panadol", "paracetamol"]
+    },
+    "advil": {
+      "ar": ["أدفيل"],
+      "en": ["advil", "ibuprofen"]
+    },
+    "amoxicillin": {
+      "ar": ["أموكسيسيلين"],
+      "en": ["amoxicillin"]
+    },
+    "insulin": {
+      "ar": ["أنسولين"],
+      "en": ["insulin"]
+    },
+    "omeprazole": {
+      "ar": ["أوميبرازول"],
+      "en": ["omeprazole"]
+    }
+  },
+
+  "services": {
+    "ar": ["فحص", "علاج", "تشخيص", "استشارة", "مختبر", "اشعة", "تطعيم", "جراحة", "تنظير", "تحاليل"],
+    "en": ["checkup", "treatment", "diagnosis", "consultation", "lab", "xray", "vaccination", "surgery", "endoscopy", "analysis"]
+  }
+}
