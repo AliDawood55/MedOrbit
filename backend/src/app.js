@@ -9,8 +9,6 @@ const chatbotRoutes = require('./routes/chatbot.routes');
 const clinicRoutes = require('./routes/clinic.routes');
 const doctorRoutes = require('./routes/doctor.routes');
 
-const clinicRoutes = require('./routes/clinic.routes');
-
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const conversationRoutes = require('./routes/conversation.routes');
