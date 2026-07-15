@@ -16,6 +16,11 @@ const {
     verifyRefreshToken
 } = require("../utils/jwt");
 
+const {
+    generateToken,
+    hashToken
+} = require("../utils/token");
+
 
 
 
@@ -165,6 +170,43 @@ async function register(userData) {
 
     }
 
+    const token =
+        generateToken();
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    await db.query(
+        `
+INSERT INTO public.email_verification_tokens
+(
+ user_id,
+ token_hash,
+ expires_at
+)
+
+VALUES
+(
+ $1,
+ $2,
+ NOW()+INTERVAL '24 hours'
+)
+`,
+        [
+            user.id,
+            tokenHash
+        ]);
+
+
+
+    console.log(
+        "EMAIL VERIFICATION TOKEN:",
+        token
+    );
+
 
 
     return user;
@@ -239,7 +281,7 @@ async function login(
     ) {
 
         throw new Error(
-            "Account locked"
+            "Account locked. Try again later"
         );
 
     }
@@ -270,13 +312,21 @@ async function login(
 
         await db.query(
             `
-            UPDATE public.users
+        UPDATE public.users
 
-            SET failed_login_attempts =
-            failed_login_attempts + 1
+        SET 
+            failed_login_attempts =
+                failed_login_attempts + 1,
 
-            WHERE id=$1
-            `,
+            locked_until =
+                CASE
+                    WHEN failed_login_attempts + 1 >= 5
+                    THEN NOW() + INTERVAL '15 minutes'
+                    ELSE locked_until
+                END
+
+        WHERE id=$1
+        `,
             [
                 user.id
             ]
@@ -579,6 +629,439 @@ async function logout(refreshToken) {
 
 }
 
+/**
+ * Change user password
+ */
+async function changePassword(
+    userId,
+    currentPassword,
+    newPassword
+) {
+
+    // Find user
+
+    const result =
+        await db.query(
+            `
+            SELECT
+                password_hash
+
+            FROM public.users
+
+            WHERE id = $1
+            `,
+            [userId]
+        );
+
+
+    if (result.rows.length === 0) {
+
+        throw new Error(
+            "User not found"
+        );
+
+    }
+
+
+    const user =
+        result.rows[0];
+
+
+    // Check current password
+
+    const valid =
+        await comparePassword(
+            currentPassword,
+            user.password_hash
+        );
+
+
+    if (!valid) {
+
+        throw new Error(
+            "Current password is incorrect"
+        );
+
+    }
+
+
+    // Hash new password
+
+    const newHash =
+        await hashPassword(
+            newPassword
+        );
+
+
+    // Update password
+
+    await db.query(
+
+        `
+        UPDATE public.users
+
+        SET
+            password_hash = $1,
+            updated_at = NOW()
+
+        WHERE id = $2
+        `,
+
+        [
+            newHash,
+            userId
+        ]
+
+    );
+
+
+    // Logout every device
+
+    await db.query(
+
+        `
+        DELETE FROM public.user_sessions
+
+        WHERE user_id = $1
+        `,
+
+        [
+            userId
+        ]
+
+    );
+
+
+    return;
+
+}
+
+async function forgotPassword(email) {
+
+
+    const result =
+        await db.query(
+            `
+        SELECT id,email
+        FROM public.users
+        WHERE email=$1
+        AND deleted_at IS NULL
+        `,
+            [
+                email
+            ]);
+
+
+
+    /*
+      Security:
+      Do not reveal if email exists
+    */
+
+    if (result.rows.length === 0) {
+
+        return;
+
+    }
+
+
+    const user = result.rows[0];
+
+
+
+    const token =
+        generateToken();
+
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    await db.query(
+        `
+    INSERT INTO public.password_reset_tokens
+    (
+        user_id,
+        token_hash,
+        expires_at
+    )
+
+    VALUES
+    (
+        $1,
+        $2,
+        NOW()+INTERVAL '15 minutes'
+    )
+    `,
+        [
+            user.id,
+            tokenHash
+        ]);
+
+
+
+    /*
+       Later:
+       send email here
+
+       For testing:
+    */
+
+    console.log(
+        "PASSWORD RESET TOKEN:",
+        token
+    );
+
+
+}
+
+async function resetPassword(
+    token,
+    newPassword
+) {
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    const result =
+        await db.query(
+            `
+        SELECT
+            id,
+            user_id
+
+        FROM public.password_reset_tokens
+
+        WHERE token_hash=$1
+
+        AND expires_at > NOW()
+
+        AND used_at IS NULL
+
+        `,
+            [
+                tokenHash
+            ]);
+
+
+
+    if (result.rows.length === 0) {
+
+        throw new Error(
+            "Invalid or expired token"
+        );
+
+    }
+
+
+
+    const reset =
+        result.rows[0];
+
+
+
+    const passwordHash =
+        await hashPassword(
+            newPassword
+        );
+
+
+
+    await db.query(
+        `
+    UPDATE public.users
+
+    SET password_hash=$1
+
+    WHERE id=$2
+    `,
+        [
+            passwordHash,
+            reset.user_id
+        ]);
+
+
+
+    await db.query(
+        `
+    UPDATE public.password_reset_tokens
+
+    SET used_at=NOW()
+
+    WHERE id=$1
+    `,
+        [
+            reset.id
+        ]);
+
+    // Logout all existing sessions after password reset
+
+    await db.query(
+        `
+    UPDATE public.user_sessions
+
+    SET revoked_at = NOW()
+
+    WHERE user_id=$1
+    `,
+        [
+            reset.user_id
+        ]
+    );
+
+
+
+}
+
+async function verifyEmail(token) {
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    const result =
+        await db.query(
+            `
+        SELECT
+            id,
+            user_id
+
+        FROM public.email_verification_tokens
+
+        WHERE token_hash=$1
+
+        AND expires_at > NOW()
+
+        AND verified_at IS NULL
+
+        `,
+            [
+                tokenHash
+            ]);
+
+
+
+    if (result.rows.length === 0) {
+        throw new Error(
+            "Invalid or expired verification token"
+        );
+    }
+
+
+
+    const data =
+        result.rows[0];
+
+
+
+    await db.query(
+        `
+        UPDATE public.users
+
+        SET
+            email_verified=true,
+            updated_at=NOW()
+
+        WHERE id=$1
+        `,
+        [
+            data.user_id
+        ]);
+
+
+
+    await db.query(
+        `
+        UPDATE public.email_verification_tokens
+
+        SET verified_at=NOW()
+
+        WHERE id=$1
+        `,
+        [
+            data.id
+        ]);
+
+
+
+}
+
+async function resendVerification(email) {
+
+    const result =
+        await db.query(
+            `
+        SELECT id
+
+        FROM public.users
+
+        WHERE email=$1
+
+        AND deleted_at IS NULL
+        `,
+            [
+                email
+            ]);
+
+
+
+    if (result.rows.length === 0) {
+        return;
+    }
+
+
+
+    const user =
+        result.rows[0];
+
+
+
+    const token =
+        generateToken();
+
+
+
+    const tokenHash =
+        hashToken(token);
+
+
+
+    await db.query(
+        `
+        INSERT INTO public.email_verification_tokens
+        (
+            user_id,
+            token_hash,
+            expires_at
+        )
+
+        VALUES
+        (
+            $1,
+            $2,
+            NOW()+INTERVAL '24 hours'
+        )
+        `,
+        [
+            user.id,
+            tokenHash
+        ]);
+
+
+
+    console.log(
+        "EMAIL VERIFICATION TOKEN:",
+        token
+    );
+
+}
+
 
 
 
@@ -593,6 +1076,15 @@ module.exports = {
 
     refresh,
 
-    logout
+    logout,
+
+    changePassword,
+
+    forgotPassword,
+
+    resetPassword,
+
+    verifyEmail,
+    resendVerification
 
 };
