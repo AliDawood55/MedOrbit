@@ -1,0 +1,12 @@
+{
+  "conversation_id": "2ffe4ca7-7ff4-4d3e-b86a-951e6facf902",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "Nearest hospital",
+      "timestamp": "2026-07-12T00:23:25.021Z",
+      "latitude": 32.131336,
+      "longitude": 35.276833
+    }
+  ]
+}

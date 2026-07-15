@@ -1,0 +1,4567 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "description": "MedOrbit Hierarchical Intent Catalog",
+    "total_intents": 110,
+    "categories": [
+      "Emergency",
+      "Symptoms",
+      "Doctor Search",
+      "Clinic Information",
+      "Hospital Information",
+      "Pharmacy",
+      "Navigation",
+      "Appointments",
+      "Medication",
+      "Medical Records",
+      "Lab Results",
+      "Insurance",
+      "Platform",
+      "Small Talk",
+      "General Medical"
+    ],
+    "response_types": [
+      "emergency_alert",
+      "medical_guidance",
+      "provider_list",
+      "provider_detail",
+      "navigation_route",
+      "appointment_action",
+      "medication_info",
+      "record_info",
+      "lab_interpretation",
+      "insurance_info",
+      "platform_action",
+      "conversational",
+      "slot_filling_question"
+    ]
+  },
+  "emergency": {
+    "id": "emergency_001",
+    "category": "Emergency",
+    "subcategory": "General Emergency",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "symptom",
+      "body_part",
+      "severity"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "طوارئ",
+      "اسعاف",
+      "إسعاف",
+      "حالة طارئة",
+      "خطر",
+      "انقاذ",
+      "انقذ",
+      "غرفة طوارئ",
+      "مستعجل",
+      "عاجل"
+    ],
+    "keywords_en": [
+      "emergency",
+      "ambulance",
+      "urgent",
+      "immediate help",
+      "call ambulance",
+      "emergency room",
+      "er",
+      "life threatening"
+    ],
+    "patterns": [
+      "(emergency|urgent|immediate) (help|care|assistance|medical)",
+      "(call|need) (an |the )?(ambulance|emergency)"
+    ],
+    "examples_ar": [
+      "طوارئ",
+      "اتصل بالإسعاف",
+      "حالة طارئة",
+      "عاجل جدا"
+    ],
+    "examples_en": [
+      "This is an emergency",
+      "Call an ambulance",
+      "I need emergency help"
+    ],
+    "examples_palestinian": [
+      "طوارئ بسرعة",
+      "اتصل على الاسعاف",
+      "في حالة طارئة"
+    ],
+    "negative_examples": [
+      "أريد موعد",
+      "عندي صداع خفيف"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "heart_attack": {
+    "id": "emergency_002",
+    "category": "Emergency",
+    "subcategory": "Cardiac Emergency",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "severity",
+      "duration"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "نوبة قلبية",
+      "جلطة",
+      "سكتة قلبية",
+      "الم صدر شديد",
+      "قلبي",
+      "توقف قلب",
+      "ذبحة"
+    ],
+    "keywords_en": [
+      "heart attack",
+      "cardiac arrest",
+      "chest pain severe",
+      "myocardial infarction",
+      "cardiac emergency"
+    ],
+    "patterns": [
+      "(heart attack|cardiac arrest|myocardial infarction)",
+      "(chest pain|chest tightness).*(severe|crushing|squeezing)"
+    ],
+    "examples_ar": [
+      "عندي نوبة قلبية",
+      "حسيت بجلطة",
+      "قلبي يوجعني بقوة"
+    ],
+    "examples_en": [
+      "I think I'm having a heart attack",
+      "Severe chest pain"
+    ],
+    "examples_palestinian": [
+      "قلبي بيدق بقوة",
+      "صدر بوجعني كتير",
+      "حاس بنوبة"
+    ],
+    "negative_examples": [
+      "عندي ألم خفيف في الصدر",
+      "قلبي يوجعني من يومين"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "stroke": {
+    "id": "emergency_003",
+    "category": "Emergency",
+    "subcategory": "Stroke",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "body_part",
+      "duration"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "جلطة دماغية",
+      "سكتة دماغية",
+      "فقدان وعي",
+      "شلل نصفي",
+      "تنميل نصف الجسم",
+      "عدم القدرة على الكلام"
+    ],
+    "keywords_en": [
+      "stroke",
+      "brain attack",
+      "cva",
+      "cerebrovascular",
+      "facial droop",
+      "slurred speech",
+      "one sided weakness"
+    ],
+    "patterns": [
+      "(stroke|brain attack|cva)",
+      "(facial droop|slurred speech|weakness).*(one side|arm|leg|face)"
+    ],
+    "examples_ar": [
+      "أعتقد عندي جلطة",
+      "نص جسمي مش قادر أحركه",
+      "وجهي مائل"
+    ],
+    "examples_en": [
+      "I think I'm having a stroke",
+      "My left side is numb",
+      "Can't speak properly"
+    ],
+    "examples_palestinian": [
+      "نص حالي مش عم يتحرك",
+      "وجهي عوج",
+      "لساني تقيل"
+    ],
+    "negative_examples": [
+      "يدي تنملت شوي",
+      "راسي داير"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "breathing_emergency": {
+    "id": "emergency_004",
+    "category": "Emergency",
+    "subcategory": "Respiratory Emergency",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "severity",
+      "duration"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "مش قادر اتنفس",
+      "صعوبة تنفس",
+      "ضيق تنفس شديد",
+      "نفسي واقف",
+      "اختناق",
+      "نفسي ضايق"
+    ],
+    "keywords_en": [
+      "can't breathe",
+      "difficulty breathing",
+      "shortness of breath severe",
+      "choking",
+      "suffocating",
+      "gasping"
+    ],
+    "patterns": [
+      "(can't|cannot|can not) (breathe|breath)",
+      "(shortness of breath|difficulty breathing).*(severe|extreme)"
+    ],
+    "examples_ar": [
+      "مش قادر اتنفس",
+      "نفسي ضايق جدا",
+      "أنا مختنق"
+    ],
+    "examples_en": [
+      "I can't breathe",
+      "Having trouble breathing",
+      "I'm suffocating"
+    ],
+    "examples_palestinian": [
+      "نفسي واقف",
+      "مش قادر اخد نفس",
+      "نفسي قصير كتير"
+    ],
+    "negative_examples": [
+      "عندي كحة",
+      "نفسي تعبان شوي"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "severe_bleeding": {
+    "id": "emergency_005",
+    "category": "Emergency",
+    "subcategory": "Bleeding",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "body_part",
+      "severity"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "نزيف شديد",
+      "دم كثير",
+      "نزف",
+      "جرح عميق",
+      "قطع شريان",
+      "دم ما بوقف"
+    ],
+    "keywords_en": [
+      "severe bleeding",
+      "heavy bleeding",
+      "hemorrhage",
+      "profuse bleeding",
+      "uncontrollable bleeding",
+      "bleeding out"
+    ],
+    "patterns": [
+      "(severe|heavy|uncontrollable|profuse) bleeding",
+      "(bleeding|hemorrhage).*(severe|heavy|bad)"
+    ],
+    "examples_ar": [
+      "في نزيف شديد",
+      "الدم ما بوقف",
+      "جرح عميق بينزف"
+    ],
+    "examples_en": [
+      "I'm bleeding heavily",
+      "The blood won't stop",
+      "Severe hemorrhage"
+    ],
+    "examples_palestinian": [
+      "الدم عم بينزف كتير",
+      "الجرح عم بينزف",
+      "الدم ما بده يوقف"
+    ],
+    "negative_examples": [
+      "عندي جرح صغير",
+      "في دم خفيف"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "suicide_self_harm": {
+    "id": "emergency_006",
+    "category": "Emergency",
+    "subcategory": "Mental Health Crisis",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "انتحار",
+      "قتل نفس",
+      "إيذاء نفس",
+      "بموت",
+      "ما عاد في أمل",
+      "بدي أموت",
+      "خلصت حياتي"
+    ],
+    "keywords_en": [
+      "suicide",
+      "kill myself",
+      "end my life",
+      "self harm",
+      "want to die",
+      "no reason to live"
+    ],
+    "patterns": [
+      "(suicide|kill myself|end my life|self.harm)",
+      "(want to die|no reason to live|better off dead)"
+    ],
+    "examples_ar": [
+      "بدي أموت",
+      "ما عاد في أمل",
+      "خلصت حياتي"
+    ],
+    "examples_en": [
+      "I want to kill myself",
+      "I have no reason to live",
+      "I'm going to end it"
+    ],
+    "examples_palestinian": [
+      "بدي اروح",
+      "ما عاد في نفس",
+      "خلاص"
+    ],
+    "negative_examples": [
+      "أنا تعبان",
+      "حاس بحزن"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "poisoning": {
+    "id": "emergency_007",
+    "category": "Emergency",
+    "subcategory": "Poisoning",
+    "priority": 10,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "substance",
+      "amount",
+      "time"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "تسمم",
+      "سم",
+      "جرعة زائدة",
+      "اكلت شي منتهي",
+      "شربت مادة سامة",
+      "دواء زيادة"
+    ],
+    "keywords_en": [
+      "poisoning",
+      "poison",
+      "overdose",
+      "toxic",
+      "swallowed poison",
+      "drug overdose",
+      "chemical exposure"
+    ],
+    "patterns": [
+      "(overdose|poisoning|poison|toxic)",
+      "(swallowed|drank|ate|ingested).*(poison|chemical|cleaner|bleach)"
+    ],
+    "examples_ar": [
+      "في تسمم",
+      "اكلت سم",
+      "جرعة زائدة من الدواء"
+    ],
+    "examples_en": [
+      "I overdosed",
+      "Swallowed poison",
+      "Drug overdose"
+    ],
+    "examples_palestinian": [
+      "اكلت شي مسموم",
+      "شربت مادة خطرة",
+      "دخل فيني سم"
+    ],
+    "negative_examples": [
+      "عندي تسمم غذائي خفيف",
+      "بطني يوجعني من الأكل"
+    ],
+    "response_type": "emergency_alert"
+  },
+  "symptom_analysis": {
+    "id": "symptom_001",
+    "category": "Symptoms",
+    "subcategory": "General Symptom",
+    "priority": 7,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "symptoms"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "age",
+      "gender",
+      "chronic_conditions",
+      "medications"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity",
+      "age",
+      "gender"
+    ],
+    "keywords_ar": [
+      "صداع",
+      "حرارة",
+      "تعب",
+      "الم",
+      "وجع",
+      "اعراض",
+      "دوخة",
+      "غثيان",
+      "استفراغ",
+      "إسهال",
+      "سعال",
+      "زكام",
+      "رشح",
+      "انفلونزا",
+      "حمى",
+      "كحة",
+      "ضيق تنفس",
+      "أرق",
+      "صداع نصفي",
+      "مغص",
+      "حكة",
+      "تنميل"
+    ],
+    "keywords_en": [
+      "headache",
+      "fever",
+      "fatigue",
+      "pain",
+      "symptom",
+      "sick",
+      "dizzy",
+      "dizziness",
+      "stomach pain",
+      "chest pain",
+      "nausea",
+      "vomiting",
+      "cough",
+      "flu",
+      "cold",
+      "diarrhea",
+      "shortness of breath",
+      "migraine",
+      "rash",
+      "numbness"
+    ],
+    "patterns": [
+      "^(I have|I feel|I am experiencing|I suffer from|I've been having)",
+      "^(what is|what causes|why do I have) (this |the )?(pain|symptom|issue|problem)"
+    ],
+    "examples_ar": [
+      "عندي صداع",
+      "حرارة مرتفعة",
+      "ألم في المعدة",
+      "حاس بتعب شديد"
+    ],
+    "examples_en": [
+      "I have a headache",
+      "I feel feverish",
+      "I'm experiencing chest pain"
+    ],
+    "examples_palestinian": [
+      "راسي بوجعني",
+      "بطني بتوجع",
+      "حاس حالي تعبان",
+      "دوخت",
+      "كرشي بوجعني"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "headache_info": {
+    "id": "symptom_002",
+    "category": "Symptoms",
+    "subcategory": "Headache",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "location",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity",
+      "associated_symptoms"
+    ],
+    "keywords_ar": [
+      "صداع",
+      "وجع راس",
+      "ألم راس",
+      "صداع نصفي",
+      "شقيقة",
+      "راسي بوجعني",
+      "راسي"
+    ],
+    "keywords_en": [
+      "headache",
+      "migraine",
+      "head pain",
+      "tension headache",
+      "cluster headache",
+      "throbbing head"
+    ],
+    "patterns": [
+      "(headache|migraine|head pain).*(what|why|cause|help|relief|treatment|medicine)",
+      "(why|how long).*(head|headache|migraine)"
+    ],
+    "examples_ar": [
+      "عندي صداع شديد",
+      "راسي بوجعني من يومين",
+      "ما سبب الصداع المستمر"
+    ],
+    "examples_en": [
+      "I have a severe headache",
+      "What causes migraines",
+      "How to relieve headache"
+    ],
+    "examples_palestinian": [
+      "راسي بوجعني كتير",
+      "راسي عم يوجعني",
+      "صداع ما بطيق"
+    ],
+    "negative_examples": [
+      "عندي ألم في البطن",
+      "بدي دكتور"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "fever_info": {
+    "id": "symptom_003",
+    "category": "Symptoms",
+    "subcategory": "Fever",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "temperature",
+      "duration",
+      "age",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "temperature",
+      "duration",
+      "age"
+    ],
+    "keywords_ar": [
+      "حرارة",
+      "حمى",
+      "سخونة",
+      "درجة حرارة",
+      "سخنه",
+      "حراره"
+    ],
+    "keywords_en": [
+      "fever",
+      "high temperature",
+      "pyrexia",
+      "elevated temperature",
+      "hot",
+      "feverish"
+    ],
+    "patterns": [
+      "(fever|high temperature|temperature).*(what|why|how|treatment|medicine|reduce)",
+      "(how long).*(fever|temperature)"
+    ],
+    "examples_ar": [
+      "عندي حرارة",
+      "درجة حرارتي 39",
+      "حمى مستمرة"
+    ],
+    "examples_en": [
+      "I have a fever of 39",
+      "High temperature for 3 days",
+      "How to reduce fever"
+    ],
+    "examples_palestinian": [
+      "عندي حراره",
+      "سخنه",
+      "حراره عاليه"
+    ],
+    "negative_examples": [
+      "عندي صداع فقط",
+      "بدي مسكن"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "cough_info": {
+    "id": "symptom_004",
+    "category": "Symptoms",
+    "subcategory": "Cough",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "type",
+      "severity",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "type",
+      "severity"
+    ],
+    "keywords_ar": [
+      "كحة",
+      "سعال",
+      "كحه",
+      "كحة شديدة",
+      "سعال جاف",
+      "سعال مع بلغم"
+    ],
+    "keywords_en": [
+      "cough",
+      "coughing",
+      "dry cough",
+      "wet cough",
+      "productive cough",
+      "persistent cough",
+      "chronic cough"
+    ],
+    "patterns": [
+      "(cough|coughing).*(what|why|how|treatment|medicine|relief|stop)",
+      "(dry|wet|productive).*cough"
+    ],
+    "examples_ar": [
+      "عندي كحة شديدة",
+      "سعال جاف",
+      "كحة مع بلغم"
+    ],
+    "examples_en": [
+      "I have a bad cough",
+      "Dry cough for a week",
+      "Cough with phlegm"
+    ],
+    "examples_palestinian": [
+      "عندي كحه",
+      "كحه جامده",
+      "كحه مش راضيه تروح"
+    ],
+    "negative_examples": [
+      "عندي الم في الظهر",
+      "بدي موعد"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "stomach_ache_info": {
+    "id": "symptom_005",
+    "category": "Symptoms",
+    "subcategory": "Stomach Pain",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "location",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity",
+      "associated_symptoms"
+    ],
+    "keywords_ar": [
+      "الم معدة",
+      "وجع معدة",
+      "الم بطن",
+      "وجع بطن",
+      "مغص",
+      "بطني بتوجع",
+      "كرشي بوجعني",
+      "ألم في البطن"
+    ],
+    "keywords_en": [
+      "stomach pain",
+      "abdominal pain",
+      "upset stomach",
+      "cramps",
+      "stomach ache",
+      "belly pain",
+      "gastric pain"
+    ],
+    "patterns": [
+      "(stomach|abdominal|belly|gastric).*(pain|ache|cramp|hurt)",
+      "(pain|cramp).*(stomach|abdomen|belly)"
+    ],
+    "examples_ar": [
+      "عندي ألم في المعدة",
+      "بطني بتوجعني",
+      "مغص شديد"
+    ],
+    "examples_en": [
+      "I have stomach pain",
+      "Abdominal cramps",
+      "Upset stomach"
+    ],
+    "examples_palestinian": [
+      "بطني بتوجع",
+      "كرشي بوجعني",
+      "في مغص"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور قلب"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "chest_pain_info": {
+    "id": "symptom_006",
+    "category": "Symptoms",
+    "subcategory": "Chest Pain",
+    "priority": 8,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity"
+    ],
+    "keywords_ar": [
+      "الم صدر",
+      "وجع صدر",
+      "صدر بوجعني",
+      "ضيق صدر",
+      "ألم في الصدر",
+      "صدر"
+    ],
+    "keywords_en": [
+      "chest pain",
+      "chest discomfort",
+      "chest tightness",
+      "chest pressure",
+      "chest heaviness"
+    ],
+    "patterns": [
+      "(chest|chest).*(pain|discomfort|tightness|pressure|heaviness)",
+      "(pain|pressure|tightness).*(chest)"
+    ],
+    "examples_ar": [
+      "عندي ألم في الصدر",
+      "صدر بوجعني",
+      "ضيق في الصدر"
+    ],
+    "examples_en": [
+      "I have chest pain",
+      "Chest feels tight",
+      "Pressure in my chest"
+    ],
+    "examples_palestinian": [
+      "صدر بوجعني",
+      "في ضيق صدر",
+      "صدر نازل عليه"
+    ],
+    "negative_examples": [
+      "عندي ألم في الكتف",
+      "بدي موعد"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "back_pain_info": {
+    "id": "symptom_007",
+    "category": "Symptoms",
+    "subcategory": "Back Pain",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "location",
+      "cause"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity",
+      "location"
+    ],
+    "keywords_ar": [
+      "الم ظهر",
+      "وجع ظهر",
+      "ظهري بوجعني",
+      "آم الظهر",
+      "الم في الظهر",
+      "ظهر"
+    ],
+    "keywords_en": [
+      "back pain",
+      "lower back pain",
+      "backache",
+      "upper back pain",
+      "spinal pain"
+    ],
+    "patterns": [
+      "(back|lower back|upper back|spine).*(pain|ache|hurt)",
+      "(pain|ache).*(back|spine)"
+    ],
+    "examples_ar": [
+      "عندي ألم في الظهر",
+      "ظهري بوجعني",
+      "الم في أسفل الظهر"
+    ],
+    "examples_en": [
+      "I have back pain",
+      "Lower back hurts",
+      "Back pain when sitting"
+    ],
+    "examples_palestinian": [
+      "ظهري بوجعني",
+      "ظهر تعبان",
+      "الم في ضهري"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "dizziness_info": {
+    "id": "symptom_008",
+    "category": "Symptoms",
+    "subcategory": "Dizziness",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity"
+    ],
+    "keywords_ar": [
+      "دوخة",
+      "دوار",
+      "دوخت",
+      "دوران",
+      "عدم اتزان",
+      "راسي داير"
+    ],
+    "keywords_en": [
+      "dizziness",
+      "dizzy",
+      "vertigo",
+      "lightheaded",
+      "unsteady",
+      "balance problem"
+    ],
+    "patterns": [
+      "(dizzy|dizziness|vertigo|lightheaded|unsteady)",
+      "(room spinning|balance problem)"
+    ],
+    "examples_ar": [
+      "عندي دوخة",
+      "دوخت",
+      "حاس بدوار"
+    ],
+    "examples_en": [
+      "I feel dizzy",
+      "Room is spinning",
+      "Vertigo attack"
+    ],
+    "examples_palestinian": [
+      "دوخت",
+      "راسي داير",
+      "الدنيا بتدور فيي"
+    ],
+    "negative_examples": [
+      "عندي ألم في الراس",
+      "بدي طبيب"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "nausea_vomiting": {
+    "id": "symptom_009",
+    "category": "Symptoms",
+    "subcategory": "Nausea",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity"
+    ],
+    "keywords_ar": [
+      "غثيان",
+      "استفراغ",
+      "ترجيع",
+      "قيء",
+      "حاس حالي بستفرغ",
+      "غثيان"
+    ],
+    "keywords_en": [
+      "nausea",
+      "vomiting",
+      "sick to stomach",
+      "queasy",
+      "throwing up",
+      "nauseous"
+    ],
+    "patterns": [
+      "(nausea|nauseous|vomiting|throwing up|sick to stomach)",
+      "(feel sick|gonna vomit|gagging)"
+    ],
+    "examples_ar": [
+      "عندي غثيان",
+      "استفراغ مستمر",
+      "حاس حالي بستفرغ"
+    ],
+    "examples_en": [
+      "I feel nauseous",
+      "Vomiting all day",
+      "Can't stop throwing up"
+    ],
+    "examples_palestinian": [
+      "حاس بالغثيان",
+      "عم بترجع",
+      "بدي استفرغ"
+    ],
+    "negative_examples": [
+      "عندي ألم في البطن",
+      "بدي دكتور"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "fatigue_weakness": {
+    "id": "symptom_010",
+    "category": "Symptoms",
+    "subcategory": "Fatigue",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "associated_symptoms"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity"
+    ],
+    "keywords_ar": [
+      "تعب",
+      "ارهاق",
+      "حاس حالي تعبان",
+      "ضعف",
+      "خمول",
+      "كسل",
+      "هلكان",
+      "مش قادر اعمل شي"
+    ],
+    "keywords_en": [
+      "fatigue",
+      "tired",
+      "exhaustion",
+      "weakness",
+      "lethargy",
+      "low energy",
+      "worn out",
+      "drained"
+    ],
+    "patterns": [
+      "(fatigue|tired|exhausted|weak|lethargic|drained).*(why|what|cause|help)",
+      "(always|constantly|feeling).*(tired|fatigued|exhausted)"
+    ],
+    "examples_ar": [
+      "حاس حالي تعبان",
+      "تعب شديد",
+      "مش قادر اعمل شي"
+    ],
+    "examples_en": [
+      "I'm always tired",
+      "Chronic fatigue",
+      "Feeling weak all the time"
+    ],
+    "examples_palestinian": [
+      "حاس حالي تعبان",
+      "هلكان",
+      "مش قادر اعمل شي"
+    ],
+    "negative_examples": [
+      "عندي ألم",
+      "بدي دكتور"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "skin_rash_info": {
+    "id": "symptom_011",
+    "category": "Symptoms",
+    "subcategory": "Skin",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "location",
+      "duration",
+      "severity",
+      "appearance"
+    ],
+    "follow_up_slots": [
+      "location",
+      "duration",
+      "appearance"
+    ],
+    "keywords_ar": [
+      "طفح جلدي",
+      "حساسية",
+      "حكة",
+      "هرش",
+      "بقع حمراء",
+      "التهاب جلد",
+      "جفاف جلد"
+    ],
+    "keywords_en": [
+      "rash",
+      "skin rash",
+      "itching",
+      "hives",
+      "red spots",
+      "skin irritation",
+      "dry skin",
+      "eczema"
+    ],
+    "patterns": [
+      "(rash|skin rash|hives|itching|red spots).*(what|why|treatment|help)",
+      "(skin|itchy|irritated).*(rash|red|bumpy)"
+    ],
+    "examples_ar": [
+      "عندي طفح جلدي",
+      "حكة شديدة",
+      "بقع حمراء على الجلد"
+    ],
+    "examples_en": [
+      "I have a rash",
+      "Itchy skin",
+      "Red spots on my arm"
+    ],
+    "examples_palestinian": [
+      "عندي حكه",
+      "هرش في جسمي",
+      "بقع حمرا"
+    ],
+    "negative_examples": [
+      "عندي ألم في المعدة",
+      "بدي دكتور"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "anxiety_stress": {
+    "id": "symptom_012",
+    "category": "Symptoms",
+    "subcategory": "Mental Health",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "triggers"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity"
+    ],
+    "keywords_ar": [
+      "قلق",
+      "توتر",
+      "خوف",
+      "نرفزة",
+      "عصبية",
+      "خايف",
+      "مخنوق",
+      "ضيق",
+      "نفسية"
+    ],
+    "keywords_en": [
+      "anxiety",
+      "anxious",
+      "nervous",
+      "stress",
+      "worried",
+      "panic",
+      "fear",
+      "restless"
+    ],
+    "patterns": [
+      "(anxiety|anxious|panic|stress|worried).*(help|what|why|treatment|medication)",
+      "(feeling|having).*(anxiety|panic attack|stress)"
+    ],
+    "examples_ar": [
+      "عندي قلق",
+      "حاس بخوف",
+      "توتر شديد"
+    ],
+    "examples_en": [
+      "I have anxiety",
+      "Feeling anxious all the time",
+      "Panic attacks"
+    ],
+    "examples_palestinian": [
+      "مخنوق",
+      "حاس بضيق",
+      "نفسيتي تعبانه"
+    ],
+    "negative_examples": [
+      "عندي ألم في الصدر",
+      "بدي دكتور قلب"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "insomnia_sleep": {
+    "id": "symptom_013",
+    "category": "Symptoms",
+    "subcategory": "Sleep",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "symptom"
+    ],
+    "optional_entities": [
+      "duration",
+      "severity",
+      "cause"
+    ],
+    "follow_up_slots": [
+      "duration",
+      "severity"
+    ],
+    "keywords_ar": [
+      "أرق",
+      "ارق",
+      "سهر",
+      "مش قادر انام",
+      "نوم متقطع",
+      "النوم مش راضي",
+      "نوم"
+    ],
+    "keywords_en": [
+      "insomnia",
+      "sleepless",
+      "can't sleep",
+      "trouble sleeping",
+      "sleep problem",
+      "wake up at night"
+    ],
+    "patterns": [
+      "(insomnia|sleepless|can't sleep|trouble sleeping).*(help|what|why|treatment)",
+      "(sleep|sleeping).*(problem|difficulty|issue)"
+    ],
+    "examples_ar": [
+      "عندي أرق",
+      "مش قادر انام",
+      "نومي متقطع"
+    ],
+    "examples_en": [
+      "I can't sleep",
+      "Insomnia for weeks",
+      "Wake up multiple times"
+    ],
+    "examples_palestinian": [
+      "مش قادر انام",
+      "النوم مش راضي",
+      "سهر طول الليل"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "find_doctor": {
+    "id": "doctor_001",
+    "category": "Doctor Search",
+    "subcategory": "By Specialty",
+    "priority": 8,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "specialty"
+    ],
+    "optional_entities": [
+      "location",
+      "region",
+      "gender",
+      "language",
+      "insurance",
+      "max_fee",
+      "min_rating",
+      "name"
+    ],
+    "follow_up_slots": [
+      "specialty",
+      "location",
+      "region",
+      "gender",
+      "insurance"
+    ],
+    "keywords_ar": [
+      "دكتور",
+      "طبيب",
+      "طبيبة",
+      "استشاري",
+      "اخصائي",
+      "دكاترة",
+      "أطباء",
+      "قلب",
+      "جلدية",
+      "عظام",
+      "تخصص",
+      "طبيب أعصاب",
+      "أعصاب",
+      "طب القلب",
+      "اطفال",
+      "جراح",
+      "جراحة",
+      "نسائية",
+      "عيادة"
+    ],
+    "keywords_en": [
+      "doctor",
+      "specialist",
+      "cardiologist",
+      "dermatologist",
+      "find doctor",
+      "neurologist",
+      "neurology",
+      "brain doctor",
+      "pediatric doctor",
+      "pediatrician",
+      "general medicine",
+      "surgeon",
+      "gynecologist",
+      "orthopedic",
+      "ophthalmologist",
+      "ENT",
+      "physician"
+    ],
+    "patterns": [
+      "(show|find|search|look for|need|want|recommend) (a |an |the |some |any )?(doctor|specialist|physician)",
+      "(I need|I want|I'm looking for) (a |an |the )?(doctor|specialist|physician)"
+    ],
+    "examples_ar": [
+      "بدي دكتور قلب",
+      "ابحث عن طبيب جلدية",
+      "عندي ألم في ظهري بدي دكتور عظام"
+    ],
+    "examples_en": [
+      "I need a cardiologist",
+      "Find me a dermatologist",
+      "Looking for an eye doctor"
+    ],
+    "examples_palestinian": [
+      "بدي دكتور",
+      "دورلي على طبيب",
+      "مين احسن دكتور قلب"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_list"
+  },
+  "doctor_by_name": {
+    "id": "doctor_002",
+    "category": "Doctor Search",
+    "subcategory": "By Name",
+    "priority": 7,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "name"
+    ],
+    "optional_entities": [
+      "location",
+      "specialty"
+    ],
+    "follow_up_slots": [
+      "location"
+    ],
+    "keywords_ar": [
+      "دكتور",
+      "طبيب",
+      "اسمه",
+      "اسم",
+      "عندي دكتور"
+    ],
+    "keywords_en": [
+      "doctor named",
+      "Dr.",
+      "physician named",
+      "called"
+    ],
+    "patterns": [
+      "(doctor|Dr|physician).*(named|called|by the name)",
+      "(do you know|is there|find).*(doctor|Dr).*(named|called)"
+    ],
+    "examples_ar": [
+      "دكتور أحمد",
+      "طبيب اسمه محمد",
+      "عندك دكتور فلان"
+    ],
+    "examples_en": [
+      "Dr. Smith",
+      "Looking for Dr. Ahmed",
+      "Is there a doctor named John"
+    ],
+    "examples_palestinian": [
+      "دكتور فلان",
+      "في دكتور اسمه"
+    ],
+    "negative_examples": [
+      "بدي دكتور قلب",
+      "أقرب عيادة"
+    ],
+    "response_type": "provider_detail"
+  },
+  "doctor_rating": {
+    "id": "doctor_003",
+    "category": "Doctor Search",
+    "subcategory": "By Rating",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "specialty",
+      "location",
+      "min_rating"
+    ],
+    "follow_up_slots": [
+      "specialty",
+      "location"
+    ],
+    "keywords_ar": [
+      "أفضل دكتور",
+      "احسن طبيب",
+      "تقييم",
+      "مراجعة",
+      "ممتاز",
+      "كفؤ",
+      "مناح"
+    ],
+    "keywords_en": [
+      "best doctor",
+      "top rated",
+      "highest rated",
+      "good reviews",
+      "well reviewed",
+      "recommended doctor"
+    ],
+    "patterns": [
+      "(best|top|highest rated|recommended) (doctor|specialist|physician)",
+      "(doctor|specialist).*(good|excellent|great) (rating|review)"
+    ],
+    "examples_ar": [
+      "أفضل دكتور قلب",
+      "احسن طبيب في نابلس",
+      "دكتور تقييمه عالي"
+    ],
+    "examples_en": [
+      "Best cardiologist in town",
+      "Top rated dermatologist",
+      "Doctor with good reviews"
+    ],
+    "examples_palestinian": [
+      "مين احسن دكتور",
+      "أفضل طبيب"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "provider_list"
+  },
+  "doctor_availability": {
+    "id": "doctor_004",
+    "category": "Doctor Search",
+    "subcategory": "Availability",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "doctor"
+    ],
+    "optional_entities": [
+      "date",
+      "clinic",
+      "time"
+    ],
+    "follow_up_slots": [
+      "date",
+      "time"
+    ],
+    "keywords_ar": [
+      "مواعيد",
+      "موعد",
+      "متاح",
+      "شغال",
+      "دوام",
+      "أوقات",
+      "ساعات العمل"
+    ],
+    "keywords_en": [
+      "available",
+      "availability",
+      "working hours",
+      "schedule",
+      "when is",
+      "office hours",
+      "consultation hours"
+    ],
+    "patterns": [
+      "(when|what time|what days).*(doctor|Dr|available|working)",
+      "(availability|schedule|hours).*(doctor|Dr|clinic)"
+    ],
+    "examples_ar": [
+      "متى مواعيد دكتور القلب",
+      "هل الطبيب متاح اليوم",
+      "أوقات دوام الدكتور"
+    ],
+    "examples_en": [
+      "When is Dr. Smith available",
+      "Doctor's working hours",
+      "Is the doctor available today"
+    ],
+    "examples_palestinian": [
+      "ايمتى الدكتور موجود",
+      "الطبيب شغال اليوم"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب عيادة"
+    ],
+    "response_type": "provider_detail"
+  },
+  "doctor_fee": {
+    "id": "doctor_005",
+    "category": "Doctor Search",
+    "subcategory": "Consultation Fee",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "doctor"
+    ],
+    "optional_entities": [
+      "specialty",
+      "location"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "سعر الكشف",
+      "كشفية",
+      "اجرة الكشف",
+      "كم سعر",
+      "فلوس الكشف",
+      "التكلفة",
+      "قديش الكشف"
+    ],
+    "keywords_en": [
+      "consultation fee",
+      "doctor fee",
+      "how much",
+      "cost",
+      "price",
+      "charges",
+      "examination fee",
+      "how much does",
+      "doctor charges"
+    ],
+    "patterns": [
+      "(how much|what is|fee|cost|price|charges).*(consultation|visit|examination|appointment)",
+      "(consultation|doctor|visit).*(fee|cost|price|charges)"
+    ],
+    "examples_ar": [
+      "كم سعر كشف الدكتور",
+      "كشفية طبيب القلب",
+      "كم اجرة الكشف"
+    ],
+    "examples_en": [
+      "How much is the consultation fee",
+      "Doctor's charges",
+      "Cost of visit"
+    ],
+    "examples_palestinian": [
+      "قديش الكشف",
+      "كم سعر الكشف",
+      "قدش الكشفية"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "provider_detail"
+  },
+  "doctor_language": {
+    "id": "doctor_006",
+    "category": "Doctor Search",
+    "subcategory": "Language",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "language"
+    ],
+    "optional_entities": [
+      "specialty",
+      "location"
+    ],
+    "follow_up_slots": [
+      "specialty",
+      "location"
+    ],
+    "keywords_ar": [
+      "دكتور يتحدث",
+      "طبيب انجليزي",
+      "بالإنجليزية",
+      "لغة",
+      "طبيب عربي",
+      "دكتور اجنبي"
+    ],
+    "keywords_en": [
+      "speaks",
+      "english speaking",
+      "arabic speaking",
+      "language",
+      "fluent in",
+      "doctor who speaks"
+    ],
+    "patterns": [
+      "(doctor|physician|specialist).*(speaks|speaking|fluent in)",
+      "(speaks|speaking|fluent in).*(arabic|english|language)"
+    ],
+    "examples_ar": [
+      "دكتور يتحدث الإنجليزية",
+      "طبيب عربي",
+      "دكتور بيعرف انجليزي"
+    ],
+    "examples_en": [
+      "English speaking doctor",
+      "Doctor who speaks Arabic",
+      "Arabic speaking cardiologist"
+    ],
+    "examples_palestinian": [
+      "دكتور بحكي انجليزي",
+      "طبيب عربي"
+    ],
+    "negative_examples": [
+      "بدي دكتور قلب",
+      "أقرب عيادة"
+    ],
+    "response_type": "provider_list"
+  },
+  "doctor_gender": {
+    "id": "doctor_007",
+    "category": "Doctor Search",
+    "subcategory": "Gender",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "gender"
+    ],
+    "optional_entities": [
+      "specialty",
+      "location"
+    ],
+    "follow_up_slots": [
+      "specialty",
+      "location"
+    ],
+    "keywords_ar": [
+      "دكتورة",
+      "طبيبة",
+      "دكتور رجال",
+      "طبيب نساء",
+      "دكتورة نسائية"
+    ],
+    "keywords_en": [
+      "female doctor",
+      "woman doctor",
+      "male doctor",
+      "lady doctor",
+      "women doctor"
+    ],
+    "patterns": [
+      "(female|woman|lady|male).*(doctor|physician|specialist)",
+      "(doctor|physician|specialist).*(female|woman|lady|male)"
+    ],
+    "examples_ar": [
+      "بدي دكتورة",
+      "طبيبة نسائية",
+      "دكتور رجال"
+    ],
+    "examples_en": [
+      "I need a female doctor",
+      "Looking for a woman doctor"
+    ],
+    "examples_palestinian": [
+      "بدي دكتورة",
+      "طبيبة حرمه"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب عيادة"
+    ],
+    "response_type": "provider_list"
+  },
+  "find_nearest": {
+    "id": "clinic_001",
+    "category": "Clinic Information",
+    "subcategory": "Nearest",
+    "priority": 8,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "type",
+      "location"
+    ],
+    "optional_entities": [
+      "radius",
+      "insurance",
+      "open_now",
+      "rating",
+      "service"
+    ],
+    "follow_up_slots": [
+      "type",
+      "location",
+      "radius"
+    ],
+    "keywords_ar": [
+      "أقرب",
+      "قريب مني",
+      "حولي",
+      "جنبي",
+      "أقرب صيدلية",
+      "أقرب مستشفى",
+      "أقرب عيادة",
+      "صيدلية قريبة",
+      "مستشفى قريب",
+      "عيادة قريبة",
+      "بالقرب",
+      "جوار",
+      "مكان",
+      "موجود قريب",
+      "دكتور قريب",
+      "طوارئ",
+      "مستوصف",
+      "مركز صحي",
+      "مختبر",
+      "معمل"
+    ],
+    "keywords_en": [
+      "nearest",
+      "near me",
+      "closest",
+      "nearby",
+      "nearest clinic",
+      "nearest pharmacy",
+      "nearest hospital",
+      "closest clinic",
+      "closest pharmacy",
+      "closest hospital",
+      "around me",
+      "close to me",
+      "emergency room",
+      "lab near me",
+      "pharmacy near me"
+    ],
+    "patterns": [
+      "(where|find|show|locate|search) (the |a |an |any )?(nearest|closest|nearby|closest to me)",
+      "(is there|are there) (a |an |any )?(clinic|pharmacy|hospital|doctor).*(near|close|around)"
+    ],
+    "examples_ar": [
+      "أقرب عيادة",
+      "أقرب صيدلية مني",
+      "في مستشفى قريب",
+      "دورلي على أقرب مختبر"
+    ],
+    "examples_en": [
+      "Nearest clinic",
+      "Pharmacy near me",
+      "Is there a hospital nearby"
+    ],
+    "examples_palestinian": [
+      "أقرب عيادة",
+      "في صيدلية قريبة",
+      "دورلي على مستشفى قريب"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور قلب"
+    ],
+    "response_type": "provider_list"
+  },
+  "clinic_info": {
+    "id": "clinic_002",
+    "category": "Clinic Information",
+    "subcategory": "Details",
+    "priority": 7,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [
+      "location",
+      "service",
+      "doctor"
+    ],
+    "follow_up_slots": [
+      "clinic",
+      "location"
+    ],
+    "keywords_ar": [
+      "عيادة",
+      "مركز طبي",
+      "مستوصف",
+      "عن العيادة",
+      "معلومات العيادة",
+      "بيانات العيادة"
+    ],
+    "keywords_en": [
+      "clinic",
+      "medical center",
+      "health center",
+      "about clinic",
+      "clinic information",
+      "clinic details"
+    ],
+    "patterns": [
+      "(tell me|what is|show|about) (the |this |that )?(clinic|medical center)",
+      "(clinic|medical center).*(information|details|address|phone|hours)"
+    ],
+    "examples_ar": [
+      "معلومات عن عيادة",
+      "وين موقع العيادة",
+      "رقم تلفون العيادة"
+    ],
+    "examples_en": [
+      "Tell me about this clinic",
+      "Clinic address",
+      "Clinic phone number"
+    ],
+    "examples_palestinian": [
+      "عطيني معلومات العيادة",
+      "وين العيادة",
+      "تلفون العيادة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "clinic_address": {
+    "id": "clinic_003",
+    "category": "Clinic Information",
+    "subcategory": "Address",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [
+      "location"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "عنوان",
+      "مكان",
+      "موقع",
+      "الموقع",
+      "وين",
+      "أين",
+      "في أي منطقة",
+      "عنوان العيادة",
+      "موقع العيادة",
+      "دلني على العيادة"
+    ],
+    "keywords_en": [
+      "address",
+      "location",
+      "where is",
+      "located",
+      "directions to",
+      "find"
+    ],
+    "patterns": [
+      "(where|address|location).*(clinic|medical center)",
+      "(clinic|medical center).*(address|located|where)"
+    ],
+    "examples_ar": [
+      "وين موقع العيادة",
+      "عنوان العيادة",
+      "أين تقع العيادة"
+    ],
+    "examples_en": [
+      "What is the clinic address",
+      "Where is the clinic located",
+      "Clinic location"
+    ],
+    "examples_palestinian": [
+      "وين العيادة",
+      "في أي منطقة العيادة",
+      "دلني على العيادة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "clinic_phone": {
+    "id": "clinic_004",
+    "category": "Clinic Information",
+    "subcategory": "Contact",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "تلفون",
+      "هاتف",
+      "تليفون",
+      "رقم",
+      "جوال",
+      "موبايل",
+      "واتساب",
+      "واتس"
+    ],
+    "keywords_en": [
+      "phone",
+      "telephone",
+      "number",
+      "contact",
+      "mobile",
+      "cell",
+      "whatsapp"
+    ],
+    "patterns": [
+      "(phone|telephone|number|contact|whatsapp).*(clinic|medical center)",
+      "(clinic|medical center).*(phone|telephone|number|contact)"
+    ],
+    "examples_ar": [
+      "رقم تلفون العيادة",
+      "هاتف العيادة",
+      "واتساب العيادة"
+    ],
+    "examples_en": [
+      "Clinic phone number",
+      "Contact number",
+      "What's the clinic's phone"
+    ],
+    "examples_palestinian": [
+      "تلفون العيادة",
+      "رقم العيادة",
+      "واتس العيادة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "clinic_hours": {
+    "id": "clinic_005",
+    "category": "Clinic Information",
+    "subcategory": "Working Hours",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [
+      "day"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "ساعات العمل",
+      "دوام",
+      "وقت العمل",
+      "يفتح",
+      "يقفل",
+      "مفتوح",
+      "ساعات الدوام",
+      "اوقات العمل",
+      "اوقات الدوام",
+      "متى تفتح"
+    ],
+    "keywords_en": [
+      "working hours",
+      "opening hours",
+      "business hours",
+      "open",
+      "close",
+      "hours of operation",
+      "when open"
+    ],
+    "patterns": [
+      "(when|what time|hours).*(clinic|medical center).*(open|close)",
+      "(clinic|medical center).*(hours|open|close|operating)"
+    ],
+    "examples_ar": [
+      "ساعات دوام العيادة",
+      "متى تفتح العيادة",
+      "هل العيادة مفتوحة اليوم"
+    ],
+    "examples_en": [
+      "What are the clinic hours",
+      "When does the clinic open",
+      "Is the clinic open on Friday"
+    ],
+    "examples_palestinian": [
+      "ايمتى بتفتح العيادة",
+      "ساعات العمل",
+      "العيادة مفتوحة اليوم"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "clinic_services": {
+    "id": "clinic_006",
+    "category": "Clinic Information",
+    "subcategory": "Services",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [
+      "service"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "خدمات",
+      "الخدمات",
+      "ماذا تقدم",
+      "تخصصات",
+      "فحوصات",
+      "علاجات",
+      "خدمات العيادة",
+      "ماذا تقدمون"
+    ],
+    "keywords_en": [
+      "services",
+      "offerings",
+      "treatments",
+      "procedures",
+      "specialties",
+      "what services"
+    ],
+    "patterns": [
+      "(what|which).*(services|treatments|procedures).*(clinic|medical center)",
+      "(clinic|medical center).*(services|offer|provide|treatments)"
+    ],
+    "examples_ar": [
+      "ما هي خدمات العيادة",
+      "ماذا تقدم العيادة",
+      "الخدمات المتوفرة"
+    ],
+    "examples_en": [
+      "What services does the clinic offer",
+      "Clinic services",
+      "Available treatments"
+    ],
+    "examples_palestinian": [
+      "شو خدمات العيادة",
+      "ماذا في عندهم"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "clinic_insurance": {
+    "id": "clinic_007",
+    "category": "Clinic Information",
+    "subcategory": "Insurance",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [
+      "insurance"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "تأمين",
+      "تامين",
+      "ضمان",
+      "شركة تأمين",
+      "بوليصة",
+      "تأمين صحي",
+      "بتقبل تأمين",
+      "شركات التأمين"
+    ],
+    "keywords_en": [
+      "insurance",
+      "health insurance",
+      "accepted insurance",
+      "insurance plan",
+      "coverage"
+    ],
+    "patterns": [
+      "(insurance|coverage).*(clinic|medical center)",
+      "(clinic|medical center).*(insurance|accepted|cover)"
+    ],
+    "examples_ar": [
+      "هل العيادة بتقبل التأمين",
+      "ما هي شركات التأمين",
+      "تأمين صحي مقبول"
+    ],
+    "examples_en": [
+      "Do you accept insurance",
+      "What insurance is accepted",
+      "Insurance coverage"
+    ],
+    "examples_palestinian": [
+      "بتقبلو تأمين",
+      "شو التأمينات المقبولة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "clinic_doctors": {
+    "id": "clinic_008",
+    "category": "Clinic Information",
+    "subcategory": "Staff",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [
+      "specialty"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "دكاترة",
+      "أطباء",
+      "من يعمل",
+      "طبيب في العيادة",
+      "الأطباء",
+      "الكادر الطبي",
+      "دكاترة العيادة"
+    ],
+    "keywords_en": [
+      "doctors",
+      "physicians",
+      "who works",
+      "medical staff",
+      "doctors at",
+      "specialists"
+    ],
+    "patterns": [
+      "(who|which|what).*(doctors|physicians|specialists).*(clinic|medical center)",
+      "(clinic|medical center).*(doctors|physicians|staff)"
+    ],
+    "examples_ar": [
+      "من هم الأطباء في العيادة",
+      "دكاترة العيادة",
+      "ما هي التخصصات في العيادة"
+    ],
+    "examples_en": [
+      "Which doctors work at this clinic",
+      "Clinic medical staff",
+      "Specialists available"
+    ],
+    "examples_palestinian": [
+      "مين الشغالين في العيادة",
+      "دكاترة العيادة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_list"
+  },
+  "clinic_parking": {
+    "id": "clinic_009",
+    "category": "Clinic Information",
+    "subcategory": "Parking",
+    "priority": 4,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "clinic"
+    ],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "موقف",
+      "موقف سيارات",
+      "بارك",
+      "جراج",
+      "ركن",
+      "صف سيارات"
+    ],
+    "keywords_en": [
+      "parking",
+      "car park",
+      "parking lot",
+      "parking space",
+      "valet"
+    ],
+    "patterns": [
+      "(parking|car park).*(clinic|medical center)",
+      "(clinic|medical center).*(parking|park)"
+    ],
+    "examples_ar": [
+      "هل يوجد موقف سيارات",
+      "موقف العيادة",
+      "مكان للركن"
+    ],
+    "examples_en": [
+      "Is there parking",
+      "Parking available",
+      "Clinic parking"
+    ],
+    "examples_palestinian": [
+      "في موقف",
+      "مكان للسيارة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "find_hospital": {
+    "id": "hospital_001",
+    "category": "Hospital Information",
+    "subcategory": "Search",
+    "priority": 7,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "location",
+      "type",
+      "department",
+      "service"
+    ],
+    "follow_up_slots": [
+      "location",
+      "type"
+    ],
+    "keywords_ar": [
+      "مستشفى",
+      "مستشفيات",
+      "مشفى",
+      "مشفي",
+      "المستشفى"
+    ],
+    "keywords_en": [
+      "hospital",
+      "hospitals",
+      "medical center",
+      "healthcare facility"
+    ],
+    "patterns": [
+      "(find|search|show|look for|need).*(hospital|medical center)",
+      "(hospital|medical center).*(near|in|at)"
+    ],
+    "examples_ar": [
+      "ابحث عن مستشفى",
+      "في مستشفى قريب",
+      "أقرب مستشفى"
+    ],
+    "examples_en": [
+      "Find a hospital",
+      "Is there a hospital nearby",
+      "Nearest hospital"
+    ],
+    "examples_palestinian": [
+      "دورلي على مستشفى",
+      "في مستشفى قريب"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_list"
+  },
+  "hospital_departments": {
+    "id": "hospital_002",
+    "category": "Hospital Information",
+    "subcategory": "Departments",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "hospital"
+    ],
+    "optional_entities": [
+      "department"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "أقسام",
+      "اقسام",
+      "أقسام المستشفى",
+      "عيادات المستشفى",
+      "تخصصات",
+      "وحدات"
+    ],
+    "keywords_en": [
+      "departments",
+      "wards",
+      "units",
+      "sections",
+      "divisions",
+      "specialties"
+    ],
+    "patterns": [
+      "(what|which|departments|wards|units).*(hospital|medical center)",
+      "(hospital|medical center).*(departments|wards|units|sections)"
+    ],
+    "examples_ar": [
+      "ما هي أقسام المستشفى",
+      "قسم الطوارئ",
+      "هل يوجد قسم للعظام"
+    ],
+    "examples_en": [
+      "Hospital departments",
+      "Does the hospital have a cardiology department",
+      "Emergency department"
+    ],
+    "examples_palestinian": [
+      "شو أقسام المستشفى",
+      "في قسم قلب"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "hospital_emergency": {
+    "id": "hospital_003",
+    "category": "Hospital Information",
+    "subcategory": "Emergency Department",
+    "priority": 8,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "location"
+    ],
+    "follow_up_slots": [
+      "location"
+    ],
+    "keywords_ar": [
+      "طوارئ مستشفى",
+      "قسم طوارئ",
+      "غرفة طوارئ",
+      "اسعاف مستشفى",
+      "طوارئ",
+      "قسم الطوارئ",
+      "غرفة الاسعاف"
+    ],
+    "keywords_en": [
+      "emergency room",
+      "ER",
+      "emergency department",
+      "urgent care",
+      "emergency ward"
+    ],
+    "patterns": [
+      "(emergency|ER|urgent care).*(hospital|department|room|ward)",
+      "(hospital|medical center).*(emergency|ER)"
+    ],
+    "examples_ar": [
+      "قسم الطوارئ في المستشفى",
+      "غرفة الطوارئ",
+      "طوارئ المستشفى"
+    ],
+    "examples_en": [
+      "Emergency room location",
+      "Hospital ER",
+      "Emergency department hours"
+    ],
+    "examples_palestinian": [
+      "طوارئ المستشفى",
+      "غرفة الاسعاف"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "provider_detail"
+  },
+  "find_pharmacy": {
+    "id": "pharmacy_001",
+    "category": "Pharmacy",
+    "subcategory": "Search",
+    "priority": 7,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "location",
+      "open_now",
+      "insurance"
+    ],
+    "follow_up_slots": [
+      "location"
+    ],
+    "keywords_ar": [
+      "صيدلية",
+      "صيدليات",
+      "دواء",
+      "صيدلي",
+      "صيدلانية",
+      "روشتة"
+    ],
+    "keywords_en": [
+      "pharmacy",
+      "pharmacies",
+      "drug store",
+      "chemist",
+      "dispensary"
+    ],
+    "patterns": [
+      "(find|search|show|look for|need).*(pharmacy|drug store)",
+      "(pharmacy|drug store).*(near|in|at|close)"
+    ],
+    "examples_ar": [
+      "أقرب صيدلية",
+      "صيدلية قريبة مني",
+      "ابحث عن صيدلية"
+    ],
+    "examples_en": [
+      "Nearest pharmacy",
+      "Pharmacy near me",
+      "Find a pharmacy"
+    ],
+    "examples_palestinian": [
+      "دورلي على صيدلية",
+      "أقرب صيدلية"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "provider_list"
+  },
+  "pharmacy_24h": {
+    "id": "pharmacy_002",
+    "category": "Pharmacy",
+    "subcategory": "24 Hours",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "location"
+    ],
+    "follow_up_slots": [
+      "location"
+    ],
+    "keywords_ar": [
+      "صيدلية مفتوحة",
+      "صيدلية 24",
+      "صيدلية نهار",
+      "صيدلية ليل",
+      "صيدلية 24 ساعة"
+    ],
+    "keywords_en": [
+      "24 hour pharmacy",
+      "pharmacy open now",
+      "all night pharmacy",
+      "late night pharmacy",
+      "open 24 hours"
+    ],
+    "patterns": [
+      "(24 hour|24h|all night|open now|late night).*(pharmacy|drug store)",
+      "(pharmacy|drug store).*(24 hour|24h|open now|all night)"
+    ],
+    "examples_ar": [
+      "صيدلية 24 ساعة",
+      "صيدلية مفتوحة الآن",
+      "صيدلية ليلية"
+    ],
+    "examples_en": [
+      "24 hour pharmacy near me",
+      "Pharmacy open now",
+      "Late night pharmacy"
+    ],
+    "examples_palestinian": [
+      "صيدلية مفتوحة هلأ",
+      "صيدلية 24"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب عيادة"
+    ],
+    "response_type": "provider_list"
+  },
+  "pharmacy_medication": {
+    "id": "pharmacy_003",
+    "category": "Pharmacy",
+    "subcategory": "Medication Availability",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "medication"
+    ],
+    "optional_entities": [
+      "location"
+    ],
+    "follow_up_slots": [
+      "medication",
+      "location"
+    ],
+    "keywords_ar": [
+      "دواء",
+      "علاج",
+      "حبوب",
+      "دواء متوفر",
+      "في صيدلية",
+      "عندهم دواء"
+    ],
+    "keywords_en": [
+      "medicine",
+      "medication",
+      "available",
+      "in stock",
+      "do you have",
+      "carry"
+    ],
+    "patterns": [
+      "(do you have|is there|available|in stock).*(medicine|medication|drug)",
+      "(medicine|medication|drug).*(available|in stock)"
+    ],
+    "examples_ar": [
+      "هل في صيدلية عندها بانادول",
+      "دواء متوفر",
+      "في دواء"
+    ],
+    "examples_en": [
+      "Do you have this medication",
+      "Is this medicine available",
+      "Which pharmacy has this drug"
+    ],
+    "examples_palestinian": [
+      "في دواء",
+      "عندهم بانادول"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب عيادة"
+    ],
+    "response_type": "provider_list"
+  },
+  "show_route": {
+    "id": "nav_001",
+    "category": "Navigation",
+    "subcategory": "Directions",
+    "priority": 7,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "destination"
+    ],
+    "optional_entities": [
+      "origin",
+      "mode",
+      "departure_time"
+    ],
+    "follow_up_slots": [
+      "destination",
+      "origin",
+      "mode"
+    ],
+    "keywords_ar": [
+      "حددلي",
+      "حددلي المسار",
+      "ارسم المسار",
+      "طريق",
+      "كيف اوصل",
+      "كيف أصل",
+      "اوصلني",
+      "وصله",
+      "اتجه إلى",
+      "خذني إلى",
+      "اوجد الطريق",
+      "المسار",
+      "دليل",
+      "ارشاد",
+      "دلني"
+    ],
+    "keywords_en": [
+      "show route",
+      "show me the route",
+      "draw route",
+      "get directions",
+      "how to get there",
+      "navigate",
+      "take me to",
+      "directions",
+      "find route",
+      "show path",
+      "show directions",
+      "guide me to",
+      "how do I get",
+      "how to get",
+      "directions to"
+    ],
+    "patterns": [
+      "^(how (can I|do I|to) get)",
+      "^(navigate|route|directions) (to|from)",
+      "^(take|bring|lead|guide) me (to|towards)"
+    ],
+    "examples_ar": [
+      "كيف اوصل للعيادة",
+      "ارسم المسار",
+      "دلني على المستشفى"
+    ],
+    "examples_en": [
+      "How do I get there",
+      "Show me the route",
+      "Directions to the clinic"
+    ],
+    "examples_palestinian": [
+      "دلني",
+      "اوصلني",
+      "كيف اوصل"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "navigation_route"
+  },
+  "travel_time": {
+    "id": "nav_002",
+    "category": "Navigation",
+    "subcategory": "Travel Time",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "destination"
+    ],
+    "optional_entities": [
+      "origin",
+      "mode"
+    ],
+    "follow_up_slots": [
+      "destination",
+      "origin"
+    ],
+    "keywords_ar": [
+      "مدة الوصول",
+      "كم يستغرق",
+      "وقت",
+      "مشوار",
+      "بعد",
+      "كم دقيقة",
+      "المسافة",
+      "قديش المشوار"
+    ],
+    "keywords_en": [
+      "travel time",
+      "how long",
+      "estimated time",
+      "duration",
+      "how far",
+      "distance",
+      "minutes away"
+    ],
+    "patterns": [
+      "(how long|travel time|duration|estimated time|how far).*(to|from|get|reach)",
+      "(time|minutes|distance).*(to|from|clinic|hospital|pharmacy)"
+    ],
+    "examples_ar": [
+      "كم يستغرق الوصول",
+      "مدة المشوار",
+      "كم دقيقة للعيادة"
+    ],
+    "examples_en": [
+      "How long to get there",
+      "Travel time to the clinic",
+      "Distance from here"
+    ],
+    "examples_palestinian": [
+      "قديش المشوار",
+      "كم دقيقة",
+      "بعيد ولا قريب"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "navigation_route"
+  },
+  "walking_route": {
+    "id": "nav_003",
+    "category": "Navigation",
+    "subcategory": "Walking",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "destination"
+    ],
+    "optional_entities": [
+      "origin"
+    ],
+    "follow_up_slots": [
+      "destination"
+    ],
+    "keywords_ar": [
+      "مشي",
+      "على الاقدام",
+      "مشوار مشي",
+      "أقدر امشي",
+      "مشيا"
+    ],
+    "keywords_en": [
+      "walk",
+      "walking",
+      "on foot",
+      "walkable",
+      "pedestrian",
+      "walk there"
+    ],
+    "patterns": [
+      "(walk|walking|on foot|pedestrian).*(to|from|route|directions)",
+      "(can I|how to).*(walk|walking).*(to|there)"
+    ],
+    "examples_ar": [
+      "كم مدة المشي",
+      "أقدر امشي",
+      "المسافة مشياً"
+    ],
+    "examples_en": [
+      "Walking distance",
+      "Can I walk there",
+      "Walking route"
+    ],
+    "examples_palestinian": [
+      "بعدها مشي",
+      "أقدر امشي"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "navigation_route"
+  },
+  "driving_route": {
+    "id": "nav_004",
+    "category": "Navigation",
+    "subcategory": "Driving",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "destination"
+    ],
+    "optional_entities": [
+      "origin"
+    ],
+    "follow_up_slots": [
+      "destination"
+    ],
+    "keywords_ar": [
+      "سيارة",
+      "بالسيارة",
+      "سواقة",
+      "مشوار سيارة",
+      "بالمشوار"
+    ],
+    "keywords_en": [
+      "drive",
+      "driving",
+      "by car",
+      "car route",
+      "driving directions"
+    ],
+    "patterns": [
+      "(drive|driving|by car).*(to|from|route|directions)",
+      "(how long|distance).*(drive|driving|car)"
+    ],
+    "examples_ar": [
+      "المسافة بالسيارة",
+      "مدة السواقة",
+      "مشوار السيارة"
+    ],
+    "examples_en": [
+      "Driving distance",
+      "How long by car",
+      "Driving directions"
+    ],
+    "examples_palestinian": [
+      "قديش بالسيارة",
+      "مشوار السيارة"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "navigation_route"
+  },
+  "book_appointment": {
+    "id": "appt_001",
+    "category": "Appointments",
+    "subcategory": "Book",
+    "priority": 8,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "doctor",
+      "date",
+      "time"
+    ],
+    "optional_entities": [
+      "clinic",
+      "patient_name",
+      "reason",
+      "insurance"
+    ],
+    "follow_up_slots": [
+      "doctor",
+      "date",
+      "time",
+      "clinic",
+      "reason"
+    ],
+    "keywords_ar": [
+      "حجز",
+      "موعد",
+      "احجز",
+      "حدد موعد",
+      "حجز موعد",
+      "موعد جديد",
+      "كشف",
+      "حجز عيادة",
+      "بغيت موعد"
+    ],
+    "keywords_en": [
+      "appointment",
+      "book",
+      "reserve",
+      "schedule",
+      "make an appointment",
+      "book a visit",
+      "set up a meeting",
+      "book a consultation"
+    ],
+    "patterns": [
+      "(book|schedule|make|set|arrange) (an |a |the )?(appointment|visit|meeting)",
+      "(I want|I need|I'd like) (to book|to schedule|to make) (an |a )?(appointment|visit)"
+    ],
+    "examples_ar": [
+      "بدي احجز موعد",
+      "حجز عند دكتور",
+      "موعد جديد"
+    ],
+    "examples_en": [
+      "I want to book an appointment",
+      "Schedule a visit",
+      "Make an appointment"
+    ],
+    "examples_palestinian": [
+      "بدي احجز",
+      "حجز موعد",
+      "بغيت موعد"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "أقرب صيدلية"
+    ],
+    "response_type": "appointment_action"
+  },
+  "cancel_appointment": {
+    "id": "appt_002",
+    "category": "Appointments",
+    "subcategory": "Cancel",
+    "priority": 7,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "appointment"
+    ],
+    "optional_entities": [
+      "reason"
+    ],
+    "follow_up_slots": [
+      "appointment",
+      "reason"
+    ],
+    "keywords_ar": [
+      "إلغاء",
+      "الغاء",
+      "إلغاء موعد",
+      "الغاء موعد",
+      "إلغاء الحجز",
+      "الغاء الحجز",
+      "بطل"
+    ],
+    "keywords_en": [
+      "cancel",
+      "cancellation",
+      "cancel appointment",
+      "cancel booking",
+      "cancel visit"
+    ],
+    "patterns": [
+      "(cancel|cancellation).*(appointment|booking|visit|reservation)",
+      "(I want|I need|I'd like) (to cancel|to cancel) (my |the )?(appointment|booking)"
+    ],
+    "examples_ar": [
+      "بدي ألغي الموعد",
+      "إلغاء الحجز",
+      "بطل الموعد"
+    ],
+    "examples_en": [
+      "I want to cancel my appointment",
+      "Cancel the booking",
+      "Cancel my visit"
+    ],
+    "examples_palestinian": [
+      "بدي ألغي الموعد",
+      "بطل الموعد"
+    ],
+    "negative_examples": [
+      "بدي احجز",
+      "عندي صداع"
+    ],
+    "response_type": "appointment_action"
+  },
+  "reschedule_appointment": {
+    "id": "appt_003",
+    "category": "Appointments",
+    "subcategory": "Reschedule",
+    "priority": 7,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "appointment",
+      "date"
+    ],
+    "optional_entities": [
+      "time",
+      "reason"
+    ],
+    "follow_up_slots": [
+      "date",
+      "time"
+    ],
+    "keywords_ar": [
+      "إعادة جدولة",
+      "تغيير الموعد",
+      "تأجيل",
+      "تقديم موعد",
+      "تعديل الموعد",
+      "تغيير تاريخ"
+    ],
+    "keywords_en": [
+      "reschedule",
+      "change appointment",
+      "change date",
+      "postpone",
+      "move appointment",
+      "change time"
+    ],
+    "patterns": [
+      "(reschedule|change|postpone|move).*(appointment|booking|date|time)",
+      "(I want|I need|I'd like) (to reschedule|to change|to move) (my |the )?(appointment|booking)"
+    ],
+    "examples_ar": [
+      "بدي أغير الموعد",
+      "تأجيل الموعد",
+      "تغيير تاريخ الكشف"
+    ],
+    "examples_en": [
+      "I need to reschedule",
+      "Change my appointment date",
+      "Postpone my visit"
+    ],
+    "examples_palestinian": [
+      "بدي أغير الموعد",
+      "أجل الموعد"
+    ],
+    "negative_examples": [
+      "بدي احجز",
+      "عندي صداع"
+    ],
+    "response_type": "appointment_action"
+  },
+  "appointment_status": {
+    "id": "appt_004",
+    "category": "Appointments",
+    "subcategory": "Status",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "appointment"
+    ],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "حالة الموعد",
+      "تأكيد موعد",
+      "موعدي",
+      "هل الموعد",
+      "تأكيد الحجز",
+      "حالة موعدي",
+      "موعدي مؤكد"
+    ],
+    "keywords_en": [
+      "appointment status",
+      "appointment confirmation",
+      "my appointment",
+      "check appointment",
+      "appointment details"
+    ],
+    "patterns": [
+      "(status|check|confirm|details).*(appointment|booking)",
+      "(my|the).*(appointment|booking).*(status|confirmed|when)"
+    ],
+    "examples_ar": [
+      "حالة موعدي",
+      "هل الموعد مؤكد",
+      "تأكيد الحجز"
+    ],
+    "examples_en": [
+      "What is my appointment status",
+      "Is my appointment confirmed",
+      "Check my booking"
+    ],
+    "examples_palestinian": [
+      "موعدي أكيد",
+      "حالة الحجز"
+    ],
+    "negative_examples": [
+      "بدي احجز",
+      "عندي صداع"
+    ],
+    "response_type": "appointment_action"
+  },
+  "medication_info": {
+    "id": "med_001",
+    "category": "Medication",
+    "subcategory": "General Info",
+    "priority": 7,
+    "confidence_threshold": 0.3,
+    "required_entities": [
+      "medication"
+    ],
+    "optional_entities": [
+      "dosage",
+      "frequency",
+      "duration"
+    ],
+    "follow_up_slots": [
+      "medication",
+      "dosage"
+    ],
+    "keywords_ar": [
+      "دواء",
+      "بانادول",
+      "جرعة",
+      "علاج",
+      "حبوب",
+      "استخدام",
+      "استعمال",
+      "دواء جديد",
+      "أدوية",
+      "وصفة",
+      "مفعول"
+    ],
+    "keywords_en": [
+      "medicine",
+      "medication",
+      "panadol",
+      "dose",
+      "drug",
+      "used for",
+      "what is this medicine used for",
+      "pill",
+      "tablet",
+      "prescription",
+      "medication information"
+    ],
+    "patterns": [
+      "(what is|tell me about|information about) (the |this |that )?(medication|medicine|drug|pill)",
+      "(how (much|many|often) (should|can|do I) (take|use|consume))"
+    ],
+    "examples_ar": [
+      "ما هو هذا الدواء",
+      "معلومات عن بانادول",
+      "استخدامات هذا العلاج"
+    ],
+    "examples_en": [
+      "Tell me about this medication",
+      "What is paracetamol used for",
+      "Information about ibuprofen"
+    ],
+    "examples_palestinian": [
+      "شو هذا الدواء",
+      "عطيني معلومات عن الدواء"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medication_info"
+  },
+  "medication_dosage": {
+    "id": "med_002",
+    "category": "Medication",
+    "subcategory": "Dosage",
+    "priority": 7,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "medication"
+    ],
+    "optional_entities": [
+      "age",
+      "weight",
+      "condition"
+    ],
+    "follow_up_slots": [
+      "medication",
+      "age"
+    ],
+    "keywords_ar": [
+      "جرعة",
+      "كم مرة",
+      "كم حبة",
+      "طريقة الاستخدام",
+      "كيف استخدم",
+      "متى اخذ",
+      "الجرعة المناسبة"
+    ],
+    "keywords_en": [
+      "dosage",
+      "dose",
+      "how much",
+      "how many",
+      "how often",
+      "how to take",
+      "recommended dose",
+      "proper dosage"
+    ],
+    "patterns": [
+      "(dosage|dose|how much|how many|how often).*(medication|medicine|drug|pill|tablet)",
+      "(what is|what's|recommended|proper).*(dosage|dose).*(for|of)"
+    ],
+    "examples_ar": [
+      "كم جرعة البانادول",
+      "طريقة استخدام الدواء",
+      "كم مرة في اليوم"
+    ],
+    "examples_en": [
+      "What is the dosage for adults",
+      "How many pills should I take",
+      "How often to take this medicine"
+    ],
+    "examples_palestinian": [
+      "قديش الجرعة",
+      "كم حبة باليوم"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medication_info"
+  },
+  "medication_side_effects": {
+    "id": "med_003",
+    "category": "Medication",
+    "subcategory": "Side Effects",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "medication"
+    ],
+    "optional_entities": [],
+    "follow_up_slots": [
+      "medication"
+    ],
+    "keywords_ar": [
+      "اعراض جانبية",
+      "آثار جانبية",
+      "مضاعفات",
+      "أضرار",
+      "تأثيرات",
+      "مخاطر",
+      "أضرار الدواء"
+    ],
+    "keywords_en": [
+      "side effects",
+      "adverse effects",
+      "reactions",
+      "complications",
+      "risks",
+      "contraindications"
+    ],
+    "patterns": [
+      "(side effects|adverse effects|reactions|risks).*(medication|medicine|drug|pill)",
+      "(what are|what is|tell me).*(side effects|adverse effects).*(of|for)"
+    ],
+    "examples_ar": [
+      "ما هي الأعراض الجانبية",
+      "آثار البانادول الجانبية",
+      "مضاعفات هذا الدواء"
+    ],
+    "examples_en": [
+      "What are the side effects",
+      "Side effects of ibuprofen",
+      "Risks of this medication"
+    ],
+    "examples_palestinian": [
+      "شو أضرار الدواء",
+      "آثار جانبية"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "medication_info"
+  },
+  "medication_interaction": {
+    "id": "med_004",
+    "category": "Medication",
+    "subcategory": "Drug Interaction",
+    "priority": 7,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "medication"
+    ],
+    "optional_entities": [
+      "other_medication"
+    ],
+    "follow_up_slots": [
+      "medication",
+      "other_medication"
+    ],
+    "keywords_ar": [
+      "تداخل دوائي",
+      "تفاعل دوائي",
+      "تعارض أدوية",
+      "هل يتعارض",
+      "مع أدوية أخرى",
+      "مع دواء"
+    ],
+    "keywords_en": [
+      "drug interaction",
+      "medication interaction",
+      "interaction with",
+      "conflict with",
+      "combine with",
+      "take with"
+    ],
+    "patterns": [
+      "(interaction|interact|conflict|combine).*(medication|medicine|drug)",
+      "(can I|is it safe).*(take|combine|mix).*(with|and)"
+    ],
+    "examples_ar": [
+      "هل يتعارض البانادول مع الضغط",
+      "تفاعل دوائي",
+      "هل أستطيع أخذ دواءين معاً"
+    ],
+    "examples_en": [
+      "Does this interact with other medications",
+      "Drug interaction check",
+      "Can I take this with my blood pressure medicine"
+    ],
+    "examples_palestinian": [
+      "هل بتعارض الأدوية",
+      "مع بعض منيح"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medication_info"
+  },
+  "medication_alternative": {
+    "id": "med_005",
+    "category": "Medication",
+    "subcategory": "Alternative",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "medication"
+    ],
+    "optional_entities": [
+      "condition"
+    ],
+    "follow_up_slots": [
+      "medication",
+      "condition"
+    ],
+    "keywords_ar": [
+      "بديل",
+      "بديل دواء",
+      "مش مشكلة",
+      "في بديل",
+      "نفس المفعول"
+    ],
+    "keywords_en": [
+      "alternative",
+      "substitute",
+      "replacement",
+      "generic",
+      "instead of",
+      "similar medication"
+    ],
+    "patterns": [
+      "(alternative|substitute|replacement|generic).*(medication|medicine|drug)",
+      "(instead of|similar to|comparable).*(medication|medicine|drug)"
+    ],
+    "examples_ar": [
+      "بديل البانادول",
+      "في دواء بديل",
+      "نفس مفعول"
+    ],
+    "examples_en": [
+      "Is there an alternative",
+      "Generic substitute",
+      "Similar medication"
+    ],
+    "examples_palestinian": [
+      "في بديل",
+      "نفس الدواء بس اسم تاني"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medication_info"
+  },
+  "medical_history": {
+    "id": "record_001",
+    "category": "Medical Records",
+    "subcategory": "History",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "patient",
+      "date_range"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "تاريخي",
+      "سجل",
+      "تقارير",
+      "سابق",
+      "نتائجي",
+      "تاريخ مرضي",
+      "ملفي",
+      "فحوصاتي",
+      "تحاليل",
+      "تشخيص سابق"
+    ],
+    "keywords_en": [
+      "history",
+      "medical record",
+      "past",
+      "my records",
+      "my history",
+      "previous diagnosis",
+      "my files",
+      "my results",
+      "my lab results"
+    ],
+    "patterns": [
+      "(show|get|view|retrieve) (my |the )?(medical|health) (history|record|records|files)",
+      "(what is|what are) (my |the )?(previous|past) (diagnosis|records|results)"
+    ],
+    "examples_ar": [
+      "عرض تاريخي الطبي",
+      "سجلاتي السابقة",
+      "تقاريري الطبية"
+    ],
+    "examples_en": [
+      "Show my medical history",
+      "My previous records",
+      "View my medical files"
+    ],
+    "examples_palestinian": [
+      "تاريخي الطبي",
+      "سجلاتي",
+      "ملفي"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "record_info"
+  },
+  "lab_result_query": {
+    "id": "lab_001",
+    "category": "Lab Results",
+    "subcategory": "Query",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "test_type"
+    ],
+    "optional_entities": [
+      "date",
+      "patient_name"
+    ],
+    "follow_up_slots": [
+      "test_type",
+      "date"
+    ],
+    "keywords_ar": [
+      "مختبر",
+      "تحليل",
+      "نتيجة",
+      "فحص",
+      "تحاليل",
+      "نتائج",
+      "تحليل دم",
+      "تحليل بول",
+      "سكري",
+      "ضغط",
+      "كوليسترول",
+      "دهون"
+    ],
+    "keywords_en": [
+      "lab",
+      "result",
+      "test result",
+      "analysis",
+      "blood test",
+      "urine test",
+      "lab results",
+      "medical test",
+      "blood work",
+      "cholesterol",
+      "sugar level"
+    ],
+    "patterns": [
+      "(what (do|does|are) (my |the )?(lab|test|blood|urine) (results|result|levels))",
+      "(interpret|explain|understand) (my |the )?(lab|test|blood|urine) (results|result)"
+    ],
+    "examples_ar": [
+      "نتائج تحاليل",
+      "قراءة تحليل الدم",
+      "تفسير نتيجة المختبر"
+    ],
+    "examples_en": [
+      "My lab results",
+      "Interpret blood test",
+      "What do my results mean"
+    ],
+    "examples_palestinian": [
+      "نتائج التحاليل",
+      "قراءة التحليل"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "lab_interpretation"
+  },
+  "lab_interpret": {
+    "id": "lab_002",
+    "category": "Lab Results",
+    "subcategory": "Interpretation",
+    "priority": 6,
+    "confidence_threshold": 0.4,
+    "required_entities": [
+      "test_type",
+      "value"
+    ],
+    "optional_entities": [
+      "unit",
+      "reference_range"
+    ],
+    "follow_up_slots": [
+      "test_type",
+      "value"
+    ],
+    "keywords_ar": [
+      "تفسير",
+      "قراءة",
+      "معنى",
+      "ماذا يعني",
+      "هل طبيعي",
+      "مرتفع",
+      "منخفض",
+      "نسبة"
+    ],
+    "keywords_en": [
+      "interpret",
+      "meaning",
+      "what does it mean",
+      "normal range",
+      "high",
+      "low",
+      "abnormal",
+      "level"
+    ],
+    "patterns": [
+      "(interpret|explain|what does|meaning).*(result|level|value|reading)",
+      "(high|low|abnormal|normal).*(result|level|value|reading)"
+    ],
+    "examples_ar": [
+      "تفسير نتيجة السكر",
+      "هل تحليلي طبيعي",
+      "نسبة الكوليسترول مرتفعة"
+    ],
+    "examples_en": [
+      "Interpret my blood test",
+      "Is my result normal",
+      "High cholesterol meaning"
+    ],
+    "examples_palestinian": [
+      "شو معنى النتيجة",
+      "هل التحليل طبيعي"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "lab_interpretation"
+  },
+  "insurance_query": {
+    "id": "ins_001",
+    "category": "Insurance",
+    "subcategory": "Coverage",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "insurance",
+      "provider",
+      "service"
+    ],
+    "follow_up_slots": [
+      "insurance",
+      "service"
+    ],
+    "keywords_ar": [
+      "تأمين",
+      "تامين",
+      "ضمان",
+      "شركة تأمين",
+      "بوليصة",
+      "تأمين صحي",
+      "تغطية",
+      "استعلام",
+      "استعلام تأمين",
+      "تغطية تأمين",
+      "هل التأمين"
+    ],
+    "keywords_en": [
+      "insurance",
+      "health insurance",
+      "coverage",
+      "insurance plan",
+      "policy",
+      "provider"
+    ],
+    "patterns": [
+      "(insurance|coverage|policy).*(what|which|how|does|cover)",
+      "(does|do).*(insurance|coverage).*(cover|accept|include)"
+    ],
+    "examples_ar": [
+      "هل التأمين يغطي",
+      "استعلام عن تأمين",
+      "تغطية التأمين الصحي"
+    ],
+    "examples_en": [
+      "Does my insurance cover this",
+      "Insurance coverage",
+      "What insurance is accepted"
+    ],
+    "examples_palestinian": [
+      "التأمين بغطي",
+      "شو بتغطية التأمين"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "insurance_info"
+  },
+  "platform_support": {
+    "id": "platform_001",
+    "category": "Platform",
+    "subcategory": "Help",
+    "priority": 5,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "feature"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "كيف",
+      "ارفع",
+      "حساب",
+      "تطبيق",
+      "مساعدة",
+      "اشتراك",
+      "تسجيل",
+      "دخول",
+      "نسيت",
+      "كلمة المرور",
+      "تسجيل خروج",
+      "تعديل",
+      "إعدادات",
+      "كيف أسجل",
+      "انشاء حساب"
+    ],
+    "keywords_en": [
+      "how",
+      "upload",
+      "profile",
+      "account",
+      "support",
+      "login",
+      "register",
+      "sign up",
+      "sign in",
+      "forgot password",
+      "help",
+      "settings",
+      "change password",
+      "how to register",
+      "create account"
+    ],
+    "patterns": [
+      "(how (do I|can I|to|does))",
+      "(help me|I need help) (with|using|understanding)"
+    ],
+    "examples_ar": [
+      "كيف أسجل",
+      "مساعدة في التطبيق",
+      "نسيت كلمة المرور"
+    ],
+    "examples_en": [
+      "How do I register",
+      "Help with the app",
+      "I forgot my password"
+    ],
+    "examples_palestinian": [
+      "كيف أسجل",
+      "بدي مساعدة"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "platform_action"
+  },
+  "feedback": {
+    "id": "platform_002",
+    "category": "Platform",
+    "subcategory": "Feedback",
+    "priority": 4,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "اقتراح",
+      "شكوى",
+      "ملاحظات",
+      "رأي",
+      "تقييم",
+      "مشكلة",
+      "تظلم"
+    ],
+    "keywords_en": [
+      "feedback",
+      "suggestion",
+      "complaint",
+      "review",
+      "opinion",
+      "issue",
+      "problem"
+    ],
+    "patterns": [
+      "(I have|I want|I'd like) (to give|to share|to submit) (feedback|a suggestion|a complaint)",
+      "(feedback|suggestion|complaint).*(about|regarding)"
+    ],
+    "examples_ar": [
+      "عندي اقتراح",
+      "شكوى",
+      "تقييم المنصة"
+    ],
+    "examples_en": [
+      "I have a suggestion",
+      "I want to give feedback",
+      "I have a complaint"
+    ],
+    "examples_palestinian": [
+      "عندي ملاحظة",
+      "بدي أشتكي"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "platform_action"
+  },
+  "settings": {
+    "id": "platform_003",
+    "category": "Platform",
+    "subcategory": "Settings",
+    "priority": 4,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "setting_type"
+    ],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "إعدادات",
+      "الاعدادات",
+      "تعديل",
+      "تغيير",
+      "تخصيص",
+      "لغة",
+      "تنبيهات",
+      "إشعارات"
+    ],
+    "keywords_en": [
+      "settings",
+      "preferences",
+      "change",
+      "update",
+      "customize",
+      "language",
+      "notifications",
+      "profile settings"
+    ],
+    "patterns": [
+      "(settings|preferences|configuration).*(change|update|modify)",
+      "(I want|I need|how to).*(change|update|modify).*(settings|preferences|language|password)"
+    ],
+    "examples_ar": [
+      "تغيير الإعدادات",
+      "تعديل اللغة",
+      "إعدادات الإشعارات"
+    ],
+    "examples_en": [
+      "Change my settings",
+      "Update preferences",
+      "Language settings"
+    ],
+    "examples_palestinian": [
+      "بدي أغير الإعدادات",
+      "تعديل اللغة"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "platform_action"
+  },
+  "small_talk": {
+    "id": "talk_001",
+    "category": "Small Talk",
+    "subcategory": "Greeting",
+    "priority": 3,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "مرحبا",
+      "اهلا",
+      "السلام عليكم",
+      "صباح الخير",
+      "مساء الخير",
+      "كيفك",
+      "تحياتي",
+      "أهلاً وسهلاً"
+    ],
+    "keywords_en": [
+      "hello",
+      "hi",
+      "hey",
+      "good morning",
+      "good evening",
+      "how are you",
+      "greetings",
+      "welcome"
+    ],
+    "patterns": [],
+    "examples_ar": [
+      "مرحبا",
+      "السلام عليكم",
+      "كيفك"
+    ],
+    "examples_en": [
+      "Hello",
+      "Hi there",
+      "Good morning"
+    ],
+    "examples_palestinian": [
+      "مرحبا",
+      "كيفك",
+      "أهلا"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "conversational"
+  },
+  "thanks": {
+    "id": "talk_002",
+    "category": "Small Talk",
+    "subcategory": "Gratitude",
+    "priority": 3,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "شكرا",
+      "شكرا جزيلا",
+      "ممنون",
+      "الله يعطيك العافية",
+      "تسلم",
+      "يعطيك الف عافية",
+      "يسلمو"
+    ],
+    "keywords_en": [
+      "thanks",
+      "thank you",
+      "thank you very much",
+      "thanks a lot",
+      "appreciate it",
+      "grateful"
+    ],
+    "patterns": [],
+    "examples_ar": [
+      "شكرا",
+      "الله يعطيك العافية",
+      "تسلم"
+    ],
+    "examples_en": [
+      "Thank you",
+      "Thanks a lot",
+      "I appreciate it"
+    ],
+    "examples_palestinian": [
+      "يسلمو",
+      "الله يعطيك العافية"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "conversational"
+  },
+  "bye": {
+    "id": "talk_003",
+    "category": "Small Talk",
+    "subcategory": "Farewell",
+    "priority": 3,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "مع السلامة",
+      "باي",
+      "الله معك",
+      "تصبح على خير",
+      "الي اللقاء",
+      "في أمان الله"
+    ],
+    "keywords_en": [
+      "bye",
+      "goodbye",
+      "see you",
+      "see you later",
+      "take care",
+      "farewell"
+    ],
+    "patterns": [],
+    "examples_ar": [
+      "مع السلامة",
+      "باي",
+      "في أمان الله"
+    ],
+    "examples_en": [
+      "Goodbye",
+      "See you later",
+      "Take care"
+    ],
+    "examples_palestinian": [
+      "مع السلامة",
+      "باي"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "conversational"
+  },
+  "how_are_you": {
+    "id": "talk_004",
+    "category": "Small Talk",
+    "subcategory": "Status Inquiry",
+    "priority": 3,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "كيف حالك",
+      "كيفك",
+      "شو أخبارك",
+      "عامل إيه",
+      "كيف الأمور"
+    ],
+    "keywords_en": [
+      "how are you",
+      "how's it going",
+      "how are things",
+      "what's up",
+      "how do you do"
+    ],
+    "patterns": [],
+    "examples_ar": [
+      "كيفك",
+      "شو أخبارك",
+      "كيف الأمور"
+    ],
+    "examples_en": [
+      "How are you",
+      "How's it going",
+      "What's up"
+    ],
+    "examples_palestinian": [
+      "كيفك",
+      "شو أخبارك"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "conversational"
+  },
+  "yes_confirmation": {
+    "id": "talk_005",
+    "category": "Small Talk",
+    "subcategory": "Confirmation",
+    "priority": 2,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "نعم",
+      "ايوه",
+      "آه",
+      "بصحيح",
+      "طيب",
+      "تمام",
+      "حسنا",
+      "موافق",
+      "ماشي"
+    ],
+    "keywords_en": [
+      "yes",
+      "yeah",
+      "sure",
+      "okay",
+      "alright",
+      "fine",
+      "correct",
+      "right",
+      "agreed"
+    ],
+    "patterns": [],
+    "examples_ar": [
+      "نعم",
+      "طيب",
+      "تمام"
+    ],
+    "examples_en": [
+      "Yes",
+      "Sure",
+      "Okay"
+    ],
+    "examples_palestinian": [
+      "ايوه",
+      "آه",
+      "ماشي"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "conversational"
+  },
+  "no_negation": {
+    "id": "talk_006",
+    "category": "Small Talk",
+    "subcategory": "Negation",
+    "priority": 2,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [],
+    "follow_up_slots": [],
+    "keywords_ar": [
+      "لا",
+      "أبدا",
+      "مش",
+      "لا شكرا",
+      "مش هيك",
+      "غلط",
+      "لا موافق"
+    ],
+    "keywords_en": [
+      "no",
+      "not",
+      "never",
+      "no thanks",
+      "not really",
+      "wrong",
+      "incorrect",
+      "disagree"
+    ],
+    "patterns": [],
+    "examples_ar": [
+      "لا",
+      "مش",
+      "لا شكرا"
+    ],
+    "examples_en": [
+      "No",
+      "Not really",
+      "No thanks"
+    ],
+    "examples_palestinian": [
+      "لا",
+      "مش",
+      "لا شكرا"
+    ],
+    "negative_examples": [
+      "عندي صداع",
+      "بدي دكتور"
+    ],
+    "response_type": "conversational"
+  },
+  "general_medical_question": {
+    "id": "general_001",
+    "category": "General Medical",
+    "subcategory": "Health Information",
+    "priority": 5,
+    "confidence_threshold": 0.3,
+    "required_entities": [],
+    "optional_entities": [
+      "topic",
+      "condition"
+    ],
+    "follow_up_slots": [
+      "topic"
+    ],
+    "keywords_ar": [
+      "ما هو",
+      "ماذا",
+      "شرح",
+      "معلومات",
+      "عن",
+      "حول",
+      "يعني",
+      "معنى",
+      "تعريف"
+    ],
+    "keywords_en": [
+      "what is",
+      "what are",
+      "explain",
+      "information about",
+      "tell me about",
+      "define",
+      "meaning of"
+    ],
+    "patterns": [
+      "(what is|what are|explain|define|tell me about) (a |an |the )?(medical|health|disease|condition|treatment)"
+    ],
+    "examples_ar": [
+      "ما هو مرض السكر",
+      "شرح ضغط الدم",
+      "معلومات عن القلب"
+    ],
+    "examples_en": [
+      "What is diabetes",
+      "Explain blood pressure",
+      "Tell me about heart disease"
+    ],
+    "examples_palestinian": [
+      "شو هو السكري",
+      "ما معنى ضغط"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "أقرب صيدلية"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "bmi_calculator": {
+    "id": "general_002",
+    "category": "General Medical",
+    "subcategory": "BMI",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "weight",
+      "height",
+      "age"
+    ],
+    "follow_up_slots": [
+      "weight",
+      "height"
+    ],
+    "keywords_ar": [
+      "وزن",
+      "وزني",
+      "كتلة الجسم",
+      "سمنة",
+      "نحافة",
+      "BMI",
+      "كتلة",
+      "مثالي",
+      "احسب",
+      "احسب كتلة"
+    ],
+    "keywords_en": [
+      "bmi",
+      "body mass index",
+      "weight",
+      "obesity",
+      "overweight",
+      "underweight",
+      "ideal weight"
+    ],
+    "patterns": [
+      "(bmi|body mass index|ideal weight).*(calculate|what|how|check)",
+      "(calculate|check|find).*(bmi|body mass index|ideal weight)"
+    ],
+    "examples_ar": [
+      "احسب كتلة جسمي",
+      "وزني المثالي",
+      "هل وزني طبيعي"
+    ],
+    "examples_en": [
+      "Calculate my BMI",
+      "What is my ideal weight",
+      "Am I overweight"
+    ],
+    "examples_palestinian": [
+      "احسب BMI",
+      "وزني المثالي"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "nutrition_advice": {
+    "id": "general_003",
+    "category": "General Medical",
+    "subcategory": "Nutrition",
+    "priority": 4,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "condition",
+      "goal"
+    ],
+    "follow_up_slots": [
+      "condition",
+      "goal"
+    ],
+    "keywords_ar": [
+      "غذاء",
+      "اكل",
+      "طعام",
+      "رجيم",
+      "حمية",
+      "دايت",
+      "تغذية",
+      "أكل صحي",
+      "فيتامين",
+      "نصائح غذائية",
+      "غذاء صحي",
+      "اكل صحي"
+    ],
+    "keywords_en": [
+      "nutrition",
+      "diet",
+      "food",
+      "healthy eating",
+      "meal plan",
+      "vitamins",
+      "supplements",
+      "dietary",
+      "nutrition advice",
+      "diet tips"
+    ],
+    "patterns": [
+      "(nutrition|diet|healthy eating|meal plan).*(advice|tips|recommendation|help)",
+      "(what should|how to|best).*(eat|diet|nutrition|food)"
+    ],
+    "examples_ar": [
+      "نصائح غذائية",
+      "رجيم صحي",
+      "أكل مفيد للقلب"
+    ],
+    "examples_en": [
+      "Nutrition advice",
+      "Healthy diet tips",
+      "Food for diabetes"
+    ],
+    "examples_palestinian": [
+      "نصايح غذائية",
+      "شو أكل منيح"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "exercise_advice": {
+    "id": "general_004",
+    "category": "General Medical",
+    "subcategory": "Exercise",
+    "priority": 4,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "condition",
+      "goal",
+      "age"
+    ],
+    "follow_up_slots": [
+      "condition",
+      "goal"
+    ],
+    "keywords_ar": [
+      "رياضة",
+      "تمارين",
+      "مشي",
+      "جري",
+      "نادي رياضي",
+      "لياقة",
+      "تمرين",
+      "حركة"
+    ],
+    "keywords_en": [
+      "exercise",
+      "workout",
+      "physical activity",
+      "fitness",
+      "walking",
+      "running",
+      "gym",
+      "training"
+    ],
+    "patterns": [
+      "(exercise|workout|fitness|physical activity).*(advice|tips|recommendation|help|routine)",
+      "(what|best|how).*(exercise|workout|fitness).*(for|with)"
+    ],
+    "examples_ar": [
+      "تمارين مناسبة",
+      "رياضة لمرضى القلب",
+      "كم مدة المشي"
+    ],
+    "examples_en": [
+      "Exercise recommendations",
+      "Best workout for diabetes",
+      "How much exercise"
+    ],
+    "examples_palestinian": [
+      "تمارين",
+      "رياضة",
+      "مشي"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "pregnancy_info": {
+    "id": "general_005",
+    "category": "General Medical",
+    "subcategory": "Pregnancy",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "stage",
+      "symptom",
+      "week"
+    ],
+    "follow_up_slots": [
+      "stage"
+    ],
+    "keywords_ar": [
+      "حمل",
+      "حامل",
+      "ولادة",
+      "جنين",
+      "الحمل",
+      "مرحلة الحمل",
+      "شهور الحمل",
+      "وحم"
+    ],
+    "keywords_en": [
+      "pregnancy",
+      "pregnant",
+      "childbirth",
+      "fetus",
+      "prenatal",
+      "antenatal",
+      "maternity"
+    ],
+    "patterns": [
+      "(pregnancy|pregnant|prenatal).*(advice|tips|symptoms|care|nutrition)",
+      "(what|how|when).*(pregnancy|pregnant|fetus|baby)"
+    ],
+    "examples_ar": [
+      "نصائح للحامل",
+      "أعراض الحمل",
+      "تغذية الحامل"
+    ],
+    "examples_en": [
+      "Pregnancy advice",
+      "Prenatal care",
+      "Pregnancy symptoms"
+    ],
+    "examples_palestinian": [
+      "نصايح للحمل",
+      "أعراض الحمل"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "children_health": {
+    "id": "general_006",
+    "category": "General Medical",
+    "subcategory": "Pediatrics",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "age",
+      "symptom",
+      "condition"
+    ],
+    "follow_up_slots": [
+      "age",
+      "symptom"
+    ],
+    "keywords_ar": [
+      "اطفال",
+      "أطفال",
+      "طفل",
+      "رضيع",
+      "مولود",
+      "ببي",
+      "طفلي",
+      "ولدي",
+      "بنتي",
+      "ولدي مريض"
+    ],
+    "keywords_en": [
+      "children",
+      "child",
+      "kids",
+      "baby",
+      "infant",
+      "newborn",
+      "toddler",
+      "pediatric"
+    ],
+    "patterns": [
+      "(child|children|baby|infant|newborn|toddler).*(health|symptom|fever|cough|care|nutrition)",
+      "(my|the).*(child|baby|son|daughter|kid).*(sick|fever|cough|symptom)"
+    ],
+    "examples_ar": [
+      "طفلي عنده حرارة",
+      "صحة الأطفال",
+      "تطعيم الأطفال"
+    ],
+    "examples_en": [
+      "My baby has a fever",
+      "Children's health",
+      "Infant care"
+    ],
+    "examples_palestinian": [
+      "ببي عنده حرارة",
+      "ولدي تعبان"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "vaccination_info": {
+    "id": "general_007",
+    "category": "General Medical",
+    "subcategory": "Vaccination",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "age",
+      "vaccine_type"
+    ],
+    "follow_up_slots": [
+      "age"
+    ],
+    "keywords_ar": [
+      "تطعيم",
+      "تلقيح",
+      "طعوم",
+      "مطاعيم",
+      "لقاح",
+      "جرعة تطعيم",
+      "جدول تطعيمات"
+    ],
+    "keywords_en": [
+      "vaccination",
+      "vaccine",
+      "immunization",
+      "shot",
+      "vaccine schedule",
+      "booster"
+    ],
+    "patterns": [
+      "(vaccination|vaccine|immunization|shot).*(schedule|when|what|need|required)",
+      "(what|which|when).*(vaccination|vaccine|immunization).*(for|need|required)"
+    ],
+    "examples_ar": [
+      "جدول التطعيمات",
+      "تطعيم الأطفال",
+      "متى أخذ التطعيم"
+    ],
+    "examples_en": [
+      "Vaccination schedule",
+      "Childhood vaccines",
+      "When to vaccinate"
+    ],
+    "examples_palestinian": [
+      "تطعيمات الأطفال",
+      "جدول المطاعيم"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "mental_health": {
+    "id": "general_008",
+    "category": "General Medical",
+    "subcategory": "Mental Health",
+    "priority": 5,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "condition",
+      "symptom"
+    ],
+    "follow_up_slots": [
+      "condition"
+    ],
+    "keywords_ar": [
+      "اكتئاب",
+      "نفسية",
+      "حالة نفسية",
+      "علاج نفسي",
+      "صحة نفسية",
+      "حزن",
+      "ضيق",
+      "مشاعر",
+      "مساعدة نفسية"
+    ],
+    "keywords_en": [
+      "depression",
+      "mental health",
+      "psychological",
+      "emotional",
+      "mood",
+      "sadness",
+      "therapy",
+      "counseling"
+    ],
+    "patterns": [
+      "(depression|mental health|anxiety|stress|therapy|counseling).*(help|advice|treatment|support)",
+      "(I feel|I'm feeling).*(depressed|anxious|sad|hopeless)"
+    ],
+    "examples_ar": [
+      "مساعدة نفسية",
+      "علاج الاكتئاب",
+      "صحة نفسية"
+    ],
+    "examples_en": [
+      "Mental health support",
+      "Depression treatment",
+      "Anxiety therapy"
+    ],
+    "examples_palestinian": [
+      "حالة نفسية",
+      "مكتئب",
+      "مخنوق"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  },
+  "sick_leave": {
+    "id": "general_009",
+    "category": "General Medical",
+    "subcategory": "Sick Leave",
+    "priority": 4,
+    "confidence_threshold": 0.4,
+    "required_entities": [],
+    "optional_entities": [
+      "condition",
+      "duration"
+    ],
+    "follow_up_slots": [
+      "condition"
+    ],
+    "keywords_ar": [
+      "اجازة مرضية",
+      "راحة",
+      "راحة مرضية",
+      "عذر طبي",
+      "إجازة مرضية",
+      "تقرير طبي"
+    ],
+    "keywords_en": [
+      "sick leave",
+      "medical leave",
+      "doctor's note",
+      "medical certificate",
+      "time off"
+    ],
+    "patterns": [
+      "(sick leave|medical leave|doctor's note|medical certificate).*(need|get|how|request)",
+      "(I need|I want|how to get).*(sick leave|medical leave|doctor's note)"
+    ],
+    "examples_ar": [
+      "بدي اجازة مرضية",
+      "عذر طبي",
+      "تقرير طبي للعمل"
+    ],
+    "examples_en": [
+      "I need a sick leave",
+      "Doctor's note for work",
+      "Medical certificate"
+    ],
+    "examples_palestinian": [
+      "بدي عذر طبي",
+      "اجازة مرضية"
+    ],
+    "negative_examples": [
+      "بدي دكتور",
+      "عندي صداع"
+    ],
+    "response_type": "medical_guidance"
+  }
+}

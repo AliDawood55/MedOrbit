@@ -1,0 +1,23 @@
+{
+  "conversation_id": "8fd425ee-fe9d-4411-8e15-8b18059b45c7",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "أقرب صيدلية",
+      "timestamp": "2026-07-11T14:14:59.320Z"
+    },
+    {
+      "sender": "bot",
+      "message": "🏥 أقرب الأماكن الطبية:\n\n1. Nablus Medical Hospital\n📍 0.00 km\n📞 +970-9-2381000\n🗺️ https://www.google.com/maps?q=32.22340000,35.25780000\n\n2. Elite Cardiac Clinic\n📍 0.00 km\n📞 +970-9-2345671\n🗺️ https://www.google.com/maps?q=32.22560000,35.25230000\n\n3. Primary Healthcare Center\n📍 0.00 km\n📞 +970-9-2381234\n🗺️ https://www.google.com/maps?q=32.21980000,35.25120000\n\n4. Happy Kids Clinic\n📍 0.00 km\n📞 +970-9-2345673\n🗺️ https://www.google.com/maps?q=32.22150000,35.24890000\n\n5. Future Radiology Center\n📍 0.00 km\n📞 +970-9-2345674\n🗺️ https://www.google.com/maps?q=32.22780000,35.25900000\n\n",
+      "intent": "find_nearest",
+      "confidence": 1,
+      "entities": {
+        "specialty": null,
+        "symptoms": [],
+        "location": null,
+        "raw": "أقرب صيدلية"
+      },
+      "timestamp": "2026-07-11T14:14:59.388Z"
+    }
+  ]
+}

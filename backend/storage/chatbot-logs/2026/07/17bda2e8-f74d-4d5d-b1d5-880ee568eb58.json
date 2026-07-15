@@ -1,0 +1,12 @@
+{
+  "conversation_id": "17bda2e8-f74d-4d5d-b1d5-880ee568eb58",
+  "messages": [
+    {
+      "sender": "user",
+      "message": "Nearest pharmacy",
+      "timestamp": "2026-07-11T23:58:56.141Z",
+      "latitude": 32.131336,
+      "longitude": 35.276833
+    }
+  ]
+}
