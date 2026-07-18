@@ -59,6 +59,7 @@ app.use('/api/doctors', doctorRoutes);
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
+app.use('/api/specialties', require('./routes/specialty.routes'));
 
 // 404 handler
 app.use(notFound);
