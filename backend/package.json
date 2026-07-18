@@ -16,8 +16,8 @@
   "author": "MedOrbit Team",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^6.0.0",
     "axios": "^1.18.1",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

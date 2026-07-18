@@ -253,4 +253,62 @@ router.put('/:id', authenticate, authorize('doctor', 'admin'), async (req, res, 
   }
 });
 
+// GET doctor clinics
+
+router.get(
+  "/:id/clinics",
+  async (req, res, next) => {
+
+    try {
+
+      const result = await db.query(
+        `
+        SELECT
+
+        c.id,
+        c.name_ar,
+        c.name_en,
+        c.address_ar,
+        c.address_en,
+        c.city,
+        c.phone,
+
+        dca.is_primary,
+        dca.consultation_fee_override
+
+        FROM public.doctor_clinic_assignments dca
+
+        JOIN public.clinics c
+
+        ON c.id=dca.clinic_id
+
+        WHERE dca.doctor_id=$1
+
+        AND dca.is_active=true
+
+        AND c.is_active=true
+
+        `,
+        [
+          req.params.id
+        ]
+      );
+
+
+      return success(
+        res,
+        result.rows,
+        "Doctor clinics retrieved"
+      );
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+  });
+
 module.exports = router;
