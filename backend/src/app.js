@@ -1,4 +1,5 @@
-require('dotenv').config();
+// .env is loaded by src/config/env.js (called from server.js)
+// Do NOT call dotenv.config() here — it would override the root path.
 
 const express = require('express');
 const cors = require('cors');
