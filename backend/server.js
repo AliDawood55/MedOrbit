@@ -1,3 +1,7 @@
+// Load root .env BEFORE any requires that read process.env
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
 const app = require("./src/app");
 
 const env = require("./src/config/env");
