@@ -10,6 +10,7 @@ const userRoutes = require('./routes/user.routes');;
 const doctorRoutes = require('./routes/doctor.routes');
 const clinicRoutes = require('./routes/clinic.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const notificationTemplateRoutes = require('./routes/notification-template.routes');
 
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
 
 // 404 handler
 app.use(notFound);
