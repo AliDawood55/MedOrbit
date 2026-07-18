@@ -1,163 +1,1043 @@
-const express = require('express');
-const db = require('../config/database');
-const { success, error } = require('../utils/response');
+const express = require("express");
 
 const router = express.Router();
 
-// GET /api/clinics - List clinics with filters
-router.get('/', async (req, res, next) => {
-  try {
-    const { region, service, insurance, search, page = 1, limit = 10 } = req.query;
+const db = require("../config/database");
 
-    let query = `
-      SELECT 
-        c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
-        c.city, c.region, c.latitude, c.longitude, c.phone, c.email,
-        c.website, c.operating_hours, c.services, c.insurance_accepted,
-        c.logo_url, c.is_active, c.verification_status
-      FROM public.clinics c
-      WHERE c.is_active = true
-    `;
+const {
+  success,
+  error
+} = require("../utils/response");
 
-    const params = [];
-    let paramIndex = 1;
 
-    if (region) {
-      query += ` AND c.region ILIKE $${paramIndex}`;
-      params.push(`%${region}%`);
-      paramIndex++;
-    }
+const {
+  authenticate,
+  authorize
+} = require("../middleware/auth");
 
-    if (service) {
-      query += ` AND $${paramIndex} = ANY(c.services)`;
-      params.push(service);
-      paramIndex++;
-    }
 
-    if (insurance) {
-      query += ` AND $${paramIndex} = ANY(c.insurance_accepted)`;
-      params.push(insurance);
-      paramIndex++;
-    }
 
-    if (search) {
-      query += ` AND (c.name_ar ILIKE $${paramIndex} OR c.name_en ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
+function haversine(
 
-    // Count
-    const countResult = await db.query(
-      `SELECT COUNT(*) FROM (${query}) as count_query`,
-      params
+  lat1,
+  lon1,
+  lat2,
+  lon2
+
+) {
+
+  const R = 6371;
+
+
+  const dLat =
+
+    (lat2 - lat1) *
+    Math.PI / 180;
+
+
+  const dLon =
+
+    (lon2 - lon1) *
+    Math.PI / 180;
+
+
+  const a =
+
+    Math.sin(dLat / 2) *
+    Math.sin(dLat / 2)
+
+    +
+
+    Math.cos(
+
+      lat1 *
+      Math.PI / 180
+
+    )
+
+    *
+
+    Math.cos(
+
+      lat2 *
+      Math.PI / 180
+
+    )
+
+    *
+
+    Math.sin(dLon / 2)
+
+    *
+
+    Math.sin(dLon / 2);
+
+
+
+  const c =
+
+    2 *
+
+    Math.atan2(
+
+      Math.sqrt(a),
+
+      Math.sqrt(1 - a)
+
     );
-    const total = parseInt(countResult.rows[0].count);
 
-    query += ` ORDER BY c.name_en`;
-    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
 
-    const result = await db.query(query, params);
+  return R * c;
 
-    return success(res, {
-      clinics: result.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / parseInt(limit))
+}
+
+
+
+
+//---------------------------------------------------
+// GET ALL CLINICS
+//---------------------------------------------------
+
+
+router.get(
+
+  "/",
+
+  async (req, res, next) => {
+
+    try {
+
+
+      const {
+
+        page = 1,
+
+        limit = 10,
+
+        city,
+
+        type,
+
+        search
+
+      } = req.query;
+
+
+
+      let query =
+
+        `
+
+SELECT
+
+id,
+name_ar,
+name_en,
+city,
+region,
+phone,
+email,
+website,
+latitude,
+longitude,
+type,
+verification_status
+
+FROM public.clinics
+
+WHERE is_active=true
+
+`;
+
+
+      const params = [];
+
+
+      let index = 1;
+
+
+
+      if (city) {
+
+        query +=
+
+          ` AND city ILIKE $${index}`;
+
+        params.push(
+
+          `%${city}%`
+
+        );
+
+        index++;
+
       }
-    }, 'Clinics retrieved successfully');
 
-  } catch (err) {
-    next(err);
-  }
-});
 
-// GET /api/clinics/nearby - Find nearby clinics
-router.get('/nearby', async (req, res, next) => {
-  try {
-    const { lat, lng, radius = 5 } = req.query; // radius in km
 
-    if (!lat || !lng) {
-      return error(res, 'Latitude and longitude required', 400, 'VALIDATION_ERROR');
+      if (type) {
+
+        query +=
+
+          ` AND type=$${index}`;
+
+        params.push(type);
+
+        index++;
+
+      }
+
+
+
+      if (search) {
+
+        query +=
+
+          `
+
+AND(
+
+name_ar ILIKE $${index}
+
+OR
+
+name_en ILIKE $${index}
+
+)
+
+`;
+
+        params.push(
+
+          `%${search}%`
+
+        );
+
+        index++;
+
+      }
+
+
+      query +=
+
+        `
+
+ORDER BY name_en
+
+LIMIT $${index}
+
+OFFSET $${index + 1}
+
+`;
+
+
+      params.push(
+
+        parseInt(limit),
+
+        (parseInt(page) - 1)
+
+        *
+
+        parseInt(limit)
+
+      );
+
+
+      const result =
+
+        await db.query(
+
+          query,
+          params
+        );
+
+
+      return success(
+
+        res,
+
+        result.rows,
+
+        "Clinics retrieved successfully"
+
+      );
+
     }
 
-    const query = `
-      SELECT 
-        c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
-        c.city, c.region, c.latitude, c.longitude, c.phone,
-        c.services, c.logo_url,
-        ROUND(
-          6371 * acos(
-            cos(radians($1)) * cos(radians(c.latitude)) *
-            cos(radians(c.longitude) - radians($2)) +
-            sin(radians($1)) * sin(radians(c.latitude))
-          )::numeric, 2
-        ) as distance_km
-      FROM public.clinics c
-      WHERE c.is_active = true
-      HAVING 
-        6371 * acos(
-          cos(radians($1)) * cos(radians(c.latitude)) *
-          cos(radians(c.longitude) - radians($2)) +
-          sin(radians($1)) * sin(radians(c.latitude))
-        ) <= $3
-      ORDER BY distance_km
-    `;
+    catch (err) {
 
-    const result = await db.query(query, [lat, lng, parseFloat(radius)]);
+      next(err);
 
-    return success(res, {
-      clinics: result.rows
-    }, 'Nearby clinics retrieved');
-
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/clinics/:id - Get clinic details
-router.get('/:id', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    const clinicResult = await db.query(
-      `SELECT * FROM public.clinics WHERE id = $1 AND is_active = true`,
-      [id]
-    );
-
-    if (clinicResult.rows.length === 0) {
-      return error(res, 'Clinic not found', 404, 'NOT_FOUND');
     }
 
-    const clinic = clinicResult.rows[0];
-
-    // Doctors in this clinic
-    const doctorsResult = await db.query(
-      `SELECT 
-        d.id, d.years_of_experience, d.consultation_fee,
-        d.average_rating, d.is_accepting_patients,
-        p.first_name_ar, p.first_name_en, p.last_name_ar, p.last_name_en,
-        p.profile_image_url,
-        s.name_ar as specialty_ar, s.name_en as specialty_en
-      FROM public.doctor_clinic_assignments dca
-      JOIN public.doctors d ON d.id = dca.doctor_id
-      JOIN public.users u ON u.id = d.user_id
-      LEFT JOIN public.user_profiles p ON p.user_id = d.user_id
-      LEFT JOIN public.specialties s ON s.id = d.specialty_id
-      WHERE dca.clinic_id = $1 AND dca.is_active = true AND u.is_active = true`,
-      [id]
-    );
-
-    return success(res, {
-      clinic,
-      doctors: doctorsResult.rows
-    }, 'Clinic details retrieved');
-
-  } catch (err) {
-    next(err);
   }
-});
+
+);
+
+
+
+
+//---------------------------------------------------
+// NEARBY CLINICS
+//---------------------------------------------------
+
+
+router.get(
+
+  "/nearby",
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const {
+
+        latitude,
+
+        longitude,
+
+        radius = 5
+
+      } = req.query;
+
+
+
+      if (
+
+        !latitude ||
+
+        !longitude
+
+      ) {
+
+        return error(
+
+          res,
+
+          "Latitude and longitude are required",
+
+          400,
+
+          "VALIDATION_ERROR"
+
+        );
+
+      }
+
+
+
+      const result =
+
+        await db.query(
+
+          `
+
+SELECT *
+
+FROM public.clinics
+
+WHERE is_active=true
+
+`
+
+        );
+
+
+
+      const nearby =
+
+        result.rows.filter(
+
+          clinic => {
+
+
+            const distance =
+
+              haversine(
+
+                parseFloat(latitude),
+
+                parseFloat(longitude),
+
+                parseFloat(clinic.latitude),
+
+                parseFloat(clinic.longitude)
+
+              );
+
+
+            clinic.distance =
+
+              distance.toFixed(2);
+
+
+            return (
+
+              distance <=
+
+              parseFloat(radius)
+
+            );
+
+
+          }
+
+        );
+
+
+      return success(
+
+        res,
+
+        nearby,
+
+        "Nearby clinics"
+
+      );
+
+
+    }
+
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
+
+
+
+
+//---------------------------------------------------
+// GET CLINIC BY ID
+//---------------------------------------------------
+
+
+router.get(
+
+  "/:id",
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const result =
+
+        await db.query(
+
+          `
+
+SELECT *
+
+FROM public.clinics
+
+WHERE id=$1
+
+AND is_active=true
+
+`,
+
+          [
+
+            req.params.id
+
+          ]
+
+        );
+
+
+
+      if (
+
+        result.rows.length === 0
+
+      ) {
+
+        return error(
+
+          res,
+
+          "Clinic not found",
+
+          404,
+
+          "NOT_FOUND"
+
+        );
+
+      }
+
+
+      return success(
+
+        res,
+
+        result.rows[0]
+
+      );
+
+
+    }
+
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
+
+
+
+
+//---------------------------------------------------
+// CREATE CLINIC
+//---------------------------------------------------
+
+
+router.post(
+
+  "/",
+
+  authenticate,
+
+  authorize("admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const {
+
+        name_ar,
+        name_en,
+        address_ar,
+        address_en,
+        city,
+        region,
+        latitude,
+        longitude,
+        phone,
+        email,
+        website,
+        type
+
+      } = req.body;
+
+
+
+      await db.query(
+
+        `
+
+INSERT INTO public.clinics(
+
+name_ar,
+name_en,
+address_ar,
+address_en,
+city,
+region,
+latitude,
+longitude,
+phone,
+email,
+website,
+type
+
+)
+
+VALUES(
+
+$1,$2,$3,$4,
+$5,$6,$7,$8,
+$9,$10,$11,$12
+
+)
+
+`
+
+        ,
+
+        [
+
+          name_ar,
+          name_en,
+          address_ar,
+          address_en,
+          city,
+          region,
+          latitude,
+          longitude,
+          phone,
+          email,
+          website,
+          type
+
+        ]
+
+      );
+
+
+      return success(
+
+        res,
+
+        null,
+
+        "Clinic created successfully"
+
+      );
+
+
+    }
+
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
+
+
+
+
+//---------------------------------------------------
+// UPDATE
+//---------------------------------------------------
+
+
+router.put(
+
+  "/:id",
+
+  authenticate,
+
+  authorize("admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const {
+
+        name_ar,
+        name_en,
+        phone
+
+      } = req.body;
+
+
+
+      const result =
+
+        await db.query(
+
+          `
+
+UPDATE public.clinics
+
+SET
+
+name_ar=COALESCE($1,name_ar),
+
+name_en=COALESCE($2,name_en),
+
+phone=COALESCE($3,phone)
+
+WHERE id=$4
+
+AND is_active=true
+
+`
+
+          ,
+
+          [
+
+            name_ar,
+
+            name_en,
+
+            phone,
+
+            req.params.id
+
+          ]
+
+        );
+
+
+
+      if (
+
+        result.rowCount === 0
+
+      ) {
+
+        return error(
+
+          res,
+
+          "Clinic not found",
+
+          404,
+
+          "NOT_FOUND"
+
+        );
+
+      }
+
+
+
+      return success(
+
+        res,
+
+        null,
+
+        "Clinic updated"
+
+      );
+
+
+    }
+
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
+
+
+
+
+//---------------------------------------------------
+// DELETE
+//---------------------------------------------------
+
+
+router.delete(
+
+  "/:id",
+
+  authenticate,
+
+  authorize("admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const result =
+
+        await db.query(
+
+          `
+
+UPDATE public.clinics
+
+SET is_active=false
+
+WHERE id=$1
+
+AND is_active=true
+
+`
+
+          ,
+
+          [
+
+            req.params.id
+
+          ]
+
+        );
+
+
+
+      if (
+
+        result.rowCount === 0
+
+      ) {
+
+        return error(
+
+          res,
+
+          "Clinic not found",
+
+          404,
+
+          "NOT_FOUND"
+
+        );
+
+      }
+
+
+      return success(
+
+        res,
+
+        null,
+
+        "Clinic deleted"
+
+      );
+
+
+    }
+
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
+
+// POST /api/clinics/:id/assign-doctor
+// Admin only
+
+router.post(
+  "/:id/assign-doctor",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+
+    try {
+
+      const clinicId = req.params.id;
+
+
+      const {
+        doctorId,
+        isPrimary = false,
+        consultationFeeOverride = null
+      } = req.body;
+
+
+
+      if (!doctorId) {
+
+        return error(
+          res,
+          "Doctor id is required",
+          400,
+          "VALIDATION_ERROR"
+        );
+
+      }
+
+
+
+      // Check clinic exists
+
+      const clinic =
+        await db.query(
+          `
+          SELECT id
+          FROM public.clinics
+          WHERE id=$1
+          AND is_active=true
+          `,
+          [
+            clinicId
+          ]
+        );
+
+
+      if (clinic.rows.length === 0) {
+
+        return error(
+          res,
+          "Clinic not found",
+          404,
+          "NOT_FOUND"
+        );
+
+      }
+
+
+
+
+      // Check doctor exists
+
+      const doctor =
+        await db.query(
+          `
+          SELECT id
+          FROM public.doctors
+          WHERE id=$1
+          `,
+          [
+            doctorId
+          ]
+        );
+
+
+      if (doctor.rows.length === 0) {
+
+        return error(
+          res,
+          "Doctor not found",
+          404,
+          "NOT_FOUND"
+        );
+
+      }
+
+
+
+      // Insert assignment
+
+      await db.query(
+
+        `
+        INSERT INTO public.doctor_clinic_assignments
+        (
+          doctor_id,
+          clinic_id,
+          is_primary,
+          consultation_fee_override,
+          is_active
+        )
+
+        VALUES
+        (
+          $1,$2,$3,$4,true
+        )
+
+        ON CONFLICT
+        (
+          doctor_id,
+          clinic_id
+        )
+
+        DO UPDATE SET
+
+        is_active=true,
+        is_primary=$3,
+        consultation_fee_override=$4
+
+        `,
+
+        [
+          doctorId,
+          clinicId,
+          isPrimary,
+          consultationFeeOverride
+        ]
+
+      );
+
+
+
+      return success(
+        res,
+        null,
+        "Doctor assigned successfully"
+      );
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+  });
+
+// DELETE /api/clinics/:id/remove-doctor/:doctorId
+
+router.delete(
+
+  "/:id/remove-doctor/:doctorId",
+
+  authenticate,
+
+  authorize("admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      await db.query(
+
+        `
+UPDATE public.doctor_clinic_assignments
+
+SET is_active=false
+
+WHERE clinic_id=$1
+
+AND doctor_id=$2
+`,
+
+        [
+          req.params.id,
+          req.params.doctorId
+        ]
+
+      );
+
+
+
+      return success(
+        res,
+        null,
+        "Doctor removed from clinic"
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  });
+
+
 
 module.exports = router;
