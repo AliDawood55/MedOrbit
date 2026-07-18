@@ -1,6 +1,16 @@
 // src/config/env.js
+// Loads environment from root .env — called once at startup.
+// All other modules read process.env after this is loaded.
 
-require("dotenv").config();
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Resolve root .env: server.js -> src/ -> config/ -> ../../../ = project root
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+dotenv.config({ path: rootEnvPath });
+
+// Also set in process.env for any direct readers
+process.env.DOTENV_LOADED = '1';
 
 const env = {
     app: {
@@ -14,7 +24,7 @@ const env = {
         port: Number(process.env.DB_PORT),
         name: process.env.DB_NAME,
         user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
+        password: String(process.env.DB_PASSWORD || ''),
         schema: process.env.DB_SCHEMA || "public",
     },
 
