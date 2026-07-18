@@ -830,6 +830,214 @@ AND is_active=true
 
 );
 
+// POST /api/clinics/:id/assign-doctor
+// Admin only
+
+router.post(
+  "/:id/assign-doctor",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+
+    try {
+
+      const clinicId = req.params.id;
+
+
+      const {
+        doctorId,
+        isPrimary = false,
+        consultationFeeOverride = null
+      } = req.body;
+
+
+
+      if (!doctorId) {
+
+        return error(
+          res,
+          "Doctor id is required",
+          400,
+          "VALIDATION_ERROR"
+        );
+
+      }
+
+
+
+      // Check clinic exists
+
+      const clinic =
+        await db.query(
+          `
+          SELECT id
+          FROM public.clinics
+          WHERE id=$1
+          AND is_active=true
+          `,
+          [
+            clinicId
+          ]
+        );
+
+
+      if (clinic.rows.length === 0) {
+
+        return error(
+          res,
+          "Clinic not found",
+          404,
+          "NOT_FOUND"
+        );
+
+      }
+
+
+
+
+      // Check doctor exists
+
+      const doctor =
+        await db.query(
+          `
+          SELECT id
+          FROM public.doctors
+          WHERE id=$1
+          `,
+          [
+            doctorId
+          ]
+        );
+
+
+      if (doctor.rows.length === 0) {
+
+        return error(
+          res,
+          "Doctor not found",
+          404,
+          "NOT_FOUND"
+        );
+
+      }
+
+
+
+      // Insert assignment
+
+      await db.query(
+
+        `
+        INSERT INTO public.doctor_clinic_assignments
+        (
+          doctor_id,
+          clinic_id,
+          is_primary,
+          consultation_fee_override,
+          is_active
+        )
+
+        VALUES
+        (
+          $1,$2,$3,$4,true
+        )
+
+        ON CONFLICT
+        (
+          doctor_id,
+          clinic_id
+        )
+
+        DO UPDATE SET
+
+        is_active=true,
+        is_primary=$3,
+        consultation_fee_override=$4
+
+        `,
+
+        [
+          doctorId,
+          clinicId,
+          isPrimary,
+          consultationFeeOverride
+        ]
+
+      );
+
+
+
+      return success(
+        res,
+        null,
+        "Doctor assigned successfully"
+      );
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+  });
+
+// DELETE /api/clinics/:id/remove-doctor/:doctorId
+
+router.delete(
+
+  "/:id/remove-doctor/:doctorId",
+
+  authenticate,
+
+  authorize("admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      await db.query(
+
+        `
+UPDATE public.doctor_clinic_assignments
+
+SET is_active=false
+
+WHERE clinic_id=$1
+
+AND doctor_id=$2
+`,
+
+        [
+          req.params.id,
+          req.params.doctorId
+        ]
+
+      );
+
+
+
+      return success(
+        res,
+        null,
+        "Doctor removed from clinic"
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  });
+
 
 
 module.exports = router;
