@@ -1,3 +1,4 @@
+// src/routes/docotr.routes.js
 const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
@@ -6,89 +7,275 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 // GET /api/doctors - List all doctors with filters
-router.get('/', async (req, res, next) => {
-  try {
-    const { specialty, region, minRating, search, page = 1, limit = 10 } = req.query;
+router.get(
+  "/",
+  async (req, res, next) => {
 
-    let query = `
-      SELECT 
-        d.id, d.user_id, d.medical_license_number, d.years_of_experience,
-        d.consultation_fee, d.consultation_duration, d.average_rating, d.total_ratings,
-        d.is_accepting_patients, d.education, d.certifications,
-        d.professional_bio_ar, d.professional_bio_en,
-        u.email,
-        p.first_name_ar, p.last_name_ar, p.first_name_en, p.last_name_en,
-        p.phone, p.profile_image_url,
-        s.name_ar as specialty_ar, s.name_en as specialty_en,
-        s.icon as specialty_icon
-      FROM public.doctors d
-      JOIN public.users u ON u.id = d.user_id
-      LEFT JOIN public.user_profiles p ON p.user_id = d.user_id
-      LEFT JOIN public.specialties s ON s.id = d.specialty_id
-      WHERE u.is_active = true AND u.deleted_at IS NULL
-    `;
+    try {
 
-    const params = [];
-    let paramIndex = 1;
 
-    if (specialty) {
-      query += ` AND (s.name_en ILIKE $${paramIndex} OR s.name_ar ILIKE $${paramIndex})`;
-      params.push(`%${specialty}%`);
-      paramIndex++;
-    }
+      const {
+        specialty,
+        region,
+        minRating,
+        minFee,
+        maxFee,
+        page = 1,
+        limit = 10
+      } = req.query;
 
-    if (region) {
-      query += ` AND p.city ILIKE $${paramIndex}`;
-      params.push(`%${region}%`);
-      paramIndex++;
-    }
 
-    if (minRating) {
-      query += ` AND d.average_rating >= $${paramIndex}`;
-      params.push(parseFloat(minRating));
-      paramIndex++;
-    }
 
-    if (search) {
-      query += ` AND (
-        p.first_name_ar ILIKE $${paramIndex} OR 
-        p.first_name_en ILIKE $${paramIndex} OR
-        p.last_name_ar ILIKE $${paramIndex} OR
-        p.last_name_en ILIKE $${paramIndex}
-      )`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
+      let query = `
 
-    // Count total
-    const countResult = await db.query(
-      `SELECT COUNT(*) FROM (${query}) as count_query`,
-      params
-    );
-    const total = parseInt(countResult.rows[0].count);
+SELECT
 
-    // Add pagination
-    query += ` ORDER BY d.average_rating DESC, d.total_ratings DESC`;
-    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+d.id,
+d.user_id,
 
-    const result = await db.query(query, params);
+d.medical_license_number,
+d.years_of_experience,
 
-    return success(res, {
-      doctors: result.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / parseInt(limit))
+d.consultation_fee,
+d.average_rating,
+d.total_ratings,
+
+d.is_accepting_patients,
+
+
+u.email,
+
+
+p.first_name_ar,
+p.last_name_ar,
+
+p.first_name_en,
+p.last_name_en,
+
+
+s.id AS specialty_id,
+s.name_ar AS specialty_ar,
+s.name_en AS specialty_en
+
+
+FROM public.doctors d
+
+
+JOIN public.users u
+ON u.id=d.user_id
+
+
+LEFT JOIN public.user_profiles p
+ON p.user_id=d.user_id
+
+
+LEFT JOIN public.specialties s
+ON s.id=d.specialty_id
+
+
+WHERE
+u.is_active=true
+
+AND u.deleted_at IS NULL
+
+`;
+
+
+
+      let params = [];
+      let index = 1;
+
+
+
+      // specialty filter
+
+      if (specialty) {
+
+        query += `
+
+AND d.specialty_id=$${index}
+
+`;
+
+        params.push(specialty);
+
+        index++;
+
       }
-    }, 'Doctors retrieved successfully');
 
-  } catch (err) {
-    next(err);
-  }
-});
 
+
+
+      // region filter
+
+      if (region) {
+
+        query += `
+
+AND p.city ILIKE $${index}
+
+`;
+
+        params.push(`%${region}%`);
+
+        index++;
+
+      }
+
+
+
+
+      // rating filter
+
+      if (minRating) {
+
+        query += `
+
+AND d.average_rating >= $${index}
+
+`;
+
+        params.push(Number(minRating));
+
+        index++;
+
+      }
+
+
+
+
+      // fee minimum
+
+      if (minFee) {
+
+        query += `
+
+AND d.consultation_fee >= $${index}
+
+`;
+
+        params.push(Number(minFee));
+
+        index++;
+
+      }
+
+
+
+      // fee maximum
+
+      if (maxFee) {
+
+        query += `
+
+AND d.consultation_fee <= $${index}
+
+`;
+
+        params.push(Number(maxFee));
+
+        index++;
+
+      }
+
+
+
+
+
+      // count
+
+      const countQuery =
+
+        `
+SELECT COUNT(*)
+FROM (${query}) AS total
+`;
+
+
+
+      const countResult =
+        await db.query(
+          countQuery,
+          params
+        );
+
+
+
+      const total =
+        Number(countResult.rows[0].count);
+
+
+
+
+
+      // pagination
+
+      query += `
+
+ORDER BY
+d.average_rating DESC
+
+
+LIMIT $${index}
+
+OFFSET $${index + 1}
+
+`;
+
+
+
+      params.push(
+        Number(limit),
+        (Number(page) - 1) * Number(limit)
+      );
+
+
+
+      const result =
+        await db.query(
+          query,
+          params
+        );
+
+
+
+
+      return success(
+        res,
+        {
+
+          doctors: result.rows,
+
+          pagination: {
+
+            page: Number(page),
+
+            limit: Number(limit),
+
+            total,
+
+            totalPages:
+              Math.ceil(total / limit)
+
+          }
+
+        },
+
+        "Doctors retrieved"
+
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  });
 // GET /api/doctors/:id - Get doctor details
 router.get('/:id', async (req, res, next) => {
   try {
@@ -310,5 +497,267 @@ router.get(
     }
 
   });
+
+// ============================================
+// CREATE DOCTOR AVAILABILITY
+// POST /api/doctors/:id/availability
+// ============================================
+
+router.post(
+  "/:id/availability",
+
+  authenticate,
+  authorize("doctor", "admin"),
+
+  async (req, res, next) => {
+
+    try {
+
+
+      const doctorId = req.params.id;
+
+
+      const {
+
+        clinic_id,
+        day_of_week,
+        specific_date,
+        start_time,
+        end_time,
+        slot_duration,
+        is_telemedicine
+
+      } = req.body;
+
+
+
+      const result = await db.query(
+
+        `
+        INSERT INTO public.doctor_availability
+        (
+            doctor_id,
+            clinic_id,
+            day_of_week,
+            specific_date,
+            start_time,
+            end_time,
+            slot_duration,
+            is_telemedicine
+        )
+
+        VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8)
+
+        RETURNING *
+        `,
+
+        [
+
+          doctorId,
+          clinic_id || null,
+          day_of_week,
+          specific_date || null,
+          start_time,
+          end_time,
+          slot_duration || 30,
+          is_telemedicine || false
+
+        ]
+
+      );
+
+
+      return success(
+        res,
+        result.rows[0],
+        "Availability created"
+      );
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+  }
+);
+
+// ============================================
+// UPDATE AVAILABILITY
+// PUT /api/doctors/:id/availability/:slotId
+// ============================================
+
+router.put(
+
+  "/:id/availability/:slotId",
+
+  authenticate,
+  authorize("doctor", "admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const {
+
+        start_time,
+        end_time,
+        slot_duration,
+        is_telemedicine,
+        clinic_id
+
+
+      } = req.body;
+
+
+
+      const result = await db.query(
+
+        `
+
+UPDATE public.doctor_availability
+
+SET
+
+start_time = COALESCE($1,start_time),
+
+end_time = COALESCE($2,end_time),
+
+slot_duration = COALESCE($3,slot_duration),
+
+is_telemedicine = COALESCE($4,is_telemedicine),
+
+clinic_id = COALESCE($5,clinic_id)
+
+
+WHERE id=$6
+
+AND doctor_id=$7
+
+
+RETURNING *
+
+`,
+
+        [
+
+          start_time,
+          end_time,
+          slot_duration,
+          is_telemedicine,
+          clinic_id,
+
+          req.params.slotId,
+          req.params.id
+
+        ]
+
+
+      );
+
+
+
+      if (result.rows.length === 0) {
+
+        return error(
+          res,
+          "Availability not found",
+          404,
+          "NOT_FOUND"
+        );
+
+      }
+
+
+
+      return success(
+        res,
+        result.rows[0],
+        "Availability updated"
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+
+  }
+
+);
+
+// ============================================
+// DELETE AVAILABILITY
+// DELETE /api/doctors/:id/availability/:slotId
+// ============================================
+
+router.delete(
+
+  "/:id/availability/:slotId",
+
+  authenticate,
+  authorize("doctor", "admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      await db.query(
+
+        `
+
+UPDATE public.doctor_availability
+
+SET is_active=false
+
+WHERE id=$1
+
+AND doctor_id=$2
+
+`,
+
+        [
+
+          req.params.slotId,
+
+          req.params.id
+
+        ]
+
+      );
+
+
+
+      return success(
+        res,
+        null,
+        "Availability deleted"
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
 
 module.exports = router;
