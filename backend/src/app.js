@@ -16,6 +16,7 @@ const conversationRoutes = require('./routes/conversation.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const notificationRoutes = require('./routes/notification.routes');
 const notificationTemplateRoutes = require('./routes/notification-template.routes');
+const appointmentRoutes = require("./routes/appointment.routes");
 
 
 const app = express();
@@ -69,6 +70,15 @@ app.use(
   express.static("uploads")
 );
 
+app.use(express.json());
+
+app.use(
+  express.urlencoded({
+    extended: true
+  })
+);
+
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -107,6 +117,7 @@ app.use('/api/clinics', clinicRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
 app.use('/api/specialties', require('./routes/specialty.routes'));
+app.use("/api/appointments", appointmentRoutes);
 
 // Doctor routes (public read, protected write)
 app.use('/api/doctors', doctorRoutes);

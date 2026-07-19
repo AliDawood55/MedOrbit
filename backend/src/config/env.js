@@ -6,7 +6,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 // Resolve root .env: server.js -> src/ -> config/ -> ../../../ = project root
-const rootEnvPath = path.resolve(__dirname, '../../../.env');
+const rootEnvPath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: rootEnvPath });
 
 // Also set in process.env for any direct readers
@@ -51,4 +51,6 @@ const env = {
     }
 };
 
-module.exports = env;
+module.exports = env; console.log("ENV LOADED");
+
+console.log(process.env.DB_PASSWORD);
