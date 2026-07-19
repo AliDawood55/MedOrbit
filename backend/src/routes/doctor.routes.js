@@ -498,4 +498,266 @@ router.get(
 
   });
 
+// ============================================
+// CREATE DOCTOR AVAILABILITY
+// POST /api/doctors/:id/availability
+// ============================================
+
+router.post(
+  "/:id/availability",
+
+  authenticate,
+  authorize("doctor", "admin"),
+
+  async (req, res, next) => {
+
+    try {
+
+
+      const doctorId = req.params.id;
+
+
+      const {
+
+        clinic_id,
+        day_of_week,
+        specific_date,
+        start_time,
+        end_time,
+        slot_duration,
+        is_telemedicine
+
+      } = req.body;
+
+
+
+      const result = await db.query(
+
+        `
+        INSERT INTO public.doctor_availability
+        (
+            doctor_id,
+            clinic_id,
+            day_of_week,
+            specific_date,
+            start_time,
+            end_time,
+            slot_duration,
+            is_telemedicine
+        )
+
+        VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8)
+
+        RETURNING *
+        `,
+
+        [
+
+          doctorId,
+          clinic_id || null,
+          day_of_week,
+          specific_date || null,
+          start_time,
+          end_time,
+          slot_duration || 30,
+          is_telemedicine || false
+
+        ]
+
+      );
+
+
+      return success(
+        res,
+        result.rows[0],
+        "Availability created"
+      );
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+  }
+);
+
+// ============================================
+// UPDATE AVAILABILITY
+// PUT /api/doctors/:id/availability/:slotId
+// ============================================
+
+router.put(
+
+  "/:id/availability/:slotId",
+
+  authenticate,
+  authorize("doctor", "admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      const {
+
+        start_time,
+        end_time,
+        slot_duration,
+        is_telemedicine,
+        clinic_id
+
+
+      } = req.body;
+
+
+
+      const result = await db.query(
+
+        `
+
+UPDATE public.doctor_availability
+
+SET
+
+start_time = COALESCE($1,start_time),
+
+end_time = COALESCE($2,end_time),
+
+slot_duration = COALESCE($3,slot_duration),
+
+is_telemedicine = COALESCE($4,is_telemedicine),
+
+clinic_id = COALESCE($5,clinic_id)
+
+
+WHERE id=$6
+
+AND doctor_id=$7
+
+
+RETURNING *
+
+`,
+
+        [
+
+          start_time,
+          end_time,
+          slot_duration,
+          is_telemedicine,
+          clinic_id,
+
+          req.params.slotId,
+          req.params.id
+
+        ]
+
+
+      );
+
+
+
+      if (result.rows.length === 0) {
+
+        return error(
+          res,
+          "Availability not found",
+          404,
+          "NOT_FOUND"
+        );
+
+      }
+
+
+
+      return success(
+        res,
+        result.rows[0],
+        "Availability updated"
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+
+  }
+
+);
+
+// ============================================
+// DELETE AVAILABILITY
+// DELETE /api/doctors/:id/availability/:slotId
+// ============================================
+
+router.delete(
+
+  "/:id/availability/:slotId",
+
+  authenticate,
+  authorize("doctor", "admin"),
+
+  async (req, res, next) => {
+
+
+    try {
+
+
+      await db.query(
+
+        `
+
+UPDATE public.doctor_availability
+
+SET is_active=false
+
+WHERE id=$1
+
+AND doctor_id=$2
+
+`,
+
+        [
+
+          req.params.slotId,
+
+          req.params.id
+
+        ]
+
+      );
+
+
+
+      return success(
+        res,
+        null,
+        "Availability deleted"
+      );
+
+
+
+    }
+    catch (err) {
+
+      next(err);
+
+    }
+
+
+  }
+
+);
+
 module.exports = router;
