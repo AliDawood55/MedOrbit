@@ -12,6 +12,8 @@ const {
     error
 } = require("../utils/response");
 
+const crypto = require("crypto");
+
 
 const router = express.Router();
 
@@ -119,7 +121,11 @@ ORDER BY start_time
 
 
 
-
+const {
+    generateMeetingLink
+}
+    =
+    require("../services/telemedicine.service");
 
 // =====================================================
 // CREATE APPOINTMENT
@@ -137,10 +143,7 @@ router.post(
 
         try {
 
-
             const {
-
-                patient_id,
                 doctor_id,
                 clinic_id,
                 scheduled_date,
@@ -150,9 +153,46 @@ router.post(
                 appointment_type,
                 reason_for_visit,
                 notes
-
-
             } = req.body;
+
+
+            const patientResult = await db.query(
+                `
+    SELECT id
+    FROM public.patients
+    WHERE user_id=$1
+    `,
+                [
+                    req.user.sub
+                ]
+            );
+
+
+            if (patientResult.rows.length === 0) {
+
+                return error(
+                    res,
+                    "Patient profile not found",
+                    404,
+                    "PATIENT_NOT_FOUND"
+                );
+
+            }
+
+
+            const patient_id = patientResult.rows[0].id;
+
+            let meetingLink = null;
+
+
+            if (appointment_type === "telemedicine") {
+
+                meetingLink =
+                    generateMeetingLink(
+                        crypto.randomUUID()
+                    );
+
+            }
 
 
 
@@ -201,9 +241,7 @@ AND status NOT IN
             const result = await db.query(
 
                 `
-
 INSERT INTO public.appointments
-
 (
 appointment_number,
 patient_id,
@@ -215,24 +253,31 @@ end_time,
 duration_minutes,
 appointment_type,
 status,
+meeting_link,
 reason_for_visit,
 notes
 )
 
-
 VALUES
-
 (
 'APT-' || floor(random()*1000000)::text,
-$1,$2,$3,$4,$5,$6,$7,$8,
+$1,
+$2,
+$3,
+$4,
+$5,
+$6,
+$7,
+$8,
 'pending',
-$9,$10
+$9,
+$10,
+$11
 )
 
 RETURNING *
 
 `,
-
                 [
                     patient_id,
                     doctor_id,
@@ -242,13 +287,12 @@ RETURNING *
                     end_time,
                     duration_minutes,
                     appointment_type,
+                    meetingLink,
                     reason_for_visit,
                     notes
                 ]
 
-
             );
-
 
 
             const appointment = result.rows[0];
