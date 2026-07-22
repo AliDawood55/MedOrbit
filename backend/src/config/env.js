@@ -25,7 +25,7 @@ const env = {
         name: process.env.DB_NAME,
         user: process.env.DB_USER,
         password: String(process.env.DB_PASSWORD || ''),
-        schema: process.env.DB_SCHEMA || "public",
+        schema: process.env.DB_SCHEMA || "medorbit",
     },
 
     jwt: {
@@ -42,6 +42,10 @@ const env = {
     security: {
         bcryptRounds:
             Number(process.env.BCRYPT_ROUNDS) || 12,
+    },
+
+    google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
     },
 
 
