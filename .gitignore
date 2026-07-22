@@ -58,7 +58,9 @@ Thumbs.db
 # Uploads / Temp
 #################################################
 
-**/uploads/
+**/uploads/*
+!**/uploads/avatars/
+!**/uploads/avatars/.gitkeep
 **/temp/
 **/tmp/
 
@@ -103,3 +105,41 @@ Thumbs.db
 **/__pycache__/
 *.py[cod]
 *$py.class
+
+#################################################
+# Editor / AI-tool artifacts (repo root)
+#################################################
+
+tempData/
+
+#################################################
+# Stale generated dumps
+#################################################
+
+/project-tree.txt
+/project_tree.txt
+
+#################################################
+# Superseded / scratch (root)
+#################################################
+
+/test_auth.ps1
+/AUDIT_REPORT.md
+
+#################################################
+# ai-service/data — one-off data-collection scripts
+# and diagnostic output, not needed to run the app.
+# Kept tracked on purpose: osm_collector.py, save_to_db.py,
+# osm_transform.py, nablus_review_export.py,
+# build_nablus_seed.py, nablus_osm_review.csv
+#################################################
+
+ai-service/data/dry_run_*.py
+ai-service/data/build_*_cleanup.py
+ai-service/data/find_name_bug_victims.py
+ai-service/data/fix_name_bug.py
+ai-service/data/nudge_check.py
+ai-service/data/wide*_export*.py
+ai-service/data/_dry_run_*.sql
+ai-service/data/wide_dry_run_out.txt
+ai-service/data/nablus_wide_review*.csv
