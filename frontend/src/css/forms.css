@@ -1,0 +1,169 @@
+/* ===========================================
+   MedOrbit v2 - Form Components
+   Shared input/label/toggle styles for auth pages,
+   account/profile forms, and other data-entry pages.
+   =========================================== */
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper > i:first-child {
+    position: absolute;
+    right: 14px;
+    color: var(--text-faint);
+    font-size: 13px;
+    pointer-events: none;
+}
+
+[dir="ltr"] .input-wrapper > i:first-child {
+    right: auto;
+    left: 14px;
+}
+
+.input-wrapper input,
+.input-wrapper select {
+    width: 100%;
+    padding: 11px 42px 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg-soft);
+    transition: all var(--t-fast);
+    outline: none;
+}
+
+[dir="ltr"] .input-wrapper input,
+[dir="ltr"] .input-wrapper select {
+    padding: 11px 14px 11px 42px;
+}
+
+.input-wrapper input:focus,
+.input-wrapper select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    background: var(--bg-card);
+}
+
+.input-wrapper input::placeholder {
+    color: var(--text-faint);
+}
+
+.input-wrapper select {
+    cursor: pointer;
+    appearance: none;
+}
+
+.toggle-password {
+    position: absolute;
+    left: 14px;
+    color: var(--text-faint);
+    cursor: pointer;
+    font-size: 13px;
+    transition: color var(--t-fast);
+}
+
+[dir="ltr"] .toggle-password {
+    left: auto;
+    right: 14px;
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+}
+
+/* === Password strength meter === */
+.pw-strength {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.pw-strength .bar {
+    flex: 1;
+    height: 3px;
+    border-radius: var(--r-full);
+    background: var(--border);
+    transition: background var(--t-base);
+}
+
+.pw-strength .bar.weak { background: var(--danger); }
+.pw-strength .bar.medium { background: var(--warning); }
+.pw-strength .bar.strong { background: var(--success); }
+
+.pw-hint {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-top: 6px;
+    line-height: 1.5;
+}
+
+/* === Radio group (e.g. gender) === */
+.radio-group {
+    display: flex;
+    gap: 10px;
+}
+
+.radio-option {
+    flex: 1;
+    position: relative;
+}
+
+.radio-option input {
+    display: none;
+}
+
+.radio-option label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-soft);
+    background: var(--bg-soft);
+    transition: all var(--t-fast);
+    margin-bottom: 0;
+}
+
+.radio-option input:checked + label {
+    border-color: var(--primary);
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+[data-theme="dark"] .radio-option input:checked + label {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+@media (max-width: 480px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}

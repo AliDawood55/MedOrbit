@@ -234,3 +234,85 @@
     color: var(--text-soft);
     font-size: 12px;
 }
+
+/* === Alert === */
+.alert {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.alert.error {
+    display: flex;
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.alert.success {
+    display: flex;
+    background: rgba(16, 185, 129, 0.08);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="dark"] .alert.error { background: rgba(239, 68, 68, 0.15); }
+[data-theme="dark"] .alert.success { background: rgba(16, 185, 129, 0.15); }
+
+/* === Button loading state === */
+.btn .btn-spinner {
+    display: none;
+}
+
+.btn.loading .btn-spinner {
+    display: inline-flex;
+}
+
+.btn.loading .btn-label {
+    display: none;
+}
+
+.btn.loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.btn-primary .btn-spinner {
+    border-color: rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+}
+
+/* === Utility === */
+.hidden {
+    display: none !important;
+}
+
+/* === Responsive: touch tap targets ===
+   Desktop keeps the compact sizing above (mouse pointer, not touch); below
+   1024px (tablet and phone are both touch, not just phone) every
+   button-like control meets the ~44px minimum tap target. */
+@media (max-width: 1024px) {
+    .btn {
+        min-height: 44px;
+        padding-top: 11px;
+        padding-bottom: 11px;
+    }
+
+    .btn-sm {
+        min-height: 44px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-size: 13px;
+    }
+
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}

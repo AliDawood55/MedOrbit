@@ -108,5 +108,23 @@ const Dom = (() => {
         });
     }
 
-    return { $, $$, el, debounce, throttle, escapeHtml, scrollToBottom };
+    /**
+     * Reference-counted body scroll lock — for overlays (drawer, mobile
+     * sidebar, bottom sheet) that should block background scroll while
+     * open. Counted so two overlays opening/closing in any order can never
+     * unlock the body while another is still up.
+     */
+    let scrollLockCount = 0;
+    function lockScroll() {
+        scrollLockCount++;
+        document.body.classList.add('scroll-locked');
+    }
+    function unlockScroll() {
+        scrollLockCount = Math.max(0, scrollLockCount - 1);
+        if (scrollLockCount === 0) {
+            document.body.classList.remove('scroll-locked');
+        }
+    }
+
+    return { $, $$, el, debounce, throttle, escapeHtml, scrollToBottom, lockScroll, unlockScroll };
 })();
