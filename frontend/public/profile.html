@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – حسابي</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/ai-tools.css">
+    <link rel="stylesheet" href="../src/css/profile.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:760px;">
+
+        <div class="page-header">
+            <h1 data-i18n="profile.title">حسابي</h1>
+            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="profile.subtitle">إدارة معلوماتك الشخصية وإعدادات حسابك</p>
+        </div>
+
+        <div id="loadingState" class="profile-loading">
+            <div class="spinner spinner-lg"></div>
+            <p data-i18n="common.loading">جارِ التحميل...</p>
+        </div>
+
+        <div id="errorState" class="tool-error hidden">
+            <i class="fas fa-triangle-exclamation"></i>
+            <p data-i18n="profile.loadError">تعذر تحميل بيانات حسابك</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="retryLoadBtn" data-i18n="common.retry">إعادة المحاولة</button>
+        </div>
+
+        <div id="profileContent" class="hidden">
+
+            <!-- Avatar + identity -->
+            <div class="card profile-header-card">
+                <div class="profile-avatar-wrap">
+                    <div class="profile-avatar" id="avatarDisplay"></div>
+                    <button type="button" class="profile-avatar-edit" id="avatarEditBtn" title="Change photo">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                    <input type="file" id="avatarInput" accept=".jpg,.jpeg,.png" style="display:none;">
+                </div>
+                <div class="profile-identity">
+                    <h2 id="profileName"></h2>
+                    <p id="profileEmail"></p>
+                    <p class="profile-since" id="profileSince"></p>
+                    <p class="profile-avatar-hint" data-i18n="profile.avatarHint">JPG أو PNG — حتى 2 ميجابايت</p>
+                </div>
+            </div>
+
+            <div class="alert" id="formAlert"></div>
+
+            <!-- Profile info form -->
+            <div class="card profile-section">
+                <div class="profile-section-title" data-i18n="profile.sectionInfo">المعلومات الشخصية</div>
+
+                <form id="profileForm" novalidate>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstNameAr" data-i18n="auth.firstNameAr">الاسم الأول (عربي)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="firstNameAr" name="firstNameAr" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastNameAr" data-i18n="auth.lastNameAr">الاسم الأخير (عربي)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="lastNameAr" name="lastNameAr" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstNameEn" data-i18n="auth.firstNameEn">First Name (English)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="firstNameEn" name="firstNameEn" required dir="ltr" style="text-align:right">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastNameEn" data-i18n="auth.lastNameEn">Last Name (English)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="lastNameEn" name="lastNameEn" required dir="ltr" style="text-align:right">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone" data-i18n="auth.phone">رقم الهاتف</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-phone"></i>
+                                <input type="tel" id="phone" name="phone" data-i18n-placeholder="auth.phonePlaceholder" placeholder="+970-59-1234567" dir="ltr" style="text-align:right">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label data-i18n="auth.gender">الجنس</label>
+                            <div class="radio-group">
+                                <div class="radio-option">
+                                    <input type="radio" name="gender" id="genderMale" value="male">
+                                    <label for="genderMale"><i class="fas fa-mars"></i> <span data-i18n="auth.genderMale">ذكر</span></label>
+                                </div>
+                                <div class="radio-option">
+                                    <input type="radio" name="gender" id="genderFemale" value="female">
+                                    <label for="genderFemale"><i class="fas fa-venus"></i> <span data-i18n="auth.genderFemale">أنثى</span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address" data-i18n="profile.address">العنوان</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-location-dot"></i>
+                                <input type="text" id="address" name="address" data-i18n-placeholder="profile.addressPlaceholder" placeholder="الحي، الشارع...">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="city" data-i18n="profile.city">المدينة</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-city"></i>
+                                <input type="text" id="city" name="city" data-i18n-placeholder="profile.cityPlaceholder" placeholder="نابلس">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-save-row">
+                        <button type="submit" class="btn btn-primary" id="saveProfileBtn">
+                            <span class="btn-label" data-i18n="profile.saveChanges">حفظ التغييرات</span>
+                            <span class="spinner spinner-sm btn-spinner"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Language preference -->
+            <div class="card profile-section">
+                <div class="profile-section-title" data-i18n="profile.sectionLanguage">لغة الواجهة</div>
+                <div class="profile-section-desc" data-i18n="profile.languageDesc">تُطبَّق فوراً وتُحفظ لحسابك</div>
+
+                <div class="profile-lang-options" id="langOptions">
+                    <label class="profile-lang-option" id="langOptionAr">
+                        <input type="radio" name="profileLang" value="ar">
+                        <i class="fas fa-check" style="display:none;"></i>
+                        <span data-i18n="profile.languageAr">العربية</span>
+                    </label>
+                    <label class="profile-lang-option" id="langOptionEn">
+                        <input type="radio" name="profileLang" value="en">
+                        <i class="fas fa-check" style="display:none;"></i>
+                        <span data-i18n="profile.languageEn">English</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Change password -->
+            <div class="card profile-section">
+                <div class="profile-section-title" data-i18n="profile.sectionPassword">تغيير كلمة المرور</div>
+                <div class="profile-section-desc" data-i18n="profile.passwordDesc">سيتم تسجيل خروجك من كل الأجهزة بعد تغيير كلمة المرور، وستحتاج لتسجيل الدخول من جديد.</div>
+
+                <div class="alert" id="passwordAlert"></div>
+
+                <form id="passwordForm" novalidate>
+                    <div class="form-group">
+                        <label for="currentPassword" data-i18n="profile.currentPassword">كلمة المرور الحالية</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="currentPassword" name="currentPassword" required autocomplete="current-password">
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="newPassword" data-i18n="profile.newPassword">كلمة المرور الجديدة</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="newPassword" name="newPassword" data-i18n-placeholder="auth.newPasswordPlaceholder" placeholder="8 أحرف على الأقل" required autocomplete="new-password">
+                            <i class="fas fa-eye toggle-password"></i>
+                        </div>
+                        <div class="pw-strength" id="pwStrength">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                        <div class="pw-hint" data-i18n="auth.pwHint">حرف كبير + صغير + رقم + رمز خاص (8 أحرف على الأقل)</div>
+                    </div>
+
+                    <div class="profile-save-row">
+                        <button type="submit" class="btn btn-primary" id="changePasswordBtn">
+                            <span class="btn-label" data-i18n="profile.changePassword">تغيير كلمة المرور</span>
+                            <span class="spinner spinner-sm btn-spinner"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/profile.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            Profile.init();
+        });
+    </script>
+</body>
+</html>
