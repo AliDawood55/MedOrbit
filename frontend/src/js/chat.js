@@ -16,16 +16,100 @@ const Chat = (() => {
         attachEvents();
     }
 
+    function isArLang() {
+        return (document.documentElement.lang || 'ar') === 'ar';
+    }
+
+    /**
+     * Sets the active conversation and notifies the rest of the app
+     * (the conversation sidebar listens for this to update its active
+     * highlight and refresh the list) without coupling chat.js to sidebar.js.
+     */
+    function setConversationId(id) {
+        conversationId = id || null;
+        window.dispatchEvent(new CustomEvent('chat:conversationChanged', {
+            detail: { conversationId }
+        }));
+    }
+
+    function getConversationId() {
+        return conversationId;
+    }
+
     function clearChat() {
-        conversationId = null;
+        setConversationId(null);
         lastPlaces = [];
         const el = document.getElementById('chatMessages');
         if (el) el.innerHTML = '';
         renderWelcome();
+        hideSuggestions();
 
         // Clear map
         if (MapApp?.clearResults) {
             MapApp.clearResults();
+        }
+    }
+
+    /**
+     * Loads a past conversation (from the sidebar) and replays its
+     * messages + last known places into the chat panel and map.
+     */
+    async function loadConversation(id) {
+        if (!id || isProcessing) return;
+
+        const el = document.getElementById('chatMessages');
+        if (!el) return;
+
+        try {
+            const res = await API.conversations.get(id);
+            const data = res?.data;
+            if (!data) return;
+
+            setConversationId(data.conversation?.id || id);
+
+            const places = (data.places || []).map((p) => ({
+                id: p.id,
+                name: p.place_name,
+                lat: parseFloat(p.latitude),
+                lng: parseFloat(p.longitude),
+                type: p.place_type,
+                address: p.address,
+                phone: p.phone,
+                distance: p.distance_km != null ? Number(p.distance_km) * 1000 : null,
+                rating: p.rating
+            }));
+            lastPlaces = places;
+
+            el.innerHTML = '';
+            hideSuggestions();
+
+            (data.messages || []).forEach((m) => {
+                if (m.message_type === 'user') {
+                    appendUserMessage(m.message_text);
+                } else {
+                    const meta = m.metadata || {};
+                    appendBotMessage({
+                        reply: m.message_text,
+                        intent: m.intent,
+                        places: meta.places || [],
+                        doctors: meta.doctors || [],
+                        suggestions: []
+                    }, { skipMapUpdate: true });
+                }
+            });
+
+            if (MapApp?.clearResults) MapApp.clearResults();
+            if (places.length > 0 && MapApp?.renderPlaces) {
+                MapApp.renderPlaces(places);
+            }
+
+            scroll(el);
+
+        } catch (err) {
+            console.error('Chat: failed to load conversation', err);
+            if (typeof Toast !== 'undefined') {
+                Toast.error(isArLang() ? 'تعذر تحميل المحادثة' : 'Could not load this conversation');
+            }
         }
     }
 
@@ -41,6 +125,7 @@ const Chat = (() => {
         activeController = API.makeCancellable();
         isProcessing = true;
         setProcessingState(true);
+        hideSuggestions();
 
         const input = document.getElementById('chatInput');
         if (input) {
@@ -51,10 +136,21 @@ const Chat = (() => {
 
         appendUserMessage(text);
 
-        // Get user location safely — only if valid
-        const loc = MapApp?.getUserLocation?.() || null;
-
         showTyping();
+
+        // Never silently drop location: if a fix is already in, use it; if
+        // one is actively resolving, wait briefly rather than send without
+        // it; otherwise proceed without coords and say so in the reply.
+        let loc = null;
+        let locationPending = false;
+        if (typeof Location !== 'undefined') {
+            const state = Location.getState();
+            loc = state.coords;
+            if (!loc && state.status === 'locating') {
+                locationPending = true;
+                loc = await Location.waitForFix(2500);
+            }
+        }
 
         try {
 
@@ -84,12 +180,18 @@ const Chat = (() => {
 
             hideTyping();
 
-            // Track conversation ID
+            // Track conversation ID (also lets the sidebar pick up new/updated conversations)
             if (data?.conversationId) {
-                conversationId = data.conversationId;
+                setConversationId(data.conversationId);
             }
 
             appendBotMessage(data);
+
+            // If we sent without coords, tell the user why results (if any)
+            // aren't distance-ranked — never fail silently.
+            if (!payload.latitude) {
+                appendLocationNote(locationPending);
+            }
 
         } catch (err) {
 
@@ -121,7 +223,7 @@ const Chat = (() => {
         scroll(el);
     }
 
-    function appendBotMessage(data) {
+    function appendBotMessage(data, opts = {}) {
 
         const el = document.getElementById('chatMessages');
         if (!el) return;
@@ -129,6 +231,8 @@ const Chat = (() => {
         const reply = data?.reply || '';
         const intent = data?.intent || '';
         const places = Array.isArray(data?.places) ? data.places : [];
+        const doctors = Array.isArray(data?.doctors) ? data.doctors : [];
+        const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
 
         // Render bot text reply
         if (reply) {
@@ -151,40 +255,54 @@ const Chat = (() => {
         // ============================================
         if (places.length > 0) {
 
-            // Render markers on map
-            if (MapApp?.renderPlaces) {
-                MapApp.renderPlaces(places);
-            }
+            if (!opts.skipMapUpdate) {
+                // Render markers on map
+                if (MapApp?.renderPlaces) {
+                    MapApp.renderPlaces(places);
+                }
 
-            // Highlight first place
-            if (MapApp?.highlightPlace) {
-                MapApp.highlightPlace(places[0]);
+                // Highlight first place
+                if (MapApp?.highlightPlace) {
+                    MapApp.highlightPlace(places[0]);
+                }
+
+                // Draw route to first place (with safe location waiting)
+                if (MapApp?.drawRoute) {
+                    drawRouteSafely(places[0]);
+                }
             }
 
             // Render clickable cards
             renderPlaceCards(el, places);
 
-            // Draw route to first place (with safe location waiting)
-            if (MapApp?.drawRoute) {
-                drawRouteSafely(places[0]);
-            }
-
         } else if (intent === 'show_route' && lastPlaces.length > 0) {
 
             // show_route without new places — reuse cached places
-            if (MapApp?.renderPlaces) {
+            if (!opts.skipMapUpdate && MapApp?.renderPlaces) {
                 MapApp.renderPlaces(lastPlaces);
             }
 
             renderPlaceCards(el, lastPlaces);
 
             // Draw route to first cached place
-            if (MapApp?.drawRoute) {
+            if (!opts.skipMapUpdate && MapApp?.drawRoute) {
                 drawRouteSafely(lastPlaces[0]);
             }
         }
 
+        // ============================================
+        // RENDER DOCTOR CARDS
+        // ============================================
+        if (doctors.length > 0) {
+            renderDoctorCards(el, doctors);
+        }
+
         scroll(el);
+
+        // ============================================
+        // SUGGESTION CHIPS (for the latest bot reply only)
+        // ============================================
+        renderSuggestions(suggestions);
     }
 
     function renderPlaceCards(container, places) {
@@ -236,40 +354,129 @@ const Chat = (() => {
     }
 
     /**
-     * Safely draw route — waits for valid user location
-     * with a maximum retry limit to prevent infinite polling
+     * Renders doctor result cards (find_doctor intent).
+     * Purely informational for now — doctor profile pages land in a later phase.
      */
-    function drawRouteSafely(destination) {
+    function renderDoctorCards(container, doctors) {
+
+        if (!doctors || doctors.length === 0) return;
+
+        const isAr = isArLang();
+        const cardsContainer = document.createElement('div');
+        cardsContainer.className = 'cards doctor-cards';
+
+        doctors.forEach((d) => {
+
+            const card = document.createElement('div');
+            card.className = 'doctor-card';
+
+            const initials = (d.name || '?').trim().charAt(0).toUpperCase();
+            const ratingText = d.rating != null ? Number(d.rating).toFixed(1) : null;
+            const acceptingBadge = d.isAccepting === false
+                ? '<span class="badge badge-danger">' + (isAr ? 'لا يستقبل حالياً' : 'Not accepting') + '</span>'
+                : (d.isAccepting ? '<span class="badge badge-success">' + (isAr ? 'يستقبل مرضى جدد' : 'Accepting patients') + '</span>' : '');
+
+            card.innerHTML =
+                '<div class="doctor-card-avatar">' +
+                    (d.image ? '<img src="' + escape(d.image) + '" alt="">' : escape(initials)) +
+                '</div>' +
+                '<div class="doctor-card-body">' +
+                    '<div class="doctor-card-name">' + escape(d.name || '') + '</div>' +
+                    (d.specialty ? '<div class="doctor-card-specialty">' + escape(d.specialty) + '</div>' : '') +
+                    '<div class="doctor-card-meta">' +
+                        (ratingText ? '<span class="rating"><span class="rating-stars">★</span><span class="rating-value">' + ratingText + '</span></span>' : '') +
+                        (d.experience != null ? '<span>' + escape(String(d.experience)) + ' ' + (isAr ? 'سنة خبرة' : 'yrs exp.') + '</span>' : '') +
+                        (d.fee != null ? '<span>' + escape(String(d.fee)) + ' ₪</span>' : '') +
+                    '</div>' +
+                    (acceptingBadge ? '<div class="doctor-card-badge">' + acceptingBadge + '</div>' : '') +
+                '</div>';
+
+            cardsContainer.appendChild(card);
+        });
+
+        container.appendChild(cardsContainer);
+    }
+
+    /**
+     * Renders tappable suggestion chips for the latest bot reply.
+     */
+    function renderSuggestions(suggestions) {
+        const el = document.getElementById('quickReplies');
+        if (!el) return;
+
+        if (!suggestions || suggestions.length === 0) {
+            hideSuggestions();
+            return;
+        }
+
+        el.innerHTML = '';
+        suggestions.forEach((text) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'quick-reply-chip';
+            chip.textContent = text;
+            chip.addEventListener('click', () => handleSend(text));
+            el.appendChild(chip);
+        });
+        el.style.display = 'flex';
+    }
+
+    function hideSuggestions() {
+        const el = document.getElementById('quickReplies');
+        if (!el) return;
+        el.style.display = 'none';
+        el.innerHTML = '';
+    }
+
+    /**
+     * Safely draw route — waits (briefly) for a location fix via the shared
+     * Location module instead of polling MapApp directly.
+     */
+    async function drawRouteSafely(destination) {
 
         if (!destination || destination.lat == null || destination.lng == null) return;
+        if (typeof Location === 'undefined' || typeof MapApp === 'undefined') return;
 
-        let attempts = 0;
+        const state = Location.getState();
+        let user = state.coords;
 
-        const tryDraw = () => {
+        if (!user && state.status === 'locating') {
+            user = await Location.waitForFix(MAX_LOCATION_WAIT_ATTEMPTS * LOCATION_WAIT_INTERVAL_MS);
+        }
 
-            const user = MapApp.getUserLocation();
+        if (
+            user &&
+            user.lat != null &&
+            user.lng != null &&
+            !isNaN(user.lat) &&
+            !isNaN(user.lng)
+        ) {
+            MapApp.drawRoute(user, destination);
+        } else {
+            console.warn('Route drawing skipped: user location not available');
+        }
+    }
 
-            if (
-                user &&
-                user.lat != null &&
-                user.lng != null &&
-                !isNaN(user.lat) &&
-                !isNaN(user.lng)
-            ) {
-                MapApp.drawRoute(user, destination);
-                return;
-            }
+    /**
+     * Shown whenever a message was sent without coordinates, so the user
+     * understands why results (if any) aren't distance-ranked, instead of
+     * the location just silently being missing.
+     */
+    function appendLocationNote(wasPending) {
+        const el = document.getElementById('chatMessages');
+        if (!el) return;
 
-            attempts++;
+        const isAr = isArLang();
+        const text = wasPending
+            ? (isAr ? 'ℹ️ لم يتم تحديد موقعك بعد، لذا لم يتم ترتيب النتائج حسب القرب.' : "ℹ️ Your location wasn't ready yet, so results aren't distance-ranked.")
+            : (isAr ? 'ℹ️ موقعك غير محدد، لذا لم يتم ترتيب النتائج حسب القرب. يمكنك تحديده من الأعلى.' : "ℹ️ Your location isn't set, so results aren't distance-ranked. You can set it from the picker above.");
 
-            if (attempts < MAX_LOCATION_WAIT_ATTEMPTS) {
-                setTimeout(tryDraw, LOCATION_WAIT_INTERVAL_MS);
-            } else {
-                console.warn('Route drawing skipped: user location not available after', MAX_LOCATION_WAIT_ATTEMPTS, 'attempts');
-            }
-        };
+        const div = document.createElement('div');
+        div.className = 'message bot location-note';
+        div.innerHTML = '<div class="message-bubble">' + text + '</div>';
 
-        tryDraw();
+        el.appendChild(div);
+        scroll(el);
     }
 
     function handleError(err) {
@@ -278,7 +485,7 @@ const Chat = (() => {
         if (!el) return;
 
         const msg = err?.message || 'حدث خطأ غير متوقع';
-        const isAr = (document.documentElement.lang || 'ar') === 'ar';
+        const isAr = isArLang();
         const errorText = isAr ? '⚠️ حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : '⚠️ Connection error. Please try again.';
 
         const div = document.createElement('div');
@@ -312,7 +519,7 @@ const Chat = (() => {
         const el = document.getElementById('chatMessages');
         if (!el) return;
 
-        const isAr = (document.documentElement.lang || 'ar') === 'ar';
+        const isAr = isArLang();
 
         const welcomeText = isAr
             ? '👋 أهلاً بك في MedOrbit!\nيمكنني مساعدتك في البحث عن عيادات، صيدليات، مستشفيات، والأطباء الأقرب إليك.\n\nجرّب أن تسأل:\n• أقرب صيدلية\n• أقرب عيادة\n• أقرب مستشفى'
@@ -360,7 +567,9 @@ const Chat = (() => {
     return {
         init,
         handleSend,
-        clearChat
+        clearChat,
+        loadConversation,
+        getConversationId
     };
 
 })();
