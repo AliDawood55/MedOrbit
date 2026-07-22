@@ -24,7 +24,7 @@ async function processEmails() {
             `
         SELECT *
 
-        FROM public.email_queue
+        FROM medorbit.email_queue
 
         WHERE status='pending'
 
@@ -60,7 +60,7 @@ async function processEmails() {
             await db.query(
 
                 `
-                UPDATE public.email_queue
+                UPDATE medorbit.email_queue
 
                 SET
                     attempts = attempts + 1,
@@ -98,7 +98,7 @@ async function processEmails() {
             await db.query(
 
                 `
-                UPDATE public.email_queue
+                UPDATE medorbit.email_queue
 
                 SET
                     status='sent',
@@ -133,7 +133,7 @@ async function processEmails() {
             await db.query(
 
                 `
-                UPDATE public.email_queue
+                UPDATE medorbit.email_queue
 
                 SET
 
