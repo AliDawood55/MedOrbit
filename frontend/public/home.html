@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform for Nablus, Palestine">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – منصة الرعاية الصحية الذكية</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/home.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- ===== Hero ===== -->
+        <section class="hero">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span data-i18n="home.badge">نابلس، فلسطين</span>
+                </div>
+                <h1 data-i18n-html="home.heroTitle">
+                    رعاية صحية <span>ذكية</span> في متناول يدك
+                </h1>
+                <p data-i18n="home.heroSubtitle">
+                    اعثر على أقرب طبيب أو عيادة أو صيدلية، تحدث مع مساعدنا الذكي، واحصل على إجابات طبية موثوقة — كل ذلك في مكان واحد.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="index.html" class="btn btn-primary" id="heroPrimaryBtn">
+                        <i class="fas fa-comments" id="heroPrimaryIcon"></i>
+                        <span data-i18n="home.startChat" id="heroPrimaryLabel">ابدأ محادثة</span>
+                    </a>
+                    <a href="find-doctors.html" class="btn btn-secondary">
+                        <i class="fas fa-user-md"></i>
+                        <span data-i18n="nav.doctors">الأطباء</span>
+                    </a>
+                </div>
+
+                <form class="hero-search" id="heroSearchForm">
+                    <i class="fas fa-search"></i>
+                    <input
+                        type="text"
+                        id="heroSearchInput"
+                        data-i18n-placeholder="home.searchPlaceholder"
+                        placeholder="ابحث عن طبيب، تخصص، أو عيادة..."
+                        autocomplete="off"
+                    >
+                    <select id="heroSearchType">
+                        <option value="doctors" data-i18n="home.searchDoctors">أطباء</option>
+                        <option value="clinics" data-i18n="home.searchClinics">عيادات</option>
+                    </select>
+                    <button type="submit" aria-label="Search">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ===== Feature Highlights ===== -->
+        <section class="features">
+            <div class="features-heading">
+                <h2 data-i18n="home.featuresTitle">كل ما تحتاجه لرعاية صحية أفضل</h2>
+                <p data-i18n="home.featuresSubtitle">منصة واحدة تجمع بين الذكاء الاصطناعي والبيانات الطبية الموثوقة</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-robot"></i></div>
+                    <h3 data-i18n="home.feature1Title">مساعد ذكي على مدار الساعة</h3>
+                    <p data-i18n="home.feature1Desc">اسأل عن أقرب عيادة أو صيدلية أو استشر حول الأعراض، وسيرشدك المساعد فوراً.</p>
+                    <a href="index.html">
+                        <span data-i18n="home.tryNow">جرّب الآن</span>
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-user-md"></i></div>
+                    <h3 data-i18n="home.feature2Title">أطباء موثوقون</h3>
+                    <p data-i18n="home.feature2Desc">تصفح الأطباء حسب التخصص، وشاهد التقييمات وساعات العمل قبل الحجز.</p>
+                    <a href="find-doctors.html">
+                        <span data-i18n="home.browse">تصفح</span>
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-hospital"></i></div>
+                    <h3 data-i18n="home.feature3Title">عيادات ومستشفيات قريبة</h3>
+                    <p data-i18n="home.feature3Desc">ابحث عن أقرب مرفق طبي على الخريطة، مع الاتجاهات وأرقام التواصل.</p>
+                    <a href="find-clinics.html">
+                        <span data-i18n="home.browse">تصفح</span>
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-notes-medical"></i></div>
+                    <h3 data-i18n="home.feature4Title">أدوات صحية ذكية</h3>
+                    <p data-i18n="home.feature4Desc">فحص الأعراض، التحقق من تداخل الأدوية، وتلخيص التقارير الطبية.</p>
+                    <a href="index.html">
+                        <span data-i18n="home.comingSoon">قريباً</span>
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== Bottom CTA ===== -->
+        <section class="cta-band">
+            <h2 data-i18n="home.ctaTitle">ابدأ رحلتك الصحية اليوم</h2>
+            <p data-i18n="home.ctaSubtitle">أنشئ حساباً مجانياً لحفظ محادثاتك والوصول السريع لأطبائك المفضلين</p>
+            <a href="register.html" class="btn" id="ctaRegisterBtn">
+                <span data-i18n="auth.register">إنشاء حساب</span>
+            </a>
+            <a href="dashboard.html" class="btn hidden" id="ctaDashboardBtn">
+                <span data-i18n="home.goToDashboard">الذهاب إلى لوحة التحكم</span>
+            </a>
+        </section>
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+
+            // Logged-in visitors get a dashboard shortcut instead of the
+            // chat-app link and the "create an account" pitch.
+            if (API.isAuthenticated()) {
+                const heroBtn = document.getElementById('heroPrimaryBtn');
+                if (heroBtn) heroBtn.href = 'dashboard.html';
+                document.getElementById('heroPrimaryIcon')?.classList.replace('fa-comments', 'fa-gauge-high');
+                const heroLabel = document.getElementById('heroPrimaryLabel');
+                if (heroLabel) {
+                    heroLabel.setAttribute('data-i18n', 'home.goToDashboard');
+                    if (typeof I18n !== 'undefined') I18n.apply();
+                }
+
+                document.getElementById('ctaRegisterBtn')?.classList.add('hidden');
+                document.getElementById('ctaDashboardBtn')?.classList.remove('hidden');
+            }
+
+            document.getElementById('heroSearchForm')?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const q = document.getElementById('heroSearchInput')?.value.trim();
+                const type = document.getElementById('heroSearchType')?.value;
+                const target = type === 'clinics' ? 'find-clinics.html' : 'find-doctors.html';
+                window.location.href = target + (q ? '?search=' + encodeURIComponent(q) : '');
+            });
+        });
+    </script>
+</body>
+</html>
