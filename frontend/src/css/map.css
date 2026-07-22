@@ -144,6 +144,196 @@
     border-color: var(--primary);
 }
 
+/* === Location Picker (shared: index.html + find-clinics.html) ===
+   Centers the pill without a `transform` on this container — a transform
+   here would make it a containing block for the mobile bottom-sheet's
+   position:fixed below, anchoring the sheet to this small box instead of
+   the viewport. */
+.location-picker {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 1001;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.location-picker > * {
+    pointer-events: auto;
+}
+
+.location-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    box-shadow: var(--shadow-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-soft);
+    white-space: nowrap;
+    transition: all var(--t-fast);
+}
+
+.location-pill:hover {
+    border-color: var(--primary-200, var(--primary));
+}
+
+.location-pill.locating {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+
+.location-pill.resolved {
+    background: var(--success);
+    color: #fff;
+    border-color: var(--success);
+}
+
+.location-pill.manual {
+    background: var(--info, var(--primary));
+    color: #fff;
+    border-color: var(--info, var(--primary));
+}
+
+.location-pill.error {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+}
+
+.location-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 260px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg);
+    padding: 8px;
+}
+
+.location-menu.open {
+    display: block;
+}
+
+.location-error-note {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: rgba(239, 68, 68, 0.08);
+    color: var(--danger);
+    border-radius: var(--r-sm);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.location-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: start;
+    transition: background var(--t-fast);
+}
+
+.location-menu-item:hover {
+    background: var(--bg-soft);
+}
+
+.location-menu-item i {
+    width: 16px;
+    color: var(--primary);
+    text-align: center;
+}
+
+.location-menu-label {
+    margin: 10px 6px 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-transform: uppercase;
+}
+
+.location-district-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 2px 6px 4px;
+}
+
+.location-district-btn {
+    padding: 6px 10px;
+    border-radius: var(--r-full);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+}
+
+.location-district-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-50);
+}
+
+/* === Mobile: the location menu becomes a bottom sheet instead of a small
+   anchored dropdown (which would clip against a narrow map panel) === */
+@media (max-width: 768px) {
+    .location-menu-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: var(--bg-overlay);
+        z-index: var(--z-drawer);
+    }
+
+    .location-menu-backdrop.open {
+        display: block;
+    }
+
+    .location-menu {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        transform: none;
+        min-width: 0;
+        width: 100%;
+        max-height: 70vh;
+        overflow-y: auto;
+        border-radius: var(--r-xl) var(--r-xl) 0 0;
+        border-bottom: none;
+        padding: 10px 12px calc(16px + env(safe-area-inset-bottom));
+        z-index: calc(var(--z-drawer) + 1);
+    }
+
+    .location-menu-item,
+    .location-district-btn {
+        min-height: 44px;
+        font-size: 14px;
+    }
+
+    .location-district-btn {
+        padding: 10px 14px;
+    }
+}
+
 /* === Status Pill === */
 .map-status {
     position: absolute;
@@ -389,4 +579,12 @@
     background: var(--primary) !important;
     color: white !important;
     border-color: var(--primary) !important;
+}
+
+@media (max-width: 1024px) {
+    .leaflet-control-zoom a {
+        width: 44px !important;
+        height: 44px !important;
+        line-height: 44px !important;
+    }
 }
