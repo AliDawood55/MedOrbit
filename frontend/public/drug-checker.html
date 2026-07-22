@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – التحقق من تداخل الأدوية</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/ai-tools.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container">
+        <div class="tool-header">
+            <div class="tool-icon"><i class="fas fa-pills"></i></div>
+            <h1 data-i18n="drugChecker.title">التحقق من تداخل الأدوية</h1>
+            <p data-i18n="drugChecker.subtitle">أضف الأدوية التي تتناولها للتحقق من وجود تداخلات محتملة بينها</p>
+        </div>
+
+        <div class="auth-prompt-banner hidden" id="authPromptBanner">
+            <i class="fas fa-circle-info"></i>
+            <span data-i18n="aitools.loginPrompt">سجّل الدخول لحفظ سجل استخدامك لهذه الأداة</span>
+            <a href="login.html" data-i18n="auth.login">تسجيل الدخول</a>
+        </div>
+
+        <div class="disclaimer-banner">
+            <i class="fas fa-circle-exclamation"></i>
+            <span data-i18n="drugChecker.disclaimer">استشر الصيدلاني أو الطبيب دائماً قبل إجراء أي تغيير على أدويتك.</span>
+        </div>
+
+        <div id="formSection">
+            <form class="tool-card" id="drugForm" novalidate>
+                <div class="chip-input-group">
+                    <input type="text" id="medInput" data-i18n-placeholder="drugChecker.inputPlaceholder" placeholder="اكتب اسم الدواء واضغط Enter" autocomplete="off">
+                    <button type="button" class="btn btn-secondary" id="addMedBtn" data-i18n="symptomChecker.addBtn">إضافة</button>
+                </div>
+                <div class="chip-tag-list" id="medList"></div>
+
+                <div class="quick-chips-label" data-i18n="drugChecker.quickChipsLabel">أدوية شائعة</div>
+                <div class="quick-chips" id="quickChips"></div>
+
+                <div class="alert" id="formAlert"></div>
+
+                <button type="submit" class="btn btn-primary tool-submit" id="submitBtn">
+                    <span class="btn-label" data-i18n="drugChecker.submit">التحقق من التداخلات</span>
+                    <span class="spinner spinner-sm btn-spinner"></span>
+                </button>
+            </form>
+        </div>
+
+        <div id="resultSection" class="hidden"></div>
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/chip-input.js"></script>
+    <script src="../src/js/drug-checker.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            Layout.renderAuthPromptBanner('authPromptBanner');
+            DrugChecker.init();
+        });
+    </script>
+</body>
+</html>
