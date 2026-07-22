@@ -59,7 +59,7 @@ Thumbs.db
 #################################################
 
 **/uploads/*
-!**/uploads/avatars/
+**/uploads/avatars/*
 !**/uploads/avatars/.gitkeep
 **/temp/
 **/tmp/
@@ -125,6 +125,7 @@ tempData/
 
 /test_auth.ps1
 /AUDIT_REPORT.md
+/git.md
 
 #################################################
 # ai-service/data — one-off data-collection scripts
