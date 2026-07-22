@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const conversationRoutes = require('./routes/conversation.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const env = require('./config/env');
 
 
 const app = express();
@@ -50,6 +51,18 @@ const globalLimiter = rateLimit({
 });
 app.use('/api/', globalLimiter);
 
+// Stricter rate limit for login endpoint (per-IP, prevents brute force)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,                   // 10 attempts per IP per 15 min
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Please try again later.' }
+    }
+});
+
 // Stricter rate limit for AI chatbot endpoint
 const chatLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
@@ -62,6 +75,9 @@ const chatLimiter = rateLimit({
     }
 });
 
+// Body parser — must be before routes
+app.use(express.json({ limit: '1mb' }));
+
 app.use(
   "/uploads",
   express.static("uploads")
@@ -71,9 +87,6 @@ app.use(
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/doctors', doctorRoutes);
-
-// Body parser
-app.use(express.json({ limit: '1mb' }));
 
 // Request logging (dev)
 if (process.env.NODE_ENV === 'development') {
@@ -93,8 +106,6 @@ if (process.env.NODE_ENV === 'development') {
 // API ROUTES
 // =============================
 
-// Auth routes (public)
-app.use('/api/auth', authRoutes);
 
 // Chatbot routes (with stricter rate limit)
 app.use('/api/chat', chatLimiter, chatbotRoutes);
@@ -103,14 +114,21 @@ app.use('/api/chat', chatLimiter, chatbotRoutes);
 
 app.use('/api/clinics', clinicRoutes);
 
-// Doctor routes (public read, protected write)
-app.use('/api/doctors', doctorRoutes);
-
-// User routes (protected)
-app.use('/api/users', userRoutes);
 
 // Conversation routes (protected)
 app.use('/api/conversations', conversationRoutes);
+
+// Public client config — values the frontend needs but that shouldn't be
+// duplicated into a static frontend file (single source of truth is .env).
+// googleClientId is a public OAuth client identifier, not a secret.
+app.get('/api/config', (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            googleClientId: env.google.clientId || null
+        }
+    });
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -144,7 +162,7 @@ setInterval(
 
   processEmails,
 
-  60000
+  10000
 
 );
 
