@@ -17,6 +17,7 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 const notificationRoutes = require('./routes/notification.routes');
 const notificationTemplateRoutes = require('./routes/notification-template.routes');
 const appointmentRoutes = require("./routes/appointment.routes");
+const medicalRecordRoutes = require("./routes/medicalRecord.routes");
 
 
 const app = express();
@@ -118,6 +119,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
 app.use('/api/specialties', require('./routes/specialty.routes'));
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/medical-records", medicalRecordRoutes);
 
 // Doctor routes (public read, protected write)
 app.use('/api/doctors', doctorRoutes);
