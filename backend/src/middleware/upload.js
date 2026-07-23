@@ -1,3 +1,4 @@
+const fs = require("fs");
 const multer = require("multer");
 
 
@@ -7,6 +8,7 @@ const storage =
         destination:
             (req, file, cb) => {
 
+                fs.mkdirSync("uploads/avatars", { recursive: true });
                 cb(null, "uploads/avatars");
 
             },

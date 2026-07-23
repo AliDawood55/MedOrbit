@@ -32,7 +32,7 @@ router.get(
 
                 `
 SELECT *
-FROM public.notification_templates
+FROM medorbit.notification_templates
 ORDER BY created_at DESC
 `
 
@@ -77,7 +77,7 @@ router.get(
 
                 `
 SELECT *
-FROM public.notification_templates
+FROM medorbit.notification_templates
 WHERE id=$1
 `,
                 [
@@ -152,7 +152,7 @@ router.post(
             const result = await db.query(
 
                 `
-INSERT INTO public.notification_templates
+INSERT INTO medorbit.notification_templates
 (
 name,
 type,
@@ -238,7 +238,7 @@ router.put(
 
                 `
 
-UPDATE public.notification_templates
+UPDATE medorbit.notification_templates
 
 SET
 
@@ -311,7 +311,7 @@ router.delete(
             const result = await db.query(
 
                 `
-                UPDATE public.notification_templates
+                UPDATE medorbit.notification_templates
 
                 SET 
                     is_active = false,

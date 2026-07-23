@@ -1,0 +1,356 @@
+/* ===========================================
+   MedOrbit v2 - Dashboard (dashboard.html)
+   =========================================== */
+
+.dashboard-page {
+    padding-top: 28px;
+}
+
+.dashboard-page .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--text-mute);
+}
+
+.dashboard-page .loading-state.hidden {
+    display: none;
+}
+
+/* === Welcome header === */
+.dashboard-welcome {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+    margin-bottom: 28px;
+}
+
+.dashboard-avatar {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 700;
+    overflow: hidden;
+}
+
+.dashboard-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dashboard-welcome-text h1 {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.dashboard-welcome-text p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    margin-top: 4px;
+}
+
+/* === Section headings === */
+.dashboard-section {
+    margin-bottom: 28px;
+}
+
+.dashboard-section h2 {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 14px;
+}
+
+/* === Quick actions === */
+.dashboard-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+}
+
+.dashboard-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 20px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    transition: all var(--t-base);
+}
+
+.dashboard-action-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.dashboard-action-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-50);
+    color: var(--primary);
+    border-radius: var(--r-lg);
+    font-size: 18px;
+}
+
+[data-theme="dark"] .dashboard-action-icon {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+/* === Two-column layout === */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.dashboard-card {
+    margin-bottom: 20px;
+}
+
+.dashboard-side .dashboard-card:last-child {
+    margin-bottom: 0;
+}
+
+/* === Generic list items (conversations / saved places) === */
+.dashboard-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-radius: var(--r-md);
+    transition: background var(--t-fast);
+}
+
+.dashboard-list-item:hover {
+    background: var(--bg-soft);
+}
+
+.dashboard-list-main {
+    flex: 1;
+    min-width: 0;
+    display: block;
+}
+
+.dashboard-list-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dashboard-list-meta {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-top: 2px;
+}
+
+.dashboard-list-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--t-fast);
+    flex-shrink: 0;
+}
+
+.dashboard-list-item:hover .dashboard-list-actions {
+    opacity: 1;
+}
+
+.dashboard-item-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    color: var(--text-mute);
+    font-size: 12px;
+}
+
+.dashboard-item-btn:hover {
+    background: var(--bg-card);
+    color: var(--text);
+}
+
+.dashboard-rename-input {
+    flex: 1;
+    width: 100%;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg-card);
+    border: 1.5px solid var(--primary);
+    border-radius: var(--r-sm);
+    padding: 4px 8px;
+}
+
+/* Saved places have a leading icon instead of an active/rename state */
+.dashboard-place-item {
+    cursor: default;
+}
+
+.dashboard-place-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-soft);
+    color: var(--primary);
+    border-radius: var(--r-md);
+    font-size: 14px;
+}
+
+/* === Profile completeness === */
+.completeness-bar {
+    height: 8px;
+    background: var(--bg-soft);
+    border-radius: var(--r-full);
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.completeness-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: var(--r-full);
+    transition: width var(--t-base);
+}
+
+.completeness-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-soft);
+    margin-bottom: 14px;
+}
+
+.completeness-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.completeness-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-mute);
+}
+
+.completeness-list li i {
+    font-size: 14px;
+    color: var(--text-faint);
+}
+
+.completeness-list li.done {
+    color: var(--text);
+}
+
+.completeness-list li.done i {
+    color: var(--success);
+}
+
+.dashboard-full-width {
+    width: 100%;
+    justify-content: center;
+}
+
+/* === Coming soon === */
+.coming-soon-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.coming-soon-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--r-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-mute);
+}
+
+.coming-soon-item i {
+    width: 20px;
+    text-align: center;
+    color: var(--text-faint);
+}
+
+.coming-soon-item span:not(.badge-soon) {
+    flex: 1;
+}
+
+.badge-soon {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-faint);
+    background: var(--bg-soft);
+    padding: 3px 9px;
+    border-radius: var(--r-full);
+}
+
+/* === Responsive === */
+@media (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-welcome {
+        padding: 18px;
+        gap: 14px;
+    }
+
+    .dashboard-avatar {
+        width: 56px;
+        height: 56px;
+        font-size: 20px;
+    }
+
+    .dashboard-actions-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+    }
+
+    .dashboard-action-card {
+        padding: 16px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

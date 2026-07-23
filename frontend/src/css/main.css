@@ -11,8 +11,43 @@
 }
 
 html, body {
-    height: 100%;
     width: 100%;
+}
+
+/* ===========================================
+   Layout shells — exactly two, chosen via a body class, defined once here.
+
+   .app-shell  — fixed viewport, no document scroll; internal panes (chat
+                 messages, map, conversation sidebar) scroll themselves.
+                 index.html and find-clinics.html ONLY.
+   (default)   — every other page. No class needed: normal document flow,
+                 normal scrolling. html/body get no explicit height or
+                 overflow, so the browser's own natural scrolling behavior
+                 applies — this was the bug: html previously had a blanket
+                 overflow:hidden that body.site-page never reset, silently
+                 blocking real scroll input (wheel/touch/keyboard) on every
+                 content page even though body itself looked scrollable.
+   =========================================== */
+html.app-shell, body.app-shell {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Smooth scroll for anchor jumps / the back-to-top affordance, on document
+   pages only — the app shell's internal panes handle their own scrolling. */
+html:not(.app-shell) {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html:not(.app-shell) {
+        scroll-behavior: auto;
+    }
+}
+
+/* Reference-counted overlay lock (see Dom.lockScroll/unlockScroll) — blocks
+   background scroll while a drawer/sidebar/bottom-sheet overlay is open. */
+body.scroll-locked {
     overflow: hidden;
 }
 
@@ -133,8 +168,21 @@ kbd {
     --z-header: 100;
     --z-filter: 90;
     --z-modal: 1000;
+    --z-drawer: 1500;
     --z-toast: 2000;
 }
+
+/* ===========================================
+   Responsive breakpoints — the ONE set used across every stylesheet.
+   CSS has no variables usable inside @media conditions, so these are a
+   documented convention, not literal substitution: every @media in this
+   codebase MUST use one of these exact three values (max-width).
+     1024px — tablet landscape / small laptop (grids go 2-col, sheets start)
+      768px — tablet portrait / large phone (hamburger drawer kicks in)
+      480px — phone (single column everywhere, bottom-sheet modals)
+   Test at 360/414 (both fall under 480), 768, 1024, and 1440 (no query
+   applies — default desktop layout).
+   =========================================== */
 
 /* === Dark Mode === */
 [data-theme="dark"] {
@@ -528,14 +576,43 @@ kbd {
     to { transform: translateY(0); opacity: 1; }
 }
 
+/* === Mobile chat/map view toggle (FAB, mobile only) ===
+   Anchored to the opposite side from .map-controls (which sit at
+   inset-inline-end) so the two never overlap. */
+.mobile-view-toggle {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    inset-inline-start: 20px;
+    width: 52px;
+    height: 52px;
+    border-radius: var(--r-full);
+    background: var(--primary);
+    color: white;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1001;
+    transition: transform var(--t-fast);
+}
+
+.mobile-view-toggle:active {
+    transform: scale(0.94);
+}
+
 /* === Responsive === */
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
     .header-search {
         max-width: 280px;
     }
 
     .header-search kbd {
         display: none;
+    }
+
+    .app-main {
+        grid-template-columns: 340px 1fr;
     }
 }
 
@@ -544,9 +621,28 @@ kbd {
         grid-template-rows: var(--header-h) var(--filter-h) 1fr;
     }
 
+    /* Mobile: show one panel at a time (chat by default) instead of a
+       cramped 50/50 stack — .mobile-view-toggle switches between them. */
     .app-main {
         grid-template-columns: 1fr;
-        grid-template-rows: 1fr 50vh;
+        grid-template-rows: 1fr;
+    }
+
+    .map-panel {
+        display: none;
+    }
+
+    .app-main.mobile-show-map .chat-panel,
+    .app-main.mobile-show-map .list-panel {
+        display: none;
+    }
+
+    .app-main.mobile-show-map .map-panel {
+        display: flex;
+    }
+
+    .mobile-view-toggle {
+        display: flex;
     }
 
     .header-search {
@@ -569,8 +665,9 @@ kbd {
     }
 
     .filter-chip {
-        padding: 6px 10px;
-        font-size: 12px;
+        min-height: 44px;
+        padding: 8px 14px;
+        font-size: 13px;
     }
 }
 

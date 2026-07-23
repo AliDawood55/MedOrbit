@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="app-shell clinics-shell">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – العيادات والمراكز الطبية</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="preconnect" href="https://tile.openstreetmap.org">
+
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/map.css">
+</head>
+<body class="app-shell clinics-shell" data-theme="light">
+
+    <div class="app-loader" id="appLoader">
+        <div class="loader-content">
+            <div class="loader-logo"><i class="fas fa-heartbeat"></i></div>
+            <div class="loader-text">MedOrbit</div>
+            <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <div class="app" id="app" style="visibility:hidden">
+
+        <header class="app-header">
+            <a class="header-brand" id="brandLink" href="home.html">
+                <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+                <div class="brand-text">
+                    <h1>MedOrbit</h1>
+                    <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+                </div>
+            </a>
+            <nav class="site-nav" id="navLinks"></nav>
+            <div class="header-actions">
+                <div class="auth-area" id="authArea"></div>
+                <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                    <span id="langLabel">EN</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="filter-bar" id="filterBar">
+            <button class="filter-chip active" data-type="">
+                <i class="fas fa-globe"></i>
+                <span data-i18n="clinics.typeAll">الكل</span>
+            </button>
+            <button class="filter-chip" data-type="clinic">
+                <i class="fas fa-hospital"></i>
+                <span data-i18n="filter.clinic">العيادات</span>
+            </button>
+            <button class="filter-chip" data-type="pharmacy">
+                <i class="fas fa-pills"></i>
+                <span data-i18n="filter.pharmacy">الصيدليات</span>
+            </button>
+            <button class="filter-chip" data-type="hospital">
+                <i class="fas fa-hospital-user"></i>
+                <span data-i18n="filter.hospital">المستشفيات</span>
+            </button>
+            <div class="filter-spacer"></div>
+            <button class="btn btn-primary btn-sm" id="nearMeBtn">
+                <i class="fas fa-location-crosshairs"></i>
+                <span data-i18n="clinics.nearMe">بالقرب مني</span>
+            </button>
+        </div>
+
+        <main class="app-main">
+            <section class="list-panel chat-panel">
+                <div class="list-panel-header">
+                    <div class="search-field">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" data-i18n-placeholder="clinics.searchPlaceholder" placeholder="ابحث بالاسم...">
+                    </div>
+                </div>
+                <div class="list-panel-content" id="clinicsListContent">
+                    <!-- Rendered by find-clinics.js -->
+                </div>
+            </section>
+
+            <section class="map-panel-full map-panel">
+                <div id="map" class="map"></div>
+                <div class="map-controls">
+                    <button class="map-control-btn" id="fitAllBtn" data-i18n-title="fitAll" title="عرض الكل">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+                <div id="locationPicker"></div>
+            </section>
+        </main>
+
+        <button type="button" class="mobile-view-toggle" id="mobileViewToggle">
+            <i class="fas fa-map-location-dot"></i>
+        </button>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/location.js"></script>
+    <script src="../src/js/map.js"></script>
+    <script src="../src/js/location-picker.js"></script>
+    <script src="../src/js/find-clinics.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            MapApp.init();
+            LocationPicker.mount('locationPicker');
+            FindClinics.init();
+
+            setTimeout(() => {
+                document.getElementById('appLoader')?.classList.add('hidden');
+                const app = document.getElementById('app');
+                if (app) app.style.visibility = 'visible';
+            }, 400);
+
+            document.getElementById('fitAllBtn')?.addEventListener('click', () => MapApp.fitToMarkers());
+
+            document.getElementById('mobileViewToggle')?.addEventListener('click', function () {
+                const main = document.querySelector('.app-main');
+                if (!main) return;
+                const showingMap = main.classList.toggle('mobile-show-map');
+                // Mirrored onto <html> AND <body> so CSS can tell, on mobile,
+                // whether to lock the viewport (map view) or let the whole
+                // page scroll normally (list view) — see the .clinics-shell
+                // rules in listing.css. Both elements need the class: the
+                // fixed-shell overflow:hidden in main.css is set on html AND
+                // body, so the override that undoes it in list view has to
+                // target (and thus be undone on) both as well.
+                document.documentElement.classList.toggle('mobile-map-active', showingMap);
+                document.body.classList.toggle('mobile-map-active', showingMap);
+                this.innerHTML = showingMap ? '<i class="fas fa-list"></i>' : '<i class="fas fa-map-location-dot"></i>';
+                if (showingMap) MapApp.invalidateSize();
+            });
+        });
+    </script>
+</body>
+</html>

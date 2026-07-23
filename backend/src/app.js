@@ -14,9 +14,11 @@ const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 const conversationRoutes = require('./routes/conversation.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const env = require('./config/env');
 const notificationRoutes = require('./routes/notification.routes');
 const notificationTemplateRoutes = require('./routes/notification-template.routes');
-const appointmentRoutes = require("./routes/appointment.routes");
+const appointmentRoutes = require('./routes/appointment.routes');
+const specialtyRoutes = require('./routes/specialty.routes');
 
 
 const app = express();
@@ -27,78 +29,80 @@ const app = express();
 
 // Helmet — sets security headers
 app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
 
 // CORS — restrict to configured origin in production
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({
-  origin: corsOrigin === '*' ? true : corsOrigin.split(',').map(s => s.trim()),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: corsOrigin !== '*'
+    origin: corsOrigin === '*' ? true : corsOrigin.split(',').map(s => s.trim()),
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: corsOrigin !== '*'
 }));
 
 // Rate limiting — global
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' }
-  }
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' }
+    }
 });
 app.use('/api/', globalLimiter);
 
+// Stricter rate limit for login endpoint (per-IP, prevents brute force)
+// NOTE: applied at the route level inside auth.routes.js, not here — kept
+// as-is from the pre-merge file rather than removed during conflict
+// resolution.
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,                   // 10 attempts per IP per 15 min
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Please try again later.' }
+    }
+});
+
 // Stricter rate limit for AI chatbot endpoint
 const chatLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: { code: 'CHAT_RATE_LIMITED', message: 'Too many chat messages. Please slow down.' }
-  }
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        error: { code: 'CHAT_RATE_LIMITED', message: 'Too many chat messages. Please slow down.' }
+    }
 });
+
+// Body parser — must be before routes
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 app.use(
   "/uploads",
   express.static("uploads")
 );
 
-app.use(express.json());
-
-app.use(
-  express.urlencoded({
-    extended: true
-  })
-);
-
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/doctors', doctorRoutes);
-
-// Body parser
-app.use(express.json({ limit: '1mb' }));
-
 // Request logging (dev)
 if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      if (duration > 2000) {
-        console.log(`⏱ ${req.method} ${req.originalUrl} — ${duration}ms [${res.statusCode}]`);
-      }
+    app.use((req, res, next) => {
+        const start = Date.now();
+        res.on('finish', () => {
+            const duration = Date.now() - start;
+            if (duration > 2000) {
+                console.log(`⏱ ${req.method} ${req.originalUrl} — ${duration}ms [${res.statusCode}]`);
+            }
+        });
+        next();
     });
-    next();
-  });
 }
 
 // =============================
@@ -108,36 +112,53 @@ if (process.env.NODE_ENV === 'development') {
 // Auth routes (public)
 app.use('/api/auth', authRoutes);
 
-// Chatbot routes (with stricter rate limit)
-app.use('/api/chat', chatLimiter, chatbotRoutes);
-
-// Clinic routes (public read)
-
-app.use('/api/clinics', clinicRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
-app.use('/api/specialties', require('./routes/specialty.routes'));
-app.use("/api/appointments", appointmentRoutes);
+// User routes (protected)
+app.use('/api/users', userRoutes);
 
 // Doctor routes (public read, protected write)
 app.use('/api/doctors', doctorRoutes);
 
-// User routes (protected)
-app.use('/api/users', userRoutes);
+// Clinic routes (public read, protected write)
+app.use('/api/clinics', clinicRoutes);
+
+// Specialties (public read)
+app.use('/api/specialties', specialtyRoutes);
+
+// Appointments
+app.use('/api/appointments', appointmentRoutes);
+
+// Notifications
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
+
+// Chatbot routes (with stricter rate limit)
+app.use('/api/chat', chatLimiter, chatbotRoutes);
 
 // Conversation routes (protected)
 app.use('/api/conversations', conversationRoutes);
 
+// Public client config — values the frontend needs but that shouldn't be
+// duplicated into a static frontend file (single source of truth is .env).
+// googleClientId is a public OAuth client identifier, not a secret.
+app.get('/api/config', (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            googleClientId: env.google.clientId || null
+        }
+    });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      status: 'healthy',
-      version: '2.0.0',
-      timestamp: new Date().toISOString()
-    }
-  });
+    res.json({
+        success: true,
+        data: {
+            status: 'healthy',
+            version: '2.0.0',
+            timestamp: new Date().toISOString()
+        }
+    });
 });
 
 // =============================
@@ -160,7 +181,7 @@ setInterval(
 
   processEmails,
 
-  60000
+  10000
 
 );
 

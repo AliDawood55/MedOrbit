@@ -171,10 +171,12 @@ class ConversationRepository {
         return result.rows;
     }
 
-    async deletePlace(placeId) {
+    // Not currently wired to any route — ownership-scoped by user_id up
+    // front so whoever adds that route later can't do so unsafely.
+    async deletePlace(placeId, userId) {
         await db.query(
-            `UPDATE medorbit.saved_places SET is_active = false WHERE id = $1`,
-            [placeId]
+            `UPDATE medorbit.saved_places SET is_active = false WHERE id = $1 AND user_id = $2`,
+            [placeId, userId]
         );
     }
 

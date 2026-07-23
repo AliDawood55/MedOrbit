@@ -1,0 +1,547 @@
+/* ===========================================
+   MedOrbit v2 - Shared Site Layout
+   Navigation, Auth Area, Footer
+   =========================================== */
+
+/* === Standalone content pages (not the fixed-viewport app shell) ===
+   <body class="site-page"> — normal document scrolling is main.css's
+   default now, this just keeps the footer pinned to the bottom on short
+   pages via the flex column, and softens scroll-chaining at the edges. */
+body.site-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overscroll-behavior-y: contain;
+}
+
+.app-header {
+    min-height: var(--header-h);
+}
+
+/* Sticky (not fixed) — stays visible while the page scrolls, but never
+   clips content or needs a matching overflow:hidden anywhere. Only on
+   document pages; the app shell's own header isn't part of a scroller. */
+body.site-page .app-header {
+    position: sticky;
+    top: 0;
+}
+
+/* Anchor targets / focus scrolling land below the sticky header instead
+   of hiding underneath it. */
+body.site-page [id] {
+    scroll-margin-top: calc(var(--header-h) + 12px);
+}
+
+/* === Site Navigation === */
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.nav-link {
+    padding: 8px 12px;
+    border-radius: var(--r-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+    white-space: nowrap;
+}
+
+.nav-link:hover {
+    background: var(--bg-soft);
+    color: var(--text);
+}
+
+.nav-link.active {
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+[data-theme="dark"] .nav-link.active {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+/* === Nav Dropdown (e.g. "AI Tools" group) === */
+.nav-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 10px 8px 12px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    transition: all var(--t-fast);
+}
+
+[dir="rtl"] .nav-dropdown {
+    padding: 8px 12px 8px 10px;
+}
+
+.nav-dropdown:hover {
+    background: var(--bg-soft);
+}
+
+.nav-dropdown .nav-dropdown-toggle {
+    padding: 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+.nav-dropdown:hover .nav-dropdown-toggle {
+    color: var(--text);
+}
+
+.nav-dropdown.active .nav-dropdown-toggle {
+    color: var(--primary);
+}
+
+.nav-dropdown > i {
+    font-size: 9px;
+    color: var(--text-mute);
+    transition: transform var(--t-fast);
+}
+
+.nav-dropdown.open > i {
+    transform: rotate(180deg);
+}
+
+.nav-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 190px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: var(--z-modal);
+}
+
+[dir="rtl"] .nav-dropdown-menu {
+    left: auto;
+    right: 0;
+}
+
+.nav-dropdown.open .nav-dropdown-menu {
+    display: flex;
+}
+
+.nav-dropdown-item {
+    display: block;
+    padding: 9px 10px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+}
+
+.nav-dropdown-item:hover {
+    background: var(--bg-soft);
+    color: var(--text);
+}
+
+.nav-dropdown-item.active {
+    color: var(--primary);
+    background: var(--primary-50);
+}
+
+[data-theme="dark"] .nav-dropdown-item.active {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+/* === Auth Area === */
+.auth-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.user-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px 6px 6px;
+    border-radius: var(--r-full);
+    background: var(--bg-soft);
+    cursor: pointer;
+    transition: background var(--t-fast);
+    font-size: 13px;
+}
+
+[dir="rtl"] .user-chip {
+    padding: 6px 6px 6px 10px;
+}
+
+.user-chip:hover {
+    background: var(--primary-50);
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--text);
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-chip > i {
+    font-size: 10px;
+    color: var(--text-mute);
+    transition: transform var(--t-fast);
+}
+
+.user-chip.open > i {
+    transform: rotate(180deg);
+}
+
+.user-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    z-index: var(--z-modal);
+}
+
+[dir="rtl"] .user-menu {
+    right: auto;
+    left: 0;
+}
+
+.user-chip.open .user-menu {
+    display: flex;
+}
+
+.user-menu-item {
+    display: block;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-soft);
+    text-align: start;
+    transition: all var(--t-fast);
+}
+
+.user-menu-item:hover {
+    background: var(--bg-soft);
+    color: var(--text);
+}
+
+/* === Footer === */
+.site-footer {
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+    padding: 32px 24px;
+}
+
+.footer-content {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.footer-brand h3 {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.footer-brand p {
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 2px;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.footer-copy {
+    font-size: 12px;
+    color: var(--text-faint);
+    width: 100%;
+    text-align: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+/* === Back to top === */
+.back-to-top {
+    position: fixed;
+    bottom: 24px;
+    inset-inline-end: 24px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-elevated);
+    color: var(--text-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    box-shadow: var(--shadow-lg);
+    font-size: 15px;
+    z-index: var(--z-header);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity var(--t-fast), transform var(--t-fast), visibility var(--t-fast);
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.back-to-top:hover {
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+@media (max-width: 480px) {
+    .back-to-top {
+        bottom: 16px;
+        inset-inline-end: 16px;
+    }
+}
+
+/* === Mobile Drawer (hamburger nav) ===
+   Injected by layout.js into every page with an .app-header — no per-page
+   HTML needed. Hidden entirely above 1024px; below it, this replaces the
+   desktop .site-nav / .auth-area as the ONLY nav + account surface. */
+.hamburger-btn {
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-soft);
+    color: var(--text-soft);
+    border-radius: var(--r-md);
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: all var(--t-fast);
+}
+
+.hamburger-btn:hover {
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+.mobile-drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-overlay);
+    z-index: var(--z-drawer);
+    opacity: 0;
+    transition: opacity var(--t-base);
+}
+
+.mobile-drawer-backdrop.open {
+    display: block;
+    opacity: 1;
+}
+
+.mobile-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    inset-inline-start: 0;
+    width: min(320px, 85vw);
+    background: var(--bg-elevated);
+    z-index: calc(var(--z-drawer) + 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-xl);
+    transform: translateX(-100%);
+    transition: transform var(--t-base);
+    overflow-y: auto;
+}
+
+[dir="rtl"] .mobile-drawer {
+    transform: translateX(100%);
+}
+
+.mobile-drawer.open {
+    transform: translateX(0);
+}
+
+.mobile-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.mobile-drawer-header .brand-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+}
+
+.mobile-drawer-header .brand-text h1 {
+    font-size: 15px;
+}
+
+.mobile-drawer-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 2px;
+}
+
+.drawer-link {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 14px;
+    border-radius: var(--r-md);
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+    text-align: start;
+}
+
+.drawer-link:hover {
+    background: var(--bg-soft);
+}
+
+.drawer-link.active {
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+[data-theme="dark"] .drawer-link.active {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+.drawer-sublink {
+    padding-inline-start: 26px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.drawer-group-label {
+    margin: 10px 14px 2px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-faint);
+    text-transform: uppercase;
+}
+
+.mobile-drawer-auth {
+    margin-top: auto;
+    padding: 14px 10px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.drawer-auth-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+}
+
+.drawer-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px 12px;
+}
+
+.drawer-user .user-name {
+    display: block;
+    font-weight: 700;
+    color: var(--text);
+    max-width: none;
+}
+
+/* === Responsive === */
+@media (max-width: 1024px) {
+    .site-nav {
+        display: none;
+    }
+
+    .auth-area {
+        display: none;
+    }
+
+    .hamburger-btn {
+        display: flex;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Footer nav links stay visible at every width (unlike the header nav,
+       which moves into the drawer) — give them a real tap target. */
+    .footer-links .nav-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .site-footer {
+        padding: 24px 16px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+}

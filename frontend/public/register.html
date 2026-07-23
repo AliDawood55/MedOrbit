@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – إنشاء حساب</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/auth.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="auth-page">
+        <div class="auth-container auth-container-wide">
+            <div class="auth-card card">
+                <div class="auth-brand">
+                    <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+                    <h1 data-i18n="auth.registerTitle">إنشاء حساب جديد</h1>
+                    <p data-i18n="auth.registerSubtitle">انضم إلى MedOrbit وابدأ رحلتك الصحية</p>
+                </div>
+
+                <div class="alert" id="alertBox">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span id="alertMsg"></span>
+                </div>
+
+                <div class="oauth-block">
+                    <div class="google-signin-container" id="googleSignInBtn"></div>
+                    <div class="auth-divider">
+                        <span data-i18n="auth.orDivider">أو</span>
+                    </div>
+                </div>
+
+                <form id="registerForm" novalidate>
+                    <!-- Arabic name -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstNameAr" data-i18n="auth.firstNameAr">الاسم الأول (عربي)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="firstNameAr" name="firstNameAr" placeholder="أحمد" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastNameAr" data-i18n="auth.lastNameAr">الاسم الأخير (عربي)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="lastNameAr" name="lastNameAr" placeholder="محمد" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- English name -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstNameEn" data-i18n="auth.firstNameEn">First Name (English)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="firstNameEn" name="firstNameEn" placeholder="Ahmed" required dir="ltr" style="text-align:right">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="lastNameEn" data-i18n="auth.lastNameEn">Last Name (English)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-user"></i>
+                                <input type="text" id="lastNameEn" name="lastNameEn" placeholder="Mohammed" required dir="ltr" style="text-align:right">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email" data-i18n="auth.email">البريد الإلكتروني</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="email" name="email" data-i18n-placeholder="auth.emailPlaceholder" placeholder="example@medorbit.com" required autocomplete="email" dir="ltr" style="text-align:right">
+                        </div>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="form-group">
+                        <label for="phone" data-i18n="auth.phone">رقم الهاتف</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="phone" name="phone" data-i18n-placeholder="auth.phonePlaceholder" placeholder="+970-59-1234567" dir="ltr" style="text-align:right">
+                        </div>
+                    </div>
+
+                    <!-- Gender -->
+                    <div class="form-group">
+                        <label data-i18n="auth.gender">الجنس</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" name="gender" id="genderMale" value="male" checked>
+                                <label for="genderMale"><i class="fas fa-mars"></i> <span data-i18n="auth.genderMale">ذكر</span></label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" name="gender" id="genderFemale" value="female">
+                                <label for="genderFemale"><i class="fas fa-venus"></i> <span data-i18n="auth.genderFemale">أنثى</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="form-group">
+                        <label for="password" data-i18n="auth.password">كلمة المرور</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="password" name="password" data-i18n-placeholder="auth.newPasswordPlaceholder" placeholder="8 أحرف على الأقل" required autocomplete="new-password">
+                            <i class="fas fa-eye toggle-password" id="togglePassword"></i>
+                        </div>
+                        <div class="pw-strength" id="pwStrength">
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                            <div class="bar"></div>
+                        </div>
+                        <div class="pw-hint" data-i18n="auth.pwHint">حرف كبير + صغير + رقم + رمز خاص (8 أحرف على الأقل)</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary auth-submit" id="registerBtn">
+                        <span class="btn-label" data-i18n="auth.submitRegister">إنشاء الحساب</span>
+                        <span class="spinner spinner-sm btn-spinner"></span>
+                    </button>
+                </form>
+
+                <div class="auth-links">
+                    <span data-i18n="auth.haveAccount">لديك حساب بالفعل؟</span>
+                    <a href="login.html" data-i18n="auth.login">تسجيل الدخول</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/google-signin.js"></script>
+    <script src="../src/js/auth.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            GoogleSignIn.init('googleSignInBtn');
+        });
+    </script>
+</body>
+</html>

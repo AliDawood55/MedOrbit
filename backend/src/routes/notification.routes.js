@@ -49,7 +49,7 @@ router.get(
                 read_at,
                 created_at
 
-                FROM public.notifications
+                FROM medorbit.notifications
 
                 WHERE user_id=$1
 
@@ -114,7 +114,7 @@ router.put(
                 await db.query(
 
                     `
-                UPDATE public.notifications
+                UPDATE medorbit.notifications
 
                 SET
 
@@ -205,7 +205,7 @@ router.patch(
 
                     `
 
-                UPDATE public.notifications
+                UPDATE medorbit.notifications
 
                 SET
 
@@ -291,7 +291,7 @@ router.delete(
 
                     `
 
-                DELETE FROM public.notifications
+                DELETE FROM medorbit.notifications
 
                 WHERE id=$1
 
@@ -367,7 +367,7 @@ router.put('/:id/read', authenticate, async (req, res, next) => {
 
         const result = await db.query(
             `
-            UPDATE public.notifications
+            UPDATE medorbit.notifications
 
             SET 
                 is_read = true,
