@@ -1,0 +1,662 @@
+/* ===========================================
+   MedOrbit v2 - AI Tools
+   Symptom Checker, Drug Interaction Checker, Report Summarizer.
+   Talks directly to the AI service (127.0.0.1:8001), not the backend.
+   =========================================== */
+
+.tool-header {
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto 24px;
+}
+
+.tool-header .tool-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: var(--r-xl);
+    font-size: 24px;
+}
+
+.tool-header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.tool-header p {
+    font-size: 14px;
+    color: var(--text-mute);
+    line-height: 1.6;
+}
+
+.tool-card {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 24px;
+}
+
+/* === Disclaimer === */
+.disclaimer-banner {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--r-md);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-soft);
+}
+
+[data-theme="dark"] .disclaimer-banner {
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.disclaimer-banner i {
+    color: var(--warning);
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* === Auth prompt (anonymous visitors only) === */
+.auth-prompt-banner {
+    max-width: 640px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    padding: 14px 16px;
+    background: var(--primary-50);
+    border: 1px solid var(--primary);
+    border-radius: var(--r-md);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-soft);
+}
+
+.auth-prompt-banner.hidden {
+    display: none;
+}
+
+[data-theme="dark"] .auth-prompt-banner {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+.auth-prompt-banner i {
+    color: var(--primary);
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.auth-prompt-banner a {
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.disclaimer-banner strong {
+    color: var(--text);
+}
+
+/* === Chip Input === */
+.chip-input-group {
+    display: flex;
+    gap: 8px;
+}
+
+.chip-input-group input {
+    flex: 1;
+    padding: 11px 14px;
+    background: var(--bg-soft);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: all var(--t-fast);
+}
+
+.chip-input-group input:focus {
+    border-color: var(--primary);
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.chip-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    min-height: 20px;
+}
+
+.chip-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px 7px 14px;
+    background: var(--primary-50);
+    color: var(--primary-dark);
+    border-radius: var(--r-full);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+[dir="rtl"] .chip-tag {
+    padding: 7px 14px 7px 8px;
+}
+
+[data-theme="dark"] .chip-tag {
+    background: rgba(37, 99, 235, 0.18);
+    color: #93c5fd;
+}
+
+.chip-remove {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: inherit;
+    font-size: 10px;
+    opacity: 0.7;
+    transition: all var(--t-fast);
+}
+
+.chip-remove:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.quick-chips-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-mute);
+    margin: 18px 0 8px;
+}
+
+.quick-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.quick-chip {
+    padding: 6px 12px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+}
+
+.quick-chip:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-50);
+}
+
+.tool-submit {
+    width: 100%;
+    margin-top: 20px;
+    padding: 13px 24px;
+    font-size: 15px;
+}
+
+/* === Loading state === */
+.tool-loading {
+    max-width: 640px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.tool-loading .spinner-lg {
+    margin: 0 auto 18px;
+}
+
+.tool-loading p {
+    font-size: 14px;
+    color: var(--text-soft);
+    line-height: 1.6;
+}
+
+.tool-loading .loading-hint {
+    font-size: 12.5px;
+    color: var(--text-faint);
+    margin-top: 6px;
+}
+
+/* === Error state === */
+.tool-error {
+    max-width: 640px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 32px 20px;
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--r-lg);
+}
+
+[data-theme="dark"] .tool-error {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.tool-error i {
+    font-size: 30px;
+    color: var(--danger);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.tool-error p {
+    font-size: 14px;
+    color: var(--text-soft);
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+/* === Triage Result === */
+.triage-banner {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    padding: 20px 24px;
+    border-radius: var(--r-lg);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.triage-banner-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 22px;
+    flex-shrink: 0;
+    color: white;
+}
+
+.triage-banner h2 {
+    font-size: 17px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.triage-banner p {
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.triage-banner.emergency {
+    background: rgba(220, 38, 38, 0.1);
+    border: 2px solid var(--danger);
+}
+
+.triage-banner.emergency .triage-banner-icon { background: var(--danger); }
+.triage-banner.emergency h2 { color: var(--danger); }
+.triage-banner.emergency p { color: var(--text); font-weight: 600; }
+
+.triage-banner.urgent {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1.5px solid var(--warning);
+}
+
+.triage-banner.urgent .triage-banner-icon { background: var(--warning); }
+.triage-banner.urgent h2 { color: #b45309; }
+[data-theme="dark"] .triage-banner.urgent h2 { color: var(--warning); }
+
+.triage-banner.routine {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1.5px solid var(--success);
+}
+
+.triage-banner.routine .triage-banner-icon { background: var(--success); }
+.triage-banner.routine h2 { color: #047857; }
+[data-theme="dark"] .triage-banner.routine h2 { color: var(--success); }
+
+.triage-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+}
+
+.triage-detail-row:last-child {
+    border-bottom: none;
+}
+
+.triage-detail-label {
+    color: var(--text-mute);
+    font-weight: 500;
+}
+
+.triage-detail-value {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.confidence-bar {
+    width: 100px;
+    height: 6px;
+    background: var(--bg-soft);
+    border-radius: var(--r-full);
+    overflow: hidden;
+}
+
+.confidence-bar-fill {
+    height: 100%;
+    background: var(--primary-gradient);
+    border-radius: var(--r-full);
+}
+
+/* === Drug Interaction Severity Groups === */
+.severity-group {
+    margin-bottom: 20px;
+}
+
+.severity-group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding-inline-start: 2px;
+}
+
+.interaction-card {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--r-md);
+    margin-bottom: 8px;
+    border-inline-start: 4px solid;
+}
+
+.interaction-card-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.interaction-card-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.interaction-card-desc {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.5;
+}
+
+.interaction-card.severe {
+    background: rgba(220, 38, 38, 0.07);
+    border-inline-start-color: var(--danger);
+}
+
+.interaction-card.severe .interaction-card-icon { color: var(--danger); }
+
+.interaction-card.moderate {
+    background: rgba(245, 158, 11, 0.08);
+    border-inline-start-color: var(--warning);
+}
+
+.interaction-card.moderate .interaction-card-icon { color: var(--warning); }
+
+.interaction-card.mild {
+    background: rgba(6, 182, 212, 0.07);
+    border-inline-start-color: var(--info);
+}
+
+.interaction-card.mild .interaction-card-icon { color: var(--info); }
+
+.interaction-card.unknown {
+    background: var(--bg-soft);
+    border-inline-start-color: var(--border-strong);
+}
+
+.interaction-card.unknown .interaction-card-icon { color: var(--text-mute); }
+
+.no-interactions {
+    max-width: 640px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 32px 20px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: var(--r-lg);
+}
+
+[data-theme="dark"] .no-interactions {
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.no-interactions i {
+    font-size: 32px;
+    color: var(--success);
+    margin-bottom: 10px;
+    display: block;
+}
+
+.no-interactions h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* === Upload Dropzone === */
+.upload-dropzone {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--r-lg);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    background: var(--bg-card);
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+    border-color: var(--primary);
+    background: var(--primary-50);
+}
+
+[data-theme="dark"] .upload-dropzone.drag-over {
+    background: rgba(37, 99, 235, 0.1);
+}
+
+.upload-dropzone i {
+    font-size: 36px;
+    color: var(--primary);
+    margin-bottom: 14px;
+    display: block;
+}
+
+.upload-dropzone h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.upload-dropzone p {
+    font-size: 12.5px;
+    color: var(--text-mute);
+}
+
+.upload-file-chip {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+
+.upload-file-chip i {
+    font-size: 20px;
+    color: var(--primary);
+}
+
+.upload-file-chip .file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.upload-file-chip .file-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upload-file-chip .file-size {
+    font-size: 12px;
+    color: var(--text-mute);
+}
+
+/* === Summary Tabs === */
+.summary-tabs {
+    max-width: 640px;
+    margin: 0 auto 12px;
+    display: flex;
+    gap: 6px;
+    background: var(--bg-soft);
+    padding: 4px;
+    border-radius: var(--r-md);
+}
+
+.summary-tab {
+    flex: 1;
+    padding: 9px;
+    text-align: center;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-mute);
+    transition: all var(--t-fast);
+}
+
+.summary-tab.active {
+    background: var(--bg-card);
+    color: var(--primary);
+    box-shadow: var(--shadow-xs);
+}
+
+.summary-content {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px 24px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-soft);
+    white-space: pre-line;
+}
+
+.collapsible-toggle {
+    max-width: 640px;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-mute);
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.collapsible-toggle i {
+    transition: transform var(--t-fast);
+}
+
+.collapsible-toggle.open i {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    max-width: 640px;
+    margin: 0 auto 20px;
+    display: none;
+    background: var(--bg-soft);
+    border-radius: var(--r-md);
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text-mute);
+    line-height: 1.7;
+    white-space: pre-line;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.collapsible-content.open {
+    display: block;
+}
+
+.result-actions {
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.result-actions .btn {
+    flex: 1;
+}
+
+@media (max-width: 1024px) {
+    .quick-chip {
+        min-height: 44px;
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tool-card,
+    .triage-banner {
+        padding: 18px;
+    }
+
+    .triage-banner {
+        flex-direction: column;
+        text-align: center;
+    }
+}

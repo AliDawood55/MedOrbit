@@ -62,7 +62,7 @@ router.get(
                 `
 SELECT *
 
-FROM public.doctor_availability
+FROM medorbit.doctor_availability
 
 WHERE doctor_id=$1
 
@@ -159,7 +159,7 @@ router.post(
             const patientResult = await db.query(
                 `
     SELECT id
-    FROM public.patients
+    FROM medorbit.patients
     WHERE user_id=$1
     `,
                 [
@@ -201,7 +201,7 @@ router.post(
                 `
 SELECT id
 
-FROM public.appointments
+FROM medorbit.appointments
 
 WHERE doctor_id=$1
 
@@ -241,7 +241,7 @@ AND status NOT IN
             const result = await db.query(
 
                 `
-INSERT INTO public.appointments
+INSERT INTO medorbit.appointments
 (
 appointment_number,
 patient_id,
@@ -269,7 +269,7 @@ $5,
 $6,
 $7,
 $8,
-'pending',
+'scheduled',
 $9,
 $10,
 $11
@@ -304,7 +304,7 @@ RETURNING *
             await db.query(
 
                 `
-INSERT INTO public.appointment_status_history
+INSERT INTO medorbit.appointment_status_history
 
 (
 appointment_id,
@@ -313,7 +313,7 @@ new_status
 
 VALUES
 
-($1,'pending')
+($1,'scheduled')
 
 `,
 
@@ -371,7 +371,7 @@ router.get(
 
 SELECT *
 
-FROM public.appointments
+FROM medorbit.appointments
 
 WHERE patient_id=$1
 
@@ -432,7 +432,7 @@ router.get(
 
 SELECT *
 
-FROM public.appointments
+FROM medorbit.appointments
 
 WHERE id=$1
 
@@ -503,7 +503,7 @@ router.put(
 
                 `
 
-UPDATE public.appointments
+UPDATE medorbit.appointments
 
 SET
 
@@ -535,7 +535,7 @@ RETURNING *
 
                 `
 
-INSERT INTO appointment_status_history
+INSERT INTO medorbit.appointment_status_history
 
 (
 appointment_id,
@@ -602,7 +602,7 @@ router.put(
 
                 `
 
-UPDATE appointments
+UPDATE medorbit.appointments
 
 SET status='confirmed'
 
@@ -624,7 +624,7 @@ RETURNING *
 
                 `
 
-INSERT INTO appointment_status_history
+INSERT INTO medorbit.appointment_status_history
 
 (
 appointment_id,
@@ -692,7 +692,7 @@ router.put(
 
                 `
 
-UPDATE appointments
+UPDATE medorbit.appointments
 
 SET status='completed'
 

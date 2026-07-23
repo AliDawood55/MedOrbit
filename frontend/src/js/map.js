@@ -5,6 +5,7 @@ const MapApp = (() => {
     const DEFAULT_ZOOM = 13;
 
     let map = null;
+    let clusterGroup = null;
 
     // ===== STATE =====
     let userLocation = null;
@@ -12,6 +13,25 @@ const MapApp = (() => {
     let clinicMarkers = [];
     let routeLayer = null;
     let activeHighlight = null;
+
+    // ===== CATEGORY ICONS (matches the filter bar + marker-pin CSS classes) =====
+    const CATEGORY_ICONS = {
+        clinic: 'fa-hospital',
+        pharmacy: 'fa-pills',
+        hospital: 'fa-hospital-user',
+        doctor: 'fa-user-md'
+    };
+
+    const CATEGORY_LABELS = {
+        clinic: { ar: 'عيادة', en: 'Clinic' },
+        pharmacy: { ar: 'صيدلية', en: 'Pharmacy' },
+        hospital: { ar: 'مستشفى', en: 'Hospital' },
+        doctor: { ar: 'طبيب', en: 'Doctor' }
+    };
+
+    function isArLang() {
+        return (typeof I18n !== 'undefined' ? I18n.getLang() : (document.documentElement.lang || 'ar')) === 'ar';
+    }
 
     // ================= INIT =================
     function init() {
@@ -26,60 +46,135 @@ const MapApp = (() => {
             { maxZoom: 19 }
         ).addTo(map);
 
-        // Try to get user location after a short delay
-        setTimeout(() => locateUser(false), 500);
-    }
-
-    // ================= USER LOCATION =================
-    function locateUser(force = false) {
-
-        if (!navigator.geolocation) {
-            console.warn('MapApp: Geolocation not supported');
-            return;
+        // Cluster nearby markers instead of dumping dozens of overlapping pins
+        if (typeof L.markerClusterGroup === 'function') {
+            clusterGroup = L.markerClusterGroup({
+                showCoverageOnHover: false,
+                spiderfyOnMaxZoom: true,
+                maxClusterRadius: 50
+            });
+            map.addLayer(clusterGroup);
         }
 
-        navigator.geolocation.getCurrentPosition(
+        // Location is owned by the shared Location module — this just
+        // reflects whatever state it reports (GPS fix, manual pick, error).
+        if (typeof Location !== 'undefined') {
+            Location.onChange(onLocationChange);
+            setTimeout(() => Location.locate(false), 500);
+        }
 
-            (position) => {
+        map.on('click', onMapClick);
+    }
 
-                userLocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
+    // ================= USER LOCATION (driven by the shared Location module) =================
 
-                map.setView([userLocation.lat, userLocation.lng], 15);
+    function onLocationChange(state) {
+        if (!state.coords) return;
 
-                // Remove old marker
-                if (userMarker) {
-                    map.removeLayer(userMarker);
-                }
+        userLocation = state.coords;
 
-                userMarker = L.marker([userLocation.lat, userLocation.lng], {
-                    zIndexOffset: 1000
-                })
-                    .addTo(map)
-                    .bindPopup('📍 موقعك الحالي')
-                    .openPopup();
-            },
+        map.setView([userLocation.lat, userLocation.lng], 15);
 
-            (err) => {
-                console.warn('MapApp: Location error', err.message);
-            },
+        if (userMarker) {
+            map.removeLayer(userMarker);
+        }
 
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
+        const isAr = isArLang();
+        userMarker = L.marker([userLocation.lat, userLocation.lng], {
+            zIndexOffset: 1000
+        })
+            .addTo(map)
+            .bindPopup(isAr ? '📍 موقعك الحالي' : '📍 Your location')
+            .openPopup();
+    }
+
+    let pickModeActive = false;
+
+    /**
+     * Arms a one-time map click to set the user's location manually —
+     * triggered from the location picker's "pick on map" option.
+     */
+    function enablePickMode() {
+        pickModeActive = true;
+        if (map) map.getContainer().style.cursor = 'crosshair';
+    }
+
+    function onMapClick(e) {
+        if (!pickModeActive) return;
+        pickModeActive = false;
+        if (map) map.getContainer().style.cursor = '';
+
+        if (typeof Location !== 'undefined') {
+            Location.setManual({ lat: e.latlng.lat, lng: e.latlng.lng }, 'manual-map');
+        }
     }
 
     function getUserLocation() {
         return userLocation;
     }
 
+    // ================= MARKER ICON + POPUP =================
+    function buildMarkerIcon(type) {
+        const cls = CATEGORY_ICONS[type] ? type : 'clinic';
+        return L.divIcon({
+            className: 'custom-marker',
+            iconSize: [38, 38],
+            iconAnchor: [19, 38],
+            popupAnchor: [0, -34],
+            html: '<div class="marker-pin ' + cls + '"><i class="fas ' + (CATEGORY_ICONS[cls]) + '"></i></div>'
+        });
+    }
+
+    function buildPopupContent(place) {
+        const ar = isArLang();
+        const type = CATEGORY_ICONS[place.type] ? place.type : 'clinic';
+        const label = (CATEGORY_LABELS[type] || CATEGORY_LABELS.clinic)[ar ? 'ar' : 'en'];
+
+        const rows = [];
+        if (place.phone) {
+            rows.push(
+                '<div class="popup-meta-row"><i class="fas fa-phone"></i><a href="tel:' + escapeHtml(place.phone) + '">' + escapeHtml(place.phone) + '</a></div>'
+            );
+        }
+        if (place.address) {
+            rows.push(
+                '<div class="popup-meta-row"><i class="fas fa-map-marker-alt"></i><span>' + escapeHtml(place.address) + '</span></div>'
+            );
+        }
+        if (place.distance != null) {
+            const distText = (Number(place.distance) / 1000).toFixed(2) + (ar ? ' كم' : ' km');
+            rows.push(
+                '<div class="popup-meta-row"><i class="fas fa-route"></i><span>' + distText + '</span></div>'
+            );
+        }
+        if (place.rating != null) {
+            rows.push(
+                '<div class="popup-meta-row"><i class="fas fa-star"></i><span>' + Number(place.rating).toFixed(1) + '</span></div>'
+            );
+        }
+
+        return (
+            '<div class="popup-content">' +
+                '<div class="popup-header">' +
+                    '<div class="popup-title">' + escapeHtml(place.name || '') + '</div>' +
+                    '<span class="popup-type ' + type + '">' + escapeHtml(label) + '</span>' +
+                '</div>' +
+                (rows.length ? '<div class="popup-meta">' + rows.join('') + '</div>' : '') +
+                (place.phone
+                    ? '<div class="popup-actions"><a class="btn btn-primary btn-sm" href="tel:' + escapeHtml(place.phone) + '"><i class="fas fa-phone"></i> ' + (ar ? 'اتصال' : 'Call') + '</a></div>'
+                    : '') +
+            '</div>'
+        );
+    }
+
     // ================= MARKERS =================
     function clearClinicMarkers() {
 
-        clinicMarkers.forEach(marker => {
-            map.removeLayer(marker);
-        });
+        if (clusterGroup) {
+            clusterGroup.clearLayers();
+        } else {
+            clinicMarkers.forEach((marker) => map.removeLayer(marker));
+        }
 
         clinicMarkers = [];
         activeHighlight = null;
@@ -118,16 +213,8 @@ const MapApp = (() => {
             const lat = Number(place.lat);
             const lng = Number(place.lng);
 
-            const marker = L.marker([lat, lng])
-                .addTo(map)
-                .bindPopup(
-                    '<div>' +
-                        '<strong>' + escapeHtml(place.name || '') + '</strong><br/>' +
-                        (place.phone ? '📞 ' + escapeHtml(place.phone) + '<br/>' : '') +
-                        (place.address ? '📍 ' + escapeHtml(place.address) + '<br/>' : '') +
-                        (place.distance ? '📏 ' + (Number(place.distance) / 1000).toFixed(2) + ' كم' : '') +
-                    '</div>'
-                );
+            const marker = L.marker([lat, lng], { icon: buildMarkerIcon(place.type) })
+                .bindPopup(buildPopupContent(place));
 
             marker.on('click', () => {
                 highlightPlace(place);
@@ -136,6 +223,12 @@ const MapApp = (() => {
                     drawRoute(userLocation, place);
                 }
             });
+
+            if (clusterGroup) {
+                clusterGroup.addLayer(marker);
+            } else {
+                marker.addTo(map);
+            }
 
             clinicMarkers.push(marker);
         });
@@ -248,7 +341,7 @@ const MapApp = (() => {
             const durationMin = (data.routes[0].duration / 60).toFixed(0);
 
             // Show route info popup at destination
-            const isAr = (document.documentElement.lang || 'ar') === 'ar';
+            const isAr = isArLang();
             const popupText = isAr
                 ? '📏 ' + distanceKm + ' كم — ⏱ ' + durationMin + ' دقيقة'
                 : '📏 ' + distanceKm + ' km — ⏱ ' + durationMin + ' min';
@@ -267,8 +360,8 @@ const MapApp = (() => {
 
         if (userLocation) {
             map.flyTo([userLocation.lat, userLocation.lng], 15, { duration: 0.8 });
-        } else {
-            locateUser(true);
+        } else if (typeof Location !== 'undefined') {
+            Location.locate(true);
         }
     }
 
@@ -277,6 +370,17 @@ const MapApp = (() => {
         // Placeholder: will be implemented when filter bar
         // is connected to direct DB queries
         console.log('MapApp: Category filter set to', category);
+    }
+
+    /**
+     * Recomputes the map's rendered size — needed after the mobile
+     * chat/map view toggle un-hides the map panel (Leaflet can't size
+     * a container that was display:none when it initialized).
+     */
+    function invalidateSize() {
+        if (map) {
+            setTimeout(() => map.invalidateSize(), 50);
+        }
     }
 
     // ================= HELPERS =================
@@ -292,16 +396,17 @@ const MapApp = (() => {
     // ================= PUBLIC =================
     return {
         init,
-        locateUser,
         recenter,
         getUserLocation,
+        enablePickMode,
         renderPlaces,
         highlightPlace,
         drawRoute,
         fitToMarkers,
         clearRoute,
         clearResults,
-        setCategoryFilter
+        setCategoryFilter,
+        invalidateSize
     };
 
 })();

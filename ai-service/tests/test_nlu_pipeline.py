@@ -654,6 +654,18 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(r["intent"]["intent"], "find_nearest")
         self.assertEqual(r["entities"]["type"], "hospital")
 
+    def test_hospital_search_with_where_prefix(self):
+        r = self._run_pipeline("وين أقرب مستشفى")
+        self.assertEqual(r["intent"]["intent"], "find_nearest")
+        self.assertEqual(r["entities"]["type"], "hospital")
+
+    def test_pharmacy_search_bare_proximity_phrasing(self):
+        # No "أقرب" here — relies on bare "قريب"/"قريبة" keywords so this
+        # doesn't lose to the competing find_pharmacy intent.
+        r = self._run_pipeline("بدي صيدلية قريبة")
+        self.assertEqual(r["intent"]["intent"], "find_nearest")
+        self.assertEqual(r["entities"]["type"], "pharmacy")
+
     def test_medication_question(self):
         r = self._run_pipeline("معلومات عن بانادول")
         self.assertEqual(r["intent"]["intent"], "medication_info")

@@ -29,15 +29,18 @@ DB_CONFIG = {
 }
 
 
+async def _set_search_path(conn: asyncpg.Connection):
+    await conn.execute("SET search_path TO medorbit, public")
+
+
 async def get_pool() -> asyncpg.Pool:
     """Return the singleton connection pool, creating it on first call."""
     global _pool
     if _pool is None or _pool._closed:  # type: ignore[union-attr]
-        _pool = await asyncpg.create_pool(**DB_CONFIG)
-        # Set search_path on every new connection
-        async def _init(conn: asyncpg.Connection):
-            await conn.execute("SET search_path TO medorbit, public")
-        _pool._init = _init  # type: ignore[attr-defined]
+        # setup= runs on every connection checkout (unlike init=, which only
+        # runs once when a physical connection is first created) — required
+        # here since search_path doesn't survive being pooled/reused otherwise.
+        _pool = await asyncpg.create_pool(**DB_CONFIG, setup=_set_search_path)
         logger.info("DB pool created: %s:%s/%s", DB_CONFIG["host"], DB_CONFIG["port"], DB_CONFIG["database"])
     return _pool
 
