@@ -15,6 +15,10 @@ const userRoutes = require('./routes/user.routes');
 const conversationRoutes = require('./routes/conversation.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const env = require('./config/env');
+const notificationRoutes = require('./routes/notification.routes');
+const notificationTemplateRoutes = require('./routes/notification-template.routes');
+const appointmentRoutes = require('./routes/appointment.routes');
+const specialtyRoutes = require('./routes/specialty.routes');
 
 
 const app = express();
@@ -52,6 +56,9 @@ const globalLimiter = rateLimit({
 app.use('/api/', globalLimiter);
 
 // Stricter rate limit for login endpoint (per-IP, prevents brute force)
+// NOTE: applied at the route level inside auth.routes.js, not here — kept
+// as-is from the pre-merge file rather than removed during conflict
+// resolution.
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10,                   // 10 attempts per IP per 15 min
@@ -77,16 +84,12 @@ const chatLimiter = rateLimit({
 
 // Body parser — must be before routes
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 app.use(
   "/uploads",
   express.static("uploads")
 );
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/doctors', doctorRoutes);
 
 // Request logging (dev)
 if (process.env.NODE_ENV === 'development') {
@@ -106,14 +109,30 @@ if (process.env.NODE_ENV === 'development') {
 // API ROUTES
 // =============================
 
+// Auth routes (public)
+app.use('/api/auth', authRoutes);
+
+// User routes (protected)
+app.use('/api/users', userRoutes);
+
+// Doctor routes (public read, protected write)
+app.use('/api/doctors', doctorRoutes);
+
+// Clinic routes (public read, protected write)
+app.use('/api/clinics', clinicRoutes);
+
+// Specialties (public read)
+app.use('/api/specialties', specialtyRoutes);
+
+// Appointments
+app.use('/api/appointments', appointmentRoutes);
+
+// Notifications
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
 
 // Chatbot routes (with stricter rate limit)
 app.use('/api/chat', chatLimiter, chatbotRoutes);
-
-// Clinic routes (public read)
-
-app.use('/api/clinics', clinicRoutes);
-
 
 // Conversation routes (protected)
 app.use('/api/conversations', conversationRoutes);
