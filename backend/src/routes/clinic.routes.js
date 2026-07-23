@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
+const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -159,7 +160,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Doctors in this clinic
     const doctorsResult = await db.query(
-      `SELECT 
+      `SELECT
         d.id, d.years_of_experience, d.consultation_fee,
         d.average_rating, d.is_accepting_patients,
         p.first_name_ar, p.first_name_en, p.last_name_ar, p.last_name_en,
@@ -183,5 +184,158 @@ router.get('/:id', async (req, res, next) => {
     next(err);
   }
 });
+
+// POST /api/clinics - Create clinic (admin only)
+router.post(
+  "/",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const {
+        name_ar, name_en, address_ar, address_en, city, region,
+        latitude, longitude, phone, email, website, type
+      } = req.body;
+
+      await db.query(
+        `INSERT INTO medorbit.clinics(
+          name_ar, name_en, address_ar, address_en, city, region,
+          latitude, longitude, phone, email, website, type
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [name_ar, name_en, address_ar, address_en, city, region,
+          latitude, longitude, phone, email, website, type]
+      );
+
+      return success(res, null, "Clinic created successfully");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PUT /api/clinics/:id - Update clinic (admin only)
+router.put(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const { name_ar, name_en, phone } = req.body;
+
+      const result = await db.query(
+        `UPDATE medorbit.clinics
+         SET name_ar = COALESCE($1, name_ar),
+             name_en = COALESCE($2, name_en),
+             phone = COALESCE($3, phone)
+         WHERE id = $4 AND is_active = true`,
+        [name_ar, name_en, phone, req.params.id]
+      );
+
+      if (result.rowCount === 0) {
+        return error(res, "Clinic not found", 404, "NOT_FOUND");
+      }
+
+      return success(res, null, "Clinic updated");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// DELETE /api/clinics/:id - Soft-delete clinic (admin only)
+router.delete(
+  "/:id",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `UPDATE medorbit.clinics
+         SET is_active = false
+         WHERE id = $1 AND is_active = true`,
+        [req.params.id]
+      );
+
+      if (result.rowCount === 0) {
+        return error(res, "Clinic not found", 404, "NOT_FOUND");
+      }
+
+      return success(res, null, "Clinic deleted");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/clinics/:id/assign-doctor - Admin only
+router.post(
+  "/:id/assign-doctor",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const clinicId = req.params.id;
+      const { doctorId, isPrimary = false, consultationFeeOverride = null } = req.body;
+
+      if (!doctorId) {
+        return error(res, "Doctor id is required", 400, "VALIDATION_ERROR");
+      }
+
+      const clinic = await db.query(
+        `SELECT id FROM medorbit.clinics WHERE id = $1 AND is_active = true`,
+        [clinicId]
+      );
+      if (clinic.rows.length === 0) {
+        return error(res, "Clinic not found", 404, "NOT_FOUND");
+      }
+
+      const doctor = await db.query(
+        `SELECT id FROM medorbit.doctors WHERE id = $1`,
+        [doctorId]
+      );
+      if (doctor.rows.length === 0) {
+        return error(res, "Doctor not found", 404, "NOT_FOUND");
+      }
+
+      await db.query(
+        `INSERT INTO medorbit.doctor_clinic_assignments
+           (doctor_id, clinic_id, is_primary, consultation_fee_override, is_active)
+         VALUES ($1,$2,$3,$4,true)
+         ON CONFLICT (doctor_id, clinic_id)
+         DO UPDATE SET
+           is_active = true,
+           is_primary = $3,
+           consultation_fee_override = $4`,
+        [doctorId, clinicId, isPrimary, consultationFeeOverride]
+      );
+
+      return success(res, null, "Doctor assigned successfully");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// DELETE /api/clinics/:id/remove-doctor/:doctorId
+router.delete(
+  "/:id/remove-doctor/:doctorId",
+  authenticate,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      await db.query(
+        `UPDATE medorbit.doctor_clinic_assignments
+         SET is_active = false
+         WHERE clinic_id = $1 AND doctor_id = $2`,
+        [req.params.id, req.params.doctorId]
+      );
+
+      return success(res, null, "Doctor removed from clinic");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;

@@ -1,3 +1,4 @@
+// src/routes/doctor.routes.js
 const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
@@ -8,10 +9,10 @@ const router = express.Router();
 // GET /api/doctors - List all doctors with filters
 router.get('/', async (req, res, next) => {
   try {
-    const { specialty, region, minRating, search, page = 1, limit = 10 } = req.query;
+    const { specialty, region, minRating, minFee, maxFee, search, page = 1, limit = 10 } = req.query;
 
     let query = `
-      SELECT 
+      SELECT
         d.id, d.user_id, d.medical_license_number, d.years_of_experience,
         d.consultation_fee, d.consultation_duration, d.average_rating, d.total_ratings,
         d.is_accepting_patients, d.education, d.certifications,
@@ -49,9 +50,21 @@ router.get('/', async (req, res, next) => {
       paramIndex++;
     }
 
+    if (minFee) {
+      query += ` AND d.consultation_fee >= $${paramIndex}`;
+      params.push(Number(minFee));
+      paramIndex++;
+    }
+
+    if (maxFee) {
+      query += ` AND d.consultation_fee <= $${paramIndex}`;
+      params.push(Number(maxFee));
+      paramIndex++;
+    }
+
     if (search) {
       query += ` AND (
-        p.first_name_ar ILIKE $${paramIndex} OR 
+        p.first_name_ar ILIKE $${paramIndex} OR
         p.first_name_en ILIKE $${paramIndex} OR
         p.last_name_ar ILIKE $${paramIndex} OR
         p.last_name_en ILIKE $${paramIndex}
@@ -96,7 +109,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Doctor details
     const doctorResult = await db.query(
-      `SELECT 
+      `SELECT
         d.id, d.user_id, d.medical_license_number, d.years_of_experience,
         d.consultation_fee, d.consultation_duration, d.average_rating, d.total_ratings,
         d.is_accepting_patients, d.education, d.certifications,
@@ -122,7 +135,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Clinics
     const clinicsResult = await db.query(
-      `SELECT 
+      `SELECT
         c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
         c.city, c.region, c.latitude, c.longitude, c.phone,
         dca.consultation_fee_override, dca.is_primary
@@ -134,7 +147,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Availability
     const availabilityResult = await db.query(
-      `SELECT 
+      `SELECT
         id, clinic_id, day_of_week, specific_date,
         start_time, end_time, slot_duration, is_telemedicine
       FROM medorbit.doctor_availability
@@ -145,7 +158,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Reviews
     const reviewsResult = await db.query(
-      `SELECT 
+      `SELECT
         r.id, r.rating, r.review_text_ar, r.review_text_en,
         r.professionalism_rating, r.treatment_rating, r.communication_rating,
         r.created_at,
@@ -179,7 +192,7 @@ router.get('/:id/availability', async (req, res, next) => {
     const { date } = req.query; // optional: specific date
 
     let query = `
-      SELECT 
+      SELECT
         id, clinic_id, day_of_week, specific_date,
         start_time, end_time, slot_duration, is_telemedicine
       FROM medorbit.doctor_availability
@@ -252,5 +265,108 @@ router.put('/:id', authenticate, authorize('doctor', 'admin'), async (req, res, 
     next(err);
   }
 });
+
+// GET /api/doctors/:id/clinics - Clinics this doctor is assigned to
+router.get('/:id/clinics', async (req, res, next) => {
+  try {
+    const result = await db.query(
+      `SELECT
+        c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
+        c.city, c.phone,
+        dca.is_primary, dca.consultation_fee_override
+      FROM medorbit.doctor_clinic_assignments dca
+      JOIN medorbit.clinics c ON c.id = dca.clinic_id
+      WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
+      [req.params.id]
+    );
+
+    return success(res, result.rows, "Doctor clinics retrieved");
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/doctors/:id/availability - Create availability slot
+router.post(
+  '/:id/availability',
+  authenticate,
+  authorize('doctor', 'admin'),
+  async (req, res, next) => {
+    try {
+      const doctorId = req.params.id;
+      const {
+        clinic_id, day_of_week, specific_date,
+        start_time, end_time, slot_duration, is_telemedicine
+      } = req.body;
+
+      const result = await db.query(
+        `INSERT INTO medorbit.doctor_availability
+          (doctor_id, clinic_id, day_of_week, specific_date, start_time, end_time, slot_duration, is_telemedicine)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         RETURNING *`,
+        [doctorId, clinic_id || null, day_of_week, specific_date || null,
+          start_time, end_time, slot_duration || 30, is_telemedicine || false]
+      );
+
+      return success(res, result.rows[0], "Availability created");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// PUT /api/doctors/:id/availability/:slotId - Update availability slot
+router.put(
+  '/:id/availability/:slotId',
+  authenticate,
+  authorize('doctor', 'admin'),
+  async (req, res, next) => {
+    try {
+      const { start_time, end_time, slot_duration, is_telemedicine, clinic_id } = req.body;
+
+      const result = await db.query(
+        `UPDATE medorbit.doctor_availability
+         SET start_time = COALESCE($1, start_time),
+             end_time = COALESCE($2, end_time),
+             slot_duration = COALESCE($3, slot_duration),
+             is_telemedicine = COALESCE($4, is_telemedicine),
+             clinic_id = COALESCE($5, clinic_id)
+         WHERE id = $6 AND doctor_id = $7
+         RETURNING *`,
+        [start_time, end_time, slot_duration, is_telemedicine, clinic_id,
+          req.params.slotId, req.params.id]
+      );
+
+      if (result.rows.length === 0) {
+        return error(res, "Availability not found", 404, "NOT_FOUND");
+      }
+
+      return success(res, result.rows[0], "Availability updated");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// DELETE /api/doctors/:id/availability/:slotId - Deactivate availability slot
+router.delete(
+  '/:id/availability/:slotId',
+  authenticate,
+  authorize('doctor', 'admin'),
+  async (req, res, next) => {
+    try {
+      await db.query(
+        `UPDATE medorbit.doctor_availability
+         SET is_active = false
+         WHERE id = $1 AND doctor_id = $2`,
+        [req.params.slotId, req.params.id]
+      );
+
+      return success(res, null, "Availability deleted");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;
