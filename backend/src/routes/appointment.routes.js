@@ -269,7 +269,7 @@ $5,
 $6,
 $7,
 $8,
-'pending',
+'scheduled',
 $9,
 $10,
 $11
@@ -313,7 +313,7 @@ new_status
 
 VALUES
 
-($1,'pending')
+($1,'scheduled')
 
 `,
 
