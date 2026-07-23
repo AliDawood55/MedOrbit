@@ -38,6 +38,24 @@ class ChatbotService {
             let convId = conversationId;
             let isNewConversation = false;
 
+            // Ownership check — a caller-supplied conversationId is never
+            // trusted as-is. Authenticated callers may only continue a
+            // conversation that belongs to them; anonymous callers may only
+            // continue one with no owner at all. Anything else (wrong
+            // owner, or the id doesn't exist) silently falls through to
+            // starting a fresh conversation below — never a 403, so a
+            // caller can't use the response to probe whether an id exists
+            // or belongs to someone else.
+            if (convId) {
+                const existingConv = await conversationRepository.findById(convId);
+                const ownedByCaller = existingConv && (
+                    userId ? existingConv.user_id === userId : existingConv.user_id === null
+                );
+                if (!ownedByCaller) {
+                    convId = null;
+                }
+            }
+
             if (!convId) {
                 // Check if user has an active conversation
                 if (userId) {

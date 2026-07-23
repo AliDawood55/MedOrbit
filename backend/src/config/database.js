@@ -10,17 +10,25 @@ const pool = new Pool({
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 2000,
+    options: '-c search_path=medorbit,public'
+
 });
 
-// ✅ Set schema
-pool.on('connect', (client) => {
-    client.query('SET search_path TO medorbit, public');
-    console.log('✅ Connected to PostgreSQL (medorbit)');
-});
+// // Set search_path on every new connection
+// pool.on('connect', (client) => {
+//     client.query('SET search_path TO medorbit, public').catch(() => {});
+// });
+
+console.log('✅ Connected to PostgreSQL (medorbit)');
 
 const getClient = async () => {
     return await pool.connect();
 };
+// const getClient = async () => {
+//     const client = await pool.connect();
+//     await client.query('SET search_path TO medorbit, public');
+//     return client;
+// };
 
 module.exports = {
     query: (text, params) => pool.query(text, params),

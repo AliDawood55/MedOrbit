@@ -42,7 +42,6 @@ router.get(
             u.email,
             u.role,
             u.preferred_language,
-            u.preferences,
             u.created_at,
 
             p.first_name_ar,
@@ -51,14 +50,14 @@ router.get(
             p.last_name_en,
             p.phone,
             p.gender,
-            p.avatar_url,
+            p.profile_image_url AS avatar_url,
             p.address,
             p.city
 
 
-        FROM public.users u
+        FROM medorbit.users u
 
-        LEFT JOIN public.user_profiles p
+        LEFT JOIN medorbit.user_profiles p
 
         ON p.user_id=u.id
 
@@ -143,7 +142,7 @@ router.put(
 
       await db.query(
         `
-UPDATE public.user_profiles
+UPDATE medorbit.user_profiles
 
 SET
 
@@ -201,6 +200,57 @@ WHERE user_id=$9
 
 
 /*
+GET SAVED PLACES (across all conversations)
+
+GET /api/users/me/saved-places
+*/
+router.get(
+  "/me/saved-places",
+  authenticate,
+  async (req, res, next) => {
+
+    try {
+
+      const userId = req.user.sub;
+
+      const result = await db.query(
+        `
+        SELECT
+            id,
+            conversation_id,
+            place_name,
+            place_type,
+            latitude,
+            longitude,
+            address,
+            phone,
+            distance_km,
+            rating,
+            created_at
+
+        FROM medorbit.saved_places
+
+        WHERE user_id=$1
+        AND is_active=true
+
+        ORDER BY created_at DESC
+        LIMIT 50
+        `,
+        [userId]
+      );
+
+      return success(
+        res,
+        { places: result.rows },
+        "Saved places retrieved"
+      );
+
+    } catch (err) {
+      next(err);
+    }
+  });
+
+/*
 UPDATE PREFERENCES
 
 PUT /api/users/me/preferences
@@ -218,8 +268,7 @@ router.put(
 
 
       const {
-        language,
-        preferences
+        language
       } = req.body;
 
 
@@ -227,25 +276,21 @@ router.put(
       await db.query(
         `
 
-UPDATE public.users
+UPDATE medorbit.users
 
 SET
 
 preferred_language=
 COALESCE($1,preferred_language),
 
-preferences=
-COALESCE($2,preferences),
-
 updated_at=NOW()
 
 
-WHERE id=$3
+WHERE id=$2
 
 `,
         [
           language,
-          preferences,
           userId
         ]);
 
@@ -297,7 +342,7 @@ router.delete(
       await db.query(
         `
 
-UPDATE public.users
+UPDATE medorbit.users
 
 SET
 
@@ -353,9 +398,9 @@ router.post(
 
       await db.query(
         `
-UPDATE public.user_profiles
+UPDATE medorbit.user_profiles
 
-SET avatar_url=$1,
+SET profile_image_url=$1,
 updated_at=NOW()
 
 WHERE user_id=$2

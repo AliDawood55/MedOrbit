@@ -30,7 +30,7 @@ router.get(
             const result = await db.query(
                 `
                 SELECT *
-                FROM public.specialties
+                FROM medorbit.specialties
                 WHERE is_active = true
                 ORDER BY name_en
                 `
@@ -70,7 +70,7 @@ router.get(
             const result = await db.query(
                 `
                 SELECT *
-                FROM public.specialties
+                FROM medorbit.specialties
                 WHERE id=$1
                 AND is_active=true
                 `,
@@ -143,7 +143,7 @@ router.post(
 
             const result = await db.query(
                 `
-                INSERT INTO public.specialties
+                INSERT INTO medorbit.specialties
                 (
                     name_ar,
                     name_en,
@@ -223,7 +223,7 @@ router.put(
 
             const result = await db.query(
                 `
-                UPDATE public.specialties
+                UPDATE medorbit.specialties
 
                 SET
 
@@ -313,7 +313,7 @@ router.delete(
             const result = await db.query(
 
                 `
-                UPDATE public.specialties
+                UPDATE medorbit.specialties
 
                 SET is_active=false
 
