@@ -1,0 +1,716 @@
+/* ===========================================
+   MedOrbit v2 - Listing & Profile Pages
+   Shared by find-doctors.html, find-clinics.html,
+   doctor.html, and clinic.html.
+   =========================================== */
+
+/* === List + Map split view (find-clinics.html) ===
+   Reuses the .app / .app-header / .filter-bar / .app-main shell classes
+   from main.css (same app-shell chrome as index.html) — these two classes
+   just give the two .app-main panels honest names instead of borrowing
+   chat-specific ones. */
+.list-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-elevated);
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+}
+
+[dir="rtl"] .list-panel {
+    border-left: none;
+    border-right: 1px solid var(--border);
+}
+
+.list-panel-header {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.list-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.map-panel-full {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-soft);
+}
+
+.map-panel-full .map {
+    width: 100%;
+    height: 100%;
+}
+
+/* === find-clinics.html mobile hybrid ===
+   Below 768px this page still starts from .app-shell's fixed viewport, but
+   that's only correct while the map is showing (a Leaflet map needs an
+   explicit height, not document flow). In list view, drop the lock so the
+   whole page — header, filter bar, list — scrolls normally like every other
+   content page. body.mobile-map-active (toggled by the mobileViewToggle
+   handler in find-clinics.html) tracks which mode we're in. */
+@media (max-width: 768px) {
+    html.clinics-shell:not(.mobile-map-active),
+    body.clinics-shell:not(.mobile-map-active) {
+        height: auto;
+        overflow: visible;
+    }
+
+    body.clinics-shell:not(.mobile-map-active) .app {
+        display: block;
+        height: auto;
+    }
+
+    body.clinics-shell:not(.mobile-map-active) .app-header {
+        position: sticky;
+        top: 0;
+    }
+
+    body.clinics-shell:not(.mobile-map-active) .filter-bar {
+        position: sticky;
+        top: var(--header-h);
+        z-index: var(--z-header);
+    }
+
+    body.clinics-shell:not(.mobile-map-active) .app-main {
+        display: block;
+    }
+
+    body.clinics-shell:not(.mobile-map-active) .list-panel {
+        overflow: visible;
+        height: auto;
+    }
+
+    body.clinics-shell:not(.mobile-map-active) .list-panel-content {
+        overflow: visible;
+        flex: none;
+    }
+}
+
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+}
+
+.page-header {
+    margin-bottom: 20px;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 4px;
+    margin-bottom: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+.back-link:hover {
+    color: var(--primary);
+}
+
+[dir="rtl"] .back-link i {
+    transform: scaleX(-1);
+}
+
+.page-header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.page-header p {
+    font-size: 14px;
+    color: var(--text-mute);
+}
+
+/* === Filter Toolbar === */
+.filter-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+}
+
+.filter-toolbar .search-field {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    background: var(--bg-soft);
+    border-radius: var(--r-md);
+}
+
+.filter-toolbar .search-field i {
+    color: var(--text-mute);
+    font-size: 13px;
+}
+
+.filter-toolbar .search-field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.filter-toolbar select {
+    padding: 9px 14px;
+    background: var(--bg-soft);
+    border: none;
+    border-radius: var(--r-md);
+    font-size: 14px;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.filter-toolbar .chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-toolbar .btn-locate {
+    flex-shrink: 0;
+}
+
+/* === Collapsible section (mobile only — see @media block below) === */
+.filter-toggle-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    min-height: 44px;
+    background: var(--bg-soft);
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-soft);
+    flex-shrink: 0;
+}
+
+.filter-toggle-btn.open {
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+.filter-toolbar-collapsible {
+    display: contents;
+}
+
+/* === Grid === */
+.entity-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+/* === Entity Card (doctor / clinic) === */
+.entity-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    transition: all var(--t-base);
+}
+
+.entity-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--primary);
+}
+
+.entity-card-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    gap: 12px;
+}
+
+.entity-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--r-full);
+    background: var(--primary-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.entity-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.entity-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.entity-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.entity-card-subtitle {
+    font-size: 12.5px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.entity-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 8px;
+}
+
+.entity-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.entity-card-meta i {
+    color: var(--primary);
+    font-size: 11px;
+}
+
+.entity-card-badges {
+    margin-top: 8px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.entity-card-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-soft);
+}
+
+.entity-card-footer .btn {
+    width: 100%;
+}
+
+/* === Pagination === */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 28px;
+}
+
+.pagination-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all var(--t-fast);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pagination-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* === Error state (reuses .empty-state layout from components.css) === */
+.error-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--danger);
+}
+
+.error-state i {
+    font-size: 32px;
+    margin-bottom: 12px;
+    display: block;
+}
+
+/* === Profile Header (doctor.html / clinic.html) === */
+.profile-header {
+    display: flex;
+    gap: 20px;
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    margin-bottom: 20px;
+}
+
+.profile-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: var(--r-2xl);
+    background: var(--primary-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 32px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-info h1 {
+    font-size: 21px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.profile-subtitle {
+    font-size: 14px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.profile-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    font-size: 13px;
+    color: var(--text-mute);
+    margin-top: 12px;
+}
+
+.profile-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.profile-meta i {
+    color: var(--primary);
+}
+
+.profile-badges {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.profile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* === Profile Layout (two columns: content + sidebar) === */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    align-items: start;
+}
+
+.profile-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.profile-section h2 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-section h2 i {
+    color: var(--primary);
+    font-size: 14px;
+}
+
+.profile-section p {
+    font-size: 14px;
+    color: var(--text-soft);
+    line-height: 1.7;
+}
+
+/* === Weekly Schedule Grid === */
+.schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.schedule-day {
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--bg-soft);
+    border-radius: var(--r-md);
+}
+
+.schedule-day.today {
+    background: var(--primary-50);
+    border: 1.5px solid var(--primary);
+}
+
+[data-theme="dark"] .schedule-day.today {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+.schedule-day-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-mute);
+    margin-bottom: 6px;
+}
+
+.schedule-day-slots {
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.5;
+}
+
+.schedule-day-slots .slot {
+    display: block;
+    margin-bottom: 2px;
+}
+
+.schedule-day-off {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+/* === Services / Insurance chip lists === */
+.chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chip-list .chip {
+    padding: 6px 12px;
+    background: var(--bg-soft);
+    border-radius: var(--r-full);
+    font-size: 12.5px;
+    color: var(--text-soft);
+    font-weight: 500;
+}
+
+/* === Reviews === */
+.review-item {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.review-item:last-child {
+    border-bottom: none;
+}
+
+.review-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.review-author {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.review-date {
+    font-size: 11px;
+    color: var(--text-faint);
+}
+
+.review-text {
+    font-size: 13.5px;
+    color: var(--text-soft);
+    line-height: 1.6;
+}
+
+/* === Sub-item list (doctors at a clinic / clinics for a doctor) === */
+.sub-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.sub-item:last-child {
+    border-bottom: none;
+}
+
+.sub-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.sub-item-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.sub-item-subtitle {
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 2px;
+}
+
+/* === Mini Map === */
+.mini-map {
+    width: 100%;
+    height: 220px;
+    border-radius: var(--r-md);
+    overflow: hidden;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-header {
+        flex-direction: column;
+    }
+
+    .profile-actions {
+        flex-direction: row;
+    }
+
+    .profile-actions .btn {
+        flex: 1;
+        min-height: 44px;
+    }
+
+    /* Filter toolbar (find-doctors.html): search stays visible, everything
+       else collapses behind a "Filters" toggle instead of always taking
+       vertical space. */
+    .filter-toggle-btn {
+        display: flex;
+    }
+
+    .filter-toolbar-collapsible {
+        display: none;
+        flex-basis: 100%;
+    }
+
+    .filter-toolbar-collapsible.open {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .filter-toolbar-collapsible select {
+        width: 100%;
+        min-height: 44px;
+    }
+
+}
+
+@media (max-width: 1024px) {
+    .search-field input {
+        padding-block: 10px;
+    }
+
+    .pagination-btn {
+        min-width: 44px;
+        height: 44px;
+    }
+}
+
+@media (max-width: 480px) {
+    .entity-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .schedule-grid {
+        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    }
+
+    .filter-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-header {
+        padding: 16px;
+    }
+
+    .profile-avatar {
+        width: 72px;
+        height: 72px;
+        font-size: 24px;
+    }
+}
