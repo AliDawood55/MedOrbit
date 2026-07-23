@@ -1,0 +1,319 @@
+/* ===========================================
+   MedOrbit v2 - Landing Page (home.html)
+   =========================================== */
+
+.hero {
+    position: relative;
+    padding: 64px 20px 56px;
+    text-align: center;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    inset-inline-end: -15%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    inset-inline-start: -15%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--primary-50);
+    color: var(--primary);
+    border-radius: var(--r-full);
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+[data-theme="dark"] .hero-badge {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+.hero h1 {
+    font-size: 40px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.25;
+    margin-bottom: 16px;
+}
+
+.hero h1 span {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.hero p {
+    font-size: 16px;
+    color: var(--text-mute);
+    line-height: 1.7;
+    margin-bottom: 32px;
+}
+
+.hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+}
+
+.hero-actions .btn {
+    padding: 13px 26px;
+    font-size: 15px;
+}
+
+/* === Hero search === */
+.hero-search {
+    max-width: 560px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 8px 8px 20px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-full);
+    box-shadow: var(--shadow-lg);
+}
+
+[dir="rtl"] .hero-search {
+    padding: 8px 20px 8px 8px;
+}
+
+.hero-search i {
+    color: var(--text-mute);
+}
+
+.hero-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14.5px;
+    color: var(--text);
+}
+
+.hero-search select {
+    padding: 8px 10px;
+    background: var(--bg-soft);
+    border: none;
+    border-radius: var(--r-full);
+    font-size: 13px;
+    color: var(--text-soft);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.hero-search button {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: var(--r-full);
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: background var(--t-fast);
+}
+
+.hero-search button:hover {
+    background: var(--primary-dark);
+}
+
+/* === Feature Grid === */
+.features {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+}
+
+.features-heading {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.features-heading h2 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.features-heading p {
+    font-size: 14.5px;
+    color: var(--text-mute);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+}
+
+.feature-card {
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    text-align: start;
+    transition: all var(--t-base);
+}
+
+.feature-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+    border-color: var(--primary);
+}
+
+.feature-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-gradient);
+    color: white;
+    border-radius: var(--r-lg);
+    font-size: 20px;
+    margin-bottom: 16px;
+}
+
+.feature-card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.feature-card p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    line-height: 1.6;
+}
+
+.feature-card a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* === Bottom CTA band === */
+.cta-band {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+    padding: 40px;
+    background: var(--primary-gradient);
+    border-radius: var(--r-2xl);
+    text-align: center;
+    color: white;
+}
+
+.cta-band h2 {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.cta-band p {
+    font-size: 14.5px;
+    opacity: 0.9;
+    margin-bottom: 24px;
+}
+
+.cta-band .btn {
+    background: white;
+    color: var(--primary);
+    padding: 12px 28px;
+    font-size: 15px;
+}
+
+.cta-band .btn:hover {
+    background: var(--bg-soft);
+    transform: translateY(-1px);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .hero {
+        padding: 44px 16px 40px;
+    }
+
+    .hero h1 {
+        font-size: 28px;
+    }
+
+    .hero-search {
+        flex-wrap: wrap;
+        border-radius: var(--r-xl);
+        padding: 12px;
+    }
+
+    .hero-search select {
+        order: 3;
+        width: 100%;
+    }
+
+    .cta-band {
+        padding: 28px 20px;
+    }
+
+    .cta-band h2 {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero h1 {
+        font-size: 24px;
+    }
+
+    .hero-search input {
+        padding-block: 10px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+    }
+}

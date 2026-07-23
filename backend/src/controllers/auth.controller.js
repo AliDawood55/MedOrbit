@@ -90,6 +90,17 @@ async function register(req, res, next) {
 
 
     } catch (err) {
+        // if(
+        //     err.message.includes("Email already registered") ||
+        //     err.message.includes("Password must")
+        // ) {
+        //     return error(
+        //         res,
+        //         err.message,
+        //         400,
+        //         "VALIDATION_ERROR"
+        //     );
+        // }
 
         next(err);
 
@@ -161,6 +172,10 @@ async function login(req, res, next) {
 
 
     } catch (err) {
+        
+        console.log("========== LOGIN ERROR ==========");
+        console.log(err);
+        console.log("=================================");
 
         next(err);
 
@@ -172,6 +187,38 @@ async function login(req, res, next) {
 
 
 
+
+/**
+ * POST /api/auth/google
+ */
+async function google(req, res, next) {
+
+    try {
+
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return error(
+                res,
+                "Google ID token required",
+                400,
+                "VALIDATION_ERROR"
+            );
+        }
+
+        const result = await authService.googleLogin(idToken, req);
+
+        return success(
+            res,
+            result,
+            "Login successful"
+        );
+
+    } catch (err) {
+        next(err);
+    }
+
+}
 
 /**
  * POST /api/auth/refresh
@@ -522,6 +569,8 @@ module.exports = {
     register,
 
     login,
+
+    google,
 
     refresh,
 

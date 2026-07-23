@@ -25,7 +25,7 @@ const env = {
         name: process.env.DB_NAME,
         user: process.env.DB_USER,
         password: String(process.env.DB_PASSWORD || ''),
-        schema: process.env.DB_SCHEMA || "public",
+        schema: process.env.DB_SCHEMA || "medorbit",
     },
 
     jwt: {
@@ -44,6 +44,10 @@ const env = {
             Number(process.env.BCRYPT_ROUNDS) || 12,
     },
 
+    google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+    },
+
 
     cors: {
         origin:
@@ -51,6 +55,4 @@ const env = {
     }
 };
 
-module.exports = env; console.log("ENV LOADED");
-
-console.log(process.env.DB_PASSWORD);
+module.exports = env;
