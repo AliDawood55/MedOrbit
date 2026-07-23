@@ -1,0 +1,189 @@
+/* ============================================================
+   MedOrbit v2 - Profile / Account Page
+   ============================================================ */
+
+.profile-header-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.profile-avatar-wrap {
+    position: relative;
+    width: 84px;
+    height: 84px;
+    flex-shrink: 0;
+}
+
+.profile-avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: 700;
+    overflow: hidden;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-avatar-edit {
+    position: absolute;
+    bottom: -2px;
+    inset-inline-end: -2px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    border: 2px solid var(--bg);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--t-fast);
+}
+
+.profile-avatar-edit:hover {
+    background: var(--primary-50);
+    transform: scale(1.06);
+}
+
+.profile-avatar-edit.uploading {
+    pointer-events: none;
+}
+
+.profile-avatar-edit.uploading i {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.profile-identity h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.profile-identity p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+}
+
+.profile-identity .profile-since {
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: var(--text-mute);
+}
+
+.profile-avatar-hint {
+    font-size: 11.5px;
+    color: var(--text-mute);
+    margin-top: 6px;
+}
+
+.profile-section {
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.profile-section-title {
+    font-size: 15.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.profile-section-desc {
+    font-size: 13px;
+    color: var(--text-mute);
+    margin-bottom: 18px;
+}
+
+.profile-lang-options {
+    display: flex;
+    gap: 12px;
+}
+
+.profile-lang-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+}
+
+.profile-lang-option:hover {
+    border-color: var(--primary-100);
+}
+
+.profile-lang-option.active {
+    border-color: var(--primary);
+    background: var(--primary-50);
+    color: var(--primary);
+}
+
+.profile-lang-option input {
+    display: none;
+}
+
+.profile-save-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 6px;
+}
+
+[dir="rtl"] .profile-save-row {
+    justify-content: flex-start;
+}
+
+.profile-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--text-mute);
+}
+
+@media (max-width: 480px) {
+    .profile-header-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profile-lang-options {
+        flex-direction: column;
+    }
+
+    .profile-save-row {
+        justify-content: stretch;
+    }
+
+    .profile-save-row .btn {
+        width: 100%;
+    }
+}

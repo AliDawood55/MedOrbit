@@ -1,5 +1,6 @@
 import psycopg2
 from osm_collector import OSMCollector
+from osm_transform import process_place
 
 
 
@@ -21,12 +22,18 @@ cursor = conn.cursor()
 collector = OSMCollector()
 
 
-places = collector.fetch_healthcare()
+raw_places = collector.fetch_healthcare()
+
+places = [
+    r for r in
+    (process_place(p) for p in raw_places)
+    if r is not None
+]
 
 
 
 print(
-    f"✅ Collected {len(places)} places"
+    f"Collected {len(raw_places)} places, {len(places)} with a usable name"
 )
 
 
@@ -34,7 +41,7 @@ print(
 if not places:
 
     print(
-        "❌ No data collected"
+        "No data collected"
     )
 
     cursor.close()
@@ -50,6 +57,10 @@ inserted = 0
 
 for p in places:
 
+    # Never fabricate an address — blank ('' ) if OSM had none, address_ar/
+    # address_en are NOT NULL on this table so a real NULL isn't an option.
+    address = p["address"] or ""
+
 
     cursor.execute(
         """
@@ -64,35 +75,36 @@ for p in places:
             latitude,
             longitude,
             phone,
+            type,
             services,
             is_active,
             verification_status
         )
 
-        VALUES
-        (
-            %s,%s,%s,%s,%s,
-            %s,%s,%s,%s,%s,%s
+        SELECT %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s
+        WHERE NOT EXISTS (
+            SELECT 1 FROM medorbit.clinics
+            WHERE latitude = %s AND longitude = %s
         )
-
-        ON CONFLICT DO NOTHING
 
         """,
 
         (
 
-            p["name"],
-            p["name"],
+            p["name_ar"],
+            p["name_en"],
 
-            p["address"],
-            p["address"],
+            address,
+            address,
 
             "Nablus",
 
-            p["latitude"],
-            p["longitude"],
+            p["lat"],
+            p["lng"],
 
             p["phone"],
+
+            p["type"],
 
             [p["type"]]
             if p["type"]
@@ -100,14 +112,17 @@ for p in places:
 
             True,
 
-            "pending"
+            "pending",
+
+            p["lat"],
+            p["lng"],
 
         )
 
     )
 
 
-    inserted += 1
+    inserted += cursor.rowcount
 
 
 
@@ -120,9 +135,9 @@ conn.close()
 
 
 print(
-    f"✅ Inserted {inserted} clinics"
+    f"Inserted {inserted} new clinics ({len(places) - inserted} already existed at that coordinate)"
 )
 
 print(
-    "✅ Database updated successfully"
+    "Database updated successfully"
 )
