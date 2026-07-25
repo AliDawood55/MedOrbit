@@ -2,7 +2,7 @@ name: MedOrbit CI
 
 on:
   push:
-    branches: [main, ALI]
+    branches: [main, ALI, omar]
   pull_request:
     branches: [main]
 
