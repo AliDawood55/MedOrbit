@@ -288,6 +288,60 @@
     border-top-color: #fff;
 }
 
+/* === Generic confirm/detail modal (cancel appointment, delete post, etc.) === */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal, 1000);
+    padding: 20px;
+}
+
+.modal-box {
+    background: var(--bg-card);
+    border-radius: var(--r-lg);
+    padding: 22px;
+    max-width: 420px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-md);
+}
+
+.modal-box h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.modal-box p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    margin-bottom: 14px;
+    line-height: 1.7;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+@media (max-width: 480px) {
+    .modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
+
 /* === Utility === */
 .hidden {
     display: none !important;

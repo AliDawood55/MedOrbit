@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – سجلاتي الطبية</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
+    <link rel="stylesheet" href="../src/css/records.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:1000px;">
+
+        <div class="page-header">
+            <h1 data-i18n="records.title">سجلاتي الطبية</h1>
+            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="records.subtitle">السجل الزمني لزياراتك وتشخيصاتك الطبية</p>
+        </div>
+
+        <!-- Filters: visually built, disabled — nothing to filter yet -->
+        <div class="records-filter-bar">
+            <div class="search-field">
+                <i class="fas fa-search"></i>
+                <input type="text" disabled data-i18n-placeholder="records.searchPlaceholder" placeholder="ابحث في السجلات...">
+            </div>
+            <select disabled>
+                <option data-i18n="records.filterAllTypes">كل الأنواع</option>
+                <option data-i18n="records.filterConsultation">استشارة</option>
+                <option data-i18n="records.filterLabResult">نتيجة فحص</option>
+                <option data-i18n="records.filterDiagnosis">تشخيص</option>
+            </select>
+            <select disabled>
+                <option data-i18n="prescriptions.filterAnyDate">أي تاريخ</option>
+                <option data-i18n="prescriptions.filterLast30">آخر 30 يوماً</option>
+                <option data-i18n="prescriptions.filterLastYear">آخر سنة</option>
+            </select>
+            <span class="records-locked-tag"><i class="fas fa-lock"></i> <span data-i18n="records.comingSoonTag">قريباً</span></span>
+        </div>
+
+        <!-- Structural preview: skeleton shapes only, never fabricated data -->
+        <div class="records-preview-section">
+            <div class="records-preview-caption">
+                <i class="fas fa-eye"></i>
+                <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
+            </div>
+            <div class="records-timeline">
+                <div class="records-timeline-item">
+                    <div class="records-timeline-dot"></div>
+                    <div class="records-timeline-card">
+                        <div class="records-timeline-card-lines">
+                            <div class="sk-line tall w-40 skeleton"></div>
+                            <div class="sk-line w-80 skeleton"></div>
+                            <div class="sk-line w-30 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="records-timeline-item">
+                    <div class="records-timeline-dot"></div>
+                    <div class="records-timeline-card">
+                        <div class="records-timeline-card-lines">
+                            <div class="sk-line tall w-30 skeleton"></div>
+                            <div class="sk-line w-60 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="records-timeline-item">
+                    <div class="records-timeline-dot"></div>
+                    <div class="records-timeline-card">
+                        <div class="records-timeline-card-lines">
+                            <div class="sk-line tall w-60 skeleton"></div>
+                            <div class="sk-line w-80 skeleton"></div>
+                            <div class="sk-line w-40 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Honest empty state — the real, user-facing message -->
+        <div class="records-empty-state">
+            <div class="empty-state-icon"><i class="fas fa-file-waveform"></i></div>
+            <h2 data-i18n="records.emptyTitle">هذه الميزة غير متاحة بعد</h2>
+            <p data-i18n="records.emptyHint">نعمل على ربط سجلاتك الطبية من زياراتك بحسابك. بمجرد توفر هذه الميزة، سيظهر سجلك الزمني الكامل هنا تلقائياً.</p>
+            <a href="dashboard.html" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i>
+                <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>
+            </a>
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/my-records.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            MyRecords.init();
+        });
+    </script>
+</body>
+</html>

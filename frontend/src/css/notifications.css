@@ -1,0 +1,43 @@
+/* ===========================================
+   MedOrbit v2 - Notifications (notifications.html)
+   Reuses .dashboard-list-item / .dashboard-notif-item / .notif-dot from
+   dashboard.css — this file only adds what's specific to the full-inbox
+   page: the header row, the unread-only toggle, per-item actions, and the
+   loading skeleton.
+   =========================================== */
+
+.notif-page-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.notif-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-soft);
+    margin-bottom: 18px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.notif-filter-toggle input {
+    accent-color: var(--primary);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.notif-page-item {
+    align-items: flex-start;
+}
+
+.notif-page-item .dashboard-list-actions {
+    align-self: center;
+}

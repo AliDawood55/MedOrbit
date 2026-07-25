@@ -66,6 +66,7 @@ const DoctorProfile = (() => {
             const slots = availabilityRes?.data?.slots || profileRes.data.availability || [];
 
             content.innerHTML = renderProfile(doctor, clinics || [], slots, reviews || []);
+            wireProfileTabs(content);
             renderMiniMap(clinics || []);
 
         } catch (err) {
@@ -140,30 +141,14 @@ const DoctorProfile = (() => {
                     (acceptingBadge ? '<div class="profile-badges">' + acceptingBadge + '</div>' : '') +
                 '</div>' +
                 '<div class="profile-actions">' +
-                    '<a class="btn btn-primary btn-sm" href="index.html"><i class="fas fa-comments"></i> ' + escapeHtml(t('home.startChat')) + '</a>' +
+                    '<a class="btn btn-primary btn-sm" href="book-appointment.html?doctorId=' + encodeURIComponent(doctor.id) + '"><i class="fas fa-calendar-plus"></i> ' + escapeHtml(t('doctor.bookAppointment')) + '</a>' +
+                    '<a class="btn btn-secondary btn-sm" href="index.html"><i class="fas fa-comments"></i> ' + escapeHtml(t('home.startChat')) + '</a>' +
                 '</div>' +
             '</div>' +
 
             '<div class="profile-layout">' +
                 '<div class="profile-main">' +
-                    (bio ? (
-                        '<div class="profile-section">' +
-                            '<h2><i class="fas fa-user"></i> ' + escapeHtml(t('doctor.about')) + '</h2>' +
-                            '<p>' + escapeHtml(bio) + '</p>' +
-                        '</div>'
-                    ) : '') +
-
-                    '<div class="profile-section">' +
-                        '<h2><i class="fas fa-calendar-week"></i> ' + escapeHtml(t('doctor.availability')) + '</h2>' +
-                        renderSchedule(slots) +
-                    '</div>' +
-
-                    '<div class="profile-section">' +
-                        '<h2><i class="fas fa-star"></i> ' + escapeHtml(t('doctor.reviews')) + '</h2>' +
-                        (reviews.length
-                            ? reviews.map(renderReview).join('')
-                            : '<p>' + escapeHtml(t('doctor.noReviews')) + '</p>') +
-                    '</div>' +
+                    renderProfileTabs(bio, slots, reviews) +
                 '</div>' +
 
                 '<aside class="profile-sidebar">' +
@@ -221,6 +206,116 @@ const DoctorProfile = (() => {
                 (text ? '<div class="review-text">' + escapeHtml(text) + '</div>' : '') +
             '</div>'
         );
+    }
+
+    // ================= PROFILE TABS =================
+
+    function renderProfileTabs(bio, slots, reviews) {
+        const tabs = [];
+        if (bio) tabs.push({ id: 'about', icon: 'fa-user', labelKey: 'doctor.about' });
+        tabs.push({ id: 'availability', icon: 'fa-calendar-week', labelKey: 'doctor.availability' });
+        tabs.push({ id: 'reviews', icon: 'fa-star', labelKey: 'doctor.reviews' });
+        tabs.push({ id: 'posts', icon: 'fa-newspaper', labelKey: 'doctor.posts' });
+
+        const defaultTab = tabs[0].id;
+
+        const strip = '<div class="profile-tabs" role="tablist">' +
+            tabs.map((tb) =>
+                '<button type="button" class="profile-tab' + (tb.id === defaultTab ? ' active' : '') + '" data-tab="' + tb.id + '" role="tab">' +
+                    '<i class="fas ' + tb.icon + '"></i> ' + escapeHtml(t(tb.labelKey)) +
+                '</button>'
+            ).join('') +
+        '</div>';
+
+        const panels =
+            (bio ? '<div class="profile-tab-panel' + (defaultTab === 'about' ? ' active' : '') + '" data-panel="about"><p>' + escapeHtml(bio) + '</p></div>' : '') +
+            '<div class="profile-tab-panel' + (defaultTab === 'availability' ? ' active' : '') + '" data-panel="availability">' + renderSchedule(slots) + '</div>' +
+            '<div class="profile-tab-panel' + (defaultTab === 'reviews' ? ' active' : '') + '" data-panel="reviews">' +
+                (reviews.length ? reviews.map(renderReview).join('') : '<p>' + escapeHtml(t('doctor.noReviews')) + '</p>') +
+            '</div>' +
+            '<div class="profile-tab-panel' + (defaultTab === 'posts' ? ' active' : '') + '" data-panel="posts">' + renderPostsTab() + '</div>';
+
+        return strip + '<div class="profile-tab-panels">' + panels + '</div>';
+    }
+
+    function wireProfileTabs(content) {
+        const tabButtons = content.querySelectorAll('.profile-tab');
+        tabButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                tabButtons.forEach((b) => b.classList.remove('active'));
+                btn.classList.add('active');
+                content.querySelectorAll('.profile-tab-panel').forEach((p) => {
+                    p.classList.toggle('active', p.dataset.panel === btn.dataset.tab);
+                });
+            });
+        });
+    }
+
+    // ================= POSTS TAB =================
+    // GET /api/doctors/:id/posts does not exist yet (see BACKEND_NEEDED.md,
+    // item 10) — there is no `posts` table at all. This renders a
+    // structural preview (literal skeleton shapes, never fabricated
+    // article text) plus the honest empty state. openPostDetailModal()
+    // below is fully implemented and ready for real data — it's just never
+    // called today since no real, clickable post card exists yet.
+
+    function renderGhostPostCard() {
+        return (
+            '<div class="records-preview-card">' +
+                '<div class="records-preview-card-icon skeleton"></div>' +
+                '<div class="records-preview-card-lines">' +
+                    '<div class="sk-line tall w-60 skeleton"></div>' +
+                    '<div class="sk-line w-80 skeleton"></div>' +
+                    '<div class="sk-line w-30 skeleton"></div>' +
+                '</div>' +
+            '</div>'
+        );
+    }
+
+    function renderPostsTab() {
+        return (
+            '<div class="records-preview-section" style="margin-bottom:16px;">' +
+                '<div class="records-preview-caption"><i class="fas fa-eye"></i> <span>' + escapeHtml(t('doctor.postsPreviewCaption')) + '</span></div>' +
+                '<div class="records-preview-list">' +
+                    renderGhostPostCard() + renderGhostPostCard() +
+                '</div>' +
+            '</div>' +
+            '<div class="records-empty-state">' +
+                '<div class="empty-state-icon"><i class="fas fa-newspaper"></i></div>' +
+                '<h2>' + escapeHtml(t('doctor.postsEmptyTitle')) + '</h2>' +
+                '<p>' + escapeHtml(t('doctor.postsEmptyHint')) + '</p>' +
+            '</div>'
+        );
+    }
+
+    /**
+     * Opens a read-only detail view for a single post. Ready to wire up to
+     * a real click handler the moment GET /doctors/:id/posts returns real,
+     * clickable cards — not reachable today.
+     */
+    function openPostDetailModal(post) {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML =
+            '<div class="modal-box">' +
+                '<h3>' + escapeHtml(name(post, 'title_ar', 'title_en')) + '</h3>' +
+                '<p style="color:var(--text-faint);font-size:12px;">' +
+                    escapeHtml([post.category, post.created_at ? new Date(post.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : ''].filter(Boolean).join(' · ')) +
+                '</p>' +
+                '<p>' + escapeHtml(name(post, 'body_ar', 'body_en')) + '</p>' +
+                '<div class="modal-actions"><button type="button" class="btn btn-secondary" id="postDetailCloseBtn">' + escapeHtml(t('common.close')) + '</button></div>' +
+            '</div>';
+
+        document.body.appendChild(backdrop);
+        if (typeof Dom !== 'undefined') Dom.lockScroll();
+
+        const close = () => {
+            backdrop.remove();
+            if (typeof Dom !== 'undefined') Dom.unlockScroll();
+        };
+
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+        backdrop.querySelector('#postDetailCloseBtn').addEventListener('click', close);
     }
 
     function renderClinicSubItem(c) {

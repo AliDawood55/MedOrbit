@@ -221,6 +221,7 @@
     box-shadow: var(--shadow-lg);
     padding: 8px;
 }
+ 
 
 .location-menu.open {
     display: block;

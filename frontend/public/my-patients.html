@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – مرضاي</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
+    <link rel="stylesheet" href="../src/css/records.css">
+    <link rel="stylesheet" href="../src/css/care.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:1100px;">
+
+        <div class="care-restricted hidden" id="restrictedNotice">
+            <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
+            <h2 data-i18n="care.doctorOnlyTitle">هذه الصفحة مخصصة للأطباء</h2>
+            <p data-i18n="care.doctorOnlyHint">هذه الصفحة متاحة فقط لحسابات الأطباء.</p>
+            <a href="dashboard.html" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i>
+                <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>
+            </a>
+        </div>
+
+        <div id="patientsPageContent" class="hidden">
+
+            <div class="page-header">
+                <h1 data-i18n="myPatients.title">مرضاي</h1>
+                <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="myPatients.subtitle">قائمة المرضى الذين لديهم مواعيد معك</p>
+            </div>
+
+            <div class="care-search-bar">
+                <div class="search-field">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="patientSearchInput" data-i18n-placeholder="myPatients.searchPlaceholder" placeholder="ابحث باسم المريض...">
+                </div>
+                <select id="patientFilterSelect">
+                    <option value="all" data-i18n="myPatients.filterAll">كل المرضى</option>
+                    <option value="upcoming" data-i18n="myPatients.filterUpcoming">لديهم موعد قادم</option>
+                    <option value="past" data-i18n="myPatients.filterPast">زيارات سابقة فقط</option>
+                </select>
+            </div>
+
+            <!-- Structural preview: skeleton shapes only, never fabricated data -->
+            <div class="records-preview-section">
+                <div class="records-preview-caption">
+                    <i class="fas fa-eye"></i>
+                    <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
+                </div>
+                <div class="care-card-grid" style="opacity:0.7;">
+                    <div class="care-person-card">
+                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
+                        <div class="care-person-info">
+                            <div class="sk-line tall w-60 skeleton" style="margin-bottom:8px;"></div>
+                            <div class="sk-line w-40 skeleton" style="margin-bottom:10px;"></div>
+                            <div class="sk-line w-80 skeleton"></div>
+                        </div>
+                    </div>
+                    <div class="care-person-card">
+                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
+                        <div class="care-person-info">
+                            <div class="sk-line tall w-40 skeleton" style="margin-bottom:8px;"></div>
+                            <div class="sk-line w-60 skeleton" style="margin-bottom:10px;"></div>
+                            <div class="sk-line w-30 skeleton"></div>
+                        </div>
+                    </div>
+                    <div class="care-person-card">
+                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
+                        <div class="care-person-info">
+                            <div class="sk-line tall w-60 skeleton" style="margin-bottom:8px;"></div>
+                            <div class="sk-line w-40 skeleton" style="margin-bottom:10px;"></div>
+                            <div class="sk-line w-60 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Honest empty state — the real, user-facing message -->
+            <div class="records-empty-state">
+                <div class="empty-state-icon"><i class="fas fa-user-injured"></i></div>
+                <h2 data-i18n="myPatients.emptyTitle">هذه الميزة غير متاحة بعد</h2>
+                <p data-i18n="myPatients.emptyHint">نعمل على ربط قائمة مرضاك بحسابك. بمجرد توفر هذه الميزة، سيظهر مرضاك هنا تلقائياً.</p>
+                <a href="dashboard.html" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-right"></i>
+                    <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>
+                </a>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/my-patients.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            MyPatients.init();
+        });
+    </script>
+</body>
+</html>

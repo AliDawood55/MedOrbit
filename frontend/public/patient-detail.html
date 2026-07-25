@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – ملف المريض</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
+    <link rel="stylesheet" href="../src/css/records.css">
+    <link rel="stylesheet" href="../src/css/care.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:900px;">
+
+        <div class="care-restricted hidden" id="restrictedNotice">
+            <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
+            <h2 data-i18n="care.doctorOnlyTitle">هذه الصفحة مخصصة للأطباء</h2>
+            <p data-i18n="care.doctorOnlyHint">هذه الصفحة متاحة فقط لحسابات الأطباء.</p>
+            <a href="dashboard.html" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i>
+                <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>
+            </a>
+        </div>
+
+        <div class="care-restricted hidden" id="noIdNotice">
+            <div class="empty-state-icon"><i class="fas fa-circle-question"></i></div>
+            <h2 data-i18n="patientDetail.noIdTitle">لم يتم تحديد مريض</h2>
+            <p data-i18n="patientDetail.noIdHint">الرجاء اختيار مريض من قائمة مرضاك.</p>
+            <a href="my-patients.html" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i>
+                <span data-i18n="myPatients.title">مرضاي</span>
+            </a>
+        </div>
+
+        <div id="patientDetailContent" class="hidden">
+
+            <a href="my-patients.html" class="back-link">
+                <i class="fas fa-arrow-right"></i> <span data-i18n="myPatients.title">مرضاي</span>
+            </a>
+
+            <div class="records-preview-caption" style="margin-top:14px;">
+                <i class="fas fa-eye"></i>
+                <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
+            </div>
+
+            <!-- Patient header — skeleton preview only, no fabricated name/photo -->
+            <div class="care-detail-header" style="opacity:0.7;">
+                <div class="care-detail-avatar skeleton"></div>
+                <div style="flex:1;">
+                    <div class="sk-line tall w-40 skeleton" style="margin-bottom:10px;"></div>
+                    <div class="sk-line w-25 skeleton"></div>
+                </div>
+            </div>
+
+            <!-- Appointment history -->
+            <div class="care-section" style="opacity:0.7;">
+                <div class="care-section-title"><i class="fas fa-calendar-check"></i> <span data-i18n="patientDetail.appointmentHistory">سجل المواعيد</span></div>
+                <div class="records-preview-list">
+                    <div class="records-preview-card">
+                        <div class="records-preview-card-icon skeleton"></div>
+                        <div class="records-preview-card-lines">
+                            <div class="sk-line tall w-40 skeleton"></div>
+                            <div class="sk-line w-30 skeleton"></div>
+                        </div>
+                    </div>
+                    <div class="records-preview-card">
+                        <div class="records-preview-card-icon skeleton"></div>
+                        <div class="records-preview-card-lines">
+                            <div class="sk-line tall w-60 skeleton"></div>
+                            <div class="sk-line w-40 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session notes timeline + real add-note form -->
+            <div class="care-section">
+                <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">ملاحظات الجلسات</span></div>
+
+                <div class="note-timeline" style="opacity:0.7;margin-bottom:20px;">
+                    <div class="note-timeline-item">
+                        <div class="note-timeline-dot"></div>
+                        <div class="note-card">
+                            <div class="sk-line tall w-40 skeleton" style="margin-bottom:8px;"></div>
+                            <div class="sk-line w-80 skeleton"></div>
+                        </div>
+                    </div>
+                    <div class="note-timeline-item">
+                        <div class="note-timeline-dot"></div>
+                        <div class="note-card">
+                            <div class="sk-line tall w-30 skeleton" style="margin-bottom:8px;"></div>
+                            <div class="sk-line w-60 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة ملاحظة جلسة</div>
+                <div class="alert" id="noteFormAlert"></div>
+
+                <div class="care-note-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="noteRecordType" data-i18n="patientDetail.recordType">نوع السجل</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-file-medical"></i>
+                                <select id="noteRecordType">
+                                    <option value="consultation" data-i18n="patientDetail.typeConsultation">استشارة</option>
+                                    <option value="follow_up" data-i18n="patientDetail.typeFollowUp">متابعة</option>
+                                    <option value="procedure" data-i18n="patientDetail.typeProcedure">إجراء طبي</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="noteDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-stethoscope"></i>
+                                <input type="text" id="noteDiagnosis">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteChiefComplaint" data-i18n="patientDetail.chiefComplaint">الشكوى الرئيسية</label>
+                        <textarea class="feedback-textarea" id="noteChiefComplaint" style="min-height:60px;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteClinicalNotes" data-i18n="patientDetail.clinicalNotes">ملاحظات إكلينيكية</label>
+                        <textarea class="feedback-textarea" id="noteClinicalNotes"></textarea>
+                    </div>
+
+                    <label class="care-toggle-row">
+                        <input type="checkbox" id="noteDraftToggle">
+                        <span data-i18n="patientDetail.saveDraft">حفظ كمسودة (غير مرئية للمريض)</span>
+                    </label>
+
+                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                        <button type="button" class="btn btn-primary" id="noteSubmitBtn">
+                            <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ الملاحظة</span>
+                            <span class="spinner spinner-sm btn-spinner"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prescriptions -->
+            <div class="care-section" style="opacity:0.7;">
+                <div class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></div>
+                <div class="records-preview-list">
+                    <div class="records-preview-card">
+                        <div class="records-preview-card-icon skeleton"></div>
+                        <div class="records-preview-card-lines">
+                            <div class="sk-line tall w-50 skeleton"></div>
+                            <div class="sk-line w-30 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Honest empty state — the real, user-facing message -->
+            <div class="records-empty-state">
+                <div class="empty-state-icon"><i class="fas fa-folder-open"></i></div>
+                <h2 data-i18n="patientDetail.emptyTitle">هذه الميزة غير متاحة بعد</h2>
+                <p data-i18n="patientDetail.emptyHint">نعمل على ربط ملفات المرضى بحسابك. بمجرد توفر هذه الميزة، سيظهر السجل الكامل هنا تلقائياً.</p>
+            </div>
+
+            <!-- Honest "not saved" result for the note form -->
+            <div class="feedback-result hidden" id="noteFormResult">
+                <div class="feedback-result-icon"><i class="fas fa-plug-circle-exclamation"></i></div>
+                <h2 data-i18n="patientDetail.noteNotConnectedTitle">لم يتم حفظ الملاحظة بعد</h2>
+                <p data-i18n="patientDetail.noteNotConnectedHint">هذه الميزة غير متصلة بأي خادم بعد، لذلك لم يتم حفظ ملاحظتك في أي مكان. نعمل على إضافة هذه الميزة قريباً.</p>
+                <button type="button" class="btn btn-secondary btn-sm" id="noteFormResultCloseBtn">
+                    <span data-i18n="common.close">إغلاق</span>
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/patient-detail.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            PatientDetail.init();
+        });
+    </script>
+</body>
+</html>

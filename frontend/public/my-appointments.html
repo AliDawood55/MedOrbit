@@ -5,23 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – ملف الطبيب</title>
+    <title>MedOrbit – مواعيدي</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin=""/>
-
     <link rel="stylesheet" href="../src/css/main.css">
     <link rel="stylesheet" href="../src/css/components.css">
     <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
     <link rel="stylesheet" href="../src/css/listing.css">
-    <link rel="stylesheet" href="../src/css/animation.css">
-    <link rel="stylesheet" href="../src/css/records.css">
+    <link rel="stylesheet" href="../src/css/appointments.css">
 </head>
 <body class="site-page" data-theme="light">
 
@@ -46,40 +42,66 @@
     </header>
 
     <main class="page-container">
-        <a href="find-doctors.html" class="back-link">
-            <i class="fas fa-arrow-right"></i> <span data-i18n="doctor.backToList">العودة لقائمة الأطباء</span>
-        </a>
 
-        <div id="doctorContent">
-            <!-- Rendered by doctor.js: loading / profile / not-found / error -->
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h1 data-i18n="myAppts.title">مواعيدي</h1>
+                <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="myAppts.subtitle">إدارة مواعيدك الطبية القادمة والسابقة</p>
+            </div>
+            <a href="book-appointment.html" class="btn btn-primary">
+                <i class="fas fa-plus"></i>
+                <span data-i18n="myAppts.bookNew">حجز موعد جديد</span>
+            </a>
         </div>
+
+        <div class="loading-state" id="apptLoading" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:var(--text-mute);">
+            <div class="spinner spinner-lg"></div>
+            <p data-i18n="common.loading">جارِ التحميل...</p>
+        </div>
+
+        <div class="error-state hidden" id="apptError">
+            <i class="fas fa-triangle-exclamation"></i>
+            <p data-i18n="myAppts.errorLoad">تعذر تحميل مواعيدك</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="apptRetryBtn" data-i18n="common.retry">إعادة المحاولة</button>
+        </div>
+
+        <div id="apptContent" class="hidden">
+            <div class="appt-tabs" id="apptTabs">
+                <button type="button" class="appt-tab active" data-tab="upcoming" data-i18n="myAppts.tabUpcoming">القادمة</button>
+                <button type="button" class="appt-tab" data-tab="past" data-i18n="myAppts.tabPast">السابقة</button>
+                <button type="button" class="appt-tab" data-tab="cancelled" data-i18n="myAppts.tabCancelled">الملغاة</button>
+            </div>
+
+            <div class="appt-list" id="apptList"></div>
+
+            <div class="empty-state hidden" id="apptEmpty">
+                <div class="empty-state-icon"><i class="fas fa-calendar-days"></i></div>
+                <h3 id="apptEmptyTitle"></h3>
+                <p id="apptEmptyHint"></p>
+            </div>
+        </div>
+
     </main>
 
     <footer class="site-footer" id="siteFooter"></footer>
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
-
     <script src="../src/utils/dom.js"></script>
     <script src="../src/utils/format.js"></script>
     <script src="../src/utils/store.js"></script>
-    <script src="../src/utils/motion.js"></script>
 
     <script src="../src/js/api.js"></script>
     <script src="../src/js/i18n.js"></script>
     <script src="../src/js/theme.js"></script>
     <script src="../src/js/toast.js"></script>
     <script src="../src/js/layout.js"></script>
-    <script src="../src/js/mini-map.js"></script>
-    <script src="../src/js/doctor.js"></script>
+    <script src="../src/js/my-appointments.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             Layout.init();
-            DoctorProfile.init();
+            MyAppointments.init();
         });
     </script>
 </body>
