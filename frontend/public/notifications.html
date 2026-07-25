@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – الإشعارات</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
+    <link rel="stylesheet" href="../src/css/dashboard.css">
+    <link rel="stylesheet" href="../src/css/notifications.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:760px;">
+
+        <div class="notif-page-header-row">
+            <div class="page-header" style="margin-bottom:0;">
+                <h1 data-i18n="notifications.title">الإشعارات</h1>
+                <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="notifications.subtitle">كل إشعاراتك في مكان واحد</p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm hidden" id="markAllReadBtn">
+                <span data-i18n="dashboard.markAllRead">تعليم الكل كمقروء</span>
+            </button>
+        </div>
+
+        <label class="notif-filter-toggle">
+            <input type="checkbox" id="unreadOnlyToggle">
+            <span data-i18n="notifications.unreadOnly">إظهار غير المقروءة فقط</span>
+        </label>
+
+        <div class="skeleton-list" id="notifSkeleton">
+            <div class="notif-skeleton-item"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:60%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:40%;"></div></div></div>
+            <div class="notif-skeleton-item"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:50%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:30%;"></div></div></div>
+            <div class="notif-skeleton-item"><div class="skeleton" style="width:36px;height:36px;border-radius:50%;"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:70%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:35%;"></div></div></div>
+        </div>
+
+        <div class="error-state hidden" id="notifPageError">
+            <i class="fas fa-triangle-exclamation"></i>
+            <p data-i18n="notifications.errorLoad">تعذر تحميل الإشعارات</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="notifRetryBtn" data-i18n="common.retry">إعادة المحاولة</button>
+        </div>
+
+        <div id="notifPageContent" class="hidden">
+            <div class="dashboard-list" id="notifPageList"></div>
+            <div class="empty-state hidden" id="notifPageEmpty">
+                <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
+                <h3 id="notifPageEmptyTitle" data-i18n="dashboard.notifEmptyTitle">لا توجد إشعارات</h3>
+                <p id="notifPageEmptyHint" data-i18n="dashboard.notifEmptyHint">ستظهر إشعاراتك هنا عند وصولها</p>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/notifications.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            NotificationsPage.init();
+        });
+    </script>
+</body>
+</html>
