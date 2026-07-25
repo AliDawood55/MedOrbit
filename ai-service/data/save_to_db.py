@@ -1,16 +1,19 @@
+import os
 import psycopg2
+from pathlib import Path
+from dotenv import load_dotenv
 from osm_collector import OSMCollector
 from osm_transform import process_place
 
-
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 conn = psycopg2.connect(
 
-    dbname="medorbit",
-    user="postgres",
-    password="052963",
-    host="localhost",
-    port=5432
+    dbname=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    host=os.getenv("DB_HOST"),
+    port=os.getenv("DB_PORT")
 
 )
 
@@ -32,17 +35,13 @@ places = [
 
 
 
-print(
-    f"Collected {len(raw_places)} places, {len(places)} with a usable name"
-)
+print(f"Collected {len(raw_places)} places, {len(places)} with a usable name")
 
 
 
 if not places:
 
-    print(
-        "No data collected"
-    )
+    print("No data collected")
 
     cursor.close()
     conn.close()
@@ -134,10 +133,6 @@ conn.close()
 
 
 
-print(
-    f"Inserted {inserted} new clinics ({len(places) - inserted} already existed at that coordinate)"
-)
+print(f"Inserted {inserted} new clinics ({len(places) - inserted} already existed at that coordinate)")
 
-print(
-    "Database updated successfully"
-)
+print("Database updated successfully")
