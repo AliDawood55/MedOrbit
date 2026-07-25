@@ -286,6 +286,10 @@ const API = (() => {
         return request(path, { ...options, method: 'DELETE' });
     }
 
+    function patch(path, body, options = {}) {
+        return request(path, { ...options, method: 'PATCH', body });
+    }
+
     // ================= CHAT =================
 
     async function sendChatMessage(params) {
@@ -336,13 +340,78 @@ const API = (() => {
         savedPlaces: (options) => get('/users/me/saved-places', null, options)
     };
 
+    // ================= APPOINTMENTS (JWT required) =================
+
+    const appointments = {
+        list: (options) => get('/appointments', null, options),
+        get: (id, options) => get(`/appointments/${id}`, null, options),
+        create: (body, options) => post('/appointments', body, options),
+        cancel: (id, body, options) => put(`/appointments/${id}/cancel`, body, options),
+        availableSlots: (query, options) => get('/appointments/available-slots', query, options)
+    };
+
+    // ================= NOTIFICATIONS (JWT required) =================
+
+    const notifications = {
+        list: (options) => get('/notifications', null, options),
+        markRead: (id, options) => put(`/notifications/${id}/read`, null, options),
+        markAllRead: (options) => patch('/notifications/read-all', null, options),
+        remove: (id, options) => del(`/notifications/${id}`, options)
+    };
+
+    // ================= ANALYTICS (JWT required, admin only) =================
+    // GET /api/dashboard/stats does not exist yet (see BACKEND_NEEDED.md).
+    // Expected response shape once it lands — analytics.js reads exactly
+    // this and shows an "awaiting backend data" state per-chart for
+    // whichever section is missing/empty:
+    //   {
+    //     appointmentsOverTime:  { labels: string[], counts: number[] },
+    //     usersByRole:           { labels: string[], counts: number[] },
+    //     topSpecialties:        { labels: string[], counts: number[] },
+    //     conversationsPerWeek:  { labels: string[], counts: number[] },
+    //     triageLevels:          { labels: string[], emergency: number[], urgent: number[], routine: number[] },
+    //     clinicTypes:           { labels: string[], counts: number[] }
+    //   }
+    const analytics = {
+        dashboardStats: (options) => get('/dashboard/stats', null, options)
+    };
+
+    // ================= CARE (JWT required) =================
+    // None of these endpoints exist yet — see BACKEND_NEEDED.md items
+    // 10–14. Every one of them MUST resolve the caller's own doctor_id /
+    // patient_id server-side from the JWT, and the :patientId /:doctorId
+    // routes MUST verify a real appointment relationship exists before
+    // returning anything (404 if not) — see the "Data isolation" warning in
+    // BACKEND_NEEDED.md. authorize('doctor')/authorize('patient') alone only
+    // checks role, never ownership. These calls are made anyway (matching
+    // this codebase's convention for analytics/dashboardStats above) so
+    // wiring up the real route later requires zero frontend changes — they
+    // simply 404 today and every page shows its honest empty state.
+    const care = {
+        // Public doctor-posts read (doctor.html's Posts tab)
+        doctorPosts: (doctorId, options) => get(`/doctors/${doctorId}/posts`, null, options),
+        // Doctor's own posts (doctor-posts.html)
+        myPosts: (options) => get('/doctors/me/posts', null, options),
+        createPost: (body, options) => post('/doctors/me/posts', body, options),
+        updatePost: (postId, body, options) => put(`/doctors/me/posts/${postId}`, body, options),
+        deletePost: (postId, options) => del(`/doctors/me/posts/${postId}`, options),
+        // Doctor's patient list + one patient's file (my-patients.html, patient-detail.html)
+        myPatients: (query, options) => get('/doctors/me/patients', query, options),
+        patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
+        patientNotes: (patientId, options) => get(`/doctors/me/patients/${patientId}/notes`, null, options),
+        addPatientNote: (patientId, body, options) => post(`/doctors/me/patients/${patientId}/notes`, body, options),
+        // Patient's view of their own doctor(s) (my-doctor.html)
+        myDoctors: (options) => get('/patients/me/doctors', null, options),
+        sharedNotes: (doctorId, options) => get(`/patients/me/doctors/${doctorId}/notes`, null, options)
+    };
+
     function getOrigin() {
         return BASE_URL.replace(/\/api\/?$/, '');
     }
 
     return {
-        request, get, post, put, del,
-        sendChatMessage, makeCancellable, conversations, doctors, clinics, users,
+        request, get, post, put, del, patch,
+        sendChatMessage, makeCancellable, conversations, doctors, clinics, users, appointments, notifications, analytics, care,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, clearCache
     };
