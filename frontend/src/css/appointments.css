@@ -1,0 +1,527 @@
+/* ===========================================
+   MedOrbit v2 - Appointments
+   Shared by book-appointment.html (wizard) and
+   my-appointments.html (tabbed list).
+   =========================================== */
+
+/* === Wizard step indicator === */
+.wizard-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 28px;
+}
+
+.wizard-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wizard-step-circle {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--bg-soft);
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    border: 1.5px solid var(--border);
+    transition: all var(--t-base);
+}
+
+.wizard-step-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-faint);
+    transition: color var(--t-base);
+}
+
+.wizard-step.active .wizard-step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.wizard-step.active .wizard-step-label {
+    color: var(--text);
+}
+
+.wizard-step.done .wizard-step-circle {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.wizard-step.done .wizard-step-label {
+    color: var(--text-soft);
+}
+
+.wizard-step-connector {
+    width: 36px;
+    height: 2px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.wizard-step.done + .wizard-step-connector-wrap .wizard-step-connector,
+.wizard-step-connector.done {
+    background: var(--success);
+}
+
+@media (max-width: 480px) {
+    .wizard-step-label { display: none; }
+    .wizard-step-connector { width: 20px; }
+}
+
+/* === Wizard panels === */
+.wizard-card {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.wizard-panel {
+    display: none;
+}
+
+.wizard-panel.active {
+    display: block;
+}
+
+.wizard-panel-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+.wizard-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.wizard-actions .btn {
+    min-width: 110px;
+}
+
+/* === Step 1: doctor picker === */
+.doctor-search-box {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.doctor-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.doctor-pick-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px;
+    border-radius: var(--r-md);
+    text-align: start;
+    border: 1px solid transparent;
+    transition: all var(--t-fast);
+}
+
+.doctor-pick-item:hover {
+    background: var(--bg-soft);
+    border-color: var(--border);
+}
+
+.doctor-pick-item .entity-avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 15px;
+}
+
+.doctor-pick-item-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.doctor-pick-item-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doctor-pick-item-meta {
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 2px;
+}
+
+.selected-doctor-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: var(--bg-soft);
+    border: 1.5px solid var(--primary);
+    border-radius: var(--r-lg);
+}
+
+.selected-doctor-card .entity-avatar {
+    width: 52px;
+    height: 52px;
+}
+
+.selected-doctor-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.selected-doctor-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.selected-doctor-specialty {
+    font-size: 12.5px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* === Step 2: clinic / date / slots === */
+.field-block {
+    margin-bottom: 20px;
+}
+
+.field-block-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.date-scroller {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.date-pill {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 56px;
+    padding: 10px 8px;
+    border-radius: var(--r-md);
+    background: var(--bg-soft);
+    border: 1.5px solid transparent;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+}
+
+.date-pill .date-pill-day {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.date-pill:hover {
+    border-color: var(--primary);
+}
+
+.date-pill.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.date-pill.active,
+.date-pill.active .date-pill-day {
+    color: #fff;
+}
+
+.slot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+}
+
+.slot-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    border-radius: var(--r-md);
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    transition: all var(--t-fast);
+}
+
+.slot-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.slot-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.slot-btn .slot-btn-type {
+    font-size: 10.5px;
+    font-weight: 600;
+    opacity: 0.75;
+}
+
+/* === Step 3: confirm summary === */
+.booking-summary {
+    background: var(--bg-soft);
+    border-radius: var(--r-lg);
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.booking-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+}
+
+.booking-summary-row:last-child {
+    border-bottom: none;
+}
+
+.booking-summary-row .label {
+    color: var(--text-mute);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.booking-summary-row .value {
+    color: var(--text);
+    font-weight: 700;
+    text-align: end;
+}
+
+.wizard-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--r-md);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg-soft);
+    resize: vertical;
+    outline: none;
+    transition: all var(--t-fast);
+}
+
+.wizard-textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    background: var(--bg-card);
+}
+
+/* === Success screen === */
+.wizard-success {
+    text-align: center;
+    padding: 30px 16px;
+}
+
+.wizard-success-icon {
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+    border-radius: 50%;
+    font-size: 32px;
+}
+
+.wizard-success h2 {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.wizard-success p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    margin-bottom: 4px;
+}
+
+.wizard-success-number {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 0.5px;
+    margin: 8px 0 22px;
+}
+
+.wizard-success-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ===========================================
+   My Appointments — tabs + list
+   =========================================== */
+.appt-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.appt-tab {
+    padding: 10px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-mute);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all var(--t-fast);
+}
+
+.appt-tab:hover {
+    color: var(--text);
+}
+
+.appt-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.appt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.appt-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+}
+
+.appt-card-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-50);
+    color: var(--primary);
+    border-radius: var(--r-lg);
+    font-size: 17px;
+}
+
+[data-theme="dark"] .appt-card-icon {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+.appt-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.appt-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.appt-card-number {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.appt-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 12.5px;
+    color: var(--text-mute);
+    margin-top: 4px;
+}
+
+.appt-card-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.appt-card-meta i {
+    color: var(--primary);
+    font-size: 11px;
+}
+
+.appt-card-reason {
+    font-size: 12.5px;
+    color: var(--text-faint);
+    margin-top: 6px;
+}
+
+.appt-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* === Cancel confirmation modal === */
+/* .modal-backdrop / .modal-box / .modal-actions now live in components.css
+   (they're a generic pattern used by several pages, not appointment-specific). */
+
+@media (max-width: 480px) {
+    .appt-card {
+        flex-direction: column;
+    }
+
+    .appt-card-actions .btn {
+        flex: 1;
+    }
+}

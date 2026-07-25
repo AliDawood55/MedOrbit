@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – منشوراتي</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
+    <link rel="stylesheet" href="../src/css/records.css">
+    <link rel="stylesheet" href="../src/css/care.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:900px;">
+
+        <div class="care-restricted hidden" id="restrictedNotice">
+            <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
+            <h2 data-i18n="care.doctorOnlyTitle">هذه الصفحة مخصصة للأطباء</h2>
+            <p data-i18n="care.doctorOnlyHint">هذه الصفحة متاحة فقط لحسابات الأطباء.</p>
+            <a href="dashboard.html" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i>
+                <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>
+            </a>
+        </div>
+
+        <div id="postsPageContent" class="hidden">
+
+            <div class="care-header-row">
+                <div class="page-header" style="margin-bottom:0;">
+                    <h1 data-i18n="doctorPosts.title">منشوراتي</h1>
+                    <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="doctorPosts.subtitle">شارك مقالات وإعلانات مع مرضاك</p>
+                </div>
+                <button type="button" class="btn btn-primary" id="newPostBtn">
+                    <i class="fas fa-plus"></i>
+                    <span data-i18n="doctorPosts.newPost">منشور جديد</span>
+                </button>
+            </div>
+
+            <!-- ===== Create / edit form (real, validated — no submit endpoint yet) ===== -->
+            <div class="card hidden" id="postFormCard" style="padding:22px;margin-bottom:24px;">
+                <h2 class="care-form-title" id="postFormTitle" data-i18n="doctorPosts.newPost">منشور جديد</h2>
+
+                <div class="alert" id="postFormAlert"></div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="postTitleAr" data-i18n="doctorPosts.titleAr">العنوان (عربي)</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-heading"></i>
+                            <input type="text" id="postTitleAr" maxlength="150">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="postTitleEn" data-i18n="doctorPosts.titleEn">العنوان (إنجليزي)</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-heading"></i>
+                            <input type="text" id="postTitleEn" maxlength="150" dir="ltr" style="text-align:right">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="postCategory" data-i18n="doctorPosts.category">التصنيف</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-tag"></i>
+                        <select id="postCategory">
+                            <option value="health_tip" data-i18n="doctorPosts.categoryHealthTip">نصيحة صحية</option>
+                            <option value="announcement" data-i18n="doctorPosts.categoryAnnouncement">إعلان</option>
+                            <option value="clinic_news" data-i18n="doctorPosts.categoryClinicNews">أخبار العيادة</option>
+                            <option value="article" data-i18n="doctorPosts.categoryArticle">مقال</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="postBody" data-i18n="doctorPosts.body">المحتوى</label>
+                    <textarea class="feedback-textarea" id="postBody" maxlength="4000" data-i18n-placeholder="doctorPosts.bodyPlaceholder" placeholder="اكتب محتوى المنشور هنا..."></textarea>
+                    <div class="feedback-char-count"><span id="postBodyCount">0</span>/4000</div>
+                </div>
+
+                <label class="care-toggle-row">
+                    <input type="checkbox" id="postPublishToggle">
+                    <span data-i18n="doctorPosts.publishNow">نشر مباشرة (وإلا سيُحفظ كمسودة)</span>
+                </label>
+
+                <div class="care-form-actions">
+                    <button type="button" class="btn btn-secondary" id="postFormCancelBtn">
+                        <span data-i18n="doctorPosts.cancel">إلغاء</span>
+                    </button>
+                    <button type="button" class="btn btn-primary" id="postFormSubmitBtn">
+                        <span class="btn-label" data-i18n="doctorPosts.save">حفظ المنشور</span>
+                        <span class="spinner spinner-sm btn-spinner"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== Honest "not saved" result (mirrors feedback.html's pattern) ===== -->
+            <div class="feedback-result hidden" id="postFormResult">
+                <div class="feedback-result-icon"><i class="fas fa-plug-circle-exclamation"></i></div>
+                <h2 data-i18n="doctorPosts.notConnectedTitle">لم يتم حفظ المنشور بعد</h2>
+                <p data-i18n="doctorPosts.notConnectedHint">إدارة المنشورات غير متصلة بأي خادم بعد، لذلك لم يتم حفظ منشورك في أي مكان. نعمل على إضافة هذه الميزة قريباً.</p>
+                <button type="button" class="btn btn-secondary btn-sm" id="postFormResultCloseBtn">
+                    <span data-i18n="common.close">إغلاق</span>
+                </button>
+            </div>
+
+            <!-- ===== Structural preview + honest empty state for the list ===== -->
+            <div class="records-preview-section">
+                <div class="records-preview-caption">
+                    <i class="fas fa-eye"></i>
+                    <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
+                </div>
+                <div class="records-preview-list">
+                    <div class="records-preview-card active">
+                        <div class="records-preview-card-icon skeleton"></div>
+                        <div class="records-preview-card-lines">
+                            <div class="sk-line tall w-60 skeleton"></div>
+                            <div class="sk-line w-40 skeleton"></div>
+                        </div>
+                    </div>
+                    <div class="records-preview-card">
+                        <div class="records-preview-card-icon skeleton"></div>
+                        <div class="records-preview-card-lines">
+                            <div class="sk-line tall w-80 skeleton"></div>
+                            <div class="sk-line w-30 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="records-empty-state">
+                <div class="empty-state-icon"><i class="fas fa-newspaper"></i></div>
+                <h2 data-i18n="doctorPosts.emptyTitle">لا توجد منشورات بعد</h2>
+                <p data-i18n="doctorPosts.emptyHint">هذه الميزة غير متصلة بخادم بعد، لذلك لا يمكن حفظ أو عرض منشوراتك الفعلية حالياً.</p>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/doctor-posts.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            DoctorPosts.init();
+        });
+    </script>
+</body>
+</html>
