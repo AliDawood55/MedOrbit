@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – شاركنا رأيك</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
+    <link rel="stylesheet" href="../src/css/feedback.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:680px;">
+
+        <div class="page-header">
+            <h1 data-i18n="feedback.title">شاركنا رأيك</h1>
+            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="feedback.subtitle">رأيك يساعدنا على تحسين المنصة لجميع المستخدمين</p>
+        </div>
+
+        <div class="card" style="padding:24px;">
+
+            <div id="feedbackFormWrap">
+
+                <div class="overall-rating-block">
+                    <div class="overall-rating-label" data-i18n="feedback.overallRating">تقييمك العام للتجربة</div>
+                    <div class="star-rating star-rating-lg" id="overallStars" data-value="0">
+                        <button type="button" class="star-btn" data-star="1"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="2"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="3"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="4"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="5"><i class="fas fa-star"></i></button>
+                    </div>
+                </div>
+
+                <div class="alert" id="feedbackAlert"></div>
+
+                <div class="form-section-label" data-i18n="feedback.categoriesLabel">تقييم تفصيلي</div>
+
+                <div class="rating-row">
+                    <span class="rating-row-label" data-i18n="feedback.categoryChatbot">دقة المساعد الذكي</span>
+                    <div class="star-rating" data-category="chatbot" data-value="0">
+                        <button type="button" class="star-btn" data-star="1"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="2"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="3"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="4"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="5"><i class="fas fa-star"></i></button>
+                    </div>
+                </div>
+
+                <div class="rating-row">
+                    <span class="rating-row-label" data-i18n="feedback.categoryClinics">سهولة إيجاد العيادات</span>
+                    <div class="star-rating" data-category="clinics" data-value="0">
+                        <button type="button" class="star-btn" data-star="1"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="2"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="3"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="4"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="5"><i class="fas fa-star"></i></button>
+                    </div>
+                </div>
+
+                <div class="rating-row">
+                    <span class="rating-row-label" data-i18n="feedback.categoryBooking">سهولة حجز المواعيد</span>
+                    <div class="star-rating" data-category="booking" data-value="0">
+                        <button type="button" class="star-btn" data-star="1"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="2"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="3"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="4"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="5"><i class="fas fa-star"></i></button>
+                    </div>
+                </div>
+
+                <div class="rating-row">
+                    <span class="rating-row-label" data-i18n="feedback.categoryDesign">تصميم المنصة</span>
+                    <div class="star-rating" data-category="design" data-value="0">
+                        <button type="button" class="star-btn" data-star="1"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="2"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="3"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="4"><i class="fas fa-star"></i></button>
+                        <button type="button" class="star-btn" data-star="5"><i class="fas fa-star"></i></button>
+                    </div>
+                </div>
+
+                <div class="form-section-label" data-i18n="feedback.recommendLabel">هل تنصح باستخدام MedOrbit؟</div>
+                <div class="recommend-toggle" id="recommendToggle">
+                    <button type="button" class="recommend-btn" data-value="yes">
+                        <i class="fas fa-thumbs-up"></i> <span data-i18n="feedback.recommendYes">نعم</span>
+                    </button>
+                    <button type="button" class="recommend-btn" data-value="no">
+                        <i class="fas fa-thumbs-down"></i> <span data-i18n="feedback.recommendNo">لا</span>
+                    </button>
+                </div>
+
+                <div class="form-section-label" data-i18n="feedback.commentLabel">تعليق إضافي (اختياري)</div>
+                <textarea class="feedback-textarea" id="commentInput" maxlength="500" data-i18n-placeholder="feedback.commentPlaceholder" placeholder="أخبرنا بمزيد من التفاصيل عن تجربتك..."></textarea>
+                <div class="feedback-char-count"><span id="charCount">0</span>/500</div>
+
+                <div style="margin-top:22px;">
+                    <button type="button" class="btn btn-primary dashboard-full-width" id="submitFeedbackBtn">
+                        <span class="btn-label" data-i18n="feedback.submit">إرسال الملاحظات</span>
+                        <span class="spinner spinner-sm btn-spinner"></span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Honest result — never a fake success message -->
+            <div class="feedback-result hidden" id="feedbackResult">
+                <div class="feedback-result-icon"><i class="fas fa-plug-circle-exclamation"></i></div>
+                <h2 data-i18n="feedback.notConnectedTitle">لم يتم حفظ ملاحظاتك بعد</h2>
+                <p data-i18n="feedback.notConnectedHint">نموذج الملاحظات هذا غير متصل بأي خادم بعد، لذلك لم يتم حفظ إجاباتك في أي مكان. نعمل على إضافة هذه الميزة قريباً.</p>
+                <button type="button" class="btn btn-secondary btn-sm" id="startOverBtn">
+                    <span data-i18n="feedback.startOver">البدء من جديد</span>
+                </button>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/feedback.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            Feedback.init();
+        });
+    </script>
+</body>
+</html>
