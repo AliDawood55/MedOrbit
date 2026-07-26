@@ -7,7 +7,11 @@ const dotenv = require('dotenv');
 
 // Resolve root .env: server.js -> src/ -> config/ -> ../../../ = project root
 const rootEnvPath = path.resolve(__dirname, '../../.env');
-dotenv.config({ path: rootEnvPath });
+// quiet: true — suppress dotenv's own "injecting env (N)" console line; by
+// the time this runs, src/config/database.js has usually already loaded
+// everything anyway (see its own comment), so this call would otherwise log
+// a redundant/misleading "(0)".
+dotenv.config({ path: rootEnvPath, quiet: true });
 
 // Also set in process.env for any direct readers
 process.env.DOTENV_LOADED = '1';
