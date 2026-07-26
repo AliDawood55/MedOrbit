@@ -19,7 +19,6 @@ const notificationRoutes = require('./routes/notification.routes');
 const notificationTemplateRoutes = require('./routes/notification-template.routes');
 const appointmentRoutes = require("./routes/appointment.routes");
 const medicalRecordRoutes = require("./routes/medicalRecord.routes");
-const appointmentRoutes = require('./routes/appointment.routes');
 const specialtyRoutes = require('./routes/specialty.routes');
 
 
