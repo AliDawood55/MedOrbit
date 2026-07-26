@@ -68,6 +68,6 @@ Needs, on the host:
 
 ## Team
 
-- Ali Dawood - Frontend
-- Omar Abumazen - Backend
+- Ali Dawood 
+- Omar Abumazen 
 - Supervisor: Dr. Bashar Tahayna
