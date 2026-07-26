@@ -1,0 +1,38 @@
+# Root .dockerignore — applies to any build using the repo root as its
+# context. Today that's only ai-service (its Dockerfile needs root
+# requirements.txt), but kept generic.
+
+.git
+.github
+.venv
+**/.venv
+node_modules
+**/node_modules
+**/__pycache__
+**/*.pyc
+
+# Not needed for the ai-service image, and can be large/sensitive
+backend
+frontend
+db
+database
+docs
+
+# ai-service/data/ is one-off OSM data-collection tooling (see EXPLAINDATA.md)
+# with zero runtime import from chatbot.main:app, and some of those scratch
+# scripts have a hardcoded local DB password — keep it out of the image
+# entirely rather than baking that into an image layer.
+ai-service/data
+ai-service/tests
+
+**/uploads
+*.backup
+*.dump
+*.sql.bak
+
+.env
+!.env.example
+
+*.md
+.aider*
+tempData

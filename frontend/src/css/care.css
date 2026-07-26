@@ -1,0 +1,373 @@
+/* ===========================================
+   MedOrbit v2 - Doctor<->Patient Care Pages
+   Shared by doctor-posts.html, my-patients.html, patient-detail.html,
+   and my-doctor.html.
+   =========================================== */
+
+/* === Role-restricted notice (reused pattern, generic) === */
+.care-restricted {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+}
+
+.care-restricted .empty-state-icon {
+    width: 88px;
+    height: 88px;
+    font-size: 32px;
+}
+
+.care-restricted h2 {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.care-restricted p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    max-width: 420px;
+    margin: 0 auto 18px;
+    line-height: 1.7;
+}
+
+/* === Page header row (title + primary action) === */
+.care-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.care-form-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 16px;
+}
+
+.care-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-soft);
+    margin: 4px 0 18px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.care-toggle-row input {
+    accent-color: var(--primary);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.care-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 6px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+/* === Search / filter bar (my-patients.html) === */
+.care-search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.care-search-bar .search-field {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+
+.care-search-bar .search-field i {
+    color: var(--text-mute);
+    font-size: 13px;
+}
+
+.care-search-bar .search-field input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.care-search-bar select {
+    padding: 9px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    font-size: 14px;
+    color: var(--text);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* === Patient / doctor card grid === */
+.care-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+.care-person-card {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+.care-person-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.care-person-avatar {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: var(--r-full);
+    background: var(--primary-gradient);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    overflow: hidden;
+}
+
+.care-person-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.care-person-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.care-person-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.care-person-subtitle {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.care-person-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: var(--text-mute);
+}
+
+.care-person-meta span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.care-person-meta i {
+    color: var(--primary);
+    font-size: 10.5px;
+    width: 12px;
+}
+
+.care-person-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+/* === Generic section card (patient-detail.html / my-doctor.html) === */
+.care-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.care-section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.care-section-title i {
+    color: var(--primary);
+    font-size: 14px;
+}
+
+/* === Patient/doctor detail header === */
+.care-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px;
+    margin-bottom: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+}
+
+.care-detail-avatar {
+    width: 76px;
+    height: 76px;
+    flex-shrink: 0;
+    border-radius: var(--r-full);
+    background: var(--primary-gradient);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 26px;
+    overflow: hidden;
+}
+
+.care-detail-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.care-detail-name {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.care-detail-subtitle {
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+/* === Note timeline (session notes / shared notes) === */
+.note-timeline {
+    position: relative;
+    padding-inline-start: 26px;
+}
+
+.note-timeline::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 6px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: var(--border);
+}
+
+.note-timeline-item {
+    position: relative;
+    padding-bottom: 16px;
+}
+
+.note-timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.note-timeline-dot {
+    position: absolute;
+    inset-inline-start: -26px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--primary-50);
+    border: 2px solid var(--primary);
+}
+
+[data-theme="dark"] .note-timeline-dot {
+    background: rgba(37, 99, 235, 0.2);
+}
+
+.note-card {
+    padding: 12px 14px;
+    background: var(--bg-soft);
+    border-radius: var(--r-md);
+}
+
+.note-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 11.5px;
+    color: var(--text-faint);
+}
+
+.note-card-body {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.6;
+}
+
+/* === Add-note form === */
+.care-note-form textarea {
+    margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+    .care-detail-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .care-card-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .care-form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .care-form-actions .btn {
+        width: 100%;
+    }
+}

@@ -92,6 +92,14 @@
 }
 
 .page-container {
+    /* Without an explicit width, this flex item (direct child of
+       body.site-page's flex column) can fail to stretch before a nested
+       `repeat(auto-fit, minmax(...))` grid resolves its track count —
+       the grid then locks in a single narrow column (using a shrink-to-fit
+       hypothetical width instead of the real available width), which in
+       turn caps this element's own rendered width far below max-width.
+       Forcing width:100% up front removes the ambiguity. */
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 28px 20px 60px;
@@ -462,6 +470,46 @@
     flex-direction: column;
     gap: 8px;
     flex-shrink: 0;
+}
+
+/* === Profile Tabs (doctor.html: About / Availability / Reviews / Posts) === */
+.profile-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-mute);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color var(--t-fast);
+}
+
+.profile-tab:hover {
+    color: var(--text);
+}
+
+.profile-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.profile-tab-panel {
+    display: none;
+}
+
+.profile-tab-panel.active {
+    display: block;
 }
 
 /* === Profile Layout (two columns: content + sidebar) === */

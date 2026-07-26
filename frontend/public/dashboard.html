@@ -16,6 +16,8 @@
     <link rel="stylesheet" href="../src/css/components.css">
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/dashboard.css">
 </head>
 <body class="site-page" data-theme="light">
@@ -59,44 +61,81 @@
                         <span data-i18n="dashboard.welcomeBack">مرحباً بعودتك،</span>
                         <span id="dashName"></span>
                     </h1>
-                    <p data-i18n="dashboard.subtitle">إليك نظرة سريعة على حسابك</p>
+                    <p id="dashSubtitle" data-i18n="dashboard.subtitle">إليك نظرة سريعة على حسابك</p>
                 </div>
             </section>
 
-            <!-- ===== Quick actions ===== -->
+            <!-- ===== Search / command box ===== -->
+            <div class="input-wrapper dashboard-search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="dashboardSearch" data-i18n-placeholder="dashboard.searchPlaceholder" placeholder="ابحث في لوحة التحكم...">
+            </div>
+            <p class="dashboard-search-empty hidden" id="dashboardSearchEmpty" data-i18n="dashboard.searchNoResults">لا توجد نتائج مطابقة</p>
+
+            <!-- ===== Stat tiles (clickable) ===== -->
+            <div class="dashboard-stats-row" id="statsRow">
+                <a class="stat-tile hover-lift" id="statApptTile" href="my-appointments.html">
+                    <div class="stat-tile-icon stat-tile-icon-primary"><i class="fas fa-calendar-check"></i></div>
+                    <div class="stat-tile-body">
+                        <div class="stat-tile-value count-up" id="statApptCount">0</div>
+                        <div class="stat-tile-label" data-i18n="dashboard.statUpcoming">مواعيد قادمة</div>
+                    </div>
+                </a>
+                <a class="stat-tile hover-lift" id="statNotifTile" href="notifications.html">
+                    <div class="stat-tile-icon stat-tile-icon-warning"><i class="fas fa-bell"></i></div>
+                    <div class="stat-tile-body">
+                        <div class="stat-tile-value count-up" id="statNotifCount">0</div>
+                        <div class="stat-tile-label" data-i18n="dashboard.statUnread">إشعارات غير مقروءة</div>
+                    </div>
+                </a>
+                <a class="stat-tile hover-lift" id="statConvoTile" href="index.html">
+                    <div class="stat-tile-icon stat-tile-icon-info"><i class="fas fa-comments"></i></div>
+                    <div class="stat-tile-body">
+                        <div class="stat-tile-value count-up" id="statConvoCount">0</div>
+                        <div class="stat-tile-label" data-i18n="dashboard.statConversations">محادثات</div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- ===== Quick action groups (built entirely by dashboard.js from QUICK_GROUPS) ===== -->
             <section class="dashboard-section">
                 <h2 data-i18n="dashboard.quickActions">إجراءات سريعة</h2>
-                <div class="dashboard-actions-grid">
-                    <a class="dashboard-action-card" href="index.html">
-                        <div class="dashboard-action-icon"><i class="fas fa-comments"></i></div>
-                        <span data-i18n="nav.chat">المحادثة</span>
-                    </a>
-                    <a class="dashboard-action-card" href="find-doctors.html">
-                        <div class="dashboard-action-icon"><i class="fas fa-user-md"></i></div>
-                        <span data-i18n="nav.doctors">الأطباء</span>
-                    </a>
-                    <a class="dashboard-action-card" href="find-clinics.html">
-                        <div class="dashboard-action-icon"><i class="fas fa-hospital"></i></div>
-                        <span data-i18n="nav.clinics">العيادات</span>
-                    </a>
-                    <a class="dashboard-action-card" href="symptom-checker.html">
-                        <div class="dashboard-action-icon"><i class="fas fa-stethoscope"></i></div>
-                        <span data-i18n="nav.symptomChecker">فحص الأعراض</span>
-                    </a>
-                    <a class="dashboard-action-card" href="drug-checker.html">
-                        <div class="dashboard-action-icon"><i class="fas fa-pills"></i></div>
-                        <span data-i18n="nav.drugChecker">تداخل الأدوية</span>
-                    </a>
-                    <a class="dashboard-action-card" href="report-summary.html">
-                        <div class="dashboard-action-icon"><i class="fas fa-file-medical"></i></div>
-                        <span data-i18n="nav.reportSummary">تلخيص التقارير</span>
-                    </a>
-                </div>
+                <div class="dashboard-groups-grid" id="quickGroupsGrid"></div>
             </section>
 
             <div class="dashboard-grid">
                 <!-- ===== Main column ===== -->
                 <div class="dashboard-main">
+
+                    <section class="card dashboard-card" id="apptCard">
+                        <div class="card-header">
+                            <h2 data-i18n="dashboard.upcomingAppointments">المواعيد القادمة</h2>
+                            <a href="my-appointments.html" class="btn btn-secondary btn-sm">
+                                <span data-i18n="dashboard.viewAll">عرض الكل</span>
+                            </a>
+                        </div>
+                        <div class="card-body" id="apptBody">
+                            <div class="skeleton-list" id="apptSkeleton">
+                                <div class="notif-skeleton-item"><div class="skeleton" style="width:36px;height:36px;border-radius:var(--r-md);"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:50%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:30%;"></div></div></div>
+                                <div class="notif-skeleton-item"><div class="skeleton" style="width:36px;height:36px;border-radius:var(--r-md);"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:65%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:35%;"></div></div></div>
+                            </div>
+                            <div class="dashboard-list hidden" id="apptList"></div>
+                            <div class="empty-state hidden" id="apptEmpty">
+                                <div class="empty-state-icon"><i class="fas fa-calendar-days"></i></div>
+                                <h3 data-i18n="dashboard.apptEmptyTitle"></h3>
+                                <p data-i18n="dashboard.apptEmptyHint"></p>
+                                <a href="book-appointment.html" class="btn btn-primary btn-sm" style="margin-top:14px;">
+                                    <span data-i18n="myAppts.bookNew">حجز موعد جديد</span>
+                                </a>
+                            </div>
+                            <div class="empty-state hidden" id="apptDoctorNotice">
+                                <div class="empty-state-icon"><i class="fas fa-user-doctor"></i></div>
+                                <h3 data-i18n="dashboard.doctorApptNoticeTitle"></h3>
+                                <p data-i18n="dashboard.doctorApptNoticeHint"></p>
+                            </div>
+                        </div>
+                    </section>
+
                     <section class="card dashboard-card">
                         <div class="card-header">
                             <h2 data-i18n="dashboard.recentConversations">المحادثات الأخيرة</h2>
@@ -106,11 +145,18 @@
                             </a>
                         </div>
                         <div class="card-body" id="conversationsBody">
-                            <div class="dashboard-list" id="conversationsList"></div>
+                            <div class="skeleton-list" id="convoSkeleton">
+                                <div class="notif-skeleton-item"><div class="skeleton" style="height:14px;width:55%;margin-bottom:8px;"></div></div>
+                                <div class="notif-skeleton-item"><div class="skeleton" style="height:14px;width:70%;margin-bottom:8px;"></div></div>
+                            </div>
+                            <div class="dashboard-list hidden" id="conversationsList"></div>
                             <div class="empty-state hidden" id="conversationsEmpty">
                                 <div class="empty-state-icon"><i class="fas fa-comments"></i></div>
                                 <h3 id="conversationsEmptyTitle"></h3>
                                 <p id="conversationsEmptyHint"></p>
+                                <a href="index.html" class="btn btn-primary btn-sm" style="margin-top:14px;">
+                                    <span data-i18n="dashboard.newChat">محادثة جديدة</span>
+                                </a>
                             </div>
                         </div>
                     </section>
@@ -118,6 +164,38 @@
 
                 <!-- ===== Side column ===== -->
                 <div class="dashboard-side">
+
+                    <section class="card dashboard-card">
+                        <div class="card-header">
+                            <h2 data-i18n="dashboard.notifications">الإشعارات</h2>
+                            <button type="button" class="btn btn-secondary btn-sm hidden" id="markAllReadBtn">
+                                <span data-i18n="dashboard.markAllRead">تعليم الكل كمقروء</span>
+                            </button>
+                        </div>
+                        <div class="card-body" id="notifBody">
+                            <div class="skeleton-list" id="notifSkeletonDash">
+                                <div class="notif-skeleton-item"><div class="skeleton" style="width:8px;height:8px;border-radius:50%;margin-top:6px;"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:60%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:40%;"></div></div></div>
+                                <div class="notif-skeleton-item"><div class="skeleton" style="width:8px;height:8px;border-radius:50%;margin-top:6px;"></div><div style="flex:1;"><div class="skeleton" style="height:12px;width:50%;margin-bottom:8px;"></div><div class="skeleton" style="height:10px;width:30%;"></div></div></div>
+                            </div>
+                            <div class="dashboard-list hidden" id="notifList"></div>
+                            <div class="empty-state hidden" id="notifEmpty">
+                                <div class="empty-state-icon"><i class="fas fa-bell-slash"></i></div>
+                                <h3 data-i18n="dashboard.notifEmptyTitle"></h3>
+                                <p data-i18n="dashboard.notifEmptyHint"></p>
+                            </div>
+                            <div class="collapsible collapsed" id="notifMoreWrap">
+                                <div><div class="dashboard-list" id="notifMoreList"></div></div>
+                            </div>
+                            <button type="button" class="btn btn-ghost btn-sm dashboard-full-width hidden" id="notifShowMoreBtn">
+                                <span data-i18n="dashboard.showMore">عرض المزيد</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <a href="notifications.html" class="btn btn-secondary btn-sm dashboard-full-width" style="margin-top:10px;">
+                                <span data-i18n="dashboard.viewAll">عرض الكل</span>
+                            </a>
+                        </div>
+                    </section>
+
                     <section class="card dashboard-card">
                         <div class="card-header">
                             <h2 data-i18n="dashboard.profileCompleteness">اكتمال الملف الشخصي</h2>
@@ -133,45 +211,6 @@
                             </a>
                         </div>
                     </section>
-
-                    <section class="card dashboard-card">
-                        <div class="card-header">
-                            <h2 data-i18n="dashboard.savedPlaces">الأماكن المحفوظة</h2>
-                        </div>
-                        <div class="card-body" id="savedPlacesBody">
-                            <div class="dashboard-list" id="savedPlacesList"></div>
-                            <div class="empty-state hidden" id="savedPlacesEmpty">
-                                <div class="empty-state-icon"><i class="fas fa-map-pin"></i></div>
-                                <h3 id="savedPlacesEmptyTitle"></h3>
-                                <p id="savedPlacesEmptyHint"></p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="card dashboard-card">
-                        <div class="card-header">
-                            <h2 data-i18n="dashboard.comingSoon">قريباً</h2>
-                        </div>
-                        <div class="card-body">
-                            <div class="coming-soon-list">
-                                <div class="coming-soon-item">
-                                    <i class="fas fa-calendar-check"></i>
-                                    <span data-i18n="dashboard.appointments">المواعيد</span>
-                                    <span class="badge-soon" data-i18n="dashboard.comingSoon">قريباً</span>
-                                </div>
-                                <div class="coming-soon-item">
-                                    <i class="fas fa-prescription"></i>
-                                    <span data-i18n="dashboard.prescriptions">الوصفات الطبية</span>
-                                    <span class="badge-soon" data-i18n="dashboard.comingSoon">قريباً</span>
-                                </div>
-                                <div class="coming-soon-item">
-                                    <i class="fas fa-file-waveform"></i>
-                                    <span data-i18n="dashboard.medicalRecords">السجلات الطبية</span>
-                                    <span class="badge-soon" data-i18n="dashboard.comingSoon">قريباً</span>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
                 </div>
             </div>
 
@@ -185,6 +224,7 @@
     <script src="../src/utils/dom.js"></script>
     <script src="../src/utils/format.js"></script>
     <script src="../src/utils/store.js"></script>
+    <script src="../src/utils/motion.js"></script>
 
     <script src="../src/js/api.js"></script>
     <script src="../src/js/i18n.js"></script>

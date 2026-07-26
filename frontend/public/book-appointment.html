@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – حجز موعد</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/forms.css">
+    <link rel="stylesheet" href="../src/css/listing.css">
+    <link rel="stylesheet" href="../src/css/appointments.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container" style="max-width:780px;">
+
+        <div class="page-header">
+            <h1 data-i18n="bookAppt.title">حجز موعد</h1>
+            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="bookAppt.subtitle">احجز موعدك مع الطبيب المناسب خلال ثلاث خطوات بسيطة</p>
+        </div>
+
+        <div class="wizard-steps" id="wizardSteps">
+            <div class="wizard-step active" data-step="1">
+                <div class="wizard-step-circle">1</div>
+                <div class="wizard-step-label" data-i18n="bookAppt.step1">الطبيب</div>
+            </div>
+            <div class="wizard-step-connector"></div>
+            <div class="wizard-step" data-step="2">
+                <div class="wizard-step-circle">2</div>
+                <div class="wizard-step-label" data-i18n="bookAppt.step2">الموعد</div>
+            </div>
+            <div class="wizard-step-connector"></div>
+            <div class="wizard-step" data-step="3">
+                <div class="wizard-step-circle">3</div>
+                <div class="wizard-step-label" data-i18n="bookAppt.step3">التأكيد</div>
+            </div>
+        </div>
+
+        <div class="card wizard-card">
+            <div class="card-body">
+
+                <div class="loading-state" id="wizardLoading" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 20px;color:var(--text-mute);">
+                    <div class="spinner spinner-lg"></div>
+                    <p data-i18n="common.loading">جارِ التحميل...</p>
+                </div>
+
+                <div class="error-state hidden" id="wizardError">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <p data-i18n="bookAppt.doctorLoadError" id="wizardErrorText">تعذر تحميل بيانات الطبيب</p>
+                    <button type="button" class="btn btn-secondary btn-sm" id="wizardRetryBtn" data-i18n="common.retry">إعادة المحاولة</button>
+                </div>
+
+                <div class="empty-state hidden" id="wizardNotFound">
+                    <div class="empty-state-icon"><i class="fas fa-user-doctor"></i></div>
+                    <h3 data-i18n="bookAppt.doctorNotFound">الطبيب غير موجود</h3>
+                    <a href="find-doctors.html" class="btn btn-secondary btn-sm" style="margin-top:14px;" data-i18n="doctor.backToList">العودة لقائمة الأطباء</a>
+                </div>
+
+                <div id="wizardBody" class="hidden">
+
+                    <!-- ===== Step 1: Doctor ===== -->
+                    <section class="wizard-panel active" data-panel="1">
+                        <h2 class="wizard-panel-title" data-i18n="bookAppt.step1">الطبيب</h2>
+
+                        <div id="doctorPickerWrap">
+                            <div class="doctor-search-box">
+                                <div class="input-wrapper">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="doctorSearchInput" data-i18n-placeholder="bookAppt.searchPlaceholder" placeholder="ابحث عن طبيب بالاسم...">
+                                </div>
+                            </div>
+                            <div class="doctor-pick-list" id="doctorPickList"></div>
+                            <div class="empty-state hidden" id="doctorPickEmpty">
+                                <div class="empty-state-icon"><i class="fas fa-user-doctor"></i></div>
+                                <p data-i18n="bookAppt.searchEmpty">لم يتم العثور على أطباء مطابقين</p>
+                            </div>
+                            <p style="font-size:12.5px;color:var(--text-faint);margin-top:8px;" data-i18n="bookAppt.searchHint">اكتب اسم الطبيب للبحث، أو اختره من صفحة الأطباء</p>
+                        </div>
+
+                        <div id="selectedDoctorWrap" class="hidden">
+                            <div class="selected-doctor-card">
+                                <div class="entity-avatar" id="selectedDoctorAvatar">?</div>
+                                <div class="selected-doctor-info">
+                                    <div class="selected-doctor-name" id="selectedDoctorName"></div>
+                                    <div class="selected-doctor-specialty" id="selectedDoctorSpecialty"></div>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" id="changeDoctorBtn">
+                                    <span data-i18n="bookAppt.changeDoctor">تغيير الطبيب</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions">
+                            <span></span>
+                            <button type="button" class="btn btn-primary" id="step1NextBtn" disabled>
+                                <span data-i18n="bookAppt.next">التالي</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- ===== Step 2: Time slot ===== -->
+                    <section class="wizard-panel" data-panel="2">
+                        <h2 class="wizard-panel-title" data-i18n="bookAppt.step2">الموعد</h2>
+
+                        <div class="field-block hidden" id="clinicFieldBlock">
+                            <div class="field-block-label" data-i18n="bookAppt.selectClinic">اختر العيادة</div>
+                            <div class="input-wrapper">
+                                <i class="fas fa-hospital"></i>
+                                <select id="clinicSelect"></select>
+                            </div>
+                        </div>
+
+                        <div class="field-block" id="dateFieldBlock">
+                            <div class="field-block-label" data-i18n="bookAppt.selectDate">اختر التاريخ</div>
+                            <div class="date-scroller" id="dateScroller"></div>
+                        </div>
+
+                        <div class="field-block">
+                            <div class="field-block-label" data-i18n="bookAppt.availableSlots">الأوقات المتاحة</div>
+                            <div id="slotsWrap">
+                                <div class="slot-grid" id="slotGrid"></div>
+                                <div class="empty-state hidden" id="slotsEmpty">
+                                    <div class="empty-state-icon"><i class="fas fa-calendar-xmark"></i></div>
+                                    <h3 data-i18n="bookAppt.noSlotsTitle">لا توجد أوقات متاحة</h3>
+                                    <p data-i18n="bookAppt.noSlotsHint">جرّب اختيار تاريخ آخر أو عيادة أخرى</p>
+                                </div>
+                                <div class="empty-state hidden" id="noClinicsState">
+                                    <div class="empty-state-icon"><i class="fas fa-hospital"></i></div>
+                                    <h3 data-i18n="bookAppt.noClinicsTitle">لا توجد عيادات متاحة لهذا الطبيب</h3>
+                                    <p data-i18n="bookAppt.noClinicsHint">لا يمكن حجز موعد مع هذا الطبيب حالياً</p>
+                                </div>
+                                <div class="skeleton hidden" id="slotsLoading" style="height:100px;"></div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions">
+                            <button type="button" class="btn btn-secondary" id="step2BackBtn">
+                                <span data-i18n="bookAppt.back">السابق</span>
+                            </button>
+                            <button type="button" class="btn btn-primary" id="step2NextBtn" disabled>
+                                <span data-i18n="bookAppt.next">التالي</span>
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- ===== Step 3: Confirm ===== -->
+                    <section class="wizard-panel" data-panel="3">
+                        <h2 class="wizard-panel-title" data-i18n="bookAppt.step3">التأكيد</h2>
+
+                        <div class="alert" id="confirmAlert"></div>
+
+                        <div class="booking-summary" id="bookingSummary"></div>
+
+                        <div class="form-group">
+                            <label for="reasonInput" data-i18n="appt.reasonLabel">سبب الزيارة</label>
+                            <textarea class="wizard-textarea" id="reasonInput" data-i18n-placeholder="bookAppt.reasonPlaceholder" placeholder="مثال: صداع مستمر منذ أسبوع"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="notesInput" data-i18n="appt.notesLabel">ملاحظات إضافية</label>
+                            <textarea class="wizard-textarea" id="notesInput" data-i18n-placeholder="bookAppt.notesPlaceholder" placeholder="أي معلومات إضافية تود مشاركتها مع الطبيب"></textarea>
+                        </div>
+
+                        <div class="wizard-actions">
+                            <button type="button" class="btn btn-secondary" id="step3BackBtn">
+                                <span data-i18n="bookAppt.back">السابق</span>
+                            </button>
+                            <button type="button" class="btn btn-primary" id="confirmBookBtn">
+                                <span class="btn-label" data-i18n="bookAppt.confirmAndBook">تأكيد الحجز</span>
+                                <span class="spinner spinner-sm btn-spinner"></span>
+                            </button>
+                        </div>
+                    </section>
+
+                </div>
+
+                <!-- ===== Success ===== -->
+                <div class="wizard-success hidden" id="wizardSuccess">
+                    <div class="wizard-success-icon"><i class="fas fa-check"></i></div>
+                    <h2 data-i18n="bookAppt.successTitle">تم حجز موعدك بنجاح</h2>
+                    <p data-i18n="bookAppt.successHint">سيصلك تأكيد بالتفاصيل. رقم الموعد الخاص بك:</p>
+                    <div class="wizard-success-number" id="successApptNumber"></div>
+                    <div class="wizard-success-actions">
+                        <a href="my-appointments.html" class="btn btn-primary">
+                            <span data-i18n="bookAppt.viewMyAppointments">عرض مواعيدي</span>
+                        </a>
+                        <button type="button" class="btn btn-secondary" id="bookAnotherBtn">
+                            <span data-i18n="bookAppt.bookAnother">حجز موعد آخر</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/book-appointment.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            BookAppointment.init();
+        });
+    </script>
+</body>
+</html>
