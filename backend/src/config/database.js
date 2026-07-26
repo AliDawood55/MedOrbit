@@ -1,6 +1,9 @@
 const { Pool } = require('pg');
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+// quiet: true — suppress dotenv's own "injecting env (N)" console line;
+// this call is load-bearing (routes requiring this module resolve before
+// src/config/env.js runs), just not something that needs to log itself.
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env'), quiet: true });
 const pool = new Pool({
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT) || 5432,

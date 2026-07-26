@@ -72,6 +72,14 @@ Thumbs.db
 *.dump
 
 #################################################
+# Database SQL dirs — distributed via backup file, not tracked
+# (kept locally in the project; restore from medorbit_backup.backup)
+#################################################
+
+/database/
+/db/
+
+#################################################
 # Build Outputs
 #################################################
 

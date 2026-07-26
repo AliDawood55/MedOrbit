@@ -1,0 +1,125 @@
+/* ===========================================
+   MedOrbit v2 - Analytics (analytics.html)
+   =========================================== */
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 20px;
+}
+
+.chart-card {
+    /* Without this, a CSS grid item defaults to min-width:auto and won't
+       shrink below its content's intrinsic size — Chart.js's canvas (sized
+       at whatever the viewport was at initial render) would then force the
+       whole grid track, and the page, wider than the viewport on a resize
+       to a narrower breakpoint. */
+    min-width: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    transition: transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+.chart-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.chart-card-header i {
+    color: var(--primary);
+    font-size: 13px;
+}
+
+.chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 280px;
+}
+
+.chart-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.82);
+    border-radius: var(--r-md);
+    text-align: center;
+    padding: 20px;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .chart-overlay {
+    background: rgba(15, 23, 42, 0.82);
+}
+
+.chart-overlay i {
+    font-size: 26px;
+    color: var(--text-faint);
+}
+
+.chart-overlay span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-mute);
+    max-width: 220px;
+    line-height: 1.5;
+}
+
+.chart-overlay.hidden {
+    display: none;
+}
+
+/* === Access restricted (non-admin) === */
+.analytics-restricted {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+}
+
+.analytics-restricted .empty-state-icon {
+    width: 88px;
+    height: 88px;
+    font-size: 32px;
+}
+
+.analytics-restricted h2 {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.analytics-restricted p {
+    font-size: 13.5px;
+    color: var(--text-mute);
+    max-width: 420px;
+    margin: 0 auto 18px;
+    line-height: 1.7;
+}
+
+@media (max-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-canvas-wrap {
+        height: 240px;
+    }
+}

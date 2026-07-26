@@ -2,28 +2,84 @@ name: MedOrbit CI
 
 on:
   push:
-    branches: [main, ALI]
+    branches:
+      - main
+      - ALI
+      - omar
+
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  test:
+  docker:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
+      - name: Create .env
+        run: |
+          cat <<EOF > .env
+          PORT=3001
+          NODE_ENV=production
 
-      - name: Install dependencies
-        working-directory: backend
-        run: npm install
+          DB_HOST=localhost
+          DB_PORT=5432
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_SCHEMA=medorbit
 
-      - name: Run tests (if exist)
-        working-directory: backend
-        run: npm test
-        continue-on-error: true
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_EXPIRES_IN=15m
+          JWT_REFRESH_EXPIRES_IN=7d
+
+          BCRYPT_ROUNDS=12
+
+          CORS_ORIGIN=http://localhost:8080,http://127.0.0.1:8080
+
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+
+          AI_SERVICE_URL=http://localhost:8001
+          AI_SERVICE_TIMEOUT_MS=90000
+
+          EMAIL_HOST=smtp.gmail.com
+          EMAIL_PORT=587
+          EMAIL_SECURE=false
+          EMAIL_USER=${{ secrets.EMAIL_USER }}
+          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
+          EMAIL_FROM=${{ secrets.EMAIL_USER }}
+
+          FRONTEND_URL=http://localhost:8080/public
+
+          OLLAMA_URL=http://host.docker.internal:11434/api/generate
+          OLLAMA_MODEL=qwen2:7b
+          EOF
+
+      - name: Build Docker Images
+        run: docker compose build
+
+      - name: Start Containers
+        run: docker compose up -d
+
+      - name: Wait for containers
+        run: sleep 30
+
+      - name: Show running containers
+        run: docker compose ps
+
+      - name: Backend Health Check
+        run: curl --fail http://localhost:3001/api/health
+
+      - name: AI Service Health Check
+        run: curl --fail http://localhost:8001/health
+
+      - name: Show Logs on Failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Shutdown
+        if: always()
+        run: docker compose down -v

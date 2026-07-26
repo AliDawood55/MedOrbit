@@ -1,0 +1,146 @@
+# MedOrbit — local Docker Compose stack
+#
+# Services: postgres (postgis/postgis), backend (Node/Express), ai-service
+# (FastAPI), frontend (nginx, static files). Ollama is intentionally NOT a
+# service here — see the ai-service block below.
+#
+# All application env vars come from the single .env at the project root
+# (docker-compose reads it automatically for ${VAR} interpolation below, and
+# each service's `env_file: .env` injects the same values into the container
+# at runtime). Only the handful of values that must differ *inside* the
+# container network are overridden per-service under `environment:` —
+# everything else (JWT_SECRET, EMAIL_*, GOOGLE_CLIENT_ID, CORS_ORIGIN,
+# FRONTEND_URL, etc.) passes through unchanged from .env.
+#
+# DATABASE SEEDING — deliberately NOT automatic. The db/ and database/ SQL
+# folders are gitignored (see .gitignore's comment: "distributed via
+# medorbit_backup.backup"), so there is no SQL this compose file could reliably
+# auto-run on a fresh clone. See DOCKER.md for the one-time restore step
+# (docker cp + pg_restore) after `docker compose up` starts postgres for the
+# first time.
+#
+# OLLAMA — deliberately NOT a service here. The model is ~4GB and is meant to
+# run once on the host, shared by everything on that machine, not rebuilt
+# per-project. ai-service reaches it via Docker Desktop's built-in
+# host.docker.internal DNS name (Windows/Mac); extra_hosts below adds the
+# same mapping on Linux, where it isn't automatic.
+
+services:
+  postgres:
+    # PG18, not 16 — the medorbit_backup.backup file was made with pg_dump
+    # from PostgreSQL 18 (pgAdmin on the host), and pg_restore refuses to
+    # restore a newer-major-version dump into an older server ("unsupported
+    # version"). Confirmed via Docker Hub's API that 18-3.6 is the current
+    # stable (non-RC, non-alpine) postgis/postgis tag for PG18.
+    image: postgis/postgis:18-3.6
+    container_name: medorbit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Explicit subdirectory, not the volume's mount root directly — avoids
+      # Postgres tripping over a pre-existing lost+found dir on some volume
+      # drivers.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - medorbit_pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medorbit-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Inside the compose network, "postgres" is the service's DNS name —
+      # localhost (the .env default, correct when running on the host) would
+      # resolve to the backend container itself, not the DB.
+      DB_HOST: postgres
+      # Same reasoning: the ai-service container, not localhost.
+      AI_SERVICE_URL: http://ai-service:8001
+      # pino-pretty (dev-only log formatter) is a devDependency and isn't in
+      # this image (npm ci --omit=dev) — logger.js falls back to plain JSON
+      # logging when NODE_ENV=production, which is also the more standard
+      # format for container log collectors. The .env default (development)
+      # is correct for running the backend directly on the host.
+      NODE_ENV: production
+    ports:
+      - "${PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://localhost:3001/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  ai-service:
+    build:
+      # Root context: requirements.txt lives at the project root, not inside
+      # ai-service/ (see DOCKER.md).
+      context: .
+      dockerfile: ai-service/Dockerfile
+    container_name: medorbit-ai-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      # host.docker.internal reaches the HOST machine from inside the
+      # container — this is where `ollama serve` is expected to already be
+      # running (see README note in the Ollama section above).
+      OLLAMA_URL: http://host.docker.internal:11434/api/generate
+    extra_hosts:
+      # Docker Desktop (Windows/Mac) provides host.docker.internal
+      # automatically; this line is what makes the same name resolve on
+      # Linux, where it otherwise doesn't exist. Harmless no-op on Desktop.
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)\" || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: medorbit-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+
+volumes:
+  medorbit_pgdata:
+    name: medorbit_pgdata

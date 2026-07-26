@@ -120,6 +120,9 @@ const Layout = (() => {
         }
 
         const user = API.getUser();
+        const isAdmin = user?.role === 'admin';
+        const isDoctor = user?.role === 'doctor';
+        const isPatient = user?.role === 'patient';
 
         el.innerHTML =
             '<div class="user-chip" id="userChip">' +
@@ -128,6 +131,17 @@ const Layout = (() => {
                 '<i class="fas fa-chevron-down"></i>' +
                 '<div class="user-menu" id="userMenu">' +
                     '<a href="dashboard.html" class="user-menu-item" data-i18n="nav.dashboard"></a>' +
+                    '<a href="book-appointment.html" class="user-menu-item" data-i18n="nav.bookAppointment"></a>' +
+                    '<a href="my-appointments.html" class="user-menu-item" data-i18n="nav.myAppointments"></a>' +
+                    '<a href="my-prescriptions.html" class="user-menu-item" data-i18n="nav.myPrescriptions"></a>' +
+                    '<a href="my-records.html" class="user-menu-item" data-i18n="nav.myRecords"></a>' +
+                    '<a href="my-reports.html" class="user-menu-item" data-i18n="nav.myReports"></a>' +
+                    '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
+                    (isDoctor ? '<a href="my-patients.html" class="user-menu-item" data-i18n="nav.myPatients"></a>' : '') +
+                    (isDoctor ? '<a href="doctor-posts.html" class="user-menu-item" data-i18n="nav.doctorPosts"></a>' : '') +
+                    (isPatient ? '<a href="my-doctor.html" class="user-menu-item" data-i18n="nav.myDoctor"></a>' : '') +
+                    '<a href="feedback.html" class="user-menu-item" data-i18n="nav.feedback"></a>' +
+                    (isAdmin ? '<a href="analytics.html" class="user-menu-item" data-i18n="nav.analytics"></a>' : '') +
                     '<a href="profile.html" class="user-menu-item" data-i18n="nav.account"></a>' +
                     '<button type="button" class="user-menu-item" id="logoutBtn" data-i18n="auth.logout"></button>' +
                 '</div>' +
@@ -189,12 +203,26 @@ const Layout = (() => {
         }
 
         const user = API.getUser();
+        const isAdmin = user?.role === 'admin';
+        const isDoctor = user?.role === 'doctor';
+        const isPatient = user?.role === 'patient';
         return (
             '<div class="drawer-user">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
                 '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
             '</div>' +
             '<a href="dashboard.html" class="drawer-link" data-i18n="nav.dashboard"></a>' +
+            '<a href="book-appointment.html" class="drawer-link" data-i18n="nav.bookAppointment"></a>' +
+            '<a href="my-appointments.html" class="drawer-link" data-i18n="nav.myAppointments"></a>' +
+            '<a href="my-prescriptions.html" class="drawer-link" data-i18n="nav.myPrescriptions"></a>' +
+            '<a href="my-records.html" class="drawer-link" data-i18n="nav.myRecords"></a>' +
+            '<a href="my-reports.html" class="drawer-link" data-i18n="nav.myReports"></a>' +
+            '<a href="notifications.html" class="drawer-link" data-i18n="nav.notifications"></a>' +
+            (isDoctor ? '<a href="my-patients.html" class="drawer-link" data-i18n="nav.myPatients"></a>' : '') +
+            (isDoctor ? '<a href="doctor-posts.html" class="drawer-link" data-i18n="nav.doctorPosts"></a>' : '') +
+            (isPatient ? '<a href="my-doctor.html" class="drawer-link" data-i18n="nav.myDoctor"></a>' : '') +
+            '<a href="feedback.html" class="drawer-link" data-i18n="nav.feedback"></a>' +
+            (isAdmin ? '<a href="analytics.html" class="drawer-link" data-i18n="nav.analytics"></a>' : '') +
             '<a href="profile.html" class="drawer-link" data-i18n="nav.account"></a>' +
             '<button type="button" class="drawer-link" id="drawerLogoutBtn" data-i18n="auth.logout"></button>'
         );
