@@ -5,111 +5,14 @@ const db = require("../config/database");
 class MedicalRecordService {
 
 
-    async getPatientRecords(patientId) {
+
+    async create(data) {
 
 
         const result = await db.query(
 
             `
-SELECT
-mr.*,
-
-p.first_name_ar,
-p.last_name_ar,
-
-d.id AS doctor_id
-
-FROM public.medical_records mr
-
-
-LEFT JOIN public.patients pt
-ON pt.id = mr.patient_id
-
-
-LEFT JOIN public.user_profiles p
-ON p.user_id = pt.user_id
-
-
-WHERE mr.patient_id=$1
-
-ORDER BY mr.created_at DESC
-
-`,
-            [
-                patientId
-            ]
-
-        );
-
-
-        return result.rows;
-
-
-    }
-
-
-
-
-
-    async getRecord(id) {
-
-
-        const result = await db.query(
-
-            `
-SELECT *
-
-FROM public.medical_records
-
-WHERE id=$1
-`,
-            [
-                id
-            ]
-
-        );
-
-
-        return result.rows[0];
-
-
-    }
-
-
-
-
-
-
-
-    async createRecord(data) {
-
-
-        const {
-
-            patient_id,
-            doctor_id,
-            appointment_id,
-            record_type,
-            chief_complaint,
-            symptoms,
-            diagnosis,
-            diagnosis_codes,
-            treatment_plan,
-            prognosis,
-            vitals,
-            clinical_notes,
-            doctor_notes
-
-        } = data;
-
-
-
-        const result = await db.query(
-
-            `
-
-INSERT INTO public.medical_records
-
+INSERT INTO medorbit.medical_records
 (
 record_number,
 patient_id,
@@ -124,38 +27,36 @@ treatment_plan,
 prognosis,
 vitals,
 clinical_notes,
-doctor_notes
+doctor_notes,
+is_draft
 )
-
 
 VALUES
 
 (
-'MR-' || floor(random()*1000000)::text,
-$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
+'MR-'||to_char(now(),'YYYY')||'-'||floor(random()*100000),
+$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
 )
-
 
 RETURNING *
 
 `,
 
             [
-
-                patient_id,
-                doctor_id,
-                appointment_id,
-                record_type,
-                chief_complaint,
-                symptoms,
-                diagnosis,
-                diagnosis_codes,
-                treatment_plan,
-                prognosis,
-                vitals,
-                clinical_notes,
-                doctor_notes
-
+                data.patient_id,
+                data.doctor_id,
+                data.appointment_id,
+                data.record_type,
+                data.chief_complaint,
+                data.symptoms,
+                data.diagnosis,
+                data.diagnosis_codes,
+                data.treatment_plan,
+                data.prognosis,
+                data.vitals,
+                data.clinical_notes,
+                data.doctor_notes,
+                data.is_draft
             ]
 
 
@@ -164,6 +65,30 @@ RETURNING *
 
         return result.rows[0];
 
+    }
+
+
+
+
+
+    async findAll() {
+
+
+        const result =
+            await db.query(
+
+                `
+SELECT *
+FROM medorbit.medical_records
+ORDER BY created_at DESC
+
+`
+
+            );
+
+
+        return result.rows;
+
 
     }
 
@@ -171,65 +96,71 @@ RETURNING *
 
 
 
+    async findById(id) {
 
 
-    async updateRecord(id, data) {
+        const result =
+            await db.query(
+
+                `
+SELECT *
+FROM medorbit.medical_records
+WHERE id=$1
+
+`,
+                [id]
+
+            );
 
 
-        const {
+        return result.rows[0];
 
-            diagnosis,
-            treatment_plan,
-            clinical_notes,
-            doctor_notes,
-            vitals
-
-        } = data;
+    }
 
 
 
-        const result = await db.query(
 
-            `
 
-UPDATE public.medical_records
+    async update(id, data) {
+
+
+        const result =
+            await db.query(
+
+                `
+UPDATE medorbit.medical_records
 
 SET
 
-diagnosis=COALESCE($1,diagnosis),
-
-treatment_plan=COALESCE($2,treatment_plan),
-
-clinical_notes=COALESCE($3,clinical_notes),
-
-doctor_notes=COALESCE($4,doctor_notes),
-
-vitals=COALESCE($5,vitals),
-
+diagnosis=$1,
+treatment_plan=$2,
+clinical_notes=$3,
+doctor_notes=$4,
+vitals=$5,
+is_draft=$6,
 updated_at=NOW()
 
-
-WHERE id=$6
+WHERE id=$7
 
 RETURNING *
 
 `,
 
-            [
-                diagnosis,
-                treatment_plan,
-                clinical_notes,
-                doctor_notes,
-                vitals,
-                id
-            ]
+                [
+                    data.diagnosis,
+                    data.treatment_plan,
+                    data.clinical_notes,
+                    data.doctor_notes,
+                    data.vitals,
+                    data.is_draft,
+                    id
+                ]
 
 
-        );
+            );
 
 
         return result.rows[0];
-
 
     }
 
@@ -237,23 +168,98 @@ RETURNING *
 
 
 
-
-
-    async deleteRecord(id) {
+    async remove(id) {
 
 
         await db.query(
 
             `
-DELETE FROM public.medical_records
+DELETE FROM medorbit.medical_records
 
 WHERE id=$1
+
 `,
-            [
-                id
-            ]
+            [id]
 
         );
+
+
+    }
+
+
+
+    async addAttachment(data) {
+
+
+        const result =
+            await db.query(
+
+                `
+INSERT INTO medorbit.medical_record_attachments
+
+(
+record_id,
+file_name,
+file_type,
+file_path,
+file_size_bytes,
+mime_type,
+uploaded_by
+)
+
+VALUES
+
+($1,$2,$3,$4,$5,$6,$7)
+
+RETURNING *
+
+`,
+
+                [
+                    data.record_id,
+                    data.file_name,
+                    data.file_type,
+                    data.file_path,
+                    data.file_size_bytes,
+                    data.mime_type,
+                    data.uploaded_by
+                ]
+
+
+            );
+
+
+        return result.rows[0];
+
+
+    }
+
+
+
+
+
+    async getAttachments(id) {
+
+
+        const result =
+            await db.query(
+
+                `
+SELECT *
+
+FROM medorbit.medical_record_attachments
+
+WHERE record_id=$1
+
+ORDER BY created_at DESC
+
+`,
+                [id]
+
+            );
+
+
+        return result.rows;
 
 
     }
