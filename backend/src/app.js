@@ -21,6 +21,7 @@ const appointmentRoutes = require("./routes/appointment.routes");
 const medicalRecordRoutes = require("./routes/medicalRecord.routes");
 const specialtyRoutes = require('./routes/specialty.routes');
 const prescriptionRoutes = require("./routes/prescription.routes");
+const reviewRoutes = require('./routes/review.routes');
 
 
 const app = express();
@@ -126,6 +127,7 @@ app.use('/api/specialties', require('./routes/specialty.routes'));
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use('/api', reviewRoutes);
 // User routes (protected)
 app.use('/api/users', userRoutes);
 
