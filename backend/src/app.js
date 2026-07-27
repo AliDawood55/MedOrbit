@@ -20,6 +20,7 @@ const notificationTemplateRoutes = require('./routes/notification-template.route
 const appointmentRoutes = require("./routes/appointment.routes");
 const medicalRecordRoutes = require("./routes/medicalRecord.routes");
 const specialtyRoutes = require('./routes/specialty.routes');
+const prescriptionRoutes = require("./routes/prescription.routes");
 
 
 const app = express();
@@ -124,6 +125,7 @@ app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
 app.use('/api/specialties', require('./routes/specialty.routes'));
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
 // User routes (protected)
 app.use('/api/users', userRoutes);
 
