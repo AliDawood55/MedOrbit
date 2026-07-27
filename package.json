@@ -22,6 +22,8 @@
     "concurrently": "^9.2.4"
   },
   "dependencies": {
-    "pdfkit": "^0.19.1"
+    "multer": "^2.2.0",
+    "pdfkit": "^0.19.1",
+    "uuid": "^14.0.1"
   }
 }
