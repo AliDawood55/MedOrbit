@@ -10,8 +10,7 @@ const {
 } = require("../middleware/auth");
 
 
-const upload =
-    require("../middleware/upload.middleware");
+//const upload = require("../middleware/upload.middleware");
 
 
 const service =
@@ -27,6 +26,8 @@ const {
 
 
 const db = require("../config/database");
+
+const upload = require("../middleware/medicalRecordUpload");
 
 
 
@@ -304,10 +305,8 @@ router.post(
     "/:id/attachments",
 
     authenticate,
-    authorize("doctor", "admin"),
 
     upload.single("file"),
-
 
     async (req, res, next) => {
 
@@ -315,62 +314,93 @@ router.post(
         try {
 
 
-            const file = req.file;
-
-
-
-            if (!file)
+            if (!req.file) {
 
                 return error(
                     res,
-                    "No file",
-                    400
+                    "No file uploaded",
+                    400,
+                    "FILE_REQUIRED"
+                );
+
+            }
+
+
+
+            const filePath =
+                req.file.path
+                    .replace(
+                        process.cwd(),
+                        ""
+                    )
+                    .replace(
+                        /\\/g,
+                        "/"
+                    )
+                    .substring(1);
+
+
+
+            const result =
+                await db.query(
+
+                    `
+INSERT INTO medorbit.medical_record_attachments
+
+(
+record_id,
+file_name,
+file_path,
+file_size_bytes,
+mime_type,
+uploaded_by
+)
+
+VALUES
+
+($1,$2,$3,$4,$5,$6)
+
+RETURNING *
+
+`,
+
+                    [
+
+                        req.params.id,
+
+                        req.file.originalname,
+
+                        filePath,
+
+                        req.file.size,
+
+                        req.file.mimetype,
+
+                        req.user.sub
+
+                    ]
+
                 );
 
 
 
-            const attachment =
-                await service.addAttachment({
-
-                    record_id: req.params.id,
-
-                    file_name: file.originalname,
-
-                    file_type: file.extension,
-
-                    file_path: file.path,
-
-                    file_size_bytes: file.size,
-
-                    mime_type: file.mimetype,
-
-                    uploaded_by: req.user.sub
-
-
-                });
-
-
-
-            success(
+            return success(
                 res,
-                attachment,
-                "Uploaded",
-                201
+                result.rows[0],
+                "Attachment uploaded successfully"
             );
 
 
+
         }
+        catch (err) {
 
-        catch (e) {
-
-            next(e);
+            next(err);
 
         }
 
 
     });
-
-
 
 
 

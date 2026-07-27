@@ -14,7 +14,7 @@ const {
   error
 } = require("../utils/response");
 
-const upload = require("../middleware/upload");
+const upload = require("../middleware/avatarUpload");
 
 
 /*
