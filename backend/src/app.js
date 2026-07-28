@@ -24,6 +24,7 @@ const prescriptionRoutes = require("./routes/prescription.routes");
 const reviewRoutes = require('./routes/review.routes');
 const reportRoutes = require('./routes/report.routes');
 const adminRoutes = require("./routes/admin.routes");
+const systemSettingsRoutes = require('./routes/system-settings.routes');
 
 
 const app = express();
@@ -157,6 +158,7 @@ app.use('/api/chat', chatLimiter, chatbotRoutes);
 app.use('/api/conversations', conversationRoutes);
 
 app.use("/api/admin", adminRoutes);
+app.use('/api/admin/system-settings', systemSettingsRoutes);
 
 // Public client config — values the frontend needs but that shouldn't be
 // duplicated into a static frontend file (single source of truth is .env).
