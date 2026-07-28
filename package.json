@@ -5,25 +5,26 @@
   "private": true,
   "scripts": {
     "postinstall": "cd backend && npm install",
-
     "venv": "python -m venv .venv",
     "activate": ".\\.venv\\Scripts\\Activate.ps1",
     "install:python": ".\\.venv\\Scripts\\python.exe -m pip install --upgrade pip && .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt",
-
     "setup": "npm install && npm run venv && npm run install:python",
-
     "dev": "concurrently --names \"AI,BACKEND,FRONTEND\" --prefix-colors \"yellow,green,cyan\" \"npm run dev:ai\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "start": "npm run dev",
-
     "dev:ai": "cd ai-service && ..\\.venv\\Scripts\\python.exe -m uvicorn chatbot.main:app --reload --host 127.0.0.1 --port 8001",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": ".\\.venv\\Scripts\\python.exe -m http.server 8080 -d frontend",
     "dev:ollama": "ollama serve",
-
     "db:migrate": "psql -U postgres -d medorbit -f db/00_extensions.sql && psql -U postgres -d medorbit -f db/01_base_tables.sql && psql -U postgres -d medorbit -f db/02_dependent_tables.sql && psql -U postgres -d medorbit -f db/03_indexes.sql && psql -U postgres -d medorbit -f db/04_triggers_sequences.sql && psql -U postgres -d medorbit -f db/05_views.sql && psql -U postgres -d medorbit -f db/06_seed_data.sql",
     "db:seed": "psql -U postgres -d medorbit -f db/06_seed_data.sql"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.2.4"
+  },
+  "dependencies": {
+    "json2csv": "^6.0.0-alpha.2",
+    "multer": "^2.2.0",
+    "pdfkit": "^0.19.1",
+    "uuid": "^14.0.1"
   }
 }
