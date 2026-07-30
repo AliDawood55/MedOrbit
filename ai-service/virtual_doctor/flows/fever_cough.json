@@ -1,0 +1,30 @@
+{
+  "complaint": "fever_cough",
+  "match_symptoms": ["fever", "cough"],
+  "slots": [
+    {
+      "key": "duration",
+      "required": true,
+      "question_en": "How long have you had the fever and/or cough?",
+      "question_ar": "منذ متى وأنت تعاني من الحمى و/أو السعال؟"
+    },
+    {
+      "key": "severity",
+      "required": true,
+      "question_en": "How high has your temperature been, and is the cough dry or bringing up phlegm?",
+      "question_ar": "كم بلغت درجة حرارتك، وهل السعال جاف أم مصحوب ببلغم؟"
+    },
+    {
+      "key": "associated_symptoms",
+      "required": true,
+      "question_en": "Do you have a sore throat, body aches, shortness of breath, or chest pain?",
+      "question_ar": "هل لديك ألم في الحلق، آلام في الجسم، ضيق تنفس، أو ألم في الصدر؟"
+    },
+    {
+      "key": "exposure",
+      "required": true,
+      "question_en": "Have you been in close contact with anyone sick recently, or traveled anywhere?",
+      "question_ar": "هل خالطت مؤخراً أي شخص مريض، أو سافرت إلى أي مكان؟"
+    }
+  ]
+}
