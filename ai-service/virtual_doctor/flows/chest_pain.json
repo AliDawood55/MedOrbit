@@ -1,0 +1,30 @@
+{
+  "complaint": "chest_pain",
+  "match_symptoms": ["chest_pain"],
+  "slots": [
+    {
+      "key": "duration",
+      "required": true,
+      "question_en": "When did the chest pain start, and is it constant or does it come and go?",
+      "question_ar": "متى بدأ ألم الصدر، وهل هو مستمر أم يأتي ويذهب؟"
+    },
+    {
+      "key": "character",
+      "required": true,
+      "question_en": "How would you describe the pain — sharp, dull, or like pressure/tightness?",
+      "question_ar": "كيف تصف الألم؟ حاد، خفيف/مبهم، أم شعور بضغط أو ضيق؟"
+    },
+    {
+      "key": "radiation",
+      "required": true,
+      "question_en": "Does the pain spread to your arm, jaw, back, or neck?",
+      "question_ar": "هل ينتشر الألم إلى ذراعك، فكك، ظهرك، أو رقبتك؟"
+    },
+    {
+      "key": "associated_symptoms",
+      "required": true,
+      "question_en": "Do you also have shortness of breath, sweating, dizziness, or nausea, and does the pain get worse with activity?",
+      "question_ar": "هل لديك أيضاً ضيق تنفس، تعرق، دوخة، أو غثيان، وهل يزداد الألم مع بذل مجهود؟"
+    }
+  ]
+}
