@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – الاستشارة الصوتية مع الطبيب الافتراضي</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/ai-tools.css">
+    <link rel="stylesheet" href="../src/css/avatar-preview.css">
+</head>
+<body class="site-page" data-theme="light">
+
+    <header class="app-header">
+        <a class="header-brand" id="brandLink" href="home.html">
+            <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
+            <div class="brand-text">
+                <h1>MedOrbit</h1>
+                <p data-i18n="brand.tagline">Smart Healthcare AI</p>
+            </div>
+        </a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions">
+            <div class="auth-area" id="authArea"></div>
+            <button class="icon-btn" id="themeToggle" data-i18n-title="theme" title="الوضع الليلي">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" id="langToggle" data-i18n-title="language" title="Language">
+                <span id="langLabel">EN</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="page-container">
+        <div class="tool-header">
+            <div class="tool-icon"><i class="fas fa-user-doctor"></i></div>
+            <h1 data-i18n="consult.title">الاستشارة الصوتية مع الطبيب الافتراضي</h1>
+            <p data-i18n="consult.subtitle">تحدّث بشكل طبيعي — الطبيب يستمع ويجيب دون الحاجة للضغط على أي زر.</p>
+        </div>
+
+        <!-- Pre-consultation gate: the one and only click in the whole flow. -->
+        <section class="consult-start-card" id="startCard">
+            <i class="fas fa-microphone-lines consult-start-icon"></i>
+            <h2 data-i18n="consult.startHeading">استشارة بدون استخدام اليدين</h2>
+            <p data-i18n="consult.startBody">سنطلب إذن الميكروفون مرة واحدة فقط. بعدها يبدأ الطبيب بالتحدث معك، وكل ما عليك هو الإجابة بصوتك.</p>
+            <button type="button" class="btn btn-primary btn-lg" id="btnStartConsult">
+                <i class="fas fa-play"></i>
+                <span data-i18n="consult.startBtn">ابدأ الاستشارة</span>
+            </button>
+            <p class="consult-start-note" id="startNote" data-i18n="consult.startNote">يعمل بشكل أفضل في مكان هادئ.</p>
+        </section>
+
+        <!-- Kept OUTSIDE the consultation shell on purpose: a denied
+             microphone means the shell never opens, and an error rendered
+             inside it would be invisible — the user would click Start and see
+             nothing happen at all. -->
+        <div class="mic-error consult-error" id="micError" role="alert" hidden>
+            <i class="fas fa-triangle-exclamation"></i>
+            <div class="mic-error-body">
+                <p class="mic-error-msg" id="micErrorMsg"></p>
+                <p class="mic-error-detail" id="micErrorDetail" hidden></p>
+                <div class="mic-error-help" id="micErrorHelp" hidden>
+                    <p lang="ar">افتح قفل الكاميرا/الميكروفون بجوار شريط العنوان، اختر «السماح» للميكروفون، ثم أعد تحميل الصفحة وحاول مرة أخرى.</p>
+                    <p lang="en">Open the lock/settings icon next to the address bar, set Microphone to “Allow”, then reload the page and try again.</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnRetryMic" hidden>
+                    <span data-i18n="consult.retryMic">إعادة المحاولة</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="avatar-shell" id="consultShell" hidden>
+            <div class="avatar-stage-card">
+                <div class="avatar-status-strip state-idle" id="statusStrip">
+                    <span class="status-indicator-dot"></span>
+                    <span class="status-label" id="statusLabel" data-i18n="consult.stateIdle">جاهز</span>
+                    <span class="status-timer" id="statusTimer"></span>
+                </div>
+                <!-- Voice indicator. Driven by the same state names the status
+                     strip uses (see setStatus) — no separate state system. -->
+                <div class="voice-stage state-idle" id="voiceStage">
+                    <div class="voice-orb" aria-hidden="true">
+                        <span class="voice-orb-glow"></span>
+                        <span class="voice-orb-ring"></span>
+                        <span class="voice-orb-ring voice-orb-ring--slow"></span>
+                        <span class="voice-orb-core"></span>
+                        <span class="voice-wave">
+                            <i></i><i></i><i></i><i></i><i></i>
+                        </span>
+                    </div>
+                    <p class="voice-label" id="voiceLabel" data-i18n="consult.stateIdle">جاهز</p>
+
+                    <div class="subtitle-bar" id="subtitleBar" aria-live="polite" hidden>
+                        <span class="subtitle-speaker">
+                            <i class="fas fa-volume-high"></i>
+                        </span>
+                        <p class="subtitle-text" id="subtitleText"></p>
+                    </div>
+                </div>
+                <div class="mic-level-track" id="micLevelTrack">
+                    <div class="mic-level-fill" id="micLevelFill"></div>
+                </div>
+            </div>
+
+            <div class="consult-panel">
+                <div class="consult-transcript" id="conversation" aria-live="polite"></div>
+
+                <div class="mic-status" id="micStatus" aria-live="polite" hidden></div>
+
+                <!-- Speech failed but the consultation carries on in text. -->
+                <div class="tts-warning" id="ttsWarning" role="status" hidden>
+                    <i class="fas fa-volume-xmark"></i>
+                    <div>
+                        <p lang="ar">تعذّر تشغيل صوت الطبيب. ستستمر الاستشارة بالنص المكتوب.</p>
+                        <p lang="en">The doctor's voice is unavailable. The consultation continues in text.</p>
+                    </div>
+                </div>
+
+                <!-- Consultation result -->
+                <div class="consult-summary" id="summaryPanel" hidden>
+                    <div class="consult-summary-head">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span data-i18n="consult.summaryTitle">ملخص الاستشارة</span>
+                        <span class="urgency-badge" id="urgencyBadge"></span>
+                    </div>
+                    <dl class="consult-summary-grid" id="summaryGrid"></dl>
+                    <div class="consult-report-actions">
+                        <button type="button" class="btn btn-primary" id="btnDownloadReport">
+                            <i class="fas fa-file-pdf"></i>
+                            <span data-i18n="consult.downloadReport">تحميل التقرير PDF</span>
+                        </button>
+                        <div class="report-unavailable" id="reportUnavailable" hidden>
+                            <i class="fas fa-circle-info"></i>
+                            <div>
+                                <p lang="ar">تعذّر إنشاء ملف التقرير مؤقتاً. نتائج استشارتك أعلاه محفوظة ولم تتأثر.</p>
+                                <p lang="en">Report file generation is temporarily unavailable. Your consultation results above are saved and unaffected.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="dev-info-divider">
+                <div class="collapsible-toggle" id="devInfoToggle">
+                    <i class="fas fa-chevron-down"></i>
+                    <span data-i18n="avatarPreview.devInfoToggle">معلومات المطوّر</span>
+                </div>
+                <div class="collapsible-content" id="devInfoContent">
+                    <div class="dev-status-row"><span data-i18n="avatarPreview.statusLabel">الحالة</span><span id="statusText">—</span></div>
+                    <div class="dev-status-row"><span>STT</span><span id="sttInfoText">—</span></div>
+                    <div class="dev-status-row"><span>TTS</span><span id="ttsInfoText">—</span></div>
+                    <div id="log"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer" id="siteFooter"></footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/format.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/layout.js"></script>
+    <script src="../src/js/virtual-doctor-stt.js"></script>
+    <script src="../src/js/virtual-doctor-tts.js"></script>
+    <script src="../src/js/virtual-doctor-session.js"></script>
+
+    <script>
+        const els = {};
+        let sessionActive = false;
+        let ttsEnabled = true;
+        let turnStartedAt = 0;
+        let listeningSince = 0;
+        let timerInterval = null;
+
+        function logLine(msg) {
+            const el = els.log;
+            if (!el) return;
+            const line = document.createElement('div');
+            line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+            console.log('[consult]', msg);
+        }
+
+        function tr(key, fallback) {
+            if (typeof I18n !== 'undefined' && I18n.t) {
+                const val = I18n.t(key);
+                if (val && val !== key) return val;
+            }
+            return fallback;
+        }
+
+        // ================= status strip =================
+
+        const STATE_KEYS = {
+            connecting:     ['consult.stateConnecting', 'Connecting…',      'thinking'],
+            listening:      ['consult.stateListening',  'Listening',        'listening'],
+            capturing:      ['consult.stateCapturing',  'I can hear you',   'capturing'],
+            transcribing:   ['consult.stateTranscribing', 'Understanding…', 'thinking'],
+            thinking:       ['consult.stateThinking',   'Thinking…',        'thinking'],
+            doctorSpeaking: ['consult.stateDoctor',     'Doctor is speaking', 'speaking'],
+            complete:       ['consult.stateComplete',   'Consultation complete', 'idle'],
+            idle:           ['consult.stateIdle',       'Ready',            'idle']
+        };
+
+        function setStatus(state) {
+            const entry = STATE_KEYS[state] || STATE_KEYS.idle;
+            els.statusStrip.className = 'avatar-status-strip state-' + entry[2];
+            els.statusLabel.setAttribute('data-i18n', entry[0]);
+            els.statusLabel.textContent = tr(entry[0], entry[1]);
+            els.statusText.textContent = state;
+
+            // The voice indicator reuses the strip's own state vocabulary
+            // (idle | listening | capturing | thinking | speaking) so there is
+            // exactly one source of truth for what the UI is showing.
+            if (els.voiceStage) {
+                const speakingAloud = els.statusStrip.classList.contains('is-speaking-aloud');
+                els.voiceStage.className = 'voice-stage state-' + entry[2] +
+                    (speakingAloud ? ' is-speaking-aloud' : '');
+                els.voiceLabel.setAttribute('data-i18n', entry[0]);
+                els.voiceLabel.textContent = tr(entry[0], entry[1]);
+            }
+
+            if (state === 'listening') {
+                listeningSince = Date.now();
+                startTimer();
+            } else if (state === 'capturing') {
+                startTimer();
+            } else {
+                stopTimer();
+            }
+        }
+
+        function startTimer() {
+            if (timerInterval) return;
+            timerInterval = setInterval(() => {
+                const secs = Math.floor((Date.now() - listeningSince) / 1000);
+                els.statusTimer.textContent = secs > 0
+                    ? String(Math.floor(secs / 60)).padStart(2, '0') + ':' + String(secs % 60).padStart(2, '0')
+                    : '';
+            }, 250);
+        }
+
+        function stopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+            els.statusTimer.textContent = '';
+        }
+
+        // ================= conversation =================
+
+        function addBubble(role, text, lang) {
+            const wrap = document.createElement('div');
+            wrap.className = 'consult-bubble consult-bubble-' + role;
+            const who = document.createElement('span');
+            who.className = 'consult-bubble-who';
+            who.textContent = role === 'doctor'
+                ? tr('consult.doctorLabel', 'Doctor')
+                : tr('consult.patientLabel', 'You');
+            const body = document.createElement('p');
+            body.textContent = text;
+            if (lang) {
+                body.setAttribute('lang', lang);
+                body.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            }
+            wrap.appendChild(who);
+            wrap.appendChild(body);
+            els.conversation.appendChild(wrap);
+            els.conversation.scrollTop = els.conversation.scrollHeight;
+            return wrap;
+        }
+
+        function setMicStatus(text) {
+            if (!text) { els.micStatus.hidden = true; els.micStatus.textContent = ''; return; }
+            els.micStatus.hidden = false;
+            els.micStatus.textContent = text;
+        }
+
+        function showError(detail) {
+            els.micError.hidden = false;
+            els.micErrorMsg.textContent = tr(detail.key, 'Microphone error.');
+            els.micErrorDetail.hidden = !detail.detail;
+            if (detail.detail) els.micErrorDetail.textContent = detail.detail;
+            els.micErrorHelp.hidden = !detail.showHelp;
+            // A fatal error killed the mic, so offer an explicit way back in
+            // rather than leaving a hands-free page with no hands.
+            els.btnRetryMic.hidden = !detail.fatal;
+            logLine('ERROR [' + detail.code + '] ' + (detail.detail || ''));
+        }
+
+        function clearError() {
+            els.micError.hidden = true;
+            els.btnRetryMic.hidden = true;
+        }
+
+        // ================= speech output =================
+
+        /** Only true while TTS audio is actually playing — this is what makes
+         *  the indicator show its waveform rather than a plain pulse. */
+        function setSpeakingAloud(on) {
+            els.statusStrip.classList.toggle('is-speaking-aloud', !!on);
+            if (els.voiceStage) els.voiceStage.classList.toggle('is-speaking-aloud', !!on);
+        }
+
+        function showSubtitle(text, lang) {
+            els.subtitleBar.hidden = false;
+            els.subtitleText.textContent = text;
+            els.subtitleText.setAttribute('lang', lang || '');
+            els.subtitleText.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+        }
+
+        function hideSubtitle() {
+            els.subtitleBar.hidden = true;
+            els.subtitleText.textContent = '';
+        }
+
+        /**
+         * Speak one doctor reply. Resolves when the audio finishes, when the
+         * patient interrupts, or when speech fails — never blocks the
+         * consultation, which is why the result is inspected rather than
+         * awaited for success.
+         */
+        async function speakReply(text, lang) {
+            if (!ttsEnabled) return;
+            const startedAt = performance.now();
+
+            // Mic stays live but harder to trigger, so the patient can cut in.
+            VirtualDoctorSTT.setGateMode('bargein');
+
+            const result = await VirtualDoctorTTS.speak(text, lang, {
+                onStart: () => { setSpeakingAloud(true); },
+                onSubtitle: ({ text: line, index, total }) => {
+                    showSubtitle(line, lang);
+                    if (index === 0) {
+                        logLine('Speaking ' + total + ' sentence(s), first audio in ' +
+                                Math.round(performance.now() - startedAt) + 'ms');
+                    }
+                },
+                onError: (detail) => {
+                    // One notice is enough; do not nag on every turn.
+                    els.ttsWarning.hidden = false;
+                    logLine('TTS error: ' + (detail.detail || detail.key));
+                },
+                onEnd: () => { setSpeakingAloud(false); }
+            });
+
+            setSpeakingAloud(false);
+            hideSubtitle();
+
+            if (result && result.interrupted) logLine('Speech interrupted by patient');
+            if (result && result.ok === false) {
+                // Fall back to a reading beat so the reply does not vanish
+                // instantly when there is no audio to pace it.
+                await new Promise((r) => setTimeout(r, 700));
+            }
+        }
+
+        function onBargeIn() {
+            if (!VirtualDoctorTTS.isSpeaking()) return;
+            logLine('Barge-in detected — stopping speech');
+            VirtualDoctorTTS.stop();
+            hideSubtitle();
+            setSpeakingAloud(false);
+            // Hand the mic back at once rather than waiting for the session
+            // state to catch up, so the interrupting sentence is not clipped.
+            VirtualDoctorSTT.setGateMode('open');
+        }
+
+        // ================= summary =================
+
+        function renderSummary(result) {
+            const lang = VirtualDoctorSession.getLanguage();
+            const profile = result.profile || {};
+            const urgency = result.urgencyLevel || 'routine';
+
+            els.urgencyBadge.textContent = tr('consult.urgency.' + urgency, urgency);
+            els.urgencyBadge.className = 'urgency-badge urgency-' + urgency;
+
+            const rows = [
+                [tr('consult.fieldName', 'Name'), profile.name || '—'],
+                [tr('consult.fieldAge', 'Age'), profile.age != null ? String(profile.age) : '—'],
+                [tr('consult.fieldComplaint', 'Chief complaint'),
+                 profile.chief_complaint_description || result.chiefComplaint || '—'],
+                [tr('consult.fieldSpecialty', 'Recommended specialty'),
+                 (lang === 'ar' ? result.specialtyAr : result.specialtyEn) || '—']
+            ];
+            if (result.confidence != null) {
+                rows.push([tr('consult.fieldConfidence', 'AI confidence'),
+                           Math.round(result.confidence * 100) + '%']);
+            }
+
+            els.summaryGrid.innerHTML = '';
+            rows.forEach(([label, value]) => {
+                const dt = document.createElement('dt');
+                dt.textContent = label;
+                const dd = document.createElement('dd');
+                dd.textContent = value;
+                els.summaryGrid.appendChild(dt);
+                els.summaryGrid.appendChild(dd);
+            });
+
+            els.summaryPanel.hidden = false;
+            els.summaryPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function offerReport() {
+            els.btnDownloadReport.disabled = true;
+            const res = await VirtualDoctorSession.requestReport();
+            els.btnDownloadReport.disabled = false;
+
+            if (res.ok) {
+                els.reportUnavailable.hidden = true;
+                logLine('Report ready: ' + res.reportId);
+                const a = document.createElement('a');
+                a.href = res.downloadUrl;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.click();
+                return;
+            }
+
+            // Known-broken PDF renderer: say so plainly and keep the summary.
+            els.reportUnavailable.hidden = false;
+            els.btnDownloadReport.disabled = res.reason === 'pdf_unavailable';
+            logLine('Report unavailable (' + res.reason + '): ' + (res.detail || ''));
+        }
+
+        // ================= wiring =================
+
+        async function beginConsultation() {
+            clearError();
+            els.btnStartConsult.disabled = true;
+
+            // Browsers only allow programmatic audio after a user gesture, and
+            // the greeting plays well after this click — prime the element now
+            // while the gesture is still in scope.
+            const unlocked = await VirtualDoctorTTS.unlock();
+            if (!unlocked) logLine('Audio autoplay not unlocked; speech may be blocked');
+
+            // Kick both model loads off now, before the permission prompt, so
+            // they run behind the greeting rather than delaying the first turn.
+            VirtualDoctorSTT.warmup().then((status) => {
+                if (status) {
+                    els.sttInfoText.textContent =
+                        status.model + ' / ' + status.device + ' / ' + status.compute_type;
+                    logLine('STT warm on ' + status.device + '/' + status.compute_type);
+                }
+            });
+            VirtualDoctorTTS.warmup().then((status) => {
+                if (status) {
+                    els.ttsInfoText.textContent =
+                        status.engine + ' / ' + Object.values(status.voices || {}).join(' + ');
+                    logLine('TTS warm: ' + JSON.stringify(status.voices));
+                } else {
+                    ttsEnabled = false;
+                    els.ttsInfoText.textContent = 'unavailable';
+                    els.ttsWarning.hidden = false;
+                    logLine('TTS unavailable — continuing with text only');
+                }
+            });
+
+            const started = await VirtualDoctorSTT.start();
+            if (!started) {
+                els.btnStartConsult.disabled = false;
+                return;   // onError already surfaced the reason
+            }
+
+            els.startCard.hidden = true;
+            els.consultShell.hidden = false;
+            sessionActive = true;
+
+            const lang = (typeof I18n !== 'undefined' && I18n.getLang) ? I18n.getLang() : 'ar';
+            VirtualDoctorSTT.setLanguage(lang === 'ar' ? 'ar' : 'en');
+
+            try {
+                const res = await VirtualDoctorSession.start(lang === 'ar' ? 'ar' : 'en');
+                VirtualDoctorSTT.setLanguage(res.language);
+                logLine('Session ' + res.sessionId.slice(0, 8) + ' started (' + res.language + ')');
+            } catch (err) {
+                showError({ code: 'engine', key: 'consult.errStart', detail: err.message, fatal: true });
+                sessionActive = false;
+            }
+        }
+
+        function initConsultation() {
+            [
+                'startCard', 'btnStartConsult', 'startNote', 'consultShell', 'statusStrip',
+                'statusLabel', 'statusTimer', 'conversation', 'micStatus', 'micError',
+                'micErrorMsg', 'micErrorDetail', 'micErrorHelp', 'btnRetryMic', 'micLevelFill',
+                'summaryPanel', 'summaryGrid', 'urgencyBadge', 'btnDownloadReport',
+                'reportUnavailable', 'statusText', 'sttInfoText', 'log',
+                'subtitleBar', 'subtitleText', 'ttsWarning', 'ttsInfoText',
+                'voiceStage', 'voiceLabel'
+            ].forEach((id) => { els[id] = document.getElementById(id); });
+
+            VirtualDoctorSTT.init({
+                onStateChange: (state, detail) => {
+                    if (!sessionActive) return;
+                    if (state === 'capturing' || state === 'listening' || state === 'transcribing') {
+                        setStatus(state);
+                    }
+                    if (detail && detail.stillListening) {
+                        setMicStatus(tr('consult.stillListening', 'Still listening — take your time.'));
+                    } else if (state === 'capturing') {
+                        setMicStatus('');
+                    }
+                },
+                onLevel: (level, capturing) => {
+                    els.micLevelFill.style.width = Math.round(level * 100) + '%';
+                    els.micLevelFill.classList.toggle('is-capturing', !!capturing);
+                    // Feed the live mic level to the orb so it genuinely reacts
+                    // to the voice instead of running a canned animation.
+                    if (els.voiceStage) {
+                        els.voiceStage.style.setProperty('--level', level.toFixed(3));
+                    }
+                },
+                onTranscript: (result) => {
+                    setMicStatus('');
+                    addBubble('patient', result.text, result.language);
+                    logLine('Heard (' + result.processingSeconds + 's stt): "' + result.text + '"');
+                    turnStartedAt = performance.now();
+                    VirtualDoctorSTT.setGateMode('closed');   // doctor takes the floor
+                    VirtualDoctorSession.submit(result.text);
+                },
+                onBargeIn: onBargeIn,
+                onError: (detail) => showError(detail)
+            });
+
+            VirtualDoctorSession.init({
+                onState: ({ state }) => {
+                    setStatus(state);
+                    // The doctor's turn is over the moment the session goes
+                    // back to 'listening' — that is when the patient gets the
+                    // microphone back. Without this the consultation would
+                    // freeze after the first answer.
+                    if (state === 'listening' && sessionActive) {
+                        VirtualDoctorSTT.setGateMode('open');
+                    }
+                },
+                // Returning the promise makes the session hold the floor until
+                // the doctor has actually finished speaking.
+                onDoctorTurn: ({ text, meta }) => {
+                    const lang = VirtualDoctorSession.getLanguage();
+                    addBubble('doctor', text, lang);
+                    if (meta && meta.elapsedMs) {
+                        logLine('Doctor replied in ' + meta.elapsedMs + 'ms (turn ' + meta.turn + ')');
+                    }
+                    return speakReply(text, lang);
+                },
+                onPatientTurn: () => {},
+                onComplete: (result) => {
+                    sessionActive = false;
+                    VirtualDoctorSTT.stop();
+                    hideSubtitle();
+                    setStatus('complete');
+                    setMicStatus('');
+                    renderSummary(result);
+                    offerReport();
+                    logLine('Consultation complete — urgency=' + result.urgencyLevel);
+                },
+                onError: (detail) => {
+                    showError({ ...detail, code: 'engine', showHelp: false });
+                    VirtualDoctorSTT.setGateOpen(true);
+                }
+            });
+
+            els.btnStartConsult.addEventListener('click', beginConsultation);
+            els.btnRetryMic.addEventListener('click', () => {
+                clearError();
+                beginConsultation();
+            });
+            els.btnDownloadReport.addEventListener('click', offerReport);
+
+            document.getElementById('devInfoToggle')?.addEventListener('click', () => {
+                document.getElementById('devInfoToggle')?.classList.toggle('open');
+                document.getElementById('devInfoContent')?.classList.toggle('open');
+            });
+
+            VirtualDoctorSTT.fetchStatus().then((status) => {
+                if (!status) {
+                    els.sttInfoText.textContent = 'unreachable';
+                    logLine('AI service unreachable on :8001');
+                    return;
+                }
+                els.sttInfoText.textContent = status.model + ' / ' + status.device + ' / ' + status.compute_type;
+                logLine('STT ' + status.model + ' on ' + status.device + '/' + status.compute_type +
+                        (status.device_fallback_reason ? ' (CUDA fallback: ' + status.device_fallback_reason + ')' : ''));
+                if (status.device === 'cpu') {
+                    els.startNote.textContent = tr('consult.cpuWarning',
+                        'Running on CPU — replies will be noticeably slower.');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Layout.init();
+            initConsultation();
+        });
+    </script>
+</body>
+</html>

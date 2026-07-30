@@ -1,0 +1,799 @@
+﻿/* ===========================================
+   MedOrbit v2 - Virtual Doctor Avatar Preview
+   Standalone spike page â€” polished shell, not yet wired to the interview
+   engine. Reuses main.css/components.css/ai-tools.css tokens throughout;
+   this file only covers what's unique to the avatar stage + status strip.
+   =========================================== */
+
+.avatar-shell {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.avatar-stage-card {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+/* === Status strip === */
+.avatar-status-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+}
+
+.status-indicator-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex-shrink: 0;
+    transition: background var(--t-base);
+}
+
+.avatar-status-strip .status-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-mute);
+    transition: color var(--t-base);
+}
+
+/* idle: calm, no motion */
+.avatar-status-strip.state-idle .status-indicator-dot {
+    background: var(--text-faint);
+}
+
+/* thinking: amber, gentle pulse */
+.avatar-status-strip.state-thinking .status-indicator-dot {
+    background: var(--warning);
+    animation: statusPulse 1s ease-in-out infinite;
+}
+.avatar-status-strip.state-thinking .status-label {
+    color: #b45309;
+}
+[data-theme="dark"] .avatar-status-strip.state-thinking .status-label {
+    color: var(--warning);
+}
+
+/* speaking: primary blue, steady pulse (mirrors the existing chat-header
+   status-dot / avatar-pulse idiom used elsewhere in the app) */
+.avatar-status-strip.state-speaking .status-indicator-dot {
+    background: var(--primary);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5);
+    animation: statusPulse 1.4s infinite;
+}
+.avatar-status-strip.state-speaking .status-label {
+    color: var(--primary);
+}
+
+@keyframes statusPulse {
+    0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 6px transparent; opacity: 0.85; }
+    100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-indicator-dot { animation: none !important; }
+}
+
+/* ===========================================
+   Voice indicator (replaces the former 3D avatar stage)
+
+   One circular orb whose appearance is driven by the SAME state names the
+   status strip uses — idle | listening | capturing | thinking | speaking —
+   plus `is-speaking-aloud` while TTS audio is actually playing. Pure CSS: no
+   canvas, no WebGL, no per-frame JS.
+   =========================================== */
+.voice-stage {
+    position: relative;
+    height: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 40%, var(--primary-50) 0%, transparent 70%),
+        linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-card) 100%);
+
+    /* Live microphone level (0..1), pushed in from the STT onLevel callback.
+       Everything reactive reads this, so the orb responds to the real voice
+       rather than replaying a fixed animation. */
+    --level: 0;
+    --orb-size: 168px;
+    --orb-from: #2563EB;
+    --orb-to: #7C3AED;
+}
+
+[data-theme="dark"] .voice-stage {
+    background:
+        radial-gradient(ellipse 70% 60% at 50% 40%, rgba(37, 99, 235, 0.16) 0%, transparent 70%),
+        linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 100%);
+}
+
+.voice-orb {
+    position: relative;
+    width: var(--orb-size);
+    height: var(--orb-size);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.voice-orb > * {
+    grid-area: 1 / 1;
+}
+
+/* Soft outer bloom */
+.voice-orb-glow {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%,
+        rgba(124, 58, 237, 0.30) 0%, rgba(37, 99, 235, 0.18) 45%, transparent 70%);
+    filter: blur(14px);
+    transform: scale(calc(1.1 + var(--level) * 0.5));
+    transition: transform 120ms ease-out, opacity var(--t-base);
+}
+
+/* Solid gradient centre */
+.voice-orb-core {
+    width: 58%;
+    height: 58%;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--orb-from) 0%, var(--orb-to) 100%);
+    box-shadow:
+        0 8px 28px rgba(37, 99, 235, 0.38),
+        inset 0 2px 10px rgba(255, 255, 255, 0.28);
+    transform: scale(calc(1 + var(--level) * 0.22));
+    transition: transform 110ms ease-out, box-shadow var(--t-base);
+}
+
+/* Expanding rings, only animated in the reactive states */
+.voice-orb-ring {
+    width: 72%;
+    height: 72%;
+    border-radius: 50%;
+    border: 2px solid rgba(37, 99, 235, 0.45);
+    opacity: 0;
+}
+
+.voice-label {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text-mute);
+    transition: color var(--t-base);
+}
+
+/* --- Waveform bars: shown only while the doctor is actually speaking --- */
+.voice-wave {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 46%;
+    z-index: 2;
+}
+
+.voice-wave i {
+    display: block;
+    width: 6px;
+    height: 22%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+/* ---------- idle: a calm, static glow ---------- */
+.voice-stage.state-idle .voice-orb-core {
+    background: linear-gradient(145deg, #93a7c9 0%, #a99ec9 100%);
+    box-shadow: 0 6px 20px rgba(100, 116, 139, 0.28),
+                inset 0 2px 10px rgba(255, 255, 255, 0.25);
+}
+.voice-stage.state-idle .voice-orb-glow { opacity: 0.55; }
+
+/* ---------- listening: slow breathing, mic is open ---------- */
+.voice-stage.state-listening .voice-orb-core {
+    animation: voiceBreathe 2.6s ease-in-out infinite;
+}
+.voice-stage.state-listening .voice-label { color: var(--success, #16a34a); }
+.voice-stage.state-listening .voice-orb-ring {
+    animation: voiceRipple 2.6s ease-out infinite;
+}
+.voice-stage.state-listening .voice-orb-ring--slow {
+    animation-delay: 1.3s;
+}
+
+/* ---------- capturing: the patient is speaking, orb tracks the level ------ */
+.voice-stage.state-capturing .voice-orb-ring {
+    border-color: rgba(124, 58, 237, 0.55);
+    animation: voiceRipple 1.1s ease-out infinite;
+}
+.voice-stage.state-capturing .voice-orb-ring--slow { animation-delay: 0.55s; }
+.voice-stage.state-capturing .voice-label { color: var(--primary); }
+
+/* ---------- thinking: subtle, unhurried pulse ---------- */
+.voice-stage.state-thinking .voice-orb-core {
+    animation: voiceThink 1.5s ease-in-out infinite;
+}
+.voice-stage.state-thinking .voice-label { color: #b45309; }
+[data-theme="dark"] .voice-stage.state-thinking .voice-label { color: var(--warning); }
+
+/* ---------- speaking: waveform replaces the plain core ---------- */
+.voice-stage.state-speaking .voice-label,
+.voice-stage.is-speaking-aloud .voice-label { color: var(--primary); }
+
+.voice-stage.is-speaking-aloud .voice-orb-core {
+    animation: voiceBreathe 1.4s ease-in-out infinite;
+}
+.voice-stage.is-speaking-aloud .voice-wave { display: flex; }
+.voice-stage.is-speaking-aloud .voice-wave i {
+    animation: voiceBars 0.9s ease-in-out infinite;
+}
+.voice-stage.is-speaking-aloud .voice-wave i:nth-child(1) { animation-delay: 0s;    }
+.voice-stage.is-speaking-aloud .voice-wave i:nth-child(2) { animation-delay: 0.15s; }
+.voice-stage.is-speaking-aloud .voice-wave i:nth-child(3) { animation-delay: 0.3s;  }
+.voice-stage.is-speaking-aloud .voice-wave i:nth-child(4) { animation-delay: 0.45s; }
+.voice-stage.is-speaking-aloud .voice-wave i:nth-child(5) { animation-delay: 0.6s;  }
+
+@keyframes voiceBreathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.07); }
+}
+
+@keyframes voiceThink {
+    0%, 100% { transform: scale(1);    opacity: 0.85; }
+    50%      { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes voiceRipple {
+    0%   { transform: scale(0.8); opacity: 0.7; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes voiceBars {
+    0%, 100% { height: 22%; }
+    50%      { height: 78%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .voice-orb-core,
+    .voice-orb-ring,
+    .voice-wave i {
+        animation: none !important;
+    }
+    /* Without motion the state must still read: the label text and colour
+       change, and the speaking state keeps its bars at a fixed height. */
+    .voice-stage.is-speaking-aloud .voice-wave i { height: 50%; }
+    .voice-stage.state-listening .voice-orb-ring,
+    .voice-stage.state-capturing .voice-orb-ring { opacity: 0.5; }
+}
+
+/* === Controls card === */
+.avatar-controls-card {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px;
+    box-shadow: var(--shadow-xs);
+}
+
+.avatar-controls-card h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 12px;
+}
+
+.avatar-controls-card button {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.mood-row {
+    display: flex;
+    gap: 8px;
+}
+
+.mood-row button {
+    flex: 1;
+}
+
+.dev-info-divider {
+    margin: 14px 0 10px;
+    border: none;
+    border-top: 1px solid var(--border);
+}
+
+.avatar-controls-card .collapsible-toggle,
+.avatar-controls-card .collapsible-content {
+    max-width: none;
+    margin: 0;
+}
+
+.avatar-controls-card .collapsible-content {
+    margin-top: 8px;
+}
+
+.dev-status-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-mute);
+    padding: 4px 0;
+}
+
+.dev-status-row span:last-child {
+    color: var(--text);
+    font-weight: 600;
+    font-family: Consolas, "SF Mono", monospace;
+}
+
+#log {
+    margin-top: 8px;
+    font-size: 10px;
+    font-family: Consolas, "SF Mono", monospace;
+    background: #0b0d10;
+    color: #8fd68f;
+    padding: 8px;
+    border-radius: var(--r-sm);
+    max-height: 180px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+}
+
+[data-theme="dark"] #log {
+    background: #05070a;
+}
+
+/* ===========================================
+   Hands-free consultation
+   =========================================== */
+
+/* The browser's own `[hidden] { display: none }` comes from the UA stylesheet,
+   so any class below that sets `display` outranks it and would leave these
+   panels permanently on screen. Restate it for everything toggled via the
+   `hidden` attribute here. */
+.consult-start-card[hidden],
+.avatar-shell[hidden],
+.consult-panel [hidden],
+.consult-summary[hidden],
+.report-unavailable[hidden],
+.mic-error[hidden],
+.mic-error [hidden],
+.tts-warning[hidden],
+.subtitle-bar[hidden] {
+    display: none !important;
+}
+
+/* The error banner sits outside the consultation shell so it is visible from
+   the start screen too — see the comment in avatar-preview.html. */
+.consult-error {
+    max-width: 560px;
+    margin: 16px auto 0;
+}
+
+/* === Start gate === */
+.consult-start-card {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 32px 28px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.consult-start-icon {
+    font-size: 34px;
+    color: var(--primary);
+    margin-bottom: 14px;
+}
+
+.consult-start-card h2 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--text);
+}
+
+.consult-start-card p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-mute);
+    margin: 0 0 20px;
+}
+
+.consult-start-note {
+    font-size: 12.5px !important;
+    margin: 14px 0 0 !important;
+    color: var(--text-faint, var(--text-mute)) !important;
+}
+
+.btn-lg {
+    padding: 12px 30px;
+    font-size: 15px;
+    border-radius: 999px;
+}
+
+/* === Status strip states === */
+.status-timer {
+    margin-inline-start: auto;
+    font-family: Consolas, "SF Mono", monospace;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-mute);
+}
+
+/* listening: calm green, slow breath â€” the mic is open but nobody is talking */
+.avatar-status-strip.state-listening .status-indicator-dot {
+    background: var(--success, #16a34a);
+    animation: statusPulse 2s ease-in-out infinite;
+}
+.avatar-status-strip.state-listening .status-label { color: var(--success, #16a34a); }
+
+/* capturing: the patient is actively speaking â€” brighter, faster */
+.avatar-status-strip.state-capturing .status-indicator-dot {
+    background: var(--danger, #ef4444);
+    animation: micDotBlink 0.9s ease-in-out infinite;
+}
+.avatar-status-strip.state-capturing .status-label { color: var(--danger, #ef4444); }
+
+@keyframes micDotBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.35; transform: scale(0.8); }
+}
+
+/* === Speaking aloud: strip turns primary-blue and the dot pulses === */
+.avatar-status-strip.is-speaking-aloud .status-indicator-dot {
+    background: var(--primary);
+    animation: statusPulse 1.1s infinite;
+}
+.avatar-status-strip.is-speaking-aloud .status-label { color: var(--primary); }
+
+/* A speaker glyph so "speaking" is not conveyed by colour alone. */
+.avatar-status-strip.is-speaking-aloud .status-label::after {
+    content: "\f028";                 /* fa-volume-high */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-inline-start: 8px;
+    font-size: 11px;
+}
+
+/* === Subtitles, overlaid on the avatar stage === */
+.subtitle-bar {
+    position: absolute;
+    inset-inline: 12px;
+    bottom: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--r-md, 10px);
+    background: rgba(15, 23, 42, 0.82);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    box-shadow: var(--shadow-md);
+}
+
+.subtitle-speaker {
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 13px;
+    opacity: 0.85;
+    animation: subtitlePulse 1.1s ease-in-out infinite;
+}
+
+@keyframes subtitlePulse {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 0.35; }
+}
+
+.subtitle-text {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* === TTS failure notice === */
+.tts-warning {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.tts-warning i { margin-top: 2px; color: var(--warning, #f59e0b); flex-shrink: 0; }
+.tts-warning p { margin: 0 0 3px; }
+.tts-warning p:last-child { margin-bottom: 0; }
+.tts-warning [lang="ar"] { direction: rtl; text-align: right; }
+.tts-warning [lang="en"] { direction: ltr; text-align: left; }
+
+/* === Live input level, under the avatar stage === */
+.mic-level-track {
+    height: 4px;
+    background: var(--bg-soft);
+    overflow: hidden;
+}
+
+.mic-level-fill {
+    height: 100%;
+    width: 0;
+    background: var(--border);
+    transition: width 80ms linear, background var(--t-base);
+}
+
+.mic-level-fill.is-capturing {
+    background: linear-gradient(90deg, var(--success, #16a34a), var(--warning, #f59e0b));
+}
+
+/* === Conversation panel === */
+.consult-panel {
+    width: 340px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-xs);
+}
+
+.consult-transcript {
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.consult-bubble {
+    padding: 10px 12px;
+    border-radius: var(--r-md, 10px);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.consult-bubble-who {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.65;
+    margin-bottom: 3px;
+}
+
+.consult-bubble p { margin: 0; word-break: break-word; }
+
+.consult-bubble-doctor {
+    background: var(--primary-50, #eff6ff);
+    color: var(--text);
+    border: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+[data-theme="dark"] .consult-bubble-doctor {
+    background: rgba(37, 99, 235, 0.16);
+}
+
+.consult-bubble-patient {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+/* === Status / error === */
+.mic-status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-mute);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mic-error {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--r-md, 10px);
+    background: rgba(239, 68, 68, 0.07);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: var(--danger, #ef4444);
+}
+
+[data-theme="dark"] .mic-error { background: rgba(239, 68, 68, 0.14); }
+
+.mic-error > i { margin-top: 2px; flex-shrink: 0; }
+.mic-error-body { min-width: 0; flex: 1; }
+.mic-error-msg { margin: 0; font-size: 13.5px; font-weight: 600; }
+
+.mic-error-detail {
+    margin: 4px 0 0;
+    font-size: 11.5px;
+    opacity: 0.85;
+    font-family: Consolas, "SF Mono", monospace;
+    word-break: break-word;
+}
+
+/* A permission block can only be undone in browser chrome, so the recovery
+   steps are shown in BOTH languages regardless of the active UI language â€”
+   the person who has to read them may not be the one who set the toggle. */
+.mic-error-help {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(239, 68, 68, 0.25);
+    font-size: 12px;
+    color: var(--text);
+}
+
+.mic-error-help p { margin: 0 0 4px; }
+.mic-error-help p:last-child { margin-bottom: 0; }
+.mic-error-help [lang="ar"] { direction: rtl; text-align: right; }
+.mic-error-help [lang="en"] { direction: ltr; text-align: left; }
+
+.mic-error .btn { margin-top: 10px; }
+
+/* === Consultation summary === */
+.consult-summary {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: var(--r-md, 10px);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+}
+
+.consult-summary-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-mute);
+}
+
+.urgency-badge {
+    margin-inline-start: auto;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: #fff;
+    background: var(--text-mute);
+}
+
+.urgency-badge.urgency-emergency { background: #b3261e; }
+.urgency-badge.urgency-urgent    { background: #b7791f; }
+.urgency-badge.urgency-routine   { background: #2f6d43; }
+
+.consult-summary-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    margin: 0;
+    font-size: 13px;
+}
+
+.consult-summary-grid dt {
+    color: var(--text-mute);
+    font-weight: 600;
+}
+
+.consult-summary-grid dd {
+    margin: 0;
+    color: var(--text);
+    font-weight: 600;
+    word-break: break-word;
+}
+
+.consult-report-actions { margin-top: 14px; }
+.consult-report-actions .btn { width: 100%; }
+
+/* When the renderer is unavailable the button is disabled in JS; make that
+   visible, otherwise it reads as clickable and invites pointless retries. */
+.consult-report-actions .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.4);
+}
+
+.report-unavailable {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text);
+}
+
+.report-unavailable i { margin-top: 2px; color: var(--warning, #f59e0b); flex-shrink: 0; }
+.report-unavailable p { margin: 0 0 3px; }
+.report-unavailable p:last-child { margin-bottom: 0; }
+.report-unavailable [lang="ar"] { direction: rtl; text-align: right; }
+.report-unavailable [lang="en"] { direction: ltr; text-align: left; }
+
+@media (prefers-reduced-motion: reduce) {
+    .avatar-status-strip.state-listening .status-indicator-dot,
+    .avatar-status-strip.state-capturing .status-indicator-dot,
+    .avatar-status-strip.is-speaking-aloud .status-indicator-dot,
+    .subtitle-speaker {
+        animation: none !important;
+    }
+    /* Without motion the state must still be unmistakable: colour, label and
+       the running timer all still change. */
+    .avatar-status-strip.state-capturing .status-indicator-dot {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35);
+    }
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+    .avatar-shell {
+        flex-direction: column;
+    }
+
+    .consult-panel {
+        width: 100%;
+    }
+
+    .voice-stage {
+        height: 380px;
+        --orb-size: 148px;
+    }
+
+    .consult-transcript {
+        max-height: 260px;
+    }
+}
+
+@media (max-width: 480px) {
+    .voice-stage {
+        height: 320px;
+        --orb-size: 124px;
+        gap: 20px;
+    }
+
+    .consult-start-card {
+        padding: 24px 18px;
+    }
+
+    .btn-lg {
+        width: 100%;
+    }
+}
