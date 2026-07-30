@@ -43,6 +43,9 @@ from chatbot.medical.drug_interaction_matcher import DrugInteractionMatcher
 from chatbot.medical.document_extractor import DocumentExtractor
 from chatbot.medical.report_summarizer_llm import ReportSummarizerLLM
 
+# === Virtual Doctor (new, additive, isolated module) ===
+from virtual_doctor.router import router as virtual_doctor_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -95,6 +98,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(virtual_doctor_router)
 
 
 # =========================================================

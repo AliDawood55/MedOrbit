@@ -8,3 +8,7 @@ requests>=2.31.0
 pdfplumber>=0.11.0
 pytesseract>=0.3.13
 Pillow>=10.0.0
+faster-whisper==1.2.0
+ctranslate2>=4.6.0
+av==18.0.0
+huggingface-hub>=0.34.0
