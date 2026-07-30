@@ -360,7 +360,7 @@ const API = (() => {
     };
 
     // ================= ANALYTICS (JWT required, admin only) =================
-    // GET /api/dashboard/stats does not exist yet (see BACKEND_NEEDED.md).
+    // GET /api/dashboard/stats is live; analytics.js adapts the current aggregate payload.
     // Expected response shape once it lands — analytics.js reads exactly
     // this and shows an "awaiting backend data" state per-chart for
     // whichever section is missing/empty:
