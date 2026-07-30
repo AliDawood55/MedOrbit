@@ -198,6 +198,7 @@ const I18n = (() => {
             // Common
             'common.loading': 'جارٍ التحميل...',
             'common.retry': 'إعادة المحاولة',
+            'common.error': 'حدث خطأ',
             'common.page': 'صفحة',
             'common.close': 'إغلاق',
 
@@ -875,6 +876,7 @@ const I18n = (() => {
             // Common
             'common.loading': 'Loading...',
             'common.retry': 'Retry',
+            'common.error': 'Something went wrong',
             'common.page': 'Page',
             'common.close': 'Close',
 

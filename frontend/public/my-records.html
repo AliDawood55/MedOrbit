@@ -41,7 +41,7 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:1000px;">
+    <main class="page-container" style="max-width:1100px;">
 
         <div class="page-header">
             <h1 data-i18n="records.title">سجلاتي الطبية</h1>
@@ -49,27 +49,44 @@
         </div>
 
         <!-- Filters: visually built, disabled — nothing to filter yet -->
-        <div class="records-filter-bar">
+        <div class="records-filter-bar" id="recordsFilters">
             <div class="search-field">
                 <i class="fas fa-search"></i>
-                <input type="text" disabled data-i18n-placeholder="records.searchPlaceholder" placeholder="ابحث في السجلات...">
+                <input type="text" id="recordSearchInput" disabled data-i18n-placeholder="records.searchPlaceholder" placeholder="ابحث في السجلات...">
             </div>
-            <select disabled>
-                <option data-i18n="records.filterAllTypes">كل الأنواع</option>
-                <option data-i18n="records.filterConsultation">استشارة</option>
-                <option data-i18n="records.filterLabResult">نتيجة فحص</option>
-                <option data-i18n="records.filterDiagnosis">تشخيص</option>
+            <select id="recordTypeFilter" disabled>
+                <option value="all" data-i18n="records.filterAllTypes">كل الأنواع</option>
+                <option value="consultation" data-i18n="records.filterConsultation">استشارة</option>
+                <option value="lab_result" data-i18n="records.filterLabResult">نتيجة فحص</option>
+                <option value="diagnosis" data-i18n="records.filterDiagnosis">تشخيص</option>
             </select>
-            <select disabled>
-                <option data-i18n="prescriptions.filterAnyDate">أي تاريخ</option>
-                <option data-i18n="prescriptions.filterLast30">آخر 30 يوماً</option>
-                <option data-i18n="prescriptions.filterLastYear">آخر سنة</option>
+            <select id="recordDateFilter" disabled>
+                <option value="any" data-i18n="prescriptions.filterAnyDate">أي تاريخ</option>
+                <option value="30" data-i18n="prescriptions.filterLast30">آخر 30 يوماً</option>
+                <option value="365" data-i18n="prescriptions.filterLastYear">آخر سنة</option>
             </select>
-            <span class="records-locked-tag"><i class="fas fa-lock"></i> <span data-i18n="records.comingSoonTag">قريباً</span></span>
+            <span class="records-locked-tag" id="recordsLockedTag"><i class="fas fa-lock"></i> <span data-i18n="records.comingSoonTag">قريباً</span></span>
+        </div>
+
+        <div class="records-loading hidden" id="recordsLoading">
+            <div class="spinner spinner-lg"></div>
+            <p data-i18n="common.loading">جاري التحميل...</p>
+        </div>
+
+        <div class="records-error hidden" id="recordsError">
+            <div class="empty-state-icon"><i class="fas fa-triangle-exclamation"></i></div>
+            <h2 data-i18n="common.error">Error</h2>
+            <p id="recordsErrorText"></p>
+            <button type="button" class="btn btn-secondary btn-sm" id="recordsRetryBtn" data-i18n="common.retry">Retry</button>
+        </div>
+
+        <div class="records-data-grid hidden" id="recordsData">
+            <div class="records-real-list records-real-timeline" id="recordsList"></div>
+            <section class="records-real-detail" id="recordDetail"></section>
         </div>
 
         <!-- Structural preview: skeleton shapes only, never fabricated data -->
-        <div class="records-preview-section">
+        <div class="records-preview-section" id="recordsPreview">
             <div class="records-preview-caption">
                 <i class="fas fa-eye"></i>
                 <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
@@ -108,7 +125,7 @@
         </div>
 
         <!-- Honest empty state — the real, user-facing message -->
-        <div class="records-empty-state">
+        <div class="records-empty-state" id="recordsEmpty">
             <div class="empty-state-icon"><i class="fas fa-file-waveform"></i></div>
             <h2 data-i18n="records.emptyTitle">هذه الميزة غير متاحة بعد</h2>
             <p data-i18n="records.emptyHint">نعمل على ربط سجلاتك الطبية من زياراتك بحسابك. بمجرد توفر هذه الميزة، سيظهر سجلك الزمني الكامل هنا تلقائياً.</p>
