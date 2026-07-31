@@ -19,12 +19,13 @@ const Layout = (() => {
         { href: 'find-clinics.html', key: 'nav.clinics', match: ['find-clinics.html', 'clinic.html'] },
         {
             key: 'nav.aiTools',
-            match: ['symptom-checker.html', 'drug-checker.html', 'report-summary.html', 'virtual-doctor.html'],
+            match: ['symptom-checker.html', 'drug-checker.html', 'report-summary.html', 'virtual-doctor.html', 'avatar-preview.html'],
             children: [
                 { href: 'symptom-checker.html', key: 'nav.symptomChecker' },
                 { href: 'drug-checker.html', key: 'nav.drugChecker' },
                 { href: 'report-summary.html', key: 'nav.reportSummary' },
-                { href: 'virtual-doctor.html', key: 'nav.virtualDoctor' }
+                { href: 'virtual-doctor.html', key: 'nav.virtualDoctor' },
+                { href: 'avatar-preview.html', key: 'nav.voiceConsult' }
             ]
         }
     ];

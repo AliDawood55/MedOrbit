@@ -17,10 +17,27 @@ FROM python:3.12-slim
 #     before OCR (used by chatbot/medical/document_extractor.py's OCR
 #     fallback path; note pdf2image itself is not currently pinned in
 #     requirements.txt — see DOCKER.md).
+#   libpango-1.0-0 + libpangoft2-1.0-0 — WeasyPrint's text-shaping backend
+#     (virtual_doctor/pdf_worker.py, consultation PDF reports). WeasyPrint
+#     (v53+) no longer needs cairo/gdk-pixbuf — it renders PDFs itself via
+#     pydyf — but still links Pango/HarfBuzz/fontconfig/freetype through cffi
+#     for correct (including RTL/Arabic) text layout. apt pulls in glib,
+#     harfbuzz, fontconfig and freetype transitively, so nothing else is
+#     listed explicitly. Unlike the native Windows dev setup (see
+#     pdf_worker.py's pin_native_stack()), a single apt install here can't
+#     produce the mixed-runtime split that caused heap corruption there —
+#     pin_native_stack() is a no-op on Linux for exactly that reason.
+#   fonts-noto-core — includes Noto Naskh Arabic; fallback so Pango can still
+#     shape Arabic text if report_generator.py's embedded Cairo font is ever
+#     unavailable. Debian has no standalone "fonts-noto-naskh-arabic" package;
+#     the Arabic weights ship inside this core metapackage.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-ara \
     poppler-utils \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
