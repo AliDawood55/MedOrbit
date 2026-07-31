@@ -72,12 +72,12 @@ const MyPrescriptions = (() => {
         return (Array.isArray(source) ? source : []).map(normalizePrescription).filter((p) => p.id);
     }
 
-    // BLOCKED BACKEND CALL: do not call /api/prescriptions/:id or any generic
-    // prescription route until the backend resolves patient ownership. When
-    // Omar adds the safe endpoint, replace this body with one line:
-    // return normalizeList(await API.get('/patients/me/prescriptions'));
+    // GET /patients/me/prescriptions — ownership-scoped (backend/src/routes/
+    // patient.routes.js), unlike the generic /api/prescriptions/:id, which
+    // has no ownership filtering at all and must never be called from here.
     async function fetchPrescriptions() {
-        return { blocked: true, items: [] };
+        const res = await API.care.myPrescriptions();
+        return normalizeList(res);
     }
 
     function setFiltersEnabled(enabled) {
