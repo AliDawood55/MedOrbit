@@ -57,17 +57,51 @@ class MedicalRepository {
         return result.rows[0] || null;
     }
 
+    // Doctor name joined the same way findReviewsByDoctorId already does it
+    // in this file (doctors -> user_profiles via user_id). clinical_notes/
+    // doctor_notes are deliberately excluded — doctor-internal, per the
+    // "Data isolation" warning in BACKEND_NEEDED.md item 14 (that warning is
+    // scoped to the my-doctor.html "shared notes" feature; diagnosis/
+    // chief_complaint/treatment_plan are ordinary patient-facing fields, and
+    // is_draft=false is already the line this file draws for that).
     async findRecordsByPatientId(patientId, { limit = 10, offset = 0 }) {
         const result = await db.query(
-            `SELECT id, record_number, record_type, chief_complaint, diagnosis,
-                    treatment_plan, vitals, created_at
-             FROM medorbit.medical_records
-             WHERE patient_id = $1 AND is_draft = false
-             ORDER BY created_at DESC
+            `SELECT
+                 mr.id, mr.record_number, mr.record_type, mr.chief_complaint,
+                 mr.diagnosis, mr.treatment_plan, mr.vitals, mr.created_at,
+                 up.first_name_ar AS doctor_first_name_ar, up.first_name_en AS doctor_first_name_en,
+                 up.last_name_ar AS doctor_last_name_ar, up.last_name_en AS doctor_last_name_en
+             FROM medorbit.medical_records mr
+             LEFT JOIN medorbit.doctors d ON d.id = mr.doctor_id
+             LEFT JOIN medorbit.user_profiles up ON up.user_id = d.user_id
+             WHERE mr.patient_id = $1 AND mr.is_draft = false
+             ORDER BY mr.created_at DESC
              LIMIT $2 OFFSET $3`,
             [patientId, limit, offset]
         );
         return result.rows;
+    }
+
+    // Single-record fetch for a patient's own "my records" detail view.
+    // Same column subset and is_draft filter as findRecordsByPatientId, PLUS
+    // the patient_id match in the WHERE clause itself is the ownership
+    // check: a record that exists but belongs to someone else returns no
+    // row here, same as "not found", rather than ever being fetched and then
+    // checked.
+    async findRecordByIdForPatient(id, patientId) {
+        const result = await db.query(
+            `SELECT
+                 mr.id, mr.record_number, mr.record_type, mr.chief_complaint,
+                 mr.diagnosis, mr.treatment_plan, mr.vitals, mr.created_at,
+                 up.first_name_ar AS doctor_first_name_ar, up.first_name_en AS doctor_first_name_en,
+                 up.last_name_ar AS doctor_last_name_ar, up.last_name_en AS doctor_last_name_en
+             FROM medorbit.medical_records mr
+             LEFT JOIN medorbit.doctors d ON d.id = mr.doctor_id
+             LEFT JOIN medorbit.user_profiles up ON up.user_id = d.user_id
+             WHERE mr.id = $1 AND mr.patient_id = $2 AND mr.is_draft = false`,
+            [id, patientId]
+        );
+        return result.rows[0] || null;
     }
 
     // ==================== DOCTOR REVIEWS ====================
