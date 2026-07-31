@@ -1,9 +1,9 @@
 /**
  * MedOrbit v2 - Home Feedback Dashboard
  * Wires the bottom section of home.html to GET /api/feedback/stats:
- * two Chart.js charts (rating distribution, category averages), a KPI
- * strip, and a continuous marquee of users who left feedback. Polls every
- * 5s so newly submitted feedback (from feedback.html) shows up live
+ * two Chart.js doughnut charts (rating distribution, category averages), a
+ * KPI strip, and a continuous marquee of users who left feedback. Polls
+ * every 5s so newly submitted feedback (from feedback.html) shows up live
  * without a page reload.
  */
 const FeedbackDashboard = (() => {
@@ -50,18 +50,44 @@ const FeedbackDashboard = (() => {
             text: v('--text'),
             textMute: v('--text-mute'),
             border: v('--border'),
+            bgCard: v('--bg-card'),
             primary: v('--primary'),
             secondary: v('--secondary') || v('--info'),
             accent: v('--accent'),
             info: v('--info'),
-            success: v('--success')
+            success: v('--success'),
+            // Existing light->dark tints of --primary (main.css), used as a
+            // sequential ramp for the 1-5 star doughnut below — ratings are
+            // an ordered scale, so one hue getting darker per star reads
+            // correctly instead of five unrelated categorical colors.
+            primaryRamp: [v('--primary-50'), v('--primary-100'), v('--primary-light'), v('--primary'), v('--primary-dark')]
         };
     }
 
-    function baseScaleOptions(colors) {
+    // Shared legend: value + share alongside the swatch, so identity isn't
+    // color-alone on a chart with no axis to read exact sizes off of.
+    function circularLegend(colors, formatItem) {
         return {
-            grid: { color: colors.border },
-            ticks: { color: colors.textMute, font: { size: 11 } }
+            position: 'bottom',
+            labels: {
+                color: colors.text,
+                usePointStyle: true,
+                pointStyle: 'circle',
+                padding: 14,
+                font: { size: 12 },
+                generateLabels(chart) {
+                    const { labels, datasets } = chart.data;
+                    const data = datasets[0]?.data || [];
+                    const bg = datasets[0]?.backgroundColor || [];
+                    return labels.map((label, i) => ({
+                        text: formatItem(label, data[i], data),
+                        fillStyle: bg[i],
+                        strokeStyle: bg[i],
+                        fontColor: colors.text,
+                        index: i
+                    }));
+                }
+            }
         };
     }
 
@@ -111,13 +137,14 @@ const FeedbackDashboard = (() => {
         const rows = Array.isArray(ratingDistribution) ? ratingDistribution : [];
         const labels = rows.map((row) => row.rating + ' ' + t('feedbackDash.stars'));
         const counts = rows.map((row) => toNumber(row.count));
+        const bg = colors.primaryRamp;
 
         if (charts.ratings) {
             charts.ratings.data.labels = labels;
             charts.ratings.data.datasets[0].data = counts;
-            charts.ratings.data.datasets[0].backgroundColor = colors.primary;
-            charts.ratings.options.scales.x.ticks.color = colors.textMute;
-            charts.ratings.options.scales.y.ticks.color = colors.textMute;
+            charts.ratings.data.datasets[0].backgroundColor = bg;
+            charts.ratings.data.datasets[0].borderColor = colors.bgCard;
+            charts.ratings.options.plugins.legend.labels.color = colors.text;
             charts.ratings.update();
             return;
         }
@@ -126,19 +153,38 @@ const FeedbackDashboard = (() => {
         if (!canvas || typeof Chart === 'undefined') return;
 
         charts.ratings = new Chart(canvas, {
-            type: 'bar',
+            type: 'doughnut',
             data: {
                 labels,
-                datasets: [{ label: t('feedbackDash.ratingDistribution'), data: counts, backgroundColor: colors.primary, borderRadius: 6 }]
+                datasets: [{
+                    label: t('feedbackDash.ratingDistribution'),
+                    data: counts,
+                    backgroundColor: bg,
+                    borderColor: colors.bgCard,
+                    borderWidth: 2,
+                    hoverOffset: 6
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: '62%',
                 animation: reducedMotion() ? false : { duration: 250 },
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ...baseScaleOptions(colors), reverse: isAr() },
-                    y: { ...baseScaleOptions(colors), beginAtZero: true, ticks: { ...baseScaleOptions(colors).ticks, precision: 0 } }
+                plugins: {
+                    legend: circularLegend(colors, (label, value, all) => {
+                        const total = all.reduce((sum, n) => sum + n, 0);
+                        const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return label + ' — ' + value + ' (' + pct + '%)';
+                    }),
+                    tooltip: {
+                        callbacks: {
+                            label(ctx) {
+                                const total = ctx.dataset.data.reduce((sum, n) => sum + n, 0);
+                                const pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
+                                return ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -154,13 +200,14 @@ const FeedbackDashboard = (() => {
             t('feedbackDash.categoryDesign')
         ];
         const values = [cat.chatbot, cat.clinics, cat.booking, cat.design].map((v) => (v == null ? 0 : toNumber(v)));
+        const bg = [colors.primary, colors.info, colors.accent, colors.success];
 
         if (charts.categories) {
             charts.categories.data.labels = labels;
             charts.categories.data.datasets[0].data = values;
-            charts.categories.data.datasets[0].backgroundColor = [colors.primary, colors.info, colors.accent, colors.success];
-            charts.categories.options.scales.x.ticks.color = colors.textMute;
-            charts.categories.options.scales.y.ticks.color = colors.textMute;
+            charts.categories.data.datasets[0].backgroundColor = bg;
+            charts.categories.data.datasets[0].borderColor = colors.bgCard;
+            charts.categories.options.plugins.legend.labels.color = colors.text;
             charts.categories.update();
             return;
         }
@@ -169,25 +216,34 @@ const FeedbackDashboard = (() => {
         if (!canvas || typeof Chart === 'undefined') return;
 
         charts.categories = new Chart(canvas, {
-            type: 'bar',
+            type: 'doughnut',
             data: {
                 labels,
                 datasets: [{
                     label: t('feedbackDash.categoryAverages'),
                     data: values,
-                    backgroundColor: [colors.primary, colors.info, colors.accent, colors.success],
-                    borderRadius: 6
+                    backgroundColor: bg,
+                    borderColor: colors.bgCard,
+                    borderWidth: 2,
+                    hoverOffset: 6
                 }]
             },
             options: {
-                indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
+                cutout: '62%',
                 animation: reducedMotion() ? false : { duration: 250 },
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ...baseScaleOptions(colors), beginAtZero: true, max: 5, reverse: isAr() },
-                    y: { ...baseScaleOptions(colors) }
+                plugins: {
+                    // Averages are each independently out of 5, not parts of
+                    // one whole — legend/tooltip show the "x.x / 5" value
+                    // itself rather than a share-of-circle percentage, so
+                    // the doughnut's angles aren't read as summing to 100%.
+                    legend: circularLegend(colors, (label, value) => label + ' — ' + value.toFixed(1) + '/5'),
+                    tooltip: {
+                        callbacks: {
+                            label(ctx) { return ctx.label + ': ' + ctx.parsed.toFixed(1) + '/5'; }
+                        }
+                    }
                 }
             }
         });
