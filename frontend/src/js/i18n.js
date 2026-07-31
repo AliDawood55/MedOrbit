@@ -480,6 +480,23 @@ const I18n = (() => {
             'analytics.triageUrgent': 'عاجل',
             'analytics.triageRoutine': 'عادي',
 
+            // Feedback dashboard (home.html, bottom section)
+            'feedbackDash.title': 'آراء مستخدمينا',
+            'feedbackDash.subtitle': 'تقييمات حقيقية ومحدّثة لحظياً من مجتمع MedOrbit',
+            'feedbackDash.totalFeedback': 'إجمالي التقييمات',
+            'feedbackDash.averageRating': 'متوسط التقييم',
+            'feedbackDash.wouldRecommend': 'ينصحون بالمنصة',
+            'feedbackDash.ratingDistribution': 'توزيع التقييمات',
+            'feedbackDash.categoryAverages': 'متوسط التقييم حسب الفئة',
+            'feedbackDash.categoryChatbot': 'المساعد الذكي',
+            'feedbackDash.categoryClinics': 'العيادات',
+            'feedbackDash.categoryBooking': 'الحجز',
+            'feedbackDash.categoryDesign': 'التصميم',
+            'feedbackDash.stars': 'نجوم',
+            'feedbackDash.empty': 'لا توجد تقييمات بعد — كن أول من يشاركنا رأيه',
+            'feedbackDash.usersTitle': 'شكراً لكل من شاركنا رأيه',
+            'feedbackDash.live': 'مباشر',
+
             // Dashboard hub — search + quick-action groups
             'dashboard.searchPlaceholder': 'ابحث في لوحة التحكم...',
             'dashboard.searchNoResults': 'لا توجد نتائج مطابقة',
@@ -1190,6 +1207,23 @@ const I18n = (() => {
             'analytics.triageEmergency': 'Emergency',
             'analytics.triageUrgent': 'Urgent',
             'analytics.triageRoutine': 'Routine',
+
+            // Feedback dashboard (home.html, bottom section)
+            'feedbackDash.title': 'What Our Users Say',
+            'feedbackDash.subtitle': 'Real, live-updating feedback from the MedOrbit community',
+            'feedbackDash.totalFeedback': 'Total feedback',
+            'feedbackDash.averageRating': 'Average rating',
+            'feedbackDash.wouldRecommend': 'Would recommend',
+            'feedbackDash.ratingDistribution': 'Rating Distribution',
+            'feedbackDash.categoryAverages': 'Average Rating by Category',
+            'feedbackDash.categoryChatbot': 'AI Assistant',
+            'feedbackDash.categoryClinics': 'Clinics',
+            'feedbackDash.categoryBooking': 'Booking',
+            'feedbackDash.categoryDesign': 'Design',
+            'feedbackDash.stars': 'stars',
+            'feedbackDash.empty': 'No feedback yet — be the first to share yours',
+            'feedbackDash.usersTitle': 'Thanks to everyone who shared their feedback',
+            'feedbackDash.live': 'Live',
 
             // Dashboard hub — search + quick-action groups
             'dashboard.searchPlaceholder': 'Search the dashboard...',

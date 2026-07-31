@@ -1,0 +1,254 @@
+/* ===========================================
+   MedOrbit v2 - Home Feedback Dashboard
+   (bottom section of home.html)
+   =========================================== */
+
+.feedback-dash {
+    max-width: 1100px;
+    margin: 0 auto 60px;
+    padding: 0 20px;
+}
+
+.feedback-dash-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.feedback-dash-heading h2 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.feedback-dash-heading p {
+    font-size: 14.5px;
+    color: var(--text-mute);
+}
+
+.feedback-dash-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success);
+    border-radius: var(--r-full);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.feedback-dash-live .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: feedback-live-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes feedback-live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.75); }
+}
+
+/* === KPI strip === */
+.feedback-dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.feedback-dash-kpi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+}
+
+.feedback-dash-kpi-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-lg);
+    font-size: 15px;
+    background: var(--primary-50, #eff6ff);
+    color: var(--primary);
+}
+
+[data-theme="dark"] .feedback-dash-kpi-icon {
+    background: rgba(37, 99, 235, 0.2);
+}
+
+.feedback-dash-kpi-body {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.feedback-dash-kpi-value {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.feedback-dash-kpi-label {
+    font-size: 12px;
+    color: var(--text-mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* === Charts === */
+.feedback-dash-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 18px;
+    margin-bottom: 32px;
+}
+
+.feedback-chart-card {
+    min-width: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px;
+}
+
+.feedback-chart-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.feedback-chart-card-header i {
+    color: var(--primary);
+    font-size: 13px;
+}
+
+.feedback-chart-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 240px;
+}
+
+/* === Users marquee === */
+.feedback-dash-users h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.feedback-marquee {
+    position: relative;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+}
+
+.feedback-marquee-track {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: max-content;
+    animation: feedback-marquee-scroll 32s linear infinite;
+}
+
+.feedback-marquee:hover .feedback-marquee-track {
+    animation-play-state: paused;
+}
+
+@keyframes feedback-marquee-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+.feedback-marquee-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px 8px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-full);
+    box-shadow: var(--shadow-xs);
+    flex-shrink: 0;
+}
+
+.feedback-marquee-avatar {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    background: #FFFFFF;
+}
+
+.feedback-marquee-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+}
+
+.feedback-marquee-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+.feedback-dash-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-mute);
+    font-size: 13.5px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: var(--r-lg);
+}
+
+.feedback-dash-empty.hidden,
+.feedback-marquee.hidden {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .feedback-marquee-track {
+        animation: none;
+    }
+    .feedback-marquee {
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .feedback-dash-grid {
+        grid-template-columns: 1fr;
+    }
+    .feedback-chart-canvas-wrap {
+        height: 220px;
+    }
+}
