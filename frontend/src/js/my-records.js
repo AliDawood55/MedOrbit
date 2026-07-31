@@ -1,14 +1,15 @@
 /**
  * MedOrbit v2 - My Medical Records
  *
- * Fetches via GET /patients/me/medical-records (backend/src/routes/
- * patient.routes.js) — ownership-scoped, unlike the generic
- * /api/medical-records/:id, which has no ownership filtering at all and
- * must never be called from here.
+ * Fetches via GET /patients/me/records (backend/src/routes/patient.routes.js)
+ * — a single ownership-scoped timeline that interleaves the patient's own
+ * appointments, medical records (diagnoses) and prescriptions. Never call
+ * the generic /api/medical-records or /api/prescriptions/:id from here —
+ * those have no ownership filtering at all.
  */
 const MyRecords = (() => {
 
-    let records = [];
+    let entries = [];
     let selectedId = null;
 
     function isAr() {
@@ -39,11 +40,23 @@ const MyRecords = (() => {
         return d.toLocaleDateString(isAr() ? 'ar' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
-    function dateValue(item) {
-        return item.record_date || item.visit_date || item.created_at || item.updated_at || '';
+    function entryDate(item) {
+        return item.entry_date || item.scheduled_date || item.prescription_date || item.created_at || '';
     }
 
-    const TYPE_LABELS = {
+    const ENTRY_LABELS = {
+        appointment: ['موعد', 'Appointment'],
+        record: ['سجل طبي', 'Medical record'],
+        prescription: ['وصفة طبية', 'Prescription']
+    };
+
+    const ENTRY_ICONS = {
+        appointment: 'fa-calendar-check',
+        record: 'fa-stethoscope',
+        prescription: 'fa-prescription-bottle-medical'
+    };
+
+    const RECORD_TYPE_LABELS = {
         consultation: ['استشارة', 'Consultation'],
         lab_result: ['نتيجة فحص', 'Lab result'],
         diagnosis: ['تشخيص', 'Diagnosis'],
@@ -51,7 +64,7 @@ const MyRecords = (() => {
         procedure: ['إجراء', 'Procedure']
     };
 
-    const TYPE_ICONS = {
+    const RECORD_TYPE_ICONS = {
         consultation: 'fa-user-doctor',
         lab_result: 'fa-flask',
         diagnosis: 'fa-stethoscope',
@@ -59,33 +72,36 @@ const MyRecords = (() => {
         procedure: 'fa-briefcase-medical'
     };
 
-    function recordType(item) {
-        return String(item.record_type || item.type || '').toLowerCase();
+    function entryLabel(item) {
+        const pair = ENTRY_LABELS[item.entry_type];
+        return pair ? label(pair[0], pair[1]) : label('سجل', 'Entry');
     }
 
-    function typeLabel(item) {
-        const pair = TYPE_LABELS[recordType(item)];
-        return pair ? label(pair[0], pair[1]) : (recordType(item) || label('سجل', 'Record'));
+    function recordSubtype(item) {
+        return String(item.record_type || '').toLowerCase();
     }
 
-    function typeIcon(item) {
-        return TYPE_ICONS[recordType(item)] || 'fa-file-waveform';
+    function entryIcon(item) {
+        if (item.entry_type === 'record') {
+            return RECORD_TYPE_ICONS[recordSubtype(item)] || ENTRY_ICONS.record;
+        }
+        return ENTRY_ICONS[item.entry_type] || 'fa-file-waveform';
     }
 
-    function recordTitle(item) {
-        return (
-            item.title ||
-            item.diagnosis ||
-            item.chief_complaint ||
-            typeLabel(item)
-        );
+    function entryBadge(item) {
+        if (item.entry_type === 'record') {
+            const pair = RECORD_TYPE_LABELS[recordSubtype(item)];
+            return pair ? label(pair[0], pair[1]) : entryLabel(item);
+        }
+        if (item.status) return String(item.status);
+        return entryLabel(item);
     }
 
     function doctorName(item) {
         // Backend joins bilingual name columns (doctor_first_name_ar/en,
-        // same suffix convention as everything else in this file), so pick
-        // by current language the same way typeLabel()/medicationName()
-        // already do — not a fixed field name.
+        // same suffix convention as everything else in this file) for
+        // appointments/records. Prescriptions don't carry a doctor join
+        // in this timeline, so this falls back to '' for those.
         const first = isAr() ? item.doctor_first_name_ar : item.doctor_first_name_en;
         const last = isAr() ? item.doctor_last_name_ar : item.doctor_last_name_en;
         return (
@@ -96,28 +112,45 @@ const MyRecords = (() => {
         );
     }
 
-    function normalizeRecord(raw) {
-        const record = raw?.record || raw || {};
-        return {
-            ...record,
-            id: record.id || raw?.id || record.record_number
-        };
+    function medicationName(item) {
+        const meds = Array.isArray(item.items) ? item.items : [];
+        const first = meds[0] || {};
+        return (
+            (isAr() ? first.medication_name_ar : first.medication_name_en) ||
+            first.medication_name_en ||
+            first.medication_name_ar ||
+            ''
+        );
     }
 
-    function normalizeList(payload) {
+    function entryTitle(item) {
+        if (item.entry_type === 'appointment') {
+            const specialty = isAr() ? item.specialty_ar : item.specialty_en;
+            return item.reason_for_visit || specialty || label('موعد طبي', 'Medical appointment');
+        }
+        if (item.entry_type === 'prescription') {
+            return medicationName(item) || item.diagnosis || item.prescription_number || label('وصفة طبية', 'Prescription');
+        }
+        return item.diagnosis || item.chief_complaint || entryBadge(item);
+    }
+
+    function normalizeEntry(raw) {
+        return { ...raw };
+    }
+
+    function normalizeTimeline(payload) {
         const source =
-            payload?.records ||
-            payload?.medical_records ||
-            payload?.data?.records ||
-            payload?.data ||
-            payload ||
+            payload?.data?.timeline ||
+            payload?.timeline ||
             [];
-        return (Array.isArray(source) ? source : []).map(normalizeRecord).filter((r) => r.id);
+        return (Array.isArray(source) ? source : [])
+            .map(normalizeEntry)
+            .filter((e) => e.id && e.entry_type);
     }
 
     async function fetchRecords() {
-        const res = await API.care.myMedicalRecords();
-        return normalizeList(res);
+        const res = await API.care.myRecordsTimeline();
+        return normalizeTimeline(res);
     }
 
     function setFiltersEnabled(enabled) {
@@ -128,16 +161,14 @@ const MyRecords = (() => {
         if (search) search.disabled = !enabled;
         if (type) type.disabled = !enabled;
         if (date) date.disabled = !enabled;
-        show(document.getElementById('recordsLockedTag'), !enabled);
     }
 
     function setState(state, message) {
         show(document.getElementById('recordsLoading'), state === 'loading');
         show(document.getElementById('recordsError'), state === 'error');
         show(document.getElementById('recordsData'), state === 'data');
-        show(document.getElementById('recordsPreview'), state === 'empty');
         show(document.getElementById('recordsEmpty'), state === 'empty');
-        setFiltersEnabled(state === 'data');
+        setFiltersEnabled(state === 'data' || state === 'empty');
 
         if (message) {
             const el = document.getElementById('recordsErrorText');
@@ -147,47 +178,49 @@ const MyRecords = (() => {
 
     function matchesDateFilter(item, filter) {
         if (filter === 'any') return true;
-        const d = new Date(dateValue(item));
+        const d = new Date(entryDate(item));
         if (Number.isNaN(d.getTime())) return false;
         const days = Number(filter);
         return Date.now() - d.getTime() <= days * 24 * 60 * 60 * 1000;
     }
 
-    function filteredRecords() {
+    function filteredEntries() {
         const query = (document.getElementById('recordSearchInput')?.value || '').trim().toLowerCase();
         const type = document.getElementById('recordTypeFilter')?.value || 'all';
         const dateFilter = document.getElementById('recordDateFilter')?.value || 'any';
 
-        return records.filter((item) => {
+        return entries.filter((item) => {
             const haystack = [
-                recordTitle(item),
+                entryTitle(item),
                 item.diagnosis,
                 item.chief_complaint,
+                item.reason_for_visit,
                 item.notes,
                 item.treatment_plan,
                 doctorName(item),
-                typeLabel(item)
+                entryLabel(item),
+                entryBadge(item)
             ].filter(Boolean).join(' ').toLowerCase();
 
             const matchesQuery = !query || haystack.includes(query);
-            const matchesType = type === 'all' || recordType(item) === type;
+            const matchesType = type === 'all' || item.entry_type === type;
             return matchesQuery && matchesType && matchesDateFilter(item, dateFilter);
         });
     }
 
     function renderCard(item) {
         const active = item.id === selectedId ? ' active' : '';
-        const type = recordType(item) || 'record';
+        const badge = entryBadge(item);
         return (
             '<button type="button" class="records-real-card' + active + '" data-id="' + escapeHtml(item.id) + '">' +
-                '<span class="records-real-icon"><i class="fas ' + typeIcon(item) + '"></i></span>' +
+                '<span class="records-real-icon"><i class="fas ' + entryIcon(item) + '"></i></span>' +
                 '<span class="records-real-card-main">' +
-                    '<span class="records-real-title">' + escapeHtml(recordTitle(item)) + '</span>' +
+                    '<span class="records-real-title">' + escapeHtml(entryTitle(item)) + '</span>' +
                     '<span class="records-real-meta">' +
-                        '<span class="records-real-badge ' + escapeHtml(type) + '">' + escapeHtml(typeLabel(item)) + '</span>' +
+                        '<span class="records-real-badge ' + escapeHtml(item.entry_type) + '">' + escapeHtml(badge) + '</span>' +
                         (doctorName(item) ? '<span>' + escapeHtml(doctorName(item)) + '</span>' : '') +
                     '</span>' +
-                    '<span class="records-real-subtitle">' + escapeHtml(fmtDate(dateValue(item))) + '</span>' +
+                    '<span class="records-real-subtitle">' + escapeHtml(fmtDate(entryDate(item))) + '</span>' +
                 '</span>' +
             '</button>'
         );
@@ -220,26 +253,69 @@ const MyRecords = (() => {
         );
     }
 
-    function renderDetail(item) {
-        const detail = document.getElementById('recordDetail');
-        if (!detail) return;
-        const type = recordType(item) || 'record';
+    function renderMedicationItems(items) {
+        if (!Array.isArray(items) || !items.length) {
+            return '<div class="records-detail-field"><div class="value">' + escapeHtml(label('لا توجد أدوية مفصلة', 'No medication items listed')) + '</div></div>';
+        }
+        return (
+            '<div class="records-medication-list">' +
+                items.map((med) => {
+                    const name =
+                        (isAr() ? med.medication_name_ar : med.medication_name_en) ||
+                        med.medication_name_en || med.medication_name_ar || label('دواء', 'Medication');
+                    const meta = [med.dosage, med.frequency, med.duration, med.quantity].filter(Boolean).join(' - ');
+                    return (
+                        '<div class="records-medication-item">' +
+                            '<strong>' + escapeHtml(name) + '</strong>' +
+                            '<span>' + escapeHtml(meta || label('الجرعة غير محددة', 'Dosage not specified')) + '</span>' +
+                            (med.instructions ? '<span>' + escapeHtml(med.instructions) + '</span>' : '') +
+                        '</div>'
+                    );
+                }).join('') +
+            '</div>'
+        );
+    }
 
-        detail.innerHTML =
+    function renderDetailHeader(item) {
+        return (
             '<div class="records-detail-header">' +
-                '<div class="records-real-icon"><i class="fas ' + typeIcon(item) + '"></i></div>' +
+                '<div class="records-real-icon"><i class="fas ' + entryIcon(item) + '"></i></div>' +
                 '<div>' +
-                    '<h2 class="records-detail-title">' + escapeHtml(recordTitle(item)) + '</h2>' +
+                    '<h2 class="records-detail-title">' + escapeHtml(entryTitle(item)) + '</h2>' +
                     '<div class="records-real-meta">' +
-                        '<span class="records-real-badge ' + escapeHtml(type) + '">' + escapeHtml(typeLabel(item)) + '</span>' +
-                        '<span>' + escapeHtml(fmtDate(dateValue(item))) + '</span>' +
+                        '<span class="records-real-badge ' + escapeHtml(item.entry_type) + '">' + escapeHtml(entryBadge(item)) + '</span>' +
+                        '<span>' + escapeHtml(fmtDate(entryDate(item))) + '</span>' +
                     '</div>' +
                 '</div>' +
-            '</div>' +
+            '</div>'
+        );
+    }
+
+    function renderAppointmentDetail(item) {
+        const specialty = isAr() ? item.specialty_ar : item.specialty_en;
+        return (
+            renderDetailHeader(item) +
             '<div class="records-detail-section">' +
-                '<h3><i class="fas fa-circle-info"></i>' + escapeHtml(label('تفاصيل السجل', 'Record Details')) + '</h3>' +
+                '<h3><i class="fas fa-circle-info"></i>' + escapeHtml(label('تفاصيل الموعد', 'Appointment details')) + '</h3>' +
                 '<div class="records-detail-grid">' +
-                    field(label('التاريخ', 'Date'), fmtDate(dateValue(item))) +
+                    field(label('التاريخ', 'Date'), fmtDate(item.scheduled_date)) +
+                    field(label('الوقت', 'Time'), item.start_time) +
+                    field(label('الطبيب', 'Doctor'), doctorName(item)) +
+                    field(label('التخصص', 'Specialty'), specialty) +
+                    field(label('نوع الموعد', 'Type'), item.appointment_type) +
+                    field(label('سبب الزيارة', 'Reason for visit'), item.reason_for_visit) +
+                '</div>' +
+            '</div>'
+        );
+    }
+
+    function renderRecordDetail(item) {
+        return (
+            renderDetailHeader(item) +
+            '<div class="records-detail-section">' +
+                '<h3><i class="fas fa-circle-info"></i>' + escapeHtml(label('تفاصيل السجل', 'Record details')) + '</h3>' +
+                '<div class="records-detail-grid">' +
+                    field(label('التاريخ', 'Date'), fmtDate(entryDate(item))) +
                     field(label('الطبيب', 'Doctor'), doctorName(item)) +
                     field(label('الشكوى الرئيسية', 'Chief complaint'), item.chief_complaint) +
                     field(label('التشخيص', 'Diagnosis'), item.diagnosis) +
@@ -251,23 +327,50 @@ const MyRecords = (() => {
                       '<div class="records-detail-grid">' + field(label('العلاج', 'Treatment'), item.treatment_plan) + '</div>' +
                   '</div>'
                 : '') +
-            (item.notes
-                ? '<div class="records-detail-section">' +
-                      '<h3><i class="fas fa-pen-to-square"></i>' + escapeHtml(label('ملاحظات', 'Notes')) + '</h3>' +
-                      '<div class="records-detail-grid">' + field(label('ملاحظات', 'Notes'), item.notes) + '</div>' +
-                  '</div>'
-                : '') +
-            renderAttachments(item);
+            renderAttachments(item)
+        );
+    }
+
+    function renderPrescriptionDetail(item) {
+        return (
+            renderDetailHeader(item) +
+            '<div class="records-detail-section">' +
+                '<h3><i class="fas fa-circle-info"></i>' + escapeHtml(label('تفاصيل الوصفة', 'Prescription details')) + '</h3>' +
+                '<div class="records-detail-grid">' +
+                    field(label('تاريخ الوصفة', 'Prescription date'), fmtDate(item.prescription_date)) +
+                    field(label('صالحة حتى', 'Valid until'), fmtDate(item.valid_until)) +
+                    field(label('التشخيص', 'Diagnosis'), item.diagnosis) +
+                    field(label('التعليمات', 'Instructions'), item.instructions) +
+                '</div>' +
+            '</div>' +
+            '<div class="records-detail-section">' +
+                '<h3><i class="fas fa-pills"></i>' + escapeHtml(label('الأدوية', 'Medications')) + '</h3>' +
+                renderMedicationItems(item.items) +
+            '</div>'
+        );
+    }
+
+    function renderDetail(item) {
+        const detail = document.getElementById('recordDetail');
+        if (!detail) return;
+
+        if (item.entry_type === 'appointment') {
+            detail.innerHTML = renderAppointmentDetail(item);
+        } else if (item.entry_type === 'prescription') {
+            detail.innerHTML = renderPrescriptionDetail(item);
+        } else {
+            detail.innerHTML = renderRecordDetail(item);
+        }
     }
 
     function selectRecord(id) {
-        const item = records.find((r) => String(r.id) === String(id)) || records[0];
+        const item = entries.find((r) => String(r.id) === String(id)) || entries[0];
         selectedId = item?.id || null;
         render();
     }
 
     function render() {
-        const list = filteredRecords();
+        const list = filteredEntries();
         const listEl = document.getElementById('recordsList');
 
         if (!list.length) {
@@ -290,22 +393,11 @@ const MyRecords = (() => {
     async function load() {
         setState('loading');
         try {
-            const result = await fetchRecords();
-            if (result?.blocked) {
-                records = [];
-                setState('empty');
-                const timeline = document.querySelector('.records-timeline');
-                if (timeline && typeof Motion !== 'undefined') {
-                    Motion.staggerIn(timeline, '.records-timeline-item');
-                }
-                return;
-            }
-
-            records = normalizeList(result);
-            selectedId = records[0]?.id || null;
+            entries = await fetchRecords();
+            selectedId = entries[0]?.id || null;
             render();
         } catch (err) {
-            console.error('MyRecords: failed to load medical records', err);
+            console.error('MyRecords: failed to load patient history', err);
             setState('error', err?.message || label('تعذر تحميل السجلات', 'Could not load records'));
         }
     }

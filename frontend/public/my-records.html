@@ -56,16 +56,15 @@
             </div>
             <select id="recordTypeFilter" disabled>
                 <option value="all" data-i18n="records.filterAllTypes">كل الأنواع</option>
-                <option value="consultation" data-i18n="records.filterConsultation">استشارة</option>
-                <option value="lab_result" data-i18n="records.filterLabResult">نتيجة فحص</option>
-                <option value="diagnosis" data-i18n="records.filterDiagnosis">تشخيص</option>
+                <option value="appointment" data-i18n="records.filterAppointments">المواعيد</option>
+                <option value="record" data-i18n="records.filterMedicalRecords">السجلات الطبية</option>
+                <option value="prescription" data-i18n="records.filterPrescriptions">الوصفات الطبية</option>
             </select>
             <select id="recordDateFilter" disabled>
                 <option value="any" data-i18n="prescriptions.filterAnyDate">أي تاريخ</option>
                 <option value="30" data-i18n="prescriptions.filterLast30">آخر 30 يوماً</option>
                 <option value="365" data-i18n="prescriptions.filterLastYear">آخر سنة</option>
             </select>
-            <span class="records-locked-tag" id="recordsLockedTag"><i class="fas fa-lock"></i> <span data-i18n="records.comingSoonTag">قريباً</span></span>
         </div>
 
         <div class="records-loading hidden" id="recordsLoading">
@@ -85,50 +84,11 @@
             <section class="records-real-detail" id="recordDetail"></section>
         </div>
 
-        <!-- Structural preview: skeleton shapes only, never fabricated data -->
-        <div class="records-preview-section" id="recordsPreview">
-            <div class="records-preview-caption">
-                <i class="fas fa-eye"></i>
-                <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
-            </div>
-            <div class="records-timeline">
-                <div class="records-timeline-item">
-                    <div class="records-timeline-dot"></div>
-                    <div class="records-timeline-card">
-                        <div class="records-timeline-card-lines">
-                            <div class="sk-line tall w-40 skeleton"></div>
-                            <div class="sk-line w-80 skeleton"></div>
-                            <div class="sk-line w-30 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="records-timeline-item">
-                    <div class="records-timeline-dot"></div>
-                    <div class="records-timeline-card">
-                        <div class="records-timeline-card-lines">
-                            <div class="sk-line tall w-30 skeleton"></div>
-                            <div class="sk-line w-60 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="records-timeline-item">
-                    <div class="records-timeline-dot"></div>
-                    <div class="records-timeline-card">
-                        <div class="records-timeline-card-lines">
-                            <div class="sk-line tall w-60 skeleton"></div>
-                            <div class="sk-line w-80 skeleton"></div>
-                            <div class="sk-line w-40 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Honest empty state — the real, user-facing message -->
+        <!-- Honest empty state — no history recorded for this patient yet -->
         <div class="records-empty-state" id="recordsEmpty">
             <div class="empty-state-icon"><i class="fas fa-file-waveform"></i></div>
-            <h2 data-i18n="records.emptyTitle">هذه الميزة غير متاحة بعد</h2>
-            <p data-i18n="records.emptyHint">نعمل على ربط سجلاتك الطبية من زياراتك بحسابك. بمجرد توفر هذه الميزة، سيظهر سجلك الزمني الكامل هنا تلقائياً.</p>
+            <h2 data-i18n="records.emptyTitle">لا يوجد سجل طبي بعد</h2>
+            <p data-i18n="records.emptyHint">ستظهر هنا مواعيدك وتشخيصاتك ووصفاتك الطبية بمجرد توفرها.</p>
             <a href="dashboard.html" class="btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-right"></i>
                 <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>

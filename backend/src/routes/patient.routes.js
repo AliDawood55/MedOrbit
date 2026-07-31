@@ -106,6 +106,52 @@ router.get(
 
 
 // =======================================
+// GET /api/patients/me/records
+// =======================================
+// Combined history timeline for my-records.html — interleaves the patient's
+// own appointments, medical records (diagnoses) and prescriptions into one
+// date-sorted list. Reuses the same ownership-scoped queries/services the
+// dedicated endpoints above and below already use; nothing new is read from
+// the DB, this just merges them chronologically for the timeline UI.
+
+router.get(
+    "/me/records",
+    authenticate,
+    authorize("patient"),
+
+    async (req, res, next) => {
+
+        try {
+
+            const patientId = await resolvePatientId(req.user.sub);
+
+            if (!patientId) {
+                return error(res, "Patient profile not found", 404, "NOT_FOUND");
+            }
+
+            const limit = Math.min(Number(req.query.limit) || 50, 200);
+
+            const [appointments, records, prescriptions] = await Promise.all([
+                medicalRepository.findAppointmentsByPatientId(patientId, { limit }),
+                medicalRepository.findRecordsByPatientId(patientId, { limit }),
+                prescriptionService.findByPatientId(patientId, { limit })
+            ]);
+
+            const timeline = [
+                ...appointments.map((a) => ({ ...a, entry_type: "appointment", entry_date: a.scheduled_date })),
+                ...records.map((r) => ({ ...r, entry_type: "record", entry_date: r.created_at })),
+                ...prescriptions.map((p) => ({ ...p, entry_type: "prescription", entry_date: p.prescription_date }))
+            ].sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date));
+
+            return success(res, { timeline }, "Patient history retrieved");
+
+        } catch (err) {
+            next(err);
+        }
+    });
+
+
+// =======================================
 // GET /api/patients/me/prescriptions
 // =======================================
 
