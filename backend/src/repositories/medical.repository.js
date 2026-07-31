@@ -104,6 +104,32 @@ class MedicalRepository {
         return result.rows[0] || null;
     }
 
+    // ==================== APPOINTMENTS (patient-facing) ====================
+
+    // Doctor name + specialty joined the same way findReviewsByDoctorId does
+    // it in this file. Used only by the combined "my records" timeline
+    // (GET /api/patients/me/records) — the plain GET /appointments route
+    // returns raw rows without this join and stays as-is for its own callers.
+    async findAppointmentsByPatientId(patientId, { limit = 20, offset = 0 } = {}) {
+        const result = await db.query(
+            `SELECT
+                 a.id, a.appointment_number, a.scheduled_date, a.start_time, a.status,
+                 a.appointment_type, a.reason_for_visit,
+                 up.first_name_ar AS doctor_first_name_ar, up.first_name_en AS doctor_first_name_en,
+                 up.last_name_ar AS doctor_last_name_ar, up.last_name_en AS doctor_last_name_en,
+                 s.name_ar AS specialty_ar, s.name_en AS specialty_en
+             FROM medorbit.appointments a
+             LEFT JOIN medorbit.doctors d ON d.id = a.doctor_id
+             LEFT JOIN medorbit.user_profiles up ON up.user_id = d.user_id
+             LEFT JOIN medorbit.specialties s ON s.id = d.specialty_id
+             WHERE a.patient_id = $1
+             ORDER BY a.scheduled_date DESC, a.start_time DESC
+             LIMIT $2 OFFSET $3`,
+            [patientId, limit, offset]
+        );
+        return result.rows;
+    }
+
     // ==================== DOCTOR REVIEWS ====================
 
     async findReviewsByDoctorId(doctorId, limit = 10) {

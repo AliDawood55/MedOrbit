@@ -405,6 +405,8 @@ const API = (() => {
         // and GET /prescriptions/:id, which have no ownership filtering at all.
         myMedicalRecords: (query, options) => get('/patients/me/medical-records', query, options),
         medicalRecordDetail: (id, options) => get(`/patients/me/medical-records/${id}`, null, options),
+        // Combined timeline (appointments + records + prescriptions) — my-records.html
+        myRecordsTimeline: (query, options) => get('/patients/me/records', query, options),
         myPrescriptions: (query, options) => get('/patients/me/prescriptions', query, options),
         prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
     };

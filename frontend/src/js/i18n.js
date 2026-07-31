@@ -412,17 +412,17 @@ const I18n = (() => {
 
             // Medical records (no backend yet — full UI shell + honest empty state)
             'records.title': 'سجلاتي الطبية',
-            'records.subtitle': 'السجل الزمني لزياراتك وتشخيصاتك الطبية',
+            'records.subtitle': 'السجل الزمني لمواعيدك وتشخيصاتك ووصفاتك الطبية',
             'records.searchPlaceholder': 'ابحث في السجلات...',
             'records.filterAllTypes': 'كل الأنواع',
-            'records.filterConsultation': 'استشارة',
-            'records.filterLabResult': 'نتيجة فحص',
-            'records.filterDiagnosis': 'تشخيص',
+            'records.filterAppointments': 'المواعيد',
+            'records.filterMedicalRecords': 'السجلات الطبية',
+            'records.filterPrescriptions': 'الوصفات الطبية',
             'records.comingSoonTag': 'قريباً',
             'records.previewCaption': 'معاينة لما ستراه هنا عند توفر هذه الميزة',
             'records.backToDashboard': 'العودة للوحة التحكم',
-            'records.emptyTitle': 'هذه الميزة غير متاحة بعد',
-            'records.emptyHint': 'نعمل على ربط سجلاتك الطبية من زياراتك بحسابك. بمجرد توفر هذه الميزة، سيظهر سجلك الزمني الكامل هنا تلقائياً.',
+            'records.emptyTitle': 'لا يوجد سجل طبي بعد',
+            'records.emptyHint': 'ستظهر هنا مواعيدك وتشخيصاتك ووصفاتك الطبية بمجرد توفرها.',
 
             // My Reports (real data summary — see my-reports.js for exact endpoints used)
             'reports.title': 'ملخصي الشخصي',
@@ -1140,17 +1140,17 @@ const I18n = (() => {
 
             // Medical records (no backend yet — full UI shell + honest empty state)
             'records.title': 'My Medical Records',
-            'records.subtitle': 'A timeline of your medical visits and diagnoses',
+            'records.subtitle': 'A timeline of your appointments, diagnoses, and prescriptions',
             'records.searchPlaceholder': 'Search records...',
             'records.filterAllTypes': 'All types',
-            'records.filterConsultation': 'Consultation',
-            'records.filterLabResult': 'Lab result',
-            'records.filterDiagnosis': 'Diagnosis',
+            'records.filterAppointments': 'Appointments',
+            'records.filterMedicalRecords': 'Medical records',
+            'records.filterPrescriptions': 'Prescriptions',
             'records.comingSoonTag': 'Coming soon',
             'records.previewCaption': "Preview of what you'll see here once this feature is available",
             'records.backToDashboard': 'Back to Dashboard',
-            'records.emptyTitle': "This feature isn't available yet",
-            'records.emptyHint': "We're working on connecting your medical records from your visits to your account. Once this feature is live, your full timeline will show up here automatically.",
+            'records.emptyTitle': "No medical history yet",
+            'records.emptyHint': "Your appointments, diagnoses, and prescriptions will show up here once they're available.",
 
             // My Reports (real data summary — see my-reports.js for exact endpoints used)
             'reports.title': 'My Reports',
