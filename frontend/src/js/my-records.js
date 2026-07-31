@@ -1,13 +1,10 @@
 /**
  * MedOrbit v2 - My Medical Records
  *
- * The list/detail UI is complete and works against the real record shape.
- * Data fetching is deliberately NOT wired: GET /api/medical-records has no
- * ownership filtering, so any authenticated user can read any patient's
- * records by id. Until Omar ships a caller-scoped endpoint this page shows its
- * honest empty state and makes no request at all.
- *
- * Everything below the fetch boundary is production code — see fetchRecords().
+ * Fetches via GET /patients/me/medical-records (backend/src/routes/
+ * patient.routes.js) — ownership-scoped, unlike the generic
+ * /api/medical-records/:id, which has no ownership filtering at all and
+ * must never be called from here.
  */
 const MyRecords = (() => {
 
@@ -85,9 +82,16 @@ const MyRecords = (() => {
     }
 
     function doctorName(item) {
+        // Backend joins bilingual name columns (doctor_first_name_ar/en,
+        // same suffix convention as everything else in this file), so pick
+        // by current language the same way typeLabel()/medicationName()
+        // already do — not a fixed field name.
+        const first = isAr() ? item.doctor_first_name_ar : item.doctor_first_name_en;
+        const last = isAr() ? item.doctor_last_name_ar : item.doctor_last_name_en;
         return (
             item.doctor_name ||
-            [item.doctor_first_name, item.doctor_last_name].filter(Boolean).join(' ') ||
+            [first, last].filter(Boolean).join(' ') ||
+            [item.doctor_first_name_en, item.doctor_last_name_en].filter(Boolean).join(' ') ||
             ''
         );
     }
@@ -111,21 +115,9 @@ const MyRecords = (() => {
         return (Array.isArray(source) ? source : []).map(normalizeRecord).filter((r) => r.id);
     }
 
-    // ============================================================
-    // BLOCKED BACKEND CALL — the only thing standing between this page and
-    // real data.
-    //
-    // Do NOT call GET /api/medical-records (or /api/medical-records/:id): the
-    // route has no ownership filtering, so it returns any patient's records to
-    // any authenticated caller. Once Omar adds the caller-scoped endpoint,
-    // replace this entire body with one line:
-    //
-    //     return normalizeList(await API.get('/patients/me/medical-records'));
-    //
-    // Nothing else on this page needs to change.
-    // ============================================================
     async function fetchRecords() {
-        return { blocked: true, items: [] };
+        const res = await API.care.myMedicalRecords();
+        return normalizeList(res);
     }
 
     function setFiltersEnabled(enabled) {
@@ -172,7 +164,7 @@ const MyRecords = (() => {
                 item.diagnosis,
                 item.chief_complaint,
                 item.notes,
-                item.treatment,
+                item.treatment_plan,
                 doctorName(item),
                 typeLabel(item)
             ].filter(Boolean).join(' ').toLowerCase();
@@ -253,10 +245,10 @@ const MyRecords = (() => {
                     field(label('التشخيص', 'Diagnosis'), item.diagnosis) +
                 '</div>' +
             '</div>' +
-            (item.treatment
+            (item.treatment_plan
                 ? '<div class="records-detail-section">' +
                       '<h3><i class="fas fa-notes-medical"></i>' + escapeHtml(label('العلاج', 'Treatment')) + '</h3>' +
-                      '<div class="records-detail-grid">' + field(label('العلاج', 'Treatment'), item.treatment) + '</div>' +
+                      '<div class="records-detail-grid">' + field(label('العلاج', 'Treatment'), item.treatment_plan) + '</div>' +
                   '</div>'
                 : '') +
             (item.notes

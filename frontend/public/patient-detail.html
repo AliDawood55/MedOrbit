@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/records.css">
     <link rel="stylesheet" href="../src/css/care.css">
+    <link rel="stylesheet" href="../src/css/feedback.css">
 </head>
 <body class="site-page" data-theme="light">
 
@@ -65,67 +66,36 @@
             </a>
         </div>
 
+        <div class="care-restricted hidden" id="notFoundNotice">
+            <div class="empty-state-icon"><i class="fas fa-user-slash"></i></div>
+            <h2 data-i18n="patientDetail.notFoundTitle">هذا المريض غير موجود في سجلاتك</h2>
+            <p data-i18n="patientDetail.notFoundHint">لم يسبق أن كان لديك موعد مع هذا المريض.</p>
+            <a href="my-patients.html" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-right"></i>
+                <span data-i18n="myPatients.title">مرضاي</span>
+            </a>
+        </div>
+
         <div id="patientDetailContent" class="hidden">
 
             <a href="my-patients.html" class="back-link">
                 <i class="fas fa-arrow-right"></i> <span data-i18n="myPatients.title">مرضاي</span>
             </a>
 
-            <div class="records-preview-caption" style="margin-top:14px;">
-                <i class="fas fa-eye"></i>
-                <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
-            </div>
-
-            <!-- Patient header — skeleton preview only, no fabricated name/photo -->
-            <div class="care-detail-header" style="opacity:0.7;">
-                <div class="care-detail-avatar skeleton"></div>
-                <div style="flex:1;">
-                    <div class="sk-line tall w-40 skeleton" style="margin-bottom:10px;"></div>
-                    <div class="sk-line w-25 skeleton"></div>
-                </div>
-            </div>
+            <!-- Patient header -->
+            <div class="care-detail-header" id="patientHeader" style="margin-top:14px;"></div>
 
             <!-- Appointment history -->
-            <div class="care-section" style="opacity:0.7;">
+            <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-calendar-check"></i> <span data-i18n="patientDetail.appointmentHistory">سجل المواعيد</span></div>
-                <div class="records-preview-list">
-                    <div class="records-preview-card">
-                        <div class="records-preview-card-icon skeleton"></div>
-                        <div class="records-preview-card-lines">
-                            <div class="sk-line tall w-40 skeleton"></div>
-                            <div class="sk-line w-30 skeleton"></div>
-                        </div>
-                    </div>
-                    <div class="records-preview-card">
-                        <div class="records-preview-card-icon skeleton"></div>
-                        <div class="records-preview-card-lines">
-                            <div class="sk-line tall w-60 skeleton"></div>
-                            <div class="sk-line w-40 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
+                <div id="appointmentHistoryList"></div>
             </div>
 
             <!-- Session notes timeline + real add-note form -->
             <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">ملاحظات الجلسات</span></div>
 
-                <div class="note-timeline" style="opacity:0.7;margin-bottom:20px;">
-                    <div class="note-timeline-item">
-                        <div class="note-timeline-dot"></div>
-                        <div class="note-card">
-                            <div class="sk-line tall w-40 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-80 skeleton"></div>
-                        </div>
-                    </div>
-                    <div class="note-timeline-item">
-                        <div class="note-timeline-dot"></div>
-                        <div class="note-card">
-                            <div class="sk-line tall w-30 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-60 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
+                <div class="note-timeline" id="notesTimeline" style="margin-bottom:20px;"></div>
 
                 <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة ملاحظة جلسة</div>
                 <div class="alert" id="noteFormAlert"></div>
@@ -167,6 +137,11 @@
                         <span data-i18n="patientDetail.saveDraft">حفظ كمسودة (غير مرئية للمريض)</span>
                     </label>
 
+                    <label class="care-toggle-row">
+                        <input type="checkbox" id="noteShareToggle">
+                        <span data-i18n="patientDetail.shareWithPatient">مشاركة هذه الملاحظة مع المريض في صفحة "طبيبي"</span>
+                    </label>
+
                     <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
                         <button type="button" class="btn btn-primary" id="noteSubmitBtn">
                             <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ الملاحظة</span>
@@ -177,31 +152,16 @@
             </div>
 
             <!-- Prescriptions -->
-            <div class="care-section" style="opacity:0.7;">
+            <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></div>
-                <div class="records-preview-list">
-                    <div class="records-preview-card">
-                        <div class="records-preview-card-icon skeleton"></div>
-                        <div class="records-preview-card-lines">
-                            <div class="sk-line tall w-50 skeleton"></div>
-                            <div class="sk-line w-30 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
+                <div id="prescriptionsList"></div>
             </div>
 
-            <!-- Honest empty state — the real, user-facing message -->
-            <div class="records-empty-state">
-                <div class="empty-state-icon"><i class="fas fa-folder-open"></i></div>
-                <h2 data-i18n="patientDetail.emptyTitle">هذه الميزة غير متاحة بعد</h2>
-                <p data-i18n="patientDetail.emptyHint">نعمل على ربط ملفات المرضى بحسابك. بمجرد توفر هذه الميزة، سيظهر السجل الكامل هنا تلقائياً.</p>
-            </div>
-
-            <!-- Honest "not saved" result for the note form -->
+            <!-- Real result for the note form: success or honest failure -->
             <div class="feedback-result hidden" id="noteFormResult">
-                <div class="feedback-result-icon"><i class="fas fa-plug-circle-exclamation"></i></div>
-                <h2 data-i18n="patientDetail.noteNotConnectedTitle">لم يتم حفظ الملاحظة بعد</h2>
-                <p data-i18n="patientDetail.noteNotConnectedHint">هذه الميزة غير متصلة بأي خادم بعد، لذلك لم يتم حفظ ملاحظتك في أي مكان. نعمل على إضافة هذه الميزة قريباً.</p>
+                <div class="feedback-result-icon" id="noteFormResultIcon"><i class="fas fa-circle-check"></i></div>
+                <h2 id="noteFormResultTitle"></h2>
+                <p id="noteFormResultHint"></p>
                 <button type="button" class="btn btn-secondary btn-sm" id="noteFormResultCloseBtn">
                     <span data-i18n="common.close">إغلاق</span>
                 </button>
