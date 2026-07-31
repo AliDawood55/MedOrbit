@@ -416,8 +416,13 @@ const API = (() => {
     // Platform feedback (feedback.html) — POST /api/feedback,
     // backend/src/routes/feedback.routes.js. Any authenticated user
     // (patient or doctor), user_id resolved server-side from the JWT.
+    // GET /api/feedback/stats is public (home.html's feedback dashboard):
+    // { total, averageRating, ratingDistribution:[{rating,count}],
+    //   categoryAverages:{chatbot,clinics,booking,design},
+    //   recommend:{yes,no}, users:[{id,nameAr,nameEn,avatarUrl}] }
     const feedback = {
-        submit: (body, options) => post('/feedback', body, options)
+        submit: (body, options) => post('/feedback', body, options),
+        stats: (options) => get('/feedback/stats', null, options)
     };
 
     return {
