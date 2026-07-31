@@ -111,20 +111,23 @@ def _get_voice(language: str):
         if language in _voices:
             return _voices[language]
 
-        from piper import PiperVoice
-
-        _VOICE_DIR.mkdir(parents=True, exist_ok=True)
-        onnx = _voice_path(name)
-        if not onnx.exists():
-            from piper.download_voices import download_voice
-
-            logger.info("Downloading Piper voice '%s' (~60MB, first run only)", name)
-            download_voice(name, _VOICE_DIR)
-
         started = time.time()
         try:
+            from piper import PiperVoice
+
+            _VOICE_DIR.mkdir(parents=True, exist_ok=True)
+            onnx = _voice_path(name)
+            if not onnx.exists():
+                from piper.download_voices import download_voice
+
+                logger.info("Downloading Piper voice '%s' (~60MB, first run only)", name)
+                download_voice(name, _VOICE_DIR)
+
             voice = PiperVoice.load(onnx)
         except Exception as exc:  # noqa: BLE001 - reported through /speak/status
+            # Covers a missing `piper` package (Piper not installed in this
+            # environment) as well as a real voice-load failure — both are
+            # "TTS unavailable", never an unhandled 500 (see TtsError docstring).
             _load_errors[language] = f"{type(exc).__name__}: {exc}"
             logger.exception("Piper voice '%s' failed to load", name)
             raise TtsError(str(exc)) from exc
