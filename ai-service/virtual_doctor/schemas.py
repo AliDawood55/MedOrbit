@@ -59,10 +59,16 @@ class TranscriptionResponse(BaseModel):
     audio_seconds: float = 0.0
     processing_seconds: float = 0.0
     model: str = ""
+    # True when decoding hit the deadline. The client uses this to tell the
+    # patient to repeat instead of silently discarding the turn.
+    timed_out: bool = False
 
 
 class SttStatusResponse(BaseModel):
     model: str
+    # Per-language sizes; ar and en can resolve to different models on CPU.
+    model_by_language: Dict[str, str] = {}
+    models_loaded: List[str] = []
     device: str
     compute_type: str
     loaded: bool
@@ -70,6 +76,7 @@ class SttStatusResponse(BaseModel):
     device_fallback_reason: Optional[str] = None
     cuda_libraries_found: bool = False
     supported_languages: List[str] = []
+    timeout_seconds: float = 0.0
 
 
 class SpeakRequest(BaseModel):

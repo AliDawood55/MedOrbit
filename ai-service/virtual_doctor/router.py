@@ -120,15 +120,18 @@ async def transcribe_status():
 
 
 @router.post("/transcribe/warmup", response_model=SttStatusResponse)
-async def transcribe_warmup():
+async def transcribe_warmup(language: Optional[str] = None):
     """Load the Whisper model now instead of during the patient's first answer.
 
     Cold-loading costs ~9s, which otherwise lands entirely on turn one of a
     consultation. The client fires this when the session starts so the load
     overlaps the greeting.
+
+    `language` picks which model to warm — Arabic and English use different
+    sizes on CPU, so warming the wrong one still leaves a cold load on turn one.
     """
     try:
-        return SttStatusResponse(**await stt.warmup())
+        return SttStatusResponse(**await stt.warmup(language))
     except Exception as exc:  # noqa: BLE001 - warmup is best-effort
         logger.exception("STT warmup failed")
         raise HTTPException(status_code=503, detail=f"warmup failed: {exc}")
@@ -146,6 +149,17 @@ async def transcribe(
     data = await audio.read()
     try:
         return TranscriptionResponse(**await stt.transcribe(data, language))
+    except stt.TranscriptionTimeout as exc:
+        # Not a server error: the turn simply produced nothing usable in time.
+        # Returned as a normal 200 with empty text + timed_out so the client
+        # takes the same "please repeat that" path as any other empty result,
+        # rather than showing a scary failure or hanging.
+        logger.warning("Transcription timed out: %s", exc)
+        return TranscriptionResponse(
+            text="",
+            detected_language=language or "",
+            timed_out=True,
+        )
     except stt.AudioTooLongError as exc:
         raise HTTPException(status_code=413, detail=str(exc))
     except stt.AudioDecodeError as exc:

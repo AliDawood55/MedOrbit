@@ -45,6 +45,26 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# GPU support for Whisper, OFF by default.
+#
+# CTranslate2 needs the CUDA runtime (cuBLAS + cuDNN) to run Whisper on the
+# GPU. Those wheels are ~2GB, and the default build must stay lean because CI
+# builds this image on a GPU-less ubuntu-latest runner where the extra weight
+# buys nothing and costs disk and build minutes.
+#
+# Enabled by docker-compose.gpu.yml, which sets this arg and reserves the
+# device together — the two must travel as a pair, since libraries without a
+# device (or a device without libraries) both just fall back to CPU.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# stt.py's _register_cuda_libraries() finds these at import time; when they are
+# absent it reports cuda_libraries_found=false and the CPU path is used.
+ARG INSTALL_CUDA=0
+RUN if [ "$INSTALL_CUDA" = "1" ]; then \
+        pip install --no-cache-dir nvidia-cublas-cu12 nvidia-cudnn-cu12; \
+    fi
+
 # Whole ai-service/ subtree in one shot — .dockerignore (root-level; this
 # build's context is the repo root) is the only thing that should ever decide
 # what's excluded. Don't replace this with individual COPY lines for specific

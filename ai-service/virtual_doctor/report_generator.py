@@ -38,7 +38,25 @@ _REPORTS_DIR = _MODULE_DIR / "generated" / "reports"
 _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 (_REPORTS_DIR.parent / ".gitignore").write_text("*\n!.gitignore\n", encoding="utf-8")
 
-_URGENCY_COLOR = {"emergency": "#b3261e", "urgent": "#b7791f", "routine": "#2f6d43"}
+# Presentation only. Each urgency level gets a foreground/background/border
+# triplet so the level reads as a colour-coded band (green -> amber -> red)
+# rather than a single flat pill, and stays legible when printed greyscale
+# because the active step is also the only bordered one.
+_URGENCY_STYLE = {
+    "routine": {"fg": "#1c6b45", "bg": "#e8f4ed", "border": "#a8d5bd"},
+    "urgent": {"fg": "#9a6206", "bg": "#fdf4e3", "border": "#e6c98a"},
+    "emergency": {"fg": "#b3261e", "bg": "#fceded", "border": "#eab3ae"},
+}
+_URGENCY_NEUTRAL = {"fg": "#55666f", "bg": "#f1f4f6", "border": "#d5dee3"}
+_URGENCY_ORDER = ("routine", "urgent", "emergency")
+
+# Likelihood chips in the differential table, strongest first.
+_LIKELIHOOD_COLOR = {
+    "high": {"fg": "#b3261e", "bg": "#fceded"},
+    "medium": {"fg": "#9a6206", "bg": "#fdf4e3"},
+    "low": {"fg": "#55666f", "bg": "#f1f4f6"},
+}
+
 _URGENCY_LABEL = {
     "en": {"emergency": "Emergency", "urgent": "Urgent", "routine": "Routine"},
     "ar": {"emergency": "طارئة", "urgent": "عاجلة", "routine": "روتينية"},
@@ -103,6 +121,27 @@ _LABELS = {
             "in-person care rather than relying on this report."
         ),
         "no_data": "Not collected in this interview.",
+        # --- presentation-only strings added with the report redesign ---
+        "platform": "MedOrbit",
+        "platform_tagline": "Smart Health Platform",
+        "doc_kind": "Consultation Report",
+        "doc_kind_sub": "AI-assisted preliminary assessment",
+        "report_id": "Report ID",
+        "patient_gender": "Gender",
+        "sec_symptoms": "Presenting symptoms",
+        "sec_differential": "AI differential diagnosis",
+        "sec_urgency": "Urgency level",
+        "sec_next_steps": "Recommended next steps",
+        "differential_caveat": "AI-generated — decision support only, not a diagnosis.",
+        "col_condition": "Possible condition",
+        "col_likelihood": "Likelihood",
+        "page_label": "Page",
+        "page_of": "of",
+        "confidential": "Confidential medical document — for the named patient and their treating clinician.",
+        "references": "Reference sources",
+        "references_note": "Passages from the medical reference below were retrieved and given to the AI as evidence for the differential above.",
+        "page_one": "p.",
+        "page_many": "pp.",
     },
     "ar": {
         "title": "الطبيب الافتراضي بالذكاء الاصطناعي — تقرير الاستشارة",
@@ -129,6 +168,27 @@ _LABELS = {
             "طارئة، يرجى طلب الرعاية الطبية الفورية شخصياً بدلاً من الاعتماد على هذا التقرير."
         ),
         "no_data": "لم يتم جمعها خلال هذه المقابلة.",
+        # --- presentation-only strings added with the report redesign ---
+        "platform": "MedOrbit",
+        "platform_tagline": "منصة طبية ذكية",
+        "doc_kind": "تقرير استشارة",
+        "doc_kind_sub": "تقييم أولي بمساعدة الذكاء الاصطناعي",
+        "report_id": "رقم التقرير",
+        "patient_gender": "الجنس",
+        "sec_symptoms": "الأعراض المعروضة",
+        "sec_differential": "التشخيص التفريقي بالذكاء الاصطناعي",
+        "sec_urgency": "درجة الأولوية",
+        "sec_next_steps": "الخطوات التالية الموصى بها",
+        "differential_caveat": "مُولَّد بالذكاء الاصطناعي — لدعم القرار فقط، وليس تشخيصاً.",
+        "col_condition": "حالة محتملة",
+        "col_likelihood": "الاحتمالية",
+        "page_label": "صفحة",
+        "page_of": "من",
+        "confidential": "وثيقة طبية سرية — للمريض المذكور وللطبيب المعالج فقط.",
+        "references": "المصادر المرجعية",
+        "references_note": "تم استرجاع المقاطع التالية من المرجع الطبي وتزويد الذكاء الاصطناعي بها كأساس للتشخيص التفريقي أعلاه.",
+        "page_one": "ص.",
+        "page_many": "ص.",
     },
 }
 
@@ -196,6 +256,10 @@ async def build_report_data(session_id: str) -> Optional[Dict[str, Any]]:
         "recommended_specialty_name_ar": specialty_row["name_ar"] if specialty_row else None,
         "recommended_next_step": differential.get("next_step"),
         "ai_confidence": differential.get("confidence"),
+        # Textbook passages the reasoning phase retrieved to ground the
+        # differential (reasoning.py -> differential JSONB). Absent on sessions
+        # created before RAG grounding existed, hence the default.
+        "sources": differential.get("sources", []),
     }
 
 
@@ -213,10 +277,17 @@ def _render_html(report: Dict[str, Any]) -> str:
     labels = _LABELS[lang]
     slot_labels = _SLOT_LABELS[lang]
     direction = "rtl" if lang == "ar" else "ltr"
-    align = "right" if lang == "ar" else "left"
+    # Physical sides are resolved once here rather than using CSS logical
+    # properties (border-inline-start etc.), whose WeasyPrint support is
+    # uneven — "start" is the side text flows from in this language.
+    start = "right" if lang == "ar" else "left"
+    end = "left" if lang == "ar" else "right"
+    # Arabic is cursive: letter-spacing pulls joined glyphs apart, so the
+    # small-caps tracking used on Latin labels is disabled for AR.
+    tracking = "0.3pt" if lang == "en" else "0"
 
     urgency = report["urgency_level"]
-    urgency_color = _URGENCY_COLOR.get(urgency, "#555555")
+    urgency_style = _URGENCY_STYLE.get(urgency, _URGENCY_NEUTRAL)
     urgency_label = _URGENCY_LABEL[lang].get(urgency, urgency)
 
     specialty_name = report["recommended_specialty_name_ar" if lang == "ar" else "recommended_specialty_name_en"]
@@ -228,31 +299,119 @@ def _render_html(report: Dict[str, Any]) -> str:
         return html_escape(str(value), quote=False) if value is not None else ""
 
     info = report["patient_info"]
-    patient_fields = [
-        (labels["patient_name"], esc(info.get("name")) or labels["no_data"]),
-        (labels["patient_age"],
-         f"{esc(info['age'])} {labels['years']}" if info.get("age") is not None else labels["no_data"]),
-        (labels["interview_date"],
-         esc((info.get("interview_date") or "")[:19].replace("T", " ")) or labels["no_data"]),
-        (labels["session_reference"], esc(info.get("session_reference"))),
-    ]
-    patient_rows = "".join(
-        f"<tr><th>{label}</th><td>{value}</td></tr>" for label, value in patient_fields
+
+    def or_missing(value: str) -> str:
+        """Render a value, degrading to a muted 'not collected' note."""
+        return value if value else f"<span class='muted'>{labels['no_data']}</span>"
+
+    age_display = (
+        f"{esc(info['age'])} <span class='unit'>{labels['years']}</span>"
+        if info.get("age") is not None else ""
     )
+    # `gender` is not part of build_report_data today — the interview engine
+    # never asks for it. Reading it optionally keeps the field in the layout
+    # (standard on a medical report) and lets it fill itself in if the engine
+    # ever starts collecting it, with no change needed here.
+    gender_display = esc(info.get("gender"))
+    # "2026-08-01 08:52:40" is two neutral digit runs separated by a space, so
+    # in an RTL paragraph bidi reorders them and the time renders before the
+    # date. Marking timestamps as an LTR run keeps them readable in Arabic.
+    interview_raw = esc((info.get("interview_date") or "")[:19].replace("T", " "))
+    interview_display = f"<span class='ltr'>{interview_raw}</span>" if interview_raw else ""
 
     symptoms_rows = "".join(
         f"<tr><th>{esc(slot_labels.get(k, k))}</th><td>{esc(v)}</td></tr>"
         for k, v in report["symptoms_summary"].items()
-    ) or f"<tr><td colspan='2' class='muted'>{labels['no_data']}</td></tr>"
+    ) or f"<tr><td colspan='2' class='muted pad'>{labels['no_data']}</td></tr>"
 
-    differential_items = "".join(
-        f"<li><span class='cond'>{esc(c.get('condition', ''))}</span>"
-        f"<span class='likelihood'>{esc(_LIKELIHOOD_LABEL[lang].get(c.get('likelihood'), c.get('likelihood', '')))}</span></li>"
-        for c in report["differential"]
-    ) or f"<li class='muted'>{labels['no_data']}</li>"
+    # detected_symptoms has been in the report payload all along but the old
+    # template never rendered it; it appears here as chips under the table.
+    detected = [s for s in (report.get("detected_symptoms") or []) if str(s).strip()]
+    detected_block = ""
+    if detected:
+        chips = "".join(f"<span class='chip'>{esc(s)}</span>" for s in detected)
+        detected_block = (
+            f"<div class='field'>"
+            f"<div class='field-label'>{labels['detected_symptoms']}</div>"
+            f"<div>{chips}</div></div>"
+        )
+
+    differential_rows = ""
+    for rank, cond in enumerate(report["differential"], start=1):
+        likelihood = cond.get("likelihood")
+        chip = _LIKELIHOOD_COLOR.get(likelihood, _LIKELIHOOD_COLOR["low"])
+        likelihood_text = _LIKELIHOOD_LABEL[lang].get(likelihood, likelihood or "")
+        differential_rows += (
+            f"<tr><td class='rank'>{rank}</td>"
+            f"<td class='cond'>{esc(cond.get('condition', ''))}</td>"
+            f"<td class='lk'><span class='chip-lk' "
+            f"style=\"color:{chip['fg']};background:{chip['bg']}\">"
+            f"{esc(likelihood_text)}</span></td></tr>"
+        )
+    if not differential_rows:
+        differential_rows = f"<tr><td colspan='3' class='muted pad'>{labels['no_data']}</td></tr>"
 
     confidence = report.get("ai_confidence")
-    confidence_display = f"{round(confidence * 100)}%" if isinstance(confidence, (int, float)) else "—"
+    confidence_block = ""
+    if isinstance(confidence, (int, float)):
+        pct = max(0, min(100, round(confidence * 100)))
+        confidence_block = (
+            f"<div class='conf'><table class='conf-row'><tr>"
+            f"<td>{labels['confidence']}</td><td class='conf-val'>{pct}%</td></tr></table>"
+            f"<div class='meter'><div class='meter-fill' style='width:{pct}%'></div></div></div>"
+        )
+
+    # Textbook passages the RAG retrieval fed to the LLM. Cited by page so a
+    # clinician can check the source; renders nothing at all when the session
+    # predates RAG grounding or retrieval found nothing above threshold.
+    sources = [s for s in (report.get("sources") or []) if isinstance(s, dict)]
+    references_block = ""
+    if sources:
+        items = ""
+        for ref in sources:
+            # NB: do NOT name these `start`/`end` — those hold the physical
+            # direction sides ("left"/"right") used throughout the stylesheet
+            # below, and shadowing them turns every border-/padding-/margin-
+            # {start} rule into garbage (`margin-59: 6pt`).
+            first_page, last_page = ref.get("page_start"), ref.get("page_end")
+            if first_page and last_page and last_page != first_page:
+                page_label, page_value = labels["page_many"], f"{first_page}-{last_page}"
+            elif first_page:
+                page_label, page_value = labels["page_one"], str(first_page)
+            else:
+                page_label = page_value = ""
+            # Only the numerals go in the LTR run. Putting the Arabic label
+            # ("ص.") inside it too mixes a strong-RTL character with digits in
+            # one isolated span, which is exactly the case bidi reorders.
+            pages = (
+                f"{page_label} <span class='ltr'>{page_value}</span>" if page_value else ""
+            )
+            items += (
+                f"<li><span class='ref-title'>{esc(ref.get('source'))}</span>"
+                f"<span class='ref-pages'>{pages}</span></li>"
+            )
+        references_block = (
+            f"<div class='refs'>"
+            f"<div class='refs-head'>{labels['references']}</div>"
+            f"<div class='refs-note'>{labels['references_note']}</div>"
+            f"<ul class='ref-list'>{items}</ul></div>"
+        )
+
+    # The three levels are always shown, with only the active one filled in, so
+    # the reader sees where this consultation sits on the scale.
+    urgency_steps = ""
+    for level in _URGENCY_ORDER:
+        step = _URGENCY_STYLE[level]
+        step_label = _URGENCY_LABEL[lang].get(level, level)
+        if level == urgency:
+            urgency_steps += (
+                f"<td class='ustep uactive' style=\"background:{step['bg']};"
+                f"border-color:{step['fg']};color:{step['fg']}\">"
+                f"<span class='udot' style=\"background:{step['fg']}\"></span>"
+                f"{step_label}</td>"
+            )
+        else:
+            urgency_steps += f"<td class='ustep'>{step_label}</td>"
 
     history_text = _build_history_narrative(report, lang)
     generated_at = report["generated_at"][:19].replace("T", " ")
@@ -275,91 +434,330 @@ def _render_html(report: Dict[str, Any]) -> str:
   font-weight: 700;
   src: url('{fonts_uri}/Cairo-Bold.woff') format('woff');
 }}
-@page {{ size: A4; margin: 2cm; }}
+
+/* ---------- page ---------- */
+@page {{
+  size: A4;
+  margin: 15mm 15mm 18mm;
+  direction: {direction};
+  @bottom-{start} {{
+    content: "{labels['confidential']}";
+    font-family: 'Cairo', sans-serif; font-size: 7pt; color: #93a4ae;
+  }}
+  @bottom-{end} {{
+    content: "{labels['page_label']} " counter(page) " {labels['page_of']} " counter(pages);
+    font-family: 'Cairo', sans-serif; font-size: 7pt; color: #93a4ae;
+  }}
+}}
 body {{
   font-family: 'Cairo', sans-serif;
   direction: {direction};
-  text-align: {align};
-  color: #1c1c1c;
-  font-size: 12pt;
-  line-height: 1.6;
-}}
-h1 {{ font-size: 18pt; margin: 0 0 4pt; }}
-h2 {{
-  font-size: 13pt; margin: 18pt 0 6pt;
-  border-{'right' if direction == 'rtl' else 'left'}: 4pt solid #2f4b8c;
-  padding-{'right' if direction == 'rtl' else 'left'}: 8pt;
-}}
-.meta {{ color: #555; font-size: 9.5pt; margin-bottom: 14pt; }}
-.disclaimer {{
-  border: 1pt solid #b7791f;
-  background: #fdf3e0;
-  padding: 10pt 12pt;
-  border-radius: 4pt;
+  text-align: {start};
+  color: #16232b;
   font-size: 10pt;
-  margin-top: 20pt;
+  line-height: 1.55;
+  margin: 0;
 }}
-.disclaimer .label {{ font-weight: 700; color: #8a5a10; margin-bottom: 4pt; }}
-table {{ width: 100%; border-collapse: collapse; margin-top: 4pt; }}
-th, td {{ text-align: {align}; padding: 5pt 8pt; border-bottom: 0.5pt solid #ddd; font-size: 10.5pt; }}
-th {{ width: 35%; color: #444; font-weight: 700; }}
-.muted {{ color: #888; font-style: italic; }}
-.urgency-badge {{
-  display: inline-block;
-  padding: 3pt 12pt;
-  border-radius: 12pt;
-  color: white;
-  font-weight: 700;
-  background: {urgency_color};
+p {{ margin: 0; }}
+.muted {{ color: #8a99a3; font-style: italic; font-weight: 400; }}
+.pad {{ padding: 7pt 9pt; }}
+.unit {{ font-weight: 400; color: #6b7f8a; font-size: 8.5pt; }}
+/* Timestamps and IDs are Latin/neutral runs: isolate them so RTL bidi does
+   not reorder "date time" into "time date". */
+.ltr {{ direction: ltr; unicode-bidi: embed; display: inline-block; }}
+
+/* ---------- masthead ---------- */
+.masthead {{
+  border-bottom: 2.5pt solid #0e7c86;
+  padding-bottom: 7pt;
+  margin-bottom: 9pt;
 }}
-ul.differential {{ list-style: none; margin: 4pt 0; padding: 0; }}
-ul.differential li {{
-  display: flex;
-  justify-content: space-between;
-  padding: 4pt 0;
-  border-bottom: 0.5pt solid #eee;
+.masthead table {{ width: 100%; border-collapse: collapse; }}
+.masthead td {{ border: 0; padding: 0; vertical-align: middle; }}
+.mark {{
+  display: inline-block; width: 25pt; height: 25pt; line-height: 25pt;
+  background: #123b5c; color: #ffffff;
+  text-align: center; font-weight: 700; font-size: 13pt;
 }}
-.likelihood {{ color: #666; font-size: 9.5pt; }}
+.brand {{ padding-{start}: 8pt !important; }}
+.brand-name {{ font-size: 14pt; font-weight: 700; color: #123b5c; }}
+.brand-tag {{ font-size: 7.5pt; color: #6b7f8a; }}
+.doc-kind-cell {{ text-align: {end}; }}
+.doc-kind {{ font-size: 11.5pt; font-weight: 700; color: #0e7c86; }}
+.doc-kind-sub {{ font-size: 7.5pt; color: #6b7f8a; }}
+
+/* ---------- meta bar ---------- */
+.metabar {{
+  width: 100%; border-collapse: collapse;
+  background: #f4f8fa; border: 0.5pt solid #dbe6ec;
+  margin-bottom: 12pt;
+}}
+.metabar td {{
+  padding: 5pt 9pt; vertical-align: top;
+  border-{end}: 0.5pt solid #e3ecf1;
+}}
+.metabar td.last {{ border-{end}: 0; }}
+.metabar .k {{
+  display: block; color: #6b7f8a; font-size: 7pt;
+  text-transform: uppercase; letter-spacing: {tracking};
+}}
+.metabar .v {{ font-weight: 700; color: #123b5c; font-size: 9pt; }}
+.metabar .v.id {{ font-size: 7.5pt; letter-spacing: 0; }}
+
+/* ---------- patient panel ---------- */
+.panel {{ border: 0.75pt solid #cfdde5; margin-bottom: 13pt; }}
+.panel-head {{
+  background: #123b5c; color: #ffffff;
+  font-size: 8.5pt; font-weight: 700;
+  padding: 5pt 10pt;
+  text-transform: uppercase; letter-spacing: {tracking};
+}}
+.kv {{ width: 100%; border-collapse: collapse; }}
+.kv th, .kv td {{
+  padding: 6pt 10pt; text-align: {start}; vertical-align: top;
+  border-top: 0.5pt solid #e6eef3;
+}}
+.kv tr:first-child th, .kv tr:first-child td {{ border-top: 0; }}
+.kv th {{ color: #6b7f8a; font-weight: 400; font-size: 8pt; width: 16%; }}
+.kv td {{ font-weight: 700; font-size: 9.5pt; width: 34%; }}
+
+/* ---------- sections ---------- */
+.sec {{ margin-bottom: 12pt; break-inside: avoid; }}
+.sec-head {{
+  border-{start}: 3pt solid #0e7c86;
+  padding-{start}: 8pt;
+  margin-bottom: 6pt;
+}}
+.sec-num {{
+  display: inline-block; width: 13pt; height: 13pt; line-height: 13pt;
+  background: #0e7c86; color: #ffffff;
+  text-align: center; font-size: 7.5pt; font-weight: 700;
+  margin-{end}: 5pt;
+}}
+.sec-title {{ font-size: 11pt; font-weight: 700; color: #123b5c; }}
+.sec-note {{ font-size: 7.5pt; color: #6b7f8a; }}
+
+/* ---------- fields ---------- */
+.field {{ margin-bottom: 7pt; }}
+.field-label {{
+  font-size: 7.5pt; color: #6b7f8a;
+  text-transform: uppercase; letter-spacing: {tracking};
+}}
+.lead {{
+  font-size: 11pt; font-weight: 700; color: #16232b;
+  background: #f4f8fa; border-{start}: 2.5pt solid #0e7c86;
+  padding: 6pt 10pt;
+}}
+
+/* ---------- data tables ---------- */
+.dtable {{
+  width: 100%; border-collapse: collapse;
+  border: 0.5pt solid #dbe6ec; margin-top: 3pt;
+}}
+.dtable th, .dtable td {{
+  text-align: {start}; padding: 5pt 9pt; font-size: 9.5pt;
+  border-bottom: 0.5pt solid #e6eef3; vertical-align: top;
+}}
+.dtable tr:last-child th, .dtable tr:last-child td {{ border-bottom: 0; }}
+.dtable thead th {{
+  background: #eef5f8; color: #4a6270;
+  font-size: 7.5pt; font-weight: 700;
+  text-transform: uppercase; letter-spacing: {tracking};
+  border-bottom: 0.5pt solid #cfdde5;
+}}
+.dtable tbody th {{
+  width: 34%; color: #4a6270; font-weight: 400; background: #fafcfd;
+}}
+.chip {{
+  display: inline-block; background: #eef5f8;
+  border: 0.5pt solid #cfdde5; color: #2c4551;
+  font-size: 8.5pt; padding: 1.5pt 7pt;
+  margin-{end}: 4pt; margin-bottom: 3pt;
+}}
+
+/* ---------- differential ---------- */
+.rank {{ width: 7%; color: #8a99a3; font-weight: 700; }}
+.cond {{ font-weight: 700; }}
+.lk {{ width: 22%; text-align: {end} !important; }}
+.chip-lk {{
+  display: inline-block; font-size: 8.5pt; font-weight: 700;
+  padding: 1.5pt 8pt;
+}}
+.conf {{ margin-top: 7pt; }}
+.conf-row {{ width: 100%; border-collapse: collapse; }}
+.conf-row td {{ border: 0; padding: 0 0 3pt; font-size: 8.5pt; color: #4a6270; }}
+.conf-val {{ text-align: {end}; font-weight: 700; color: #123b5c; }}
+.meter {{ height: 5pt; background: #e6eef3; }}
+.meter-fill {{ height: 5pt; background: #0e7c86; }}
+
+/* ---------- reference sources (RAG citations) ---------- */
+.refs {{
+  margin-top: 8pt; padding: 7pt 10pt;
+  background: #fafcfd; border: 0.5pt solid #e6eef3;
+  border-{start}: 2pt solid #cfdde5;
+}}
+.refs-head {{
+  font-size: 7.5pt; font-weight: 700; color: #4a6270;
+  text-transform: uppercase; letter-spacing: {tracking};
+}}
+.refs-note {{ font-size: 7.5pt; color: #8a99a3; margin-bottom: 3pt; }}
+.ref-list {{ list-style: none; margin: 0; padding: 0; }}
+.ref-list li {{ font-size: 8.5pt; padding: 1.5pt 0; }}
+.ref-title {{ color: #16232b; }}
+.ref-pages {{
+  color: #0e7c86; font-weight: 700; margin-{start}: 6pt;
+}}
+
+/* ---------- urgency ---------- */
+.uband {{
+  border: 0.75pt solid; border-{start}-width: 4pt;
+  padding: 7pt 11pt; margin-bottom: 6pt;
+}}
+.uband-value {{ font-size: 13pt; font-weight: 700; }}
+.uscale {{
+  width: 100%; border-collapse: separate; border-spacing: 4pt 0;
+  table-layout: fixed;
+}}
+.ustep {{
+  border: 0.75pt solid #dbe6ec; background: #f7fafb; color: #8a99a3;
+  font-size: 8.5pt; text-align: center; padding: 4pt 2pt;
+}}
+.uactive {{ font-weight: 700; }}
+.udot {{
+  display: inline-block; width: 5pt; height: 5pt;
+  margin-{end}: 4pt;
+}}
+
+/* ---------- disclaimer ---------- */
+.disclaimer {{
+  border: 0.75pt solid #e6c98a; border-{start}-width: 3pt;
+  background: #fdf8ee; color: #5c4a22;
+  padding: 9pt 12pt; margin-top: 13pt; font-size: 8.5pt;
+  break-inside: avoid;
+}}
+.disclaimer-title {{
+  font-weight: 700; color: #8a5a10; font-size: 9pt; margin-bottom: 2pt;
+}}
 </style>
 </head>
 <body>
-  <h1>{labels['title']}</h1>
-  <div class="meta">
-    {labels['generated_on']}: {generated_at} &nbsp;·&nbsp;
-    {labels['session_reference']}: {report['patient_info']['session_reference']}
+
+  <div class="masthead">
+    <table>
+      <tr>
+        <td style="width:25pt"><span class="mark">M</span></td>
+        <td class="brand">
+          <div class="brand-name">{labels['platform']}</div>
+          <div class="brand-tag">{labels['platform_tagline']}</div>
+        </td>
+        <td class="doc-kind-cell">
+          <div class="doc-kind">{labels['doc_kind']}</div>
+          <div class="doc-kind-sub">{labels['doc_kind_sub']}</div>
+        </td>
+      </tr>
+    </table>
   </div>
 
-  <h2>{labels['patient_info']}</h2>
-  <table>{patient_rows}</table>
+  <table class="metabar">
+    <tr>
+      <td>
+        <span class="k">{labels['report_id']}</span>
+        <span class="v id ltr">{esc(report['report_id'])}</span>
+      </td>
+      <td>
+        <span class="k">{labels['generated_on']}</span>
+        <span class="v ltr">{generated_at}</span>
+      </td>
+      <td class="last">
+        <span class="k">{labels['session_reference']}</span>
+        <span class="v ltr">{esc(info.get('session_reference'))}</span>
+      </td>
+    </tr>
+  </table>
 
-  <h2>{labels['chief_complaint']}</h2>
-  <p>{esc(report.get('chief_complaint')) or labels['no_data']}</p>
+  <div class="panel">
+    <div class="panel-head">{labels['patient_info']}</div>
+    <table class="kv">
+      <tr>
+        <th>{labels['patient_name']}</th><td>{or_missing(esc(info.get('name')))}</td>
+        <th>{labels['patient_age']}</th><td>{or_missing(age_display)}</td>
+      </tr>
+      <tr>
+        <th>{labels['patient_gender']}</th><td>{or_missing(gender_display)}</td>
+        <th>{labels['interview_date']}</th><td>{or_missing(interview_display)}</td>
+      </tr>
+    </table>
+  </div>
 
-  <h2>{labels['history']}</h2>
-  <p>{esc(history_text) or labels['no_data']}</p>
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">1</span><span class="sec-title">{labels['sec_symptoms']}</span>
+    </div>
+    <div class="field">
+      <div class="field-label">{labels['chief_complaint']}</div>
+      <div class="lead">{or_missing(esc(report.get('chief_complaint_description')))}</div>
+    </div>
+    <div class="field">
+      <div class="field-label">{labels['history']}</div>
+      <p>{or_missing(esc(history_text))}</p>
+    </div>
+    <div class="field">
+      <div class="field-label">{labels['symptoms_summary']}</div>
+      <table class="dtable">{symptoms_rows}</table>
+    </div>
+    {detected_block}
+  </div>
 
-  <h2>{labels['symptoms_summary']}</h2>
-  <table>{symptoms_rows}</table>
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">2</span><span class="sec-title">{labels['sec_differential']}</span>
+      <div class="sec-note">{labels['differential_caveat']}</div>
+    </div>
+    <table class="dtable">
+      <thead>
+        <tr>
+          <th class="rank">#</th>
+          <th>{labels['col_condition']}</th>
+          <th class="lk">{labels['col_likelihood']}</th>
+        </tr>
+      </thead>
+      <tbody>{differential_rows}</tbody>
+    </table>
+    {confidence_block}
+    {references_block}
+  </div>
 
-  <h2>{labels['urgency']}</h2>
-  <p><span class="urgency-badge">{urgency_label}</span></p>
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">3</span><span class="sec-title">{labels['sec_urgency']}</span>
+    </div>
+    <div class="uband" style="background:{urgency_style['bg']};border-color:{urgency_style['border']};color:{urgency_style['fg']}">
+      <div class="uband-value">{urgency_label}</div>
+    </div>
+    <table class="uscale"><tr>{urgency_steps}</tr></table>
+  </div>
 
-  <h2>{labels['specialty']}</h2>
-  <p>{esc(specialty_name) or labels['no_data']}</p>
-
-  <h2>{labels['differential']}</h2>
-  <ul class="differential">{differential_items}</ul>
-
-  <h2>{labels['next_step']}</h2>
-  <p>{esc(report.get('recommended_next_step')) or labels['no_data']}</p>
-
-  <h2>{labels['confidence']}</h2>
-  <p>{confidence_display}</p>
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-num">4</span><span class="sec-title">{labels['sec_next_steps']}</span>
+    </div>
+    <table class="dtable">
+      <tr>
+        <th>{labels['specialty']}</th>
+        <td>{or_missing(esc(specialty_name))}</td>
+      </tr>
+      <tr>
+        <th>{labels['next_step']}</th>
+        <td>{or_missing(esc(report.get('recommended_next_step')))}</td>
+      </tr>
+    </table>
+  </div>
 
   <div class="disclaimer">
-    <div class="label">{labels['disclaimer_title']}</div>
+    <div class="disclaimer-title">{labels['disclaimer_title']}</div>
     {labels['disclaimer_body']}
   </div>
+
 </body>
 </html>
 """
