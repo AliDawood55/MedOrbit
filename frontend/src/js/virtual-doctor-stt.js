@@ -51,6 +51,18 @@ const VirtualDoctorSTT = (() => {
         // Safety stop for an utterance that never ends (TV in the background).
         MAX_UTTERANCE_MS: 30000,
 
+        // Client-side deadline for /transcribe. Comfortably above the server's
+        // own 10s decode budget (VD_STT_TIMEOUT) plus upload, so this only
+        // fires when the response genuinely never arrives — but it guarantees
+        // the UI always leaves the "transcribing" state.
+        UPLOAD_TIMEOUT_MS: 20000,
+
+        // Below this much captured speech, an empty transcript is almost
+        // certainly a cough or a knock, so stay quiet. At or above it the
+        // patient really did say something and deserves to be asked to repeat
+        // rather than being ignored.
+        MIN_SPEECH_FOR_RETRY_MS: 400,
+
         // Rolling pre-roll window; also caps how much silence a blob can carry.
         PREROLL_MS: 3000,
 
@@ -317,8 +329,17 @@ const VirtualDoctorSTT = (() => {
         if (cfg.language) form.append('language', cfg.language);
 
         const sentAt = performance.now();
+        // Without a deadline the UI can sit on "transcribing" forever: the
+        // server serialises decoding through a single worker, so one slow turn
+        // used to leave the patient staring at "أفهم ما قلته…" with no way out.
+        // The server has its own decode deadline; this is the client-side
+        // backstop for the request never coming back at all.
+        const controller = new AbortController();
+        const abortTimer = setTimeout(() => controller.abort(), TUNING.UPLOAD_TIMEOUT_MS);
         try {
-            const res = await fetch(AI_BASE + '/virtual-doctor/transcribe', { method: 'POST', body: form });
+            const res = await fetch(AI_BASE + '/virtual-doctor/transcribe', {
+                method: 'POST', body: form, signal: controller.signal
+            });
             if (!res.ok) {
                 let detail = `HTTP ${res.status}`;
                 try {
@@ -339,8 +360,20 @@ const VirtualDoctorSTT = (() => {
             const text = (data.text || '').trim();
 
             if (!text) {
-                // Nothing intelligible — stay silent rather than nagging, and
-                // just keep listening. This happens for coughs and door slams.
+                // Staying silent here is right for a cough or a door slam, but
+                // it is wrong when the patient actually spoke and got nothing
+                // back — they are left with no feedback at all, which reads as
+                // the app having frozen. Short answers (a name) are exactly the
+                // case that returns empty, so speech-length audio now asks for
+                // a repeat; only genuinely brief blips stay silent.
+                const spokeLongEnough = (spokenMs || 0) >= TUNING.MIN_SPEECH_FOR_RETRY_MS;
+                if (data.timed_out || spokeLongEnough) {
+                    emitError({
+                        code: 'no_speech',
+                        key: data.timed_out ? 'stt.errTimeout' : 'stt.errNoSpeech',
+                        detail: '', showHelp: false, fatal: false
+                    });
+                }
                 resumeListening();
                 return;
             }
@@ -357,9 +390,17 @@ const VirtualDoctorSTT = (() => {
                 });
             }
         } catch (err) {
-            console.error('[vd-stt] upload failed:', err);
-            emitError({ code: 'network', key: 'stt.errNetwork', detail: err.message, showHelp: false, fatal: false });
+            // An abort is our own deadline firing, not a broken network.
+            const aborted = err && err.name === 'AbortError';
+            if (!aborted) console.error('[vd-stt] upload failed:', err);
+            emitError({
+                code: aborted ? 'timeout' : 'network',
+                key: aborted ? 'stt.errTimeout' : 'stt.errNetwork',
+                detail: aborted ? '' : err.message, showHelp: false, fatal: false
+            });
             resumeListening();
+        } finally {
+            clearTimeout(abortTimer);
         }
     }
 
@@ -483,7 +524,11 @@ const VirtualDoctorSTT = (() => {
      *  and would otherwise land on the patient's very first answer; starting
      *  it here lets it overlap the doctor's greeting. */
     function warmup() {
-        return fetch(AI_BASE + '/virtual-doctor/transcribe/warmup', { method: 'POST' })
+        // Pass the session language: Arabic and English load different model
+        // sizes on CPU, so warming the wrong one leaves a full cold load on
+        // the patient's first answer — long enough to look like a freeze.
+        const qs = cfg.language ? `?language=${encodeURIComponent(cfg.language)}` : '';
+        return fetch(AI_BASE + '/virtual-doctor/transcribe/warmup' + qs, { method: 'POST' })
             .then((res) => (res.ok ? res.json() : null))
             .catch(() => null);
     }
