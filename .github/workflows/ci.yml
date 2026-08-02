@@ -64,17 +64,39 @@ jobs:
       - name: Start Containers
         run: docker compose up -d
 
-      - name: Wait for containers
-        run: sleep 30
-
       - name: Show running containers
         run: docker compose ps
 
+      # A single curl after a fixed sleep isn't reliable: startup time varies
+      # with runner load, and (as diagnosed 2026-07-31) a genuine crash loop
+      # can make the port come up and go down repeatedly, so one lucky/unlucky
+      # sample either passes or fails without telling you which. Poll instead,
+      # and print each attempt so a real failure is easy to read from the log.
       - name: Backend Health Check
-        run: curl --fail http://localhost:3001/api/health
+        run: |
+          for i in $(seq 1 24); do
+            if curl --fail -s -o /dev/null http://localhost:3001/api/health; then
+              echo "Backend healthy after ${i} attempt(s) (~$(( (i - 1) * 5 ))s)"
+              exit 0
+            fi
+            echo "Attempt ${i}/24: backend not ready yet, retrying in 5s..."
+            sleep 5
+          done
+          echo "Backend did not become healthy within 120s"
+          exit 1
 
       - name: AI Service Health Check
-        run: curl --fail http://localhost:8001/health
+        run: |
+          for i in $(seq 1 24); do
+            if curl --fail -s -o /dev/null http://localhost:8001/health; then
+              echo "AI service healthy after ${i} attempt(s) (~$(( (i - 1) * 5 ))s)"
+              exit 0
+            fi
+            echo "Attempt ${i}/24: AI service not ready yet, retrying in 5s..."
+            sleep 5
+          done
+          echo "AI service did not become healthy within 120s"
+          exit 1
 
       - name: Show Logs on Failure
         if: failure()

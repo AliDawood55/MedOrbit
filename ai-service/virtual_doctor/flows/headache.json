@@ -1,0 +1,30 @@
+{
+  "complaint": "headache",
+  "match_symptoms": ["headache"],
+  "slots": [
+    {
+      "key": "duration",
+      "required": true,
+      "question_en": "How long have you had this headache — hours, days, or longer?",
+      "question_ar": "منذ متى وأنت تعاني من هذا الصداع؟ ساعات، أيام، أم أطول؟"
+    },
+    {
+      "key": "severity",
+      "required": true,
+      "question_en": "On a scale of mild, moderate, or severe, how bad is the pain?",
+      "question_ar": "ما مدى شدة الألم؟ خفيف، متوسط، أم شديد؟"
+    },
+    {
+      "key": "location",
+      "required": true,
+      "question_en": "Is the pain on one side of your head, both sides, or all over?",
+      "question_ar": "هل الألم في جانب واحد من الرأس، الجانبين، أم في كل الرأس؟"
+    },
+    {
+      "key": "associated_symptoms",
+      "required": true,
+      "question_en": "Do you have any other symptoms with the headache, such as nausea, sensitivity to light, or blurred vision?",
+      "question_ar": "هل لديك أعراض أخرى مع الصداع، مثل الغثيان، الحساسية للضوء، أو تشوش الرؤية؟"
+    }
+  ]
+}

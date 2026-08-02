@@ -73,50 +73,7 @@
                 </select>
             </div>
 
-            <!-- Structural preview: skeleton shapes only, never fabricated data -->
-            <div class="records-preview-section">
-                <div class="records-preview-caption">
-                    <i class="fas fa-eye"></i>
-                    <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
-                </div>
-                <div class="care-card-grid" style="opacity:0.7;">
-                    <div class="care-person-card">
-                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
-                        <div class="care-person-info">
-                            <div class="sk-line tall w-60 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-40 skeleton" style="margin-bottom:10px;"></div>
-                            <div class="sk-line w-80 skeleton"></div>
-                        </div>
-                    </div>
-                    <div class="care-person-card">
-                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
-                        <div class="care-person-info">
-                            <div class="sk-line tall w-40 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-60 skeleton" style="margin-bottom:10px;"></div>
-                            <div class="sk-line w-30 skeleton"></div>
-                        </div>
-                    </div>
-                    <div class="care-person-card">
-                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
-                        <div class="care-person-info">
-                            <div class="sk-line tall w-60 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-40 skeleton" style="margin-bottom:10px;"></div>
-                            <div class="sk-line w-60 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Honest empty state — the real, user-facing message -->
-            <div class="records-empty-state">
-                <div class="empty-state-icon"><i class="fas fa-user-injured"></i></div>
-                <h2 data-i18n="myPatients.emptyTitle">هذه الميزة غير متاحة بعد</h2>
-                <p data-i18n="myPatients.emptyHint">نعمل على ربط قائمة مرضاك بحسابك. بمجرد توفر هذه الميزة، سيظهر مرضاك هنا تلقائياً.</p>
-                <a href="dashboard.html" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-arrow-right"></i>
-                    <span data-i18n="records.backToDashboard">العودة للوحة التحكم</span>
-                </a>
-            </div>
+            <div id="patientsContent"></div>
 
         </div>
 

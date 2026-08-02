@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="../src/css/components.css">
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/home.css">
+    <link rel="stylesheet" href="../src/css/feedback-dashboard.css">
 </head>
 <body class="site-page" data-theme="light">
 
@@ -146,11 +147,59 @@
                 <span data-i18n="home.goToDashboard">الذهاب إلى لوحة التحكم</span>
             </a>
         </section>
+
+        <!-- ===== Feedback Dashboard ===== -->
+        <section class="feedback-dash" id="feedbackDash">
+            <div class="feedback-dash-heading">
+                <div>
+                    <h2 data-i18n="feedbackDash.title">آراء مستخدمينا</h2>
+                    <p data-i18n="feedbackDash.subtitle">تقييمات حقيقية ومحدّثة لحظياً من مجتمع MedOrbit</p>
+                </div>
+                <span class="feedback-dash-live">
+                    <span class="live-dot"></span>
+                    <span data-i18n="feedbackDash.live">مباشر</span>
+                </span>
+            </div>
+
+            <div class="feedback-dash-kpis" id="feedbackDashKpis"></div>
+
+            <div class="feedback-dash-grid">
+                <div class="feedback-chart-card">
+                    <div class="feedback-chart-card-header">
+                        <i class="fas fa-star-half-stroke"></i>
+                        <span data-i18n="feedbackDash.ratingDistribution">توزيع التقييمات</span>
+                    </div>
+                    <div class="feedback-chart-canvas-wrap">
+                        <canvas id="chartFeedbackRatings"></canvas>
+                    </div>
+                </div>
+
+                <div class="feedback-chart-card">
+                    <div class="feedback-chart-card-header">
+                        <i class="fas fa-layer-group"></i>
+                        <span data-i18n="feedbackDash.categoryAverages">متوسط التقييم حسب الفئة</span>
+                    </div>
+                    <div class="feedback-chart-canvas-wrap">
+                        <canvas id="chartFeedbackCategories"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feedback-dash-users">
+                <h3 data-i18n="feedbackDash.usersTitle">شكراً لكل من شاركنا رأيه</h3>
+                <div class="feedback-marquee hidden" id="feedbackMarquee">
+                    <div class="feedback-marquee-track" id="feedbackMarqueeTrack"></div>
+                </div>
+                <p class="feedback-dash-empty hidden" id="feedbackDashEmpty" data-i18n="feedbackDash.empty">لا توجد تقييمات بعد — كن أول من يشاركنا رأيه</p>
+            </div>
+        </section>
     </main>
 
     <footer class="site-footer" id="siteFooter"></footer>
 
     <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 
     <script src="../src/utils/dom.js"></script>
     <script src="../src/utils/format.js"></script>
@@ -161,10 +210,12 @@
     <script src="../src/js/theme.js"></script>
     <script src="../src/js/toast.js"></script>
     <script src="../src/js/layout.js"></script>
+    <script src="../src/js/feedback-dashboard.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             Layout.init();
+            FeedbackDashboard.init();
 
             // Logged-in visitors get a dashboard shortcut instead of the
             // chat-app link and the "create an account" pitch.
