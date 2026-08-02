@@ -158,6 +158,16 @@
     font-size: 28px;
 }
 
+.feedback-result-icon.success {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success);
+}
+
+.feedback-result-icon.error {
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger);
+}
+
 .feedback-result h2 {
     font-size: 17px;
     font-weight: 800;
