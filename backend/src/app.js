@@ -202,12 +202,16 @@ const {
 
 
 
-setInterval(
+if (process.env.NODE_ENV !== "test") {
 
-  processEmails,
+  setInterval(
 
-  10000
+    processEmails,
 
-);
+    10000
+
+  );
+
+}
 
 module.exports = app;

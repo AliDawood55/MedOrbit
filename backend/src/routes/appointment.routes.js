@@ -674,7 +674,6 @@ VALUES
 // COMPLETE
 // =====================================================
 
-
 router.put(
     "/:id/complete",
 
@@ -691,16 +690,15 @@ router.put(
             const result = await db.query(
 
                 `
+                UPDATE medorbit.appointments
 
-UPDATE medorbit.appointments
+                SET status='completed'
 
-SET status='completed'
+                WHERE id=$1
 
-WHERE id=$1
+                RETURNING *
 
-RETURNING *
-
-`,
+                `,
 
                 [
                     req.params.id
@@ -710,12 +708,54 @@ RETURNING *
 
 
 
-            return success(
-                res,
-                result.rows[0],
-                "Appointment completed"
+            if (!result.rows.length) {
+
+                return error(
+                    res,
+                    "Appointment not found",
+                    404,
+                    "NOT_FOUND"
+                );
+
+            }
+
+
+
+            await db.query(
+
+                `
+                INSERT INTO medorbit.appointment_status_history
+
+                (
+                    appointment_id,
+                    new_status,
+                    changed_by
+                )
+
+                VALUES
+
+                ($1,'completed',$2)
+
+                `,
+
+                [
+                    req.params.id,
+                    req.user.sub
+                ]
+
             );
 
+
+
+            return success(
+
+                res,
+
+                result.rows[0],
+
+                "Appointment completed"
+
+            );
 
 
         }
