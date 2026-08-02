@@ -1,0 +1,30 @@
+{
+  "complaint": "rash",
+  "match_symptoms": ["skin_rash"],
+  "slots": [
+    {
+      "key": "duration",
+      "required": true,
+      "question_en": "When did the rash appear, and has it spread since then?",
+      "question_ar": "متى ظهر الطفح الجلدي، وهل انتشر منذ ذلك الحين؟"
+    },
+    {
+      "key": "appearance",
+      "required": true,
+      "question_en": "What does it look like — red, raised, itchy, or blistered?",
+      "question_ar": "كيف يبدو؟ أحمر، بارز، مثير للحكة، أم فيه بثور؟"
+    },
+    {
+      "key": "location",
+      "required": true,
+      "question_en": "Where on your body is the rash?",
+      "question_ar": "أين يظهر الطفح الجلدي على جسمك؟"
+    },
+    {
+      "key": "associated_symptoms",
+      "required": true,
+      "question_en": "Do you have a fever or joint pain, or did you start any new medication, food, or soap recently?",
+      "question_ar": "هل لديك حمى أو ألم في المفاصل، أو بدأت مؤخراً بتناول دواء جديد أو طعام جديد أو استخدام صابون جديد؟"
+    }
+  ]
+}

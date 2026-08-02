@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/records.css">
     <link rel="stylesheet" href="../src/css/care.css">
+    <link rel="stylesheet" href="../src/css/feedback.css">
 </head>
 <body class="site-page" data-theme="light">
 
@@ -126,45 +127,17 @@
                 </div>
             </div>
 
-            <!-- ===== Honest "not saved" result (mirrors feedback.html's pattern) ===== -->
+            <!-- ===== Real result: success or honest failure ===== -->
             <div class="feedback-result hidden" id="postFormResult">
-                <div class="feedback-result-icon"><i class="fas fa-plug-circle-exclamation"></i></div>
-                <h2 data-i18n="doctorPosts.notConnectedTitle">لم يتم حفظ المنشور بعد</h2>
-                <p data-i18n="doctorPosts.notConnectedHint">إدارة المنشورات غير متصلة بأي خادم بعد، لذلك لم يتم حفظ منشورك في أي مكان. نعمل على إضافة هذه الميزة قريباً.</p>
+                <div class="feedback-result-icon" id="postFormResultIcon"><i class="fas fa-circle-check"></i></div>
+                <h2 id="postFormResultTitle"></h2>
+                <p id="postFormResultHint"></p>
                 <button type="button" class="btn btn-secondary btn-sm" id="postFormResultCloseBtn">
                     <span data-i18n="common.close">إغلاق</span>
                 </button>
             </div>
 
-            <!-- ===== Structural preview + honest empty state for the list ===== -->
-            <div class="records-preview-section">
-                <div class="records-preview-caption">
-                    <i class="fas fa-eye"></i>
-                    <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
-                </div>
-                <div class="records-preview-list">
-                    <div class="records-preview-card active">
-                        <div class="records-preview-card-icon skeleton"></div>
-                        <div class="records-preview-card-lines">
-                            <div class="sk-line tall w-60 skeleton"></div>
-                            <div class="sk-line w-40 skeleton"></div>
-                        </div>
-                    </div>
-                    <div class="records-preview-card">
-                        <div class="records-preview-card-icon skeleton"></div>
-                        <div class="records-preview-card-lines">
-                            <div class="sk-line tall w-80 skeleton"></div>
-                            <div class="sk-line w-30 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="records-empty-state">
-                <div class="empty-state-icon"><i class="fas fa-newspaper"></i></div>
-                <h2 data-i18n="doctorPosts.emptyTitle">لا توجد منشورات بعد</h2>
-                <p data-i18n="doctorPosts.emptyHint">هذه الميزة غير متصلة بخادم بعد، لذلك لا يمكن حفظ أو عرض منشوراتك الفعلية حالياً.</p>
-            </div>
+            <div id="postsList"></div>
 
         </div>
 

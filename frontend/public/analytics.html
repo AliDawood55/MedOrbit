@@ -64,6 +64,13 @@
         </div>
 
         <div id="analyticsContent" class="hidden">
+
+            <!-- The aggregate totals GET /api/dashboard/stats actually returns.
+                 Shown as plain labelled tiles because several of them (record
+                 counts, average rating) have no chart on this page that would
+                 describe them accurately. -->
+            <div class="analytics-kpis hidden" id="analyticsKpis"></div>
+
             <div class="analytics-grid" id="analyticsGrid">
 
                 <div class="chart-card hover-lift">
