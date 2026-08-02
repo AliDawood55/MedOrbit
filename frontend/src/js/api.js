@@ -360,7 +360,7 @@ const API = (() => {
     };
 
     // ================= ANALYTICS (JWT required, admin only) =================
-    // GET /api/dashboard/stats does not exist yet (see BACKEND_NEEDED.md).
+    // GET /api/dashboard/stats is live; analytics.js adapts the current aggregate payload.
     // Expected response shape once it lands — analytics.js reads exactly
     // this and shows an "awaiting backend data" state per-chart for
     // whichever section is missing/empty:
@@ -377,41 +377,59 @@ const API = (() => {
     };
 
     // ================= CARE (JWT required) =================
-    // None of these endpoints exist yet — see BACKEND_NEEDED.md items
-    // 10–14. Every one of them MUST resolve the caller's own doctor_id /
-    // patient_id server-side from the JWT, and the :patientId /:doctorId
-    // routes MUST verify a real appointment relationship exists before
-    // returning anything (404 if not) — see the "Data isolation" warning in
-    // BACKEND_NEEDED.md. authorize('doctor')/authorize('patient') alone only
-    // checks role, never ownership. These calls are made anyway (matching
-    // this codebase's convention for analytics/dashboardStats above) so
-    // wiring up the real route later requires zero frontend changes — they
-    // simply 404 today and every page shows its honest empty state.
+    // All LIVE — backend/src/routes/doctor.routes.js and patient.routes.js.
+    // Every one of these resolves the caller's own doctor_id / patient_id
+    // server-side from the JWT, and every :patientId /:doctorId route
+    // verifies a real appointment relationship exists before returning
+    // anything (404, not 403, if not) — see the isolation notes in
+    // patient-detail.js / my-doctor.js / doctor.routes.js.
     const care = {
-        // Public doctor-posts read (doctor.html's Posts tab)
+        // Public doctor-posts read (doctor.html's Posts tab) — published only
         doctorPosts: (doctorId, options) => get(`/doctors/${doctorId}/posts`, null, options),
-        // Doctor's own posts (doctor-posts.html)
+        // Doctor's own posts, every status (doctor-posts.html)
         myPosts: (options) => get('/doctors/me/posts', null, options),
         createPost: (body, options) => post('/doctors/me/posts', body, options),
         updatePost: (postId, body, options) => put(`/doctors/me/posts/${postId}`, body, options),
         deletePost: (postId, options) => del(`/doctors/me/posts/${postId}`, options),
-        // Doctor's patient list + one patient's file (my-patients.html, patient-detail.html)
+        // Doctor's patient list + one patient's file, incl. session notes
+        // (my-patients.html, patient-detail.html)
         myPatients: (query, options) => get('/doctors/me/patients', query, options),
         patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
-        patientNotes: (patientId, options) => get(`/doctors/me/patients/${patientId}/notes`, null, options),
         addPatientNote: (patientId, body, options) => post(`/doctors/me/patients/${patientId}/notes`, body, options),
-        // Patient's view of their own doctor(s) (my-doctor.html)
+        // Patient's view of their own doctor(s) + notes a doctor explicitly
+        // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),
-        sharedNotes: (doctorId, options) => get(`/patients/me/doctors/${doctorId}/notes`, null, options)
+        sharedNotes: (doctorId, options) => get(`/patients/me/doctors/${doctorId}/notes`, null, options),
+        // Patient's own medical records / prescriptions — the safe,
+        // ownership-scoped equivalents of the generic GET /medical-records
+        // and GET /prescriptions/:id, which have no ownership filtering at all.
+        myMedicalRecords: (query, options) => get('/patients/me/medical-records', query, options),
+        medicalRecordDetail: (id, options) => get(`/patients/me/medical-records/${id}`, null, options),
+        // Combined timeline (appointments + records + prescriptions) — my-records.html
+        myRecordsTimeline: (query, options) => get('/patients/me/records', query, options),
+        myPrescriptions: (query, options) => get('/patients/me/prescriptions', query, options),
+        prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
     };
 
     function getOrigin() {
         return BASE_URL.replace(/\/api\/?$/, '');
     }
 
+    // Platform feedback (feedback.html) — POST /api/feedback,
+    // backend/src/routes/feedback.routes.js. Any authenticated user
+    // (patient or doctor), user_id resolved server-side from the JWT.
+    // GET /api/feedback/stats is public (home.html's feedback dashboard):
+    // { total, averageRating, ratingDistribution:[{rating,count}],
+    //   categoryAverages:{chatbot,clinics,booking,design},
+    //   recommend:{yes,no}, users:[{id,nameAr,nameEn,avatarUrl}] }
+    const feedback = {
+        submit: (body, options) => post('/feedback', body, options),
+        stats: (options) => get('/feedback/stats', null, options)
+    };
+
     return {
         request, get, post, put, del, patch,
-        sendChatMessage, makeCancellable, conversations, doctors, clinics, users, appointments, notifications, analytics, care,
+        sendChatMessage, makeCancellable, conversations, doctors, clinics, users, appointments, notifications, analytics, care, feedback,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, clearCache
     };

@@ -44,7 +44,7 @@ app.use(helmet({
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({
   origin: corsOrigin === '*' ? true : corsOrigin.split(',').map(s => s.trim()),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: corsOrigin !== '*'
 }));
@@ -131,6 +131,8 @@ app.use('/api/specialties', require('./routes/specialty.routes'));
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/patients", require("./routes/patient.routes"));
+app.use("/api/feedback", require("./routes/feedback.routes"));
 app.use('/api', reviewRoutes);
 app.use('/api', reportRoutes);
 // User routes (protected)

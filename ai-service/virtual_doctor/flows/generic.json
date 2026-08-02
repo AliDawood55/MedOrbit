@@ -1,0 +1,24 @@
+{
+  "complaint": "generic",
+  "match_symptoms": [],
+  "slots": [
+    {
+      "key": "duration",
+      "required": true,
+      "question_en": "How long have you been experiencing this?",
+      "question_ar": "منذ متى وأنت تعاني من هذا؟"
+    },
+    {
+      "key": "severity",
+      "required": true,
+      "question_en": "How would you rate it — mild, moderate, or severe?",
+      "question_ar": "كيف تقيّم شدته؟ خفيف، متوسط، أم شديد؟"
+    },
+    {
+      "key": "associated_symptoms",
+      "required": true,
+      "question_en": "Are there any other symptoms happening alongside this?",
+      "question_ar": "هل هناك أي أعراض أخرى مرافقة لهذا؟"
+    }
+  ]
+}

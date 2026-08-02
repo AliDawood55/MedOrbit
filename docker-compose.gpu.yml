@@ -1,0 +1,55 @@
+# MedOrbit — optional GPU overlay for ai-service (Whisper on CUDA).
+#
+# USAGE
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# WHY THIS IS A SEPARATE FILE AND NOT PART OF docker-compose.yml
+# --------------------------------------------------------------
+# A `driver: nvidia` device reservation is not a hint — Docker fails container
+# creation outright when no NVIDIA runtime is present:
+#
+#     could not select device driver "nvidia" with capabilities: [[gpu]]
+#
+# CI (.github/workflows/ci.yml) runs `docker compose build` and
+# `docker compose up -d` on a GPU-less ubuntu-latest runner. Putting the
+# reservation in the base file would therefore break every CI run on a machine
+# that is never going to have a GPU. Keeping it in an overlay means the default
+# path stays CPU-only and green, and GPU is an explicit opt-in on machines that
+# actually have one.
+#
+# Requires on the host: an NVIDIA driver and the NVIDIA Container Toolkit
+# (check with `docker info --format '{{json .Runtimes}}'` for an "nvidia" entry).
+#
+# VRAM BUDGET — read before enabling on a small card.
+# Ollama runs on the HOST, not in this compose project, so Docker cannot see or
+# arbitrate its VRAM use. On a 4GB card, qwen2:7b alone occupies ~2.3GB
+# (partially offloaded; the model is 4.4GB and does not fit), which leaves
+# roughly 1.7GB for Whisper. `medium` in float16 needs ~1.5GB and will contend;
+# int8_float16 needs ~0.8GB and fits comfortably, which is why it is the
+# default here rather than plain float16.
+
+services:
+  ai-service:
+    build:
+      # Pulls in nvidia-cublas-cu12 + nvidia-cudnn-cu12 (~2GB). Without this
+      # the device below is reserved but CTranslate2 has no CUDA runtime to
+      # call, and stt.py silently falls back to CPU.
+      args:
+        INSTALL_CUDA: "1"
+    environment:
+      # "auto" is already the default; stated explicitly so it is obvious that
+      # this overlay is what makes the CUDA branch reachable. stt.py probes
+      # CUDA with a real encoder pass and falls back to CPU on failure, so a
+      # broken driver degrades instead of crashing the service.
+      VD_STT_DEVICE: auto
+      # Halves Whisper's VRAM versus float16 with no measurable accuracy cost
+      # at this model size — the difference between fitting alongside Ollama
+      # and fighting it for the last 200MB.
+      VD_STT_COMPUTE: int8_float16
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

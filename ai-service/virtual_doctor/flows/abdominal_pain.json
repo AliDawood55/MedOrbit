@@ -1,0 +1,30 @@
+{
+  "complaint": "abdominal_pain",
+  "match_symptoms": ["stomach_pain"],
+  "slots": [
+    {
+      "key": "duration",
+      "required": true,
+      "question_en": "How long have you had this abdominal pain?",
+      "question_ar": "منذ متى وأنت تعاني من ألم البطن هذا؟"
+    },
+    {
+      "key": "location_character",
+      "required": true,
+      "question_en": "Where exactly is the pain, and does it feel sharp, cramping, or dull?",
+      "question_ar": "أين بالضبط مكان الألم، وهل هو حاد، أم على شكل مغص، أم خفيف/مبهم؟"
+    },
+    {
+      "key": "associated_symptoms",
+      "required": true,
+      "question_en": "Do you have nausea, vomiting, diarrhea, constipation, fever, or blood in your stool?",
+      "question_ar": "هل لديك غثيان، تقيؤ، إسهال، إمساك، حمى، أو دم في البراز؟"
+    },
+    {
+      "key": "triggers",
+      "required": true,
+      "question_en": "Does eating make it better or worse, and have you had this kind of pain before?",
+      "question_ar": "هل الأكل يزيد الألم أم يخففه، وهل سبق أن شعرت بهذا الألم من قبل؟"
+    }
+  ]
+}

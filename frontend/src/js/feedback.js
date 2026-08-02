@@ -1,9 +1,7 @@
 /**
  * MedOrbit v2 - Feedback
- * No backend endpoint exists for platform feedback at all (grepped every
- * route file — see BACKEND_NEEDED.md). This is a fully working form with
- * real client-side validation; on submit it never calls an API and never
- * claims success — it shows an explicit "not connected yet" message.
+ * POST /api/feedback (backend/src/routes/feedback.routes.js) — any
+ * authenticated user, user_id resolved server-side from the JWT.
  */
 const Feedback = (() => {
 
@@ -112,14 +110,24 @@ const Feedback = (() => {
         const btn = document.getElementById('submitFeedbackBtn');
         btn.classList.add('loading');
 
-        // No endpoint exists to send this to (see BACKEND_NEEDED.md) — the
-        // brief delay is just normal button-press affordance, not a real
-        // network call. The result panel below is explicit that nothing
-        // was actually saved.
-        await new Promise((resolve) => setTimeout(resolve, 450));
+        let ok = true;
+        try {
+            await API.feedback.submit(data);
+        } catch (err) {
+            console.error('Feedback: failed to submit', err);
+            ok = false;
+        }
 
         btn.classList.remove('loading');
-        console.info('Feedback: form is valid but there is no backend endpoint to submit to yet. Collected data:', data);
+        showResult(ok);
+    }
+
+    function showResult(ok) {
+        const icon = document.getElementById('feedbackResultIcon');
+        icon.className = 'feedback-result-icon ' + (ok ? 'success' : 'error');
+        icon.innerHTML = '<i class="fas ' + (ok ? 'fa-circle-check' : 'fa-triangle-exclamation') + '"></i>';
+        document.getElementById('feedbackResultTitle').textContent = t(ok ? 'feedback.savedTitle' : 'feedback.errorTitle');
+        document.getElementById('feedbackResultHint').textContent = t(ok ? 'feedback.savedHint' : 'feedback.errorHint');
 
         document.getElementById('feedbackFormWrap').classList.add('hidden');
         document.getElementById('feedbackResult').classList.remove('hidden');

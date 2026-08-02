@@ -57,16 +57,18 @@ const DoctorProfile = (() => {
         content.innerHTML = renderSkeleton();
 
         try {
-            const [profileRes, availabilityRes] = await Promise.all([
+            const [profileRes, availabilityRes, postsRes] = await Promise.all([
                 API.doctors.get(id, { auth: false }),
-                API.doctors.availability(id, null, { auth: false }).catch(() => null)
+                API.doctors.availability(id, null, { auth: false }).catch(() => null),
+                API.care.doctorPosts(id, { auth: false }).catch(() => null)
             ]);
 
             const { doctor, clinics, reviews } = profileRes.data;
             const slots = availabilityRes?.data?.slots || profileRes.data.availability || [];
+            const posts = Array.isArray(postsRes?.data) ? postsRes.data : [];
 
-            content.innerHTML = renderProfile(doctor, clinics || [], slots, reviews || []);
-            wireProfileTabs(content);
+            content.innerHTML = renderProfile(doctor, clinics || [], slots, reviews || [], posts);
+            wireProfileTabs(content, posts);
             renderMiniMap(clinics || []);
 
         } catch (err) {
@@ -111,7 +113,7 @@ const DoctorProfile = (() => {
 
     // ================= RENDER: PROFILE =================
 
-    function renderProfile(doctor, clinics, slots, reviews) {
+    function renderProfile(doctor, clinics, slots, reviews, posts) {
         const ar = isAr();
         const fullName = escapeHtml(doctorName(doctor));
         const specialty = escapeHtml(name(doctor, 'specialty_ar', 'specialty_en'));
@@ -148,7 +150,7 @@ const DoctorProfile = (() => {
 
             '<div class="profile-layout">' +
                 '<div class="profile-main">' +
-                    renderProfileTabs(bio, slots, reviews) +
+                    renderProfileTabs(bio, slots, reviews, posts) +
                 '</div>' +
 
                 '<aside class="profile-sidebar">' +
@@ -210,7 +212,7 @@ const DoctorProfile = (() => {
 
     // ================= PROFILE TABS =================
 
-    function renderProfileTabs(bio, slots, reviews) {
+    function renderProfileTabs(bio, slots, reviews, posts) {
         const tabs = [];
         if (bio) tabs.push({ id: 'about', icon: 'fa-user', labelKey: 'doctor.about' });
         tabs.push({ id: 'availability', icon: 'fa-calendar-week', labelKey: 'doctor.availability' });
@@ -233,12 +235,12 @@ const DoctorProfile = (() => {
             '<div class="profile-tab-panel' + (defaultTab === 'reviews' ? ' active' : '') + '" data-panel="reviews">' +
                 (reviews.length ? reviews.map(renderReview).join('') : '<p>' + escapeHtml(t('doctor.noReviews')) + '</p>') +
             '</div>' +
-            '<div class="profile-tab-panel' + (defaultTab === 'posts' ? ' active' : '') + '" data-panel="posts">' + renderPostsTab() + '</div>';
+            '<div class="profile-tab-panel' + (defaultTab === 'posts' ? ' active' : '') + '" data-panel="posts">' + renderPostsTab(posts) + '</div>';
 
         return strip + '<div class="profile-tab-panels">' + panels + '</div>';
     }
 
-    function wireProfileTabs(content) {
+    function wireProfileTabs(content, posts) {
         const tabButtons = content.querySelectorAll('.profile-tab');
         tabButtons.forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -249,49 +251,52 @@ const DoctorProfile = (() => {
                 });
             });
         });
+
+        content.querySelectorAll('[data-post-id]').forEach((card) => {
+            card.addEventListener('click', () => {
+                const post = (posts || []).find((p) => String(p.id) === card.dataset.postId);
+                if (post) openPostDetailModal(post);
+            });
+        });
     }
 
     // ================= POSTS TAB =================
-    // GET /api/doctors/:id/posts does not exist yet (see BACKEND_NEEDED.md,
-    // item 10) — there is no `posts` table at all. This renders a
-    // structural preview (literal skeleton shapes, never fabricated
-    // article text) plus the honest empty state. openPostDetailModal()
-    // below is fully implemented and ready for real data — it's just never
-    // called today since no real, clickable post card exists yet.
+    // GET /api/doctors/:id/posts (backend/src/routes/doctor.routes.js) —
+    // public read of this doctor's PUBLISHED posts only.
 
-    function renderGhostPostCard() {
+    function renderPostCard(post) {
+        const title = escapeHtml(name(post, 'title_ar', 'title_en'));
+        const date = post.created_at ? new Date(post.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : '';
+        const preview = post.body && post.body.length > 100 ? post.body.slice(0, 100) + '…' : (post.body || '');
+
         return (
-            '<div class="records-preview-card">' +
-                '<div class="records-preview-card-icon skeleton"></div>' +
+            '<div class="records-preview-card" data-post-id="' + escapeHtml(post.id) + '" style="cursor:pointer;">' +
+                '<div class="records-real-icon"><i class="fas fa-newspaper"></i></div>' +
                 '<div class="records-preview-card-lines">' +
-                    '<div class="sk-line tall w-60 skeleton"></div>' +
-                    '<div class="sk-line w-80 skeleton"></div>' +
-                    '<div class="sk-line w-30 skeleton"></div>' +
+                    '<div>' + title + '</div>' +
+                    '<div style="color:var(--text-mute);font-size:12px;">' + escapeHtml([post.category, date].filter(Boolean).join(' · ')) + '</div>' +
+                    (preview ? '<div style="color:var(--text-faint);font-size:12px;">' + escapeHtml(preview) + '</div>' : '') +
                 '</div>' +
             '</div>'
         );
     }
 
-    function renderPostsTab() {
-        return (
-            '<div class="records-preview-section" style="margin-bottom:16px;">' +
-                '<div class="records-preview-caption"><i class="fas fa-eye"></i> <span>' + escapeHtml(t('doctor.postsPreviewCaption')) + '</span></div>' +
-                '<div class="records-preview-list">' +
-                    renderGhostPostCard() + renderGhostPostCard() +
-                '</div>' +
-            '</div>' +
-            '<div class="records-empty-state">' +
-                '<div class="empty-state-icon"><i class="fas fa-newspaper"></i></div>' +
-                '<h2>' + escapeHtml(t('doctor.postsEmptyTitle')) + '</h2>' +
-                '<p>' + escapeHtml(t('doctor.postsEmptyHint')) + '</p>' +
-            '</div>'
-        );
+    function renderPostsTab(posts) {
+        if (!posts || !posts.length) {
+            return (
+                '<div class="records-empty-state">' +
+                    '<div class="empty-state-icon"><i class="fas fa-newspaper"></i></div>' +
+                    '<h2>' + escapeHtml(t('doctor.postsEmptyTitle')) + '</h2>' +
+                    '<p>' + escapeHtml(t('doctor.postsEmptyHint')) + '</p>' +
+                '</div>'
+            );
+        }
+
+        return '<div class="records-preview-list">' + posts.map(renderPostCard).join('') + '</div>';
     }
 
     /**
-     * Opens a read-only detail view for a single post. Ready to wire up to
-     * a real click handler the moment GET /doctors/:id/posts returns real,
-     * clickable cards — not reachable today.
+     * Opens a read-only detail view for a single post.
      */
     function openPostDetailModal(post) {
         const backdrop = document.createElement('div');
@@ -302,7 +307,7 @@ const DoctorProfile = (() => {
                 '<p style="color:var(--text-faint);font-size:12px;">' +
                     escapeHtml([post.category, post.created_at ? new Date(post.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : ''].filter(Boolean).join(' · ')) +
                 '</p>' +
-                '<p>' + escapeHtml(name(post, 'body_ar', 'body_en')) + '</p>' +
+                '<p>' + escapeHtml(post.body || '') + '</p>' +
                 '<div class="modal-actions"><button type="button" class="btn btn-secondary" id="postDetailCloseBtn">' + escapeHtml(t('common.close')) + '</button></div>' +
             '</div>';
 

@@ -6,6 +6,261 @@ const { authenticate, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Shared by all doctor<->patient routes below.
+async function resolveDoctorId(userId) {
+  const result = await db.query('SELECT id FROM medorbit.doctors WHERE user_id = $1', [userId]);
+  return result.rows[0]?.id || null;
+}
+
+// A doctor may only act on a patient they have (or had) at least one
+// appointment with — there's no dedicated relationship table. Returns a
+// boolean rather than throwing so callers can turn a "no" into a 404 (not
+// 403), so a doctor probing random patient ids can't tell real ids from
+// fake ones — see the isolation note in patient-detail.js.
+async function verifyDoctorPatientRelationship(doctorId, patientId) {
+  const result = await db.query(
+    'SELECT 1 FROM medorbit.appointments WHERE doctor_id = $1 AND patient_id = $2 LIMIT 1',
+    [doctorId, patientId]
+  );
+  return result.rows.length > 0;
+}
+
+// GET /api/doctors/me/patients - Doctor's own patient list, derived from
+// appointment history (no dedicated doctor<->patient relationship table
+// exists). doctorId is resolved server-side from the JWT (req.user.sub),
+// never accepted from the client — see the isolation note in my-patients.js.
+// Supports ?search= against the patient's name, matching what
+// my-patients.html's search box already sends.
+router.get('/me/patients', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const { search } = req.query;
+    const params = [doctorId];
+    let searchClause = '';
+    if (search) {
+      params.push(`%${search}%`);
+      searchClause = ` AND (pr.first_name_ar ILIKE $2 OR pr.first_name_en ILIKE $2 OR pr.last_name_ar ILIKE $2 OR pr.last_name_en ILIKE $2)`;
+    }
+
+    const result = await db.query(
+      `SELECT
+         p.id, u.email, pr.first_name_ar, pr.last_name_ar, pr.first_name_en, pr.last_name_en,
+         pr.phone, pr.profile_image_url,
+         MAX(a.scheduled_date) FILTER (WHERE a.scheduled_date >= CURRENT_DATE AND a.status NOT IN ('cancelled', 'no_show')) AS next_appointment_date,
+         MAX(a.scheduled_date) FILTER (WHERE a.scheduled_date < CURRENT_DATE OR a.status = 'completed') AS last_appointment_date,
+         COUNT(*) FILTER (WHERE a.scheduled_date >= CURRENT_DATE AND a.status NOT IN ('cancelled', 'no_show')) > 0 AS has_upcoming
+       FROM medorbit.patients p
+       JOIN medorbit.users u ON u.id = p.user_id
+       LEFT JOIN medorbit.user_profiles pr ON pr.user_id = u.id
+       JOIN medorbit.appointments a ON a.patient_id = p.id
+       WHERE a.doctor_id = $1${searchClause}
+       GROUP BY p.id, u.email, pr.first_name_ar, pr.last_name_ar, pr.first_name_en, pr.last_name_en, pr.phone, pr.profile_image_url
+       ORDER BY COALESCE(MAX(a.scheduled_date), '-infinity') DESC`,
+      params
+    );
+
+    return success(res, result.rows, 'Patients retrieved');
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/doctors/me/patients/:patientId - Single patient file, as seen by
+// their doctor: profile + this doctor's appointment history + session notes
+// + prescriptions for this patient. The relationship check runs BEFORE any
+// of that is queried and returns 404 (not 403) on failure — see
+// verifyDoctorPatientRelationship above and the isolation note in
+// patient-detail.js. Notes/prescriptions are always filtered by BOTH
+// doctor_id AND patient_id, so a doctor never sees another doctor's notes
+// about the same patient.
+router.get('/me/patients/:patientId', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const { patientId } = req.params;
+    const related = await verifyDoctorPatientRelationship(doctorId, patientId);
+    if (!related) return error(res, 'Patient not found', 404, 'NOT_FOUND');
+
+    const patientResult = await db.query(
+      `SELECT p.id, u.email, pr.first_name_ar, pr.last_name_ar, pr.first_name_en, pr.last_name_en,
+              pr.phone, pr.profile_image_url, pr.date_of_birth, pr.gender
+       FROM medorbit.patients p
+       JOIN medorbit.users u ON u.id = p.user_id
+       LEFT JOIN medorbit.user_profiles pr ON pr.user_id = u.id
+       WHERE p.id = $1`,
+      [patientId]
+    );
+
+    const appointmentsResult = await db.query(
+      `SELECT id, appointment_number, scheduled_date, start_time, end_time,
+              appointment_type, status, reason_for_visit
+       FROM medorbit.appointments
+       WHERE doctor_id = $1 AND patient_id = $2
+       ORDER BY scheduled_date DESC, start_time DESC`,
+      [doctorId, patientId]
+    );
+
+    const notesResult = await db.query(
+      `SELECT id, record_number, record_type, chief_complaint, diagnosis,
+              treatment_plan, clinical_notes, doctor_notes, is_draft, visible_to_patient, created_at
+       FROM medorbit.medical_records
+       WHERE doctor_id = $1 AND patient_id = $2
+       ORDER BY created_at DESC`,
+      [doctorId, patientId]
+    );
+
+    const prescriptionsResult = await db.query(
+      `SELECT id, prescription_number, prescription_date, valid_until, status, diagnosis, instructions
+       FROM medorbit.prescriptions
+       WHERE doctor_id = $1 AND patient_id = $2
+       ORDER BY prescription_date DESC`,
+      [doctorId, patientId]
+    );
+
+    return success(res, {
+      patient: patientResult.rows[0],
+      appointments: appointmentsResult.rows,
+      notes: notesResult.rows,
+      prescriptions: prescriptionsResult.rows
+    }, 'Patient detail retrieved');
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/doctors/me/patients/:patientId/notes - Add a session note,
+// stored as a medorbit.medical_records row. patient_id/doctor_id are always
+// forced server-side (doctor_id from the JWT via resolveDoctorId, patient_id
+// from the URL only after the relationship check passes) — never taken from
+// the request body.
+router.post('/me/patients/:patientId/notes', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const { patientId } = req.params;
+    const related = await verifyDoctorPatientRelationship(doctorId, patientId);
+    if (!related) return error(res, 'Patient not found', 404, 'NOT_FOUND');
+
+    const { record_type, chief_complaint, diagnosis, clinical_notes, is_draft, visible_to_patient } = req.body;
+
+    const result = await db.query(
+      `INSERT INTO medorbit.medical_records
+         (patient_id, doctor_id, record_type, chief_complaint, diagnosis, clinical_notes, is_draft, visible_to_patient)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, record_number, record_type, chief_complaint, diagnosis, clinical_notes, is_draft, visible_to_patient, created_at`,
+      [patientId, doctorId, record_type || 'consultation', chief_complaint || null, diagnosis || null, clinical_notes || null, !!is_draft, !!visible_to_patient]
+    );
+
+    return success(res, result.rows[0], 'Note saved', 201);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/doctors/me/posts - Doctor's own posts, every status (draft +
+// published). doctorId resolved server-side from the JWT — see
+// resolveDoctorId above.
+router.get('/me/posts', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const result = await db.query(
+      `SELECT id, title_ar, title_en, category, body, is_published, created_at, updated_at
+       FROM medorbit.doctor_posts
+       WHERE doctor_id = $1
+       ORDER BY created_at DESC`,
+      [doctorId]
+    );
+
+    return success(res, result.rows, 'Posts retrieved');
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/doctors/me/posts - Create a post. doctor_id always forced
+// server-side, never taken from the request body.
+router.post('/me/posts', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const { titleAr, titleEn, category, body, isPublished } = req.body;
+
+    if (!titleAr && !titleEn) {
+      return error(res, 'titleAr or titleEn is required', 400, 'VALIDATION_ERROR');
+    }
+    if (!body) {
+      return error(res, 'body is required', 400, 'VALIDATION_ERROR');
+    }
+
+    const result = await db.query(
+      `INSERT INTO medorbit.doctor_posts (doctor_id, title_ar, title_en, category, body, is_published)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, title_ar, title_en, category, body, is_published, created_at, updated_at`,
+      [doctorId, titleAr || null, titleEn || null, category || 'health_tip', body, !!isPublished]
+    );
+
+    return success(res, result.rows[0], 'Post created', 201);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/doctors/me/posts/:postId - Edit a post. The id + doctor_id match
+// in the WHERE clause IS the ownership check — a post belonging to another
+// doctor returns 404 here, same as one that doesn't exist.
+router.put('/me/posts/:postId', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const { titleAr, titleEn, category, body, isPublished } = req.body;
+
+    const result = await db.query(
+      `UPDATE medorbit.doctor_posts
+       SET title_ar = COALESCE($1, title_ar),
+           title_en = COALESCE($2, title_en),
+           category = COALESCE($3, category),
+           body = COALESCE($4, body),
+           is_published = COALESCE($5, is_published)
+       WHERE id = $6 AND doctor_id = $7
+       RETURNING id, title_ar, title_en, category, body, is_published, created_at, updated_at`,
+      [titleAr || null, titleEn || null, category || null, body || null, typeof isPublished === 'boolean' ? isPublished : null, req.params.postId, doctorId]
+    );
+
+    if (result.rows.length === 0) return error(res, 'Post not found', 404, 'NOT_FOUND');
+
+    return success(res, result.rows[0], 'Post updated');
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/doctors/me/posts/:postId - Same ownership check as PUT above.
+router.delete('/me/posts/:postId', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    if (!doctorId) return error(res, 'Doctor profile not found', 404, 'NOT_FOUND');
+
+    const result = await db.query(
+      `DELETE FROM medorbit.doctor_posts WHERE id = $1 AND doctor_id = $2 RETURNING id`,
+      [req.params.postId, doctorId]
+    );
+
+    if (result.rows.length === 0) return error(res, 'Post not found', 404, 'NOT_FOUND');
+
+    return success(res, null, 'Post deleted');
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/doctors - List all doctors with filters
 router.get('/', async (req, res, next) => {
   try {
@@ -281,6 +536,25 @@ router.get('/:id/clinics', async (req, res, next) => {
     );
 
     return success(res, result.rows, "Doctor clinics retrieved");
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/doctors/:id/posts - Public read of a doctor's PUBLISHED posts
+// only (doctor.html's Posts tab). Drafts never leave the doctor's own
+// GET /me/posts above.
+router.get('/:id/posts', async (req, res, next) => {
+  try {
+    const result = await db.query(
+      `SELECT id, title_ar, title_en, category, body, created_at
+       FROM medorbit.doctor_posts
+       WHERE doctor_id = $1 AND is_published = true
+       ORDER BY created_at DESC`,
+      [req.params.id]
+    );
+
+    return success(res, result.rows, "Doctor posts retrieved");
   } catch (err) {
     next(err);
   }
