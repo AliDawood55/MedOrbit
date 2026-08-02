@@ -61,61 +61,23 @@
                 <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="myDoctor.subtitle">الأطباء المعالجون لك والملاحظات المشتركة معك</p>
             </div>
 
-            <div class="records-preview-caption">
-                <i class="fas fa-eye"></i>
-                <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>
-            </div>
-
             <!-- Doctor card(s) -->
-            <div class="care-section" style="opacity:0.7;">
+            <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-user-doctor"></i> <span data-i18n="myDoctor.yourDoctors">أطباؤك</span></div>
-                <div class="care-card-grid">
-                    <div class="care-person-card">
-                        <div class="care-person-avatar skeleton" style="border-radius:50%;"></div>
-                        <div class="care-person-info">
-                            <div class="sk-line tall w-60 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-40 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
+                <div id="doctorsList"></div>
             </div>
 
             <!-- Upcoming appointments with them -->
-            <div class="care-section" style="opacity:0.7;">
+            <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-calendar-check"></i> <span data-i18n="myDoctor.upcomingWithThem">المواعيد القادمة معهم</span></div>
-                <div class="records-preview-list">
-                    <div class="records-preview-card">
-                        <div class="records-preview-card-icon skeleton"></div>
-                        <div class="records-preview-card-lines">
-                            <div class="sk-line tall w-40 skeleton"></div>
-                            <div class="sk-line w-30 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
+                <div id="upcomingWithThemList"></div>
             </div>
 
-            <!-- Shared notes/sessions -->
-            <div class="care-section" style="opacity:0.7;">
+            <!-- Shared notes/sessions — only notes a doctor explicitly
+                 marked visible to the patient (medical_records.visible_to_patient). -->
+            <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="myDoctor.sharedNotes">ملاحظات مشتركة</span></div>
-                <div class="note-timeline">
-                    <div class="note-timeline-item">
-                        <div class="note-timeline-dot"></div>
-                        <div class="note-card">
-                            <div class="sk-line tall w-50 skeleton" style="margin-bottom:8px;"></div>
-                            <div class="sk-line w-80 skeleton"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Honest empty state — the real, user-facing message -->
-            <div class="records-empty-state">
-                <div class="empty-state-icon"><i class="fas fa-user-doctor"></i></div>
-                <h2 data-i18n="myDoctor.emptyTitle">هذه الميزة غير متاحة بعد</h2>
-                <p data-i18n="myDoctor.emptyHint">نعمل على ربط بيانات طبيبك المعالج بحسابك. بمجرد توفر هذه الميزة، ستظهر هنا تلقائياً.</p>
-                <a href="find-doctors.html" class="btn btn-secondary btn-sm">
-                    <span data-i18n="dashboard.descFindDoctors">تصفح الأطباء حسب التخصص</span>
-                </a>
+                <div id="sharedNotesList"></div>
             </div>
 
         </div>

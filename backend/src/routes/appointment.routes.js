@@ -364,6 +364,31 @@ router.get(
 
         try {
 
+            // req.user.sub is the JWT subject (medorbit.users.id), but
+            // appointments.patient_id is a FK to medorbit.patients.id — a
+            // different UUID. Resolve it first, same lookup POST / already
+            // does correctly, or this always returns zero rows.
+            const patientResult = await db.query(
+                `
+    SELECT id
+    FROM medorbit.patients
+    WHERE user_id=$1
+    `,
+                [
+                    req.user.sub
+                ]
+            );
+
+            if (patientResult.rows.length === 0) {
+
+                return error(
+                    res,
+                    "Patient profile not found",
+                    404,
+                    "NOT_FOUND"
+                );
+
+            }
 
             const result = await db.query(
 
@@ -380,7 +405,7 @@ ORDER BY scheduled_date DESC
 `,
 
                 [
-                    req.user.sub
+                    patientResult.rows[0].id
                 ]
 
 
@@ -425,6 +450,31 @@ router.get(
 
         try {
 
+            // Ownership check: this previously had none at all — any
+            // authenticated user's token worked against any appointment id.
+            // 404 (not 403) on a mismatch — a 403 would confirm the id is
+            // real, which is itself a small information leak.
+            const patientResult = await db.query(
+                `
+    SELECT id
+    FROM medorbit.patients
+    WHERE user_id=$1
+    `,
+                [
+                    req.user.sub
+                ]
+            );
+
+            if (patientResult.rows.length === 0) {
+
+                return error(
+                    res,
+                    "Appointment not found",
+                    404,
+                    "NOT_FOUND"
+                );
+
+            }
 
             const result = await db.query(
 
@@ -435,11 +485,13 @@ SELECT *
 FROM medorbit.appointments
 
 WHERE id=$1
+AND patient_id=$2
 
 `,
 
                 [
-                    req.params.id
+                    req.params.id,
+                    patientResult.rows[0].id
                 ]
 
             );
@@ -498,6 +550,55 @@ router.put(
 
         try {
 
+            // Ownership check: this previously had none — any authenticated
+            // user's token could cancel any appointment by id. Verify the
+            // caller's own patients.id owns this appointment before touching
+            // it; 404 (not 403) so a mismatch doesn't confirm the id is real.
+            const patientResult = await db.query(
+                `
+    SELECT id
+    FROM medorbit.patients
+    WHERE user_id=$1
+    `,
+                [
+                    req.user.sub
+                ]
+            );
+
+            if (patientResult.rows.length === 0) {
+
+                return error(
+                    res,
+                    "Appointment not found",
+                    404,
+                    "NOT_FOUND"
+                );
+
+            }
+
+            const owned = await db.query(
+                `
+    SELECT id
+    FROM medorbit.appointments
+    WHERE id=$1
+    AND patient_id=$2
+    `,
+                [
+                    req.params.id,
+                    patientResult.rows[0].id
+                ]
+            );
+
+            if (owned.rows.length === 0) {
+
+                return error(
+                    res,
+                    "Appointment not found",
+                    404,
+                    "NOT_FOUND"
+                );
+
+            }
 
             const result = await db.query(
 

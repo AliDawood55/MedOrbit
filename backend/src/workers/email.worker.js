@@ -18,10 +18,22 @@ const {
 async function processEmails() {
 
 
-    const result =
-        await db.query(
+    // This runs on an unawaited setInterval (see app.js), so a rejection
+    // here is an unhandled promise rejection that crashes the whole process
+    // — not just this one tick. That happened for real: a fresh database
+    // (no seed data, e.g. in CI) has no medorbit.email_queue table yet, the
+    // SELECT throws relation "medorbit.email_queue" does not exist, and the
+    // entire backend died in a restart loop every ~10s. Catching here just
+    // skips this tick and logs it; the per-email try/catch below is
+    // unrelated (it already handled individual send failures gracefully).
+    let result;
 
-            `
+    try {
+
+        result =
+            await db.query(
+
+                `
         SELECT *
 
         FROM medorbit.email_queue
@@ -45,7 +57,20 @@ async function processEmails() {
 
         `
 
+            );
+
+    }
+
+    catch (error) {
+
+        console.log(
+            "Email queue check failed:",
+            error.message
         );
+
+        return;
+
+    }
 
 
 
