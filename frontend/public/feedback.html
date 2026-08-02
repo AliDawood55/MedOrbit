@@ -135,11 +135,11 @@
 
             </div>
 
-            <!-- Honest result — never a fake success message -->
+            <!-- Real result: success or honest failure -->
             <div class="feedback-result hidden" id="feedbackResult">
-                <div class="feedback-result-icon"><i class="fas fa-plug-circle-exclamation"></i></div>
-                <h2 data-i18n="feedback.notConnectedTitle">لم يتم حفظ ملاحظاتك بعد</h2>
-                <p data-i18n="feedback.notConnectedHint">نموذج الملاحظات هذا غير متصل بأي خادم بعد، لذلك لم يتم حفظ إجاباتك في أي مكان. نعمل على إضافة هذه الميزة قريباً.</p>
+                <div class="feedback-result-icon" id="feedbackResultIcon"><i class="fas fa-circle-check"></i></div>
+                <h2 id="feedbackResultTitle"></h2>
+                <p id="feedbackResultHint"></p>
                 <button type="button" class="btn btn-secondary btn-sm" id="startOverBtn">
                     <span data-i18n="feedback.startOver">البدء من جديد</span>
                 </button>
