@@ -17,7 +17,7 @@
     "dev:ollama": "ollama serve",
     "db:migrate": "psql -U postgres -d medorbit -f db/00_extensions.sql && psql -U postgres -d medorbit -f db/01_base_tables.sql && psql -U postgres -d medorbit -f db/02_dependent_tables.sql && psql -U postgres -d medorbit -f db/03_indexes.sql && psql -U postgres -d medorbit -f db/04_triggers_sequences.sql && psql -U postgres -d medorbit -f db/05_views.sql && psql -U postgres -d medorbit -f db/06_seed_data.sql",
     "db:seed": "psql -U postgres -d medorbit -f db/06_seed_data.sql",
-    "test": "jest",
+    "test": "jest --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },
@@ -25,6 +25,7 @@
     "concurrently": "^9.2.4",
     "cross-env": "^10.1.0",
     "jest": "^30.4.2",
+    "jest-mock-extended": "^4.0.1",
     "supertest": "^7.2.2"
   },
   "dependencies": {

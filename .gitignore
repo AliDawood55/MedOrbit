@@ -152,3 +152,8 @@ ai-service/data/wide*_export*.py
 ai-service/data/_dry_run_*.sql
 ai-service/data/wide_dry_run_out.txt
 ai-service/data/nablus_wide_review*.csv
+
+
+#### Unit Testing ######
+tests/
+jest.config.js

@@ -30,11 +30,25 @@ const transporter = nodemailer.createTransport({
 });
 
 // Verify transporter on startup (non-blocking)
-transporter.verify().then(() => {
-    console.log('✅ Email transporter ready');
-}).catch((err) => {
-    console.warn(`⚠️ Email transporter not ready: ${err.message}`);
-});
+if (process.env.NODE_ENV !== "test") {
+
+    transporter.verify()
+        .then(() => {
+
+            console.log(
+                '✅ Email transporter ready'
+            );
+
+        })
+        .catch((err) => {
+
+            console.warn(
+                `⚠️ Email transporter not ready: ${err.message}`
+            );
+
+        });
+
+}
 
 /**
  * Send email directly with retry
