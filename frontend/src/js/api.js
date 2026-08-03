@@ -7,12 +7,26 @@
  */
 const API = (() => {
 
-    // Derive from wherever the page was actually opened from (localhost vs
-    // 127.0.0.1 are different origins to the browser/CORS even though they're
-    // the same machine) so the API origin always agrees with the page's own
-    // origin, rather than assuming one hardcoded hostname.
-    const BASE_URL = window.MEDORBIT_API_URL ||
-        (window.location.hostname ? `${window.location.protocol}//${window.location.hostname}:3001/api` : 'http://127.0.0.1:3001/api');
+    function trimTrailingSlash(value) {
+        return String(value || '').replace(/\/+$/, '');
+    }
+
+    function resolveServiceOrigin(port, override) {
+        const configured = trimTrailingSlash(override);
+        if (configured) return configured;
+
+        if (!window.location.hostname) {
+            throw new Error(`Cannot resolve MedOrbit service on port ${port} without an HTTP(S) hostname`);
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+        return `${protocol}//${window.location.hostname}:${port}`;
+    }
+
+    // Derive service hosts from wherever the page was actually opened from so
+    // localhost, loopback, and LAN IP access all call the matching backend.
+    const API_ORIGIN = resolveServiceOrigin(3001, window.MEDORBIT_API_URL).replace(/\/api\/?$/, '');
+    const BASE_URL = API_ORIGIN + '/api';
 
     const ACCESS_KEY = 'accessToken';
     const REFRESH_KEY = 'refreshToken';
@@ -412,7 +426,11 @@ const API = (() => {
     };
 
     function getOrigin() {
-        return BASE_URL.replace(/\/api\/?$/, '');
+        return API_ORIGIN;
+    }
+
+    function getAiOrigin() {
+        return resolveServiceOrigin(8001, window.MEDORBIT_AI_URL);
     }
 
     // Platform feedback (feedback.html) — POST /api/feedback,
@@ -431,7 +449,7 @@ const API = (() => {
         request, get, post, put, del, patch,
         sendChatMessage, makeCancellable, conversations, doctors, clinics, users, appointments, notifications, analytics, care, feedback,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
-        setSession, clearSession, requireAuth, logout, getOrigin, clearCache
+        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, resolveServiceOrigin, clearCache
     };
 
 })();

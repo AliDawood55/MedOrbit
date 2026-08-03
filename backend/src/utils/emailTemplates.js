@@ -51,12 +51,24 @@ function baseTemplate(title, bodyContent) {
 </html>`;
 }
 
-function verifyEmailTemplate(verifyUrl) {
+function verifyEmailTemplate(verifyUrl, otpCode = null) {
+    const otpBlock = otpCode ? `
+        <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 12px;">
+            Enter this verification code in the MedOrbit mobile app:
+        </p>
+        <p style="color:#1e293b;font-size:32px;font-weight:700;letter-spacing:8px;text-align:center;margin:0 0 24px;direction:ltr;">
+            ${otpCode}
+        </p>
+        <p style="color:#94a3b8;font-size:12px;margin:0 0 24px;">
+            This code expires in 10 minutes.
+        </p>
+    ` : '';
     const body = `
         <h2 style="color:#1e293b;margin:0 0 20px;font-size:20px;">Verify Your Email Address</h2>
         <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 20px;">
-            Welcome to ${BRAND}! Please verify your email address by clicking the button below.
+            Welcome to ${BRAND}! Verify your email using the mobile code or the web link below.
         </p>
+        ${otpBlock}
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 30px;">
             <tr>
                 <td style="background-color:#2563EB;border-radius:8px;text-align:center;">
@@ -76,7 +88,7 @@ function verifyEmailTemplate(verifyUrl) {
     `;
     return {
         html: baseTemplate('Verify Email', body),
-        text: `Welcome to ${BRAND}!\n\nPlease verify your email by visiting:\n${verifyUrl}\n\nThis link expires in 24 hours.`
+        text: `Welcome to ${BRAND}!${otpCode ? `\n\nYour verification code is:\n${otpCode}\n\nThis code expires in 10 minutes.` : ''}\n\nYou can also verify your email by visiting:\n${verifyUrl}\n\nThis link expires in 24 hours.`
     };
 }
 
