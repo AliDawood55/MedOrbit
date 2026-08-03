@@ -157,3 +157,6 @@ ai-service/data/nablus_wide_review*.csv
 #### Unit Testing ######
 tests/
 jest.config.js
+
+#### Omar Appendix ####
+Appendix-Omar/
