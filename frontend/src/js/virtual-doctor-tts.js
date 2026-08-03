@@ -19,8 +19,7 @@
  */
 const VirtualDoctorTTS = (() => {
 
-    const AI_BASE = window.MEDORBIT_AI_URL ||
-        (window.location.hostname ? `${window.location.protocol}//${window.location.hostname}:8001` : 'http://127.0.0.1:8001');
+    const AI_BASE = API.getAiOrigin();
 
     // Backend rejects >800 chars; split well below that.
     const MAX_CHUNK_CHARS = 300;
