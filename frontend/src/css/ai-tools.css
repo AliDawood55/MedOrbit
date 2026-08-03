@@ -1,7 +1,7 @@
 /* ===========================================
    MedOrbit v2 - AI Tools
    Symptom Checker, Drug Interaction Checker, Report Summarizer.
-   Talks directly to the AI service (127.0.0.1:8001), not the backend.
+   Talks directly to the AI service on the current host, not the backend.
    =========================================== */
 
 .tool-header {
