@@ -2,6 +2,7 @@
 
 
 const authService = require("../services/auth.service");
+const { validateEmail } = require("../utils/validation");
 
 const {
     success,
@@ -51,6 +52,15 @@ async function register(req, res, next) {
                 "VALIDATION_ERROR"
             );
 
+        }
+
+        if (!validateEmail(email)) {
+            return error(
+                res,
+                "Invalid email address",
+                400,
+                "VALIDATION_ERROR"
+            );
         }
 
 
@@ -509,11 +519,30 @@ async function verifyEmail(req, res, next) {
     try {
 
         const {
-            token
+            token,
+            email
         } = req.body;
 
+        if (!token || typeof token !== "string") {
+            return error(
+                res,
+                "Verification token is required",
+                400,
+                "VALIDATION_ERROR"
+            );
+        }
 
-        await authService.verifyEmail(token);
+        if (email != null && !validateEmail(email)) {
+            return error(
+                res,
+                "Invalid email address",
+                400,
+                "VALIDATION_ERROR"
+            );
+        }
+
+
+        await authService.verifyEmail(token, email);
 
 
         return success(
@@ -539,6 +568,15 @@ async function resendVerification(req, res, next) {
         const {
             email
         } = req.body;
+
+        if (!validateEmail(email)) {
+            return error(
+                res,
+                "Invalid email address",
+                400,
+                "VALIDATION_ERROR"
+            );
+        }
 
 
 

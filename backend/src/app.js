@@ -15,6 +15,7 @@ const userRoutes = require('./routes/user.routes');
 const conversationRoutes = require('./routes/conversation.routes');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const env = require('./config/env');
+const { createCorsOptions } = require('./config/cors');
 const notificationRoutes = require('./routes/notification.routes');
 const notificationTemplateRoutes = require('./routes/notification-template.routes');
 const appointmentRoutes = require("./routes/appointment.routes");
@@ -37,17 +38,20 @@ const app = express();
 // Helmet — sets security headers
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginResourcePolicy: { policy: 'cross-origin' }
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  hsts: false
 }));
 
-// CORS — restrict to configured origin in production
-const corsOrigin = process.env.CORS_ORIGIN || '*';
-app.use(cors({
-  origin: corsOrigin === '*' ? true : corsOrigin.split(',').map(s => s.trim()),
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: corsOrigin !== '*'
-}));
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'self'");
+  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(self), fullscreen=(self), payment=()');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+});
+
+// CORS: configured origins plus same-machine/LAN frontend origins.
+app.use(cors(createCorsOptions()));
 
 // Rate limiting — global
 const globalLimiter = rateLimit({

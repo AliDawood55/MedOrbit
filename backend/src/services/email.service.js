@@ -69,8 +69,8 @@ async function sendEmail(email, subject, html, text = null) {
 /**
  * Add email to queue
  */
-async function queueEmail(email, subject, html, text = null) {
-    await db.query(
+async function queueEmail(email, subject, html, text = null, queryable = db) {
+    await queryable.query(
         `INSERT INTO medorbit.email_queue
          (recipient_email, subject, body_html, body_text, status, priority)
          VALUES ($1, $2, $3, $4, 'pending', 1)`,

@@ -1,12 +1,11 @@
 /**
  * MedOrbit v2 - Symptom Checker
- * Calls the AI service directly: POST http://127.0.0.1:8001/triage
+ * Calls the AI service directly: POST <current-host>:8001/triage
  * (open CORS, no auth — this is not the Node backend on :3001).
  */
 const SymptomChecker = (() => {
 
-    const AI_BASE = window.MEDORBIT_AI_URL ||
-        (window.location.hostname ? `${window.location.protocol}//${window.location.hostname}:8001` : 'http://127.0.0.1:8001');
+    const AI_BASE = API.getAiOrigin();
 
     // Matches real seeded symptom_specialty_mappings keywords so these
     // quick-add chips reliably produce a good triage result.

@@ -6,6 +6,19 @@ const authController = require("../controllers/auth.controller");
 const { authenticate } = require("../middleware/auth");
 const rateLimit = require("express-rate-limit");
 
+function createAuthLimiter({ windowMs, max, message }) {
+    return rateLimit({
+        windowMs,
+        max,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+            success: false,
+            error: { code: 'RATE_LIMITED', message }
+        }
+    });
+}
+
 // Per-IP login rate limit: 10 attempts per 15 minutes
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -18,8 +31,26 @@ const loginLimiter = rateLimit({
     }
 });
 
+const registerLimiter = createAuthLimiter({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    message: 'Too many registration attempts. Please try again later.'
+});
+
+const verifyEmailLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Too many verification attempts. Please try again later.'
+});
+
+const resendVerificationLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many verification email requests. Please try again later.'
+});
+
 // Register
-router.post("/register", authController.register);
+router.post("/register", registerLimiter, authController.register);
 
 // Login (with per-IP rate limit)
 router.post("/login", loginLimiter, authController.login);
@@ -43,9 +74,9 @@ router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 
 // Verify email
-router.post("/verify-email", authController.verifyEmail);
+router.post("/verify-email", verifyEmailLimiter, authController.verifyEmail);
 
 // Resend verification
-router.post("/resend-verification", authController.resendVerification);
+router.post("/resend-verification", resendVerificationLimiter, authController.resendVerification);
 
 module.exports = router;
