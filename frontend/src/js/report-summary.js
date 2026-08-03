@@ -1,12 +1,11 @@
 /**
  * MedOrbit v2 - Medical Report Summarizer
- * Calls the AI service directly: POST http://127.0.0.1:8001/summarize
+ * Calls the AI service directly: POST <current-host>:8001/summarize
  * (multipart/form-data, open CORS, no auth — this is not the Node backend).
  */
 const ReportSummary = (() => {
 
-    const AI_BASE = window.MEDORBIT_AI_URL ||
-        (window.location.hostname ? `${window.location.protocol}//${window.location.hostname}:8001` : 'http://127.0.0.1:8001');
+    const AI_BASE = API.getAiOrigin();
     const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
     const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
 
