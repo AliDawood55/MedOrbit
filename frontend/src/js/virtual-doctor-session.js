@@ -16,8 +16,7 @@
  */
 const VirtualDoctorSession = (() => {
 
-    const AI_BASE = window.MEDORBIT_AI_URL ||
-        (window.location.hostname ? `${window.location.protocol}//${window.location.hostname}:8001` : 'http://127.0.0.1:8001');
+    const AI_BASE = API.getAiOrigin();
 
     // How long the doctor keeps the floor after its reply is on screen. With
     // no TTS this is just a settling beat; when TTS arrives, replace this with

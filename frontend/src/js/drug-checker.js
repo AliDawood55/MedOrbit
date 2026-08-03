@@ -1,12 +1,11 @@
 /**
  * MedOrbit v2 - Drug Interaction Checker
- * Calls the AI service directly: POST http://127.0.0.1:8001/drug-interactions
+ * Calls the AI service directly: POST <current-host>:8001/drug-interactions
  * (open CORS, no auth — this is not the Node backend on :3001).
  */
 const DrugChecker = (() => {
 
-    const AI_BASE = window.MEDORBIT_AI_URL ||
-        (window.location.hostname ? `${window.location.protocol}//${window.location.hostname}:8001` : 'http://127.0.0.1:8001');
+    const AI_BASE = API.getAiOrigin();
 
     // The actual seeded medorbit.medications rows — quick-add chips that
     // reliably match real medication records (Aspirin + Warfarin has a

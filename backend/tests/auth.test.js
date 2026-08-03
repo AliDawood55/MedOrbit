@@ -1,15 +1,15 @@
 // backend/tests/auth.test.js
 // Standalone authentication integration test
-// Run: node backend/tests/auth.test.js
+// Docker: docker compose exec -T backend node tests/auth.test.js
 
 const http = require('http');
 const { Pool } = require('pg');
 const path = require('path');
 
 // Load root .env
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
 
-const API_BASE = 'http://127.0.0.1:3001/api';
+const API_BASE = process.env.AUTH_TEST_API_BASE || 'http://127.0.0.1:3001/api';
 
 // Database pool for cleanup — must use same schema as backend
 const pool = new Pool({
@@ -21,10 +21,7 @@ const pool = new Pool({
     max: 5,
     idleTimeoutMillis: 10000,
     connectionTimeoutMillis: 2000,
-});
-
-pool.on('connect', async (client) => {
-    await client.query('SET search_path TO medorbit, public');
+    options: '-c search_path=medorbit,public',
 });
 
 // =============================================
@@ -73,13 +70,13 @@ async function cleanupUser(email) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        await client.query("DELETE FROM email_queue WHERE recipient_email = $1", [email]);
-        await client.query("DELETE FROM password_reset_tokens WHERE user_id = (SELECT id FROM users WHERE email = $1)", [email]);
-        await client.query("DELETE FROM email_verification_tokens WHERE user_id = (SELECT id FROM users WHERE email = $1)", [email]);
-        await client.query("DELETE FROM user_sessions WHERE user_id = (SELECT id FROM users WHERE email = $1)", [email]);
-        await client.query("DELETE FROM patients WHERE user_id = (SELECT id FROM users WHERE email = $1)", [email]);
-        await client.query("DELETE FROM user_profiles WHERE user_id = (SELECT id FROM users WHERE email = $1)", [email]);
-        await client.query("DELETE FROM users WHERE email = $1", [email]);
+        await client.query("DELETE FROM medorbit.email_queue WHERE recipient_email = $1", [email]);
+        await client.query("DELETE FROM medorbit.password_reset_tokens WHERE user_id = (SELECT id FROM medorbit.users WHERE email = $1)", [email]);
+        await client.query("DELETE FROM medorbit.email_verification_tokens WHERE user_id = (SELECT id FROM medorbit.users WHERE email = $1)", [email]);
+        await client.query("DELETE FROM medorbit.user_sessions WHERE user_id = (SELECT id FROM medorbit.users WHERE email = $1)", [email]);
+        await client.query("DELETE FROM medorbit.patients WHERE user_id = (SELECT id FROM medorbit.users WHERE email = $1)", [email]);
+        await client.query("DELETE FROM medorbit.user_profiles WHERE user_id = (SELECT id FROM medorbit.users WHERE email = $1)", [email]);
+        await client.query("DELETE FROM medorbit.users WHERE email = $1", [email]);
         await client.query('COMMIT');
     } catch (err) {
         await client.query('ROLLBACK');
@@ -93,7 +90,7 @@ async function verifyUserInDb(email) {
     const client = await pool.connect();
     try {
         const result = await client.query(
-            "SELECT id, email, email_verified, role FROM users WHERE email = $1",
+            "SELECT id, email, email_verified, role FROM medorbit.users WHERE email = $1",
             [email]
         );
         return result.rows[0] || null;
@@ -103,12 +100,18 @@ async function verifyUserInDb(email) {
 }
 
 async function countActiveTokens(email, table) {
+    const consumedColumns = {
+        email_verification_tokens: 'verified_at',
+        password_reset_tokens: 'used_at',
+    };
+    const consumedColumn = consumedColumns[table];
+    if (!consumedColumn) throw new Error(`Unsupported token table: ${table}`);
     const client = await pool.connect();
     try {
         const result = await client.query(
-            `SELECT COUNT(*) as cnt FROM ${table} t
-             JOIN users u ON u.id = t.user_id
-             WHERE u.email = $1 AND t.verified_at IS NULL AND t.expires_at > NOW()`,
+            `SELECT COUNT(*) as cnt FROM medorbit.${table} t
+             JOIN medorbit.users u ON u.id = t.user_id
+             WHERE u.email = $1 AND t.${consumedColumn} IS NULL AND t.expires_at > NOW()`,
             [email]
         );
         return parseInt(result.rows[0].cnt, 10);
@@ -203,9 +206,9 @@ async function runTests() {
         // Manually verify via DB
         const vClient = await pool.connect();
         try {
-            await vClient.query("UPDATE users SET email_verified = true WHERE email = $1", [testEmail]);
+            await vClient.query("UPDATE medorbit.users SET email_verified = true WHERE email = $1", [testEmail]);
             await vClient.query(
-                "UPDATE email_verification_tokens SET verified_at = NOW() WHERE user_id = (SELECT id FROM users WHERE email = $1) AND verified_at IS NULL",
+                "UPDATE medorbit.email_verification_tokens SET verified_at = NOW() WHERE user_id = (SELECT id FROM medorbit.users WHERE email = $1) AND verified_at IS NULL",
                 [testEmail]
             );
         } finally {

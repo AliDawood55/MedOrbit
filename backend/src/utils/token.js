@@ -9,6 +9,15 @@ function generateToken() {
 
 }
 
+function generateOtp() {
+
+    return crypto
+        .randomInt(0, 1000000)
+        .toString()
+        .padStart(6, "0");
+
+}
+
 
 
 function hashToken(token) {
@@ -20,12 +29,25 @@ function hashToken(token) {
 
 }
 
+function hashOtp(otp, email, secret) {
+
+    return crypto
+        .createHmac("sha256", secret)
+        .update(`email-verification-otp:${email}:${otp}`)
+        .digest("hex");
+
+}
+
 
 
 module.exports = {
 
     generateToken,
 
-    hashToken
+    generateOtp,
+
+    hashToken,
+
+    hashOtp
 
 };
