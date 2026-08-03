@@ -4,7 +4,7 @@
 const db = require("../config/database");
 const { hashPassword, comparePassword } = require("../utils/password");
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require("../utils/jwt");
-const { generateToken, hashToken } = require("../utils/token");
+const { generateToken, generateOtp, hashToken, hashOtp } = require("../utils/token");
 const { validatePassword, normalizeEmail, sanitize } = require("../utils/validation");
 const { queueEmail } = require("./email.service");
 const { verifyEmailTemplate, resetPasswordTemplate, welcomeTemplate } = require("../utils/emailTemplates");
@@ -12,8 +12,56 @@ const { OAuth2Client } = require("google-auth-library");
 const env = require("../config/env");
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080/public';
+const OTP_EXPIRY_MINUTES = 10;
 
 const googleClient = new OAuth2Client(env.google.clientId);
+
+function authError(message, statusCode, code) {
+    const err = new Error(message);
+    err.statusCode = statusCode;
+    err.code = code;
+    return err;
+}
+
+function buildVerificationUrl(token) {
+    const base = FRONTEND_URL.replace(/\/+$/, '');
+    const page = /\.html?$/i.test(base) ? base : `${base}/verify-email.html`;
+    const separator = page.includes('?') ? '&' : '?';
+    return `${page}${separator}token=${encodeURIComponent(token)}`;
+}
+
+async function createVerificationPair(client, userId, email) {
+    const linkToken = generateToken();
+
+    await client.query(
+        `INSERT INTO medorbit.email_verification_tokens (user_id, token_hash, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '24 hours')`,
+        [userId, hashToken(linkToken)]
+    );
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+        const otp = generateOtp();
+        const inserted = await client.query(
+            `INSERT INTO medorbit.email_verification_tokens (user_id, token_hash, expires_at)
+             VALUES ($1, $2, NOW() + ($3 * INTERVAL '1 minute'))
+             ON CONFLICT (token_hash) DO NOTHING
+             RETURNING id`,
+            [userId, hashOtp(otp, email, env.jwt.secret), OTP_EXPIRY_MINUTES]
+        );
+        if (inserted.rows.length > 0) {
+            return { linkToken, otp };
+        }
+    }
+
+    throw authError("Unable to generate verification code", 500, "INTERNAL_ERROR");
+}
+
+async function queueVerificationEmail(client, email, userId) {
+    const { linkToken, otp } = await createVerificationPair(client, userId, email);
+    const verifyUrl = buildVerificationUrl(linkToken);
+    const { html, text } = verifyEmailTemplate(verifyUrl, otp);
+    await queueEmail(email, 'Verify your MedOrbit account', html, text, client);
+}
 
 /**
  * Register new user
@@ -34,78 +82,57 @@ async function register(userData) {
     }
 
     const normalizedEmail = normalizeEmail(email);
-
-    const existing = await db.query(
-        `SELECT id FROM medorbit.users WHERE email=$1`,
-        [normalizedEmail]
-    );
-
-    if (existing.rows.length > 0) {
-        const err = new Error("Email already registered");
-        err.statusCode = 400;
-        err.code = "VALIDATION_ERROR";
-        throw err;
-    }
-
     const passwordHash = await hashPassword(password);
-
-    const userResult = await db.query(
-        `INSERT INTO medorbit.users (email, password_hash, role, email_verified, preferred_language)
-         VALUES ($1,$2,$3,false,'ar')
-         RETURNING id,email,role`,
-        [normalizedEmail, passwordHash, role]
-    );
-
-    const user = userResult.rows[0];
-
-    await db.query(
-        `INSERT INTO medorbit.user_profiles (user_id, first_name_ar, last_name_ar, first_name_en, last_name_en, phone, gender)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [user.id, sanitize(firstNameAr), sanitize(lastNameAr), sanitize(firstNameEn), sanitize(lastNameEn), phone || null, gender || null]
-    );
-
-    if (role === "patient") {
-        await db.query(`INSERT INTO medorbit.patients (user_id) VALUES($1)`, [user.id]);
-    }
-    if (role === "doctor") {
-        await db.query(`INSERT INTO medorbit.doctors (user_id) VALUES($1)`, [user.id]);
-    }
-
-    // Generate verification token and send email
-    const token = generateToken();
-    const tokenHash = hashToken(token);
-
-    // Invalidate any existing tokens for this user
-    await db.query(
-        `UPDATE medorbit.email_verification_tokens SET verified_at = NOW() WHERE user_id = $1 AND verified_at IS NULL`,
-        [user.id]
-    );
-
-    await db.query(
-        `INSERT INTO medorbit.email_verification_tokens (user_id, token_hash, expires_at)
-         VALUES ($1, $2, NOW()+INTERVAL '24 hours')`,
-        [user.id, tokenHash]
-    );
-
-    const verifyUrl = `${FRONTEND_URL}?verify=${token}`;
-    const { html, text } = verifyEmailTemplate(verifyUrl);
+    const client = await db.getClient();
 
     try {
-        await queueEmail(normalizedEmail, 'Verify your MedOrbit account', html, text);
-    } catch (err) {
-        console.warn(`Failed to queue verification email: ${err.message}`);
-    }
+        await client.query('BEGIN');
 
-    // Send welcome email
-    const welcomeName = firstNameEn || firstNameAr || 'User';
-    const welcome = welcomeTemplate(welcomeName);
-    try {
-        await queueEmail(normalizedEmail, 'Welcome to MedOrbit!', welcome.html, welcome.text);
-    } catch (err) {
-        console.warn(`Failed to queue welcome email: ${err.message}`);
-    }
+        const existing = await client.query(
+            `SELECT id FROM medorbit.users WHERE email=$1`,
+            [normalizedEmail]
+        );
 
-    return user;
+        if (existing.rows.length > 0) {
+            throw authError("Email already registered", 400, "VALIDATION_ERROR");
+        }
+
+        const userResult = await client.query(
+            `INSERT INTO medorbit.users (email, password_hash, role, email_verified, preferred_language)
+             VALUES ($1,$2,$3,false,'ar')
+             RETURNING id,email,role`,
+            [normalizedEmail, passwordHash, role]
+        );
+
+        const user = userResult.rows[0];
+
+        await client.query(
+            `INSERT INTO medorbit.user_profiles (user_id, first_name_ar, last_name_ar, first_name_en, last_name_en, phone, gender)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [user.id, sanitize(firstNameAr), sanitize(lastNameAr), sanitize(firstNameEn), sanitize(lastNameEn), phone || null, gender || null]
+        );
+
+        if (role === "patient") {
+            await client.query(`INSERT INTO medorbit.patients (user_id) VALUES($1)`, [user.id]);
+        }
+        if (role === "doctor") {
+            await client.query(`INSERT INTO medorbit.doctors (user_id) VALUES($1)`, [user.id]);
+        }
+
+        await queueVerificationEmail(client, normalizedEmail, user.id);
+
+        const welcomeName = firstNameEn || firstNameAr || 'User';
+        const welcome = welcomeTemplate(welcomeName);
+        await queueEmail(normalizedEmail, 'Welcome to MedOrbit!', welcome.html, welcome.text, client);
+
+        await client.query('COMMIT');
+        return user;
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
 }
 
 /**
@@ -151,14 +178,6 @@ async function login(email, password, req) {
         throw err;
     }
 
-    // Block unverified accounts
-    if (!user.email_verified) {
-        const err = new Error("Please verify your email before logging in");
-        err.statusCode = 400;
-        err.code = "EMAIL_NOT_VERIFIED";
-        throw err;
-    }
-
     const validPassword = await comparePassword(password, user.password_hash);
 
     if (!validPassword) {
@@ -173,6 +192,14 @@ async function login(email, password, req) {
         const err = new Error("Invalid credentials");
         err.statusCode = 400;
         err.code = "INVALID_CREDENTIALS";
+        throw err;
+    }
+
+    // Only reveal verification state after the password has been validated.
+    if (!user.email_verified) {
+        const err = new Error("Please verify your email before logging in");
+        err.statusCode = 400;
+        err.code = "EMAIL_NOT_VERIFIED";
         throw err;
     }
 
@@ -564,30 +591,61 @@ async function resetPassword(token, newPassword) {
  * - Validates token, single-use, expired check
  * - Marks user as verified
  */
-async function verifyEmail(token) {
-    const tokenHash = hashToken(token);
-
-    const result = await db.query(
-        `SELECT id, user_id FROM medorbit.email_verification_tokens
-         WHERE token_hash=$1 AND expires_at > NOW() AND verified_at IS NULL`,
-        [tokenHash]
-    );
-
-    if (result.rows.length === 0) {
-        throw new Error("Invalid or expired verification token");
+async function verifyEmail(token, email = null) {
+    const value = typeof token === 'string' ? token.trim() : '';
+    if (!value) {
+        throw authError("Verification token is required", 400, "VALIDATION_ERROR");
     }
 
-    const data = result.rows[0];
+    const isOtp = /^\d{6}$/.test(value);
+    const normalizedEmail = normalizeEmail(email);
+    if (isOtp && !normalizedEmail) {
+        throw authError("Email is required for verification codes", 400, "VALIDATION_ERROR");
+    }
 
-    await db.query(
-        `UPDATE medorbit.users SET email_verified=true, updated_at=NOW() WHERE id=$1`,
-        [data.user_id]
-    );
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
 
-    await db.query(
-        `UPDATE medorbit.email_verification_tokens SET verified_at=NOW() WHERE id=$1`,
-        [data.id]
-    );
+        const result = await client.query(
+            `SELECT id, user_id, expires_at, verified_at
+             FROM medorbit.email_verification_tokens
+             WHERE token_hash=$1
+             FOR UPDATE`,
+            [isOtp ? hashOtp(value, normalizedEmail, env.jwt.secret) : hashToken(value)]
+        );
+
+        if (result.rows.length === 0) {
+            throw authError("Invalid verification token", 400, "INVALID_VERIFICATION_TOKEN");
+        }
+
+        const verification = result.rows[0];
+        if (verification.verified_at) {
+            throw authError("Verification token has already been used", 409, "VERIFICATION_TOKEN_USED");
+        }
+        if (new Date(verification.expires_at).getTime() <= Date.now()) {
+            throw authError("Verification token has expired", 410, "VERIFICATION_TOKEN_EXPIRED");
+        }
+
+        await client.query(
+            `UPDATE medorbit.users SET email_verified=true, updated_at=NOW() WHERE id=$1`,
+            [verification.user_id]
+        );
+
+        await client.query(
+            `UPDATE medorbit.email_verification_tokens
+             SET verified_at=NOW()
+             WHERE user_id=$1 AND verified_at IS NULL`,
+            [verification.user_id]
+        );
+
+        await client.query('COMMIT');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
 }
 
 /**
@@ -597,49 +655,39 @@ async function verifyEmail(token) {
  */
 async function resendVerification(email) {
     const normalizedEmail = normalizeEmail(email);
-
-    const result = await db.query(
-        `SELECT id FROM medorbit.users WHERE email=$1 AND deleted_at IS NULL`,
-        [normalizedEmail]
-    );
-
-    if (result.rows.length === 0) {
-        return;
-    }
-
-    const user = result.rows[0];
-
-    // Check if already verified
-    const verifiedCheck = await db.query(
-        `SELECT email_verified FROM medorbit.users WHERE id=$1`,
-        [user.id]
-    );
-    if (verifiedCheck.rows[0]?.email_verified) {
-        return;
-    }
-
-    // Invalidate old tokens
-    await db.query(
-        `UPDATE medorbit.email_verification_tokens SET verified_at=NOW() WHERE user_id=$1 AND verified_at IS NULL`,
-        [user.id]
-    );
-
-    const token = generateToken();
-    const tokenHash = hashToken(token);
-
-    await db.query(
-        `INSERT INTO medorbit.email_verification_tokens (user_id, token_hash, expires_at)
-         VALUES ($1, $2, NOW()+INTERVAL '24 hours')`,
-        [user.id, tokenHash]
-    );
-
-    const verifyUrl = `${FRONTEND_URL}?verify=${token}`;
-    const { html, text } = verifyEmailTemplate(verifyUrl);
+    const client = await db.getClient();
 
     try {
-        await queueEmail(normalizedEmail, 'Verify your MedOrbit account', html, text);
+        await client.query('BEGIN');
+
+        const result = await client.query(
+            `SELECT id, email_verified
+             FROM medorbit.users
+             WHERE email=$1 AND deleted_at IS NULL
+             FOR UPDATE`,
+            [normalizedEmail]
+        );
+
+        if (result.rows.length === 0 || result.rows[0].email_verified) {
+            await client.query('COMMIT');
+            return;
+        }
+
+        const user = result.rows[0];
+        await client.query(
+            `UPDATE medorbit.email_verification_tokens
+             SET verified_at=NOW()
+             WHERE user_id=$1 AND verified_at IS NULL`,
+            [user.id]
+        );
+
+        await queueVerificationEmail(client, normalizedEmail, user.id);
+        await client.query('COMMIT');
     } catch (err) {
-        console.warn(`Failed to queue verification email: ${err.message}`);
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
     }
 }
 
