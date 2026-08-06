@@ -355,42 +355,71 @@ async def _build_turn_context(
 ) -> Dict[str, Any]:
     """Assemble the per-turn context the planner will consume in Phase 3.
 
-    Returns history + retrieved passages + timings. Never raises: every stage
-    degrades to empty so a turn behaves exactly as it did before Phase 2 if
-    Ollama or the knowledge table is unavailable.
+    Returns history + retrieved passages + timings. Never raises: memory and
+    retrieval are independent (neither reads the other's result), so they run
+    concurrently and are degraded to empty INDEPENDENTLY on failure — one
+    branch failing no longer discards the other branch's already-successful
+    result.
     """
     empty: Dict[str, Any] = {"history": [], "chunks": [], "context_block": "",
                              "memory_ms": 0.0, "rag_ms": 0.0}
     if not PER_TURN_CONTEXT:
         return empty
 
-    try:
+    timings: Dict[str, float] = {"memory_ms": 0.0, "rag_ms": 0.0}
+
+    async def _timed_load_recent():
         t0 = time.monotonic()
-        history = await memory.load_recent(session["id"])
-        memory_ms = (time.monotonic() - t0) * 1000
+        try:
+            return await memory.load_recent(session["id"])
+        finally:
+            timings["memory_ms"] = (time.monotonic() - t0) * 1000
 
-        t1 = time.monotonic()
-        chunks = await retrieval.retrieve_for_turn(message, chief_complaint, lang)
-        rag_ms = (time.monotonic() - t1) * 1000
+    async def _timed_retrieve_for_turn():
+        t0 = time.monotonic()
+        try:
+            return await retrieval.retrieve_for_turn(message, chief_complaint, lang)
+        finally:
+            timings["rag_ms"] = (time.monotonic() - t0) * 1000
 
-        logger.info(
-            "turn context: history=%d msg(s) rag=%d passage(s) pages=%s "
-            "memory=%.0fms rag=%.0fms complaint=%s topics=%s",
-            len(history), len(chunks),
-            [retrieval.cite(c) for c in chunks] or "-",
-            memory_ms, rag_ms, chief_complaint or "-",
-            retrieval.infer_topics(message) or "-",
+    history_result, chunks_result = await asyncio.gather(
+        _timed_load_recent(), _timed_retrieve_for_turn(), return_exceptions=True,
+    )
+
+    if isinstance(history_result, Exception):
+        logger.warning(
+            "Per-turn memory lookup failed (%s) — continuing with empty history",
+            type(history_result).__name__,
         )
-        return {
-            "history": history,
-            "chunks": chunks,
-            "context_block": retrieval.format_context(chunks),
-            "memory_ms": round(memory_ms, 1),
-            "rag_ms": round(rag_ms, 1),
-        }
-    except Exception as exc:  # noqa: BLE001 - context is an optimisation, never a requirement
-        logger.warning("Per-turn context failed (%s) — continuing without it", exc)
-        return empty
+        history = []
+    else:
+        history = history_result
+
+    if isinstance(chunks_result, Exception):
+        logger.warning(
+            "Per-turn RAG retrieval failed (%s) — continuing with empty chunks",
+            type(chunks_result).__name__,
+        )
+        chunks = []
+    else:
+        chunks = chunks_result
+
+    logger.info(
+        "turn context: history=%d msg(s) rag=%d passage(s) pages=%s "
+        "memory=%.0fms rag=%.0fms complaint=%s topics=%s",
+        len(history), len(chunks),
+        [retrieval.cite(c) for c in chunks] or "-",
+        timings["memory_ms"], timings["rag_ms"], chief_complaint or "-",
+        retrieval.infer_topics(message) or "-",
+    )
+
+    return {
+        "history": history,
+        "chunks": chunks,
+        "context_block": retrieval.format_context(chunks),
+        "memory_ms": round(timings["memory_ms"], 1),
+        "rag_ms": round(timings["rag_ms"], 1),
+    }
 
 
 async def start_session(language: Optional[str], user_id: Optional[str]) -> dict:
