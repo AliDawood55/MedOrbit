@@ -11,7 +11,7 @@ New endpoints added:
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, Form, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
@@ -349,9 +349,9 @@ async def prescription_check(req: PrescriptionCheckRequest):
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize(
     file: Optional[UploadFile] = File(None),
-    text: Optional[str] = None,
-    user_id: Optional[str] = None,
-    record_id: Optional[str] = None,
+    text: Optional[str] = Form(None),
+    user_id: Optional[str] = Form(None),
+    record_id: Optional[str] = Form(None),
 ):
     """
     Medical report summarization pipeline.
