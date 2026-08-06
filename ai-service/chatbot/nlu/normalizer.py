@@ -139,7 +139,18 @@ class TextNormalizer:
         return result
 
     def _normalize_dialect(self, text: str) -> str:
-        """Normalize Palestinian dialect expressions to standard Arabic."""
+        """Normalize Palestinian dialect expressions to standard Arabic.
+
+        Boundary-safe: uses \\b, which Python's `re` module already treats as
+        Unicode-aware (Arabic letters count as word characters, same as
+        English letters and digits), so a short expression like "لا" or
+        "مين" only fires as its own standalone word/phrase and never fires
+        merely because its characters happen to appear inside an unrelated
+        longer word — e.g. "لا" no longer matches inside "السلامة", nor
+        "مين" inside "التأمين". Multi-word expressions ("كم يستغرق") are
+        matched the same way, with the boundary check only applied at the
+        outer edges of the whole phrase.
+        """
         if not self.dialect_data:
             return text
 
@@ -150,9 +161,8 @@ class TextNormalizer:
             if not isinstance(expressions, dict):
                 continue
             for dialect_expr, standard in expressions.items():
-                if dialect_expr in result:
-                    # Replace dialect expression with standard form
-                    result = result.replace(dialect_expr, standard)
+                pattern = r'\b' + re.escape(dialect_expr) + r'\b'
+                result = re.sub(pattern, standard, result)
 
         return result
 
