@@ -159,13 +159,15 @@ class MedicalSafetyLayer:
         if lang == "ar":
             return ("🚨 **تنبيه طبي عاجل!**\n\n"
                     "قد تكون هذه أعراض حالة طارئة. يرجى التوجه فوراً إلى أقرب طوارئ "
-                    "أو الاتصال بالإسعاف على الرقم **101**.\n\n"
+                    "أو الاتصال بخدمات إسعاف جمعية الهلال الأحمر الفلسطيني في نابلس "
+                    "والضفة الغربية على الرقم **101**.\n\n"
                     "⚠️ لا يمكنني تقديم تشخيص عبر المحادثة. هذا تنبيه سلامة تلقائي.")
         else:
             return ("🚨 **Medical Emergency Alert!**\n\n"
                     "You may be experiencing a medical emergency. "
                     "Please go to the nearest emergency room immediately "
-                    "or call emergency services **(911)**.\n\n"
+                    "or call the Palestinian Red Crescent ambulance service in Nablus "
+                    "and the West Bank at **101**.\n\n"
                     "⚠️ I cannot provide a diagnosis via chat. This is an automated safety alert.")
 
     def _get_urgent_response(self, text: str) -> str:
