@@ -15,6 +15,7 @@ import asyncio
 import importlib
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -210,22 +211,24 @@ class TestSynonymEngineCharacterization(unittest.TestCase):
 
 
 class TestReportGeneratorImportCharacterization(unittest.TestCase):
-    """virtual_doctor/report_generator.py — import-time side effects.
+    """virtual_doctor/report_generator.py — import-time filesystem behavior.
 
-    Characterizes (does NOT fix) the fact that importing this module writes
-    to a fixed, real path on disk as a side effect of import. Phase 2 only
-    records this; Phase 3 Batch A may move it into an explicit init call.
+    RAG/Batch A3 (approved behavior improvement): importing this module must
+    no longer write to disk. Filesystem setup is deferred to
+    _ensure_report_output_dirs(), called only from the actual PDF-rendering
+    path. These tests characterize that new contract, not the old
+    import-time side effect.
     """
 
-    def test_import_writes_gitignore_at_fixed_generated_reports_path(self):
+    def test_import_does_not_write_or_modify_any_file(self):
         import virtual_doctor.report_generator as report_generator
-        importlib.reload(report_generator)  # re-trigger the import-time write
 
-        module_dir = Path(report_generator.__file__).resolve().parent
-        gitignore_path = module_dir / "generated" / ".gitignore"
+        with patch.object(Path, "mkdir") as mock_mkdir, \
+             patch.object(Path, "write_text") as mock_write_text:
+            importlib.reload(report_generator)
 
-        self.assertTrue(gitignore_path.exists())
-        self.assertEqual(gitignore_path.read_text(encoding="utf-8"), "*\n!.gitignore\n")
+        mock_mkdir.assert_not_called()
+        mock_write_text.assert_not_called()
 
     def test_reports_and_assets_dir_constants(self):
         import virtual_doctor.report_generator as report_generator
@@ -233,7 +236,43 @@ class TestReportGeneratorImportCharacterization(unittest.TestCase):
         module_dir = Path(report_generator.__file__).resolve().parent
         self.assertEqual(report_generator._ASSETS_DIR, module_dir / "assets")
         self.assertEqual(report_generator._REPORTS_DIR, module_dir / "generated" / "reports")
-        self.assertTrue(report_generator._REPORTS_DIR.exists())
+
+    def test_ensure_report_output_dirs_creates_directory_and_gitignore_on_demand(self):
+        import virtual_doctor.report_generator as report_generator
+
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_reports_dir = Path(tmp) / "generated" / "reports"
+            with patch.object(report_generator, "_REPORTS_DIR", fake_reports_dir):
+                report_generator._ensure_report_output_dirs()
+
+                self.assertTrue(fake_reports_dir.exists())
+                gitignore_path = fake_reports_dir.parent / ".gitignore"
+                self.assertTrue(gitignore_path.exists())
+                self.assertEqual(gitignore_path.read_text(encoding="utf-8"), "*\n!.gitignore\n")
+
+                # Idempotent: calling again must not raise or change the content.
+                report_generator._ensure_report_output_dirs()
+                self.assertEqual(gitignore_path.read_text(encoding="utf-8"), "*\n!.gitignore\n")
+
+    def test_render_pdf_isolated_calls_ensure_output_dirs_before_writing(self):
+        import virtual_doctor.report_generator as report_generator
+
+        with patch.object(report_generator, "_ensure_report_output_dirs") as mock_ensure, \
+             patch.object(report_generator.subprocess, "run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            with patch.object(Path, "exists", return_value=True):
+                report_generator._render_pdf_isolated("<html></html>", Path("fake.pdf"))
+
+        mock_ensure.assert_called_once()
+
+    def test_public_api_still_available_after_the_change(self):
+        import virtual_doctor.report_generator as report_generator
+
+        self.assertTrue(asyncio.iscoroutinefunction(report_generator.generate_report))
+        self.assertTrue(asyncio.iscoroutinefunction(report_generator.get_report_pdf_path))
+        self.assertTrue(issubclass(report_generator.PdfGenerationUnavailable, Exception))
+        self.assertEqual(report_generator._PDF_TIMEOUT_SECONDS, 90)
+        self.assertTrue(callable(report_generator._ensure_report_output_dirs))
 
     def test_pdf_generation_unavailable_exception_exists(self):
         import virtual_doctor.report_generator as report_generator

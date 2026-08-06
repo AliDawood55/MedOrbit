@@ -35,8 +35,17 @@ logger = logging.getLogger(__name__)
 _MODULE_DIR = Path(__file__).resolve().parent
 _ASSETS_DIR = _MODULE_DIR / "assets"
 _REPORTS_DIR = _MODULE_DIR / "generated" / "reports"
-_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-(_REPORTS_DIR.parent / ".gitignore").write_text("*\n!.gitignore\n", encoding="utf-8")
+
+
+def _ensure_report_output_dirs() -> None:
+    """Create the generated-reports directory (and its .gitignore) on first use.
+
+    Deferred from import time: importing this module must not write to disk —
+    only actually rendering a report should. Idempotent, so it is safe to call
+    on every report generation.
+    """
+    _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    (_REPORTS_DIR.parent / ".gitignore").write_text("*\n!.gitignore\n", encoding="utf-8")
 
 # Presentation only. Each urgency level gets a foreground/background/border
 # triplet so the level reads as a colour-coded band (green -> amber -> red)
@@ -778,6 +787,7 @@ def _render_pdf_isolated(html_string: str, pdf_path: Path) -> None:
     corruption) on this environment. In-process that took ai-service down
     entirely; here the worst case is a failed child and a 503.
     """
+    _ensure_report_output_dirs()
     payload = json.dumps({
         "html": html_string,
         "base_url": str(_MODULE_DIR),
