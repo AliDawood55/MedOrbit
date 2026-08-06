@@ -29,6 +29,10 @@
 **/.env.*.local
 !**/.env.example
 
+# Staging env file — real secrets, never commit. The .example template stays tracked.
+.env.staging
+!.env.staging.example
+
 #################################################
 # Logs
 #################################################
@@ -70,6 +74,8 @@ Thumbs.db
 
 *.sql.bak
 *.dump
+*.backup
+/backups/
 
 #################################################
 # Database SQL dirs — distributed via backup file, not tracked

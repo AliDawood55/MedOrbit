@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mobile</string>
+	<string>MedOrbit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -49,6 +49,12 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>MedOrbit uses your location only while the app is open to show nearby healthcare options. Exact coordinates are not stored by the mobile app.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MedOrbit uses the microphone only when you choose to record your voice for the Virtual Doctor consultation.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>MedOrbit uses your photo library only when you choose a new profile photo.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -66,5 +72,27 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!--
+	STAGING (temporary): no NSAppTransportSecurity key exists here on purpose,
+	so iOS blocks plaintext HTTP everywhere by default. The Azure staging VM
+	currently serves plain HTTP (no TLS yet — see
+	docs/AZURE_STAGING_DEPLOYMENT.md). To test a real device against it,
+	uncomment the block below and replace the placeholder with the VM's
+	actual public IP, LOCALLY ONLY. Revert this edit (re-comment or
+	`git checkout` this file) before committing or building a release — do
+	not ship the exception.
+
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>STAGING_VM_PUBLIC_IP</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	-->
 </dict>
 </plist>

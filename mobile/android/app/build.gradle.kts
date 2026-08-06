@@ -29,6 +29,15 @@ android {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
+            //
+            // RELEASE BLOCKERS still open (deliberately not changed here):
+            //   1. applicationId/namespace are still the com.example.* placeholder.
+            //   2. This build type is signed with the debug keystore, so the
+            //      artifact is not distributable.
+            //   3. No R8/minify or resource shrinking is configured.
+            // Cleartext traffic is already handled — see
+            // src/main/res/xml/network_security_config.xml, which is TLS-only
+            // except for the development LAN hosts.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
