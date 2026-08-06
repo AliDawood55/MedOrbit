@@ -49,34 +49,24 @@ const resendVerificationLimiter = createAuthLimiter({
     message: 'Too many verification email requests. Please try again later.'
 });
 
-// Register
 router.post("/register", registerLimiter, authController.register);
 
-// Login (with per-IP rate limit)
 router.post("/login", loginLimiter, authController.login);
 
-// Google Sign-In (with per-IP rate limit — same abuse surface as /login)
 router.post("/google", loginLimiter, authController.google);
 
-// Refresh token
 router.post("/refresh", authController.refresh);
 
-// Logout
 router.post("/logout", authController.logout);
 
-// Change password (authenticated)
 router.post("/change-password", authenticate, authController.changePassword);
 
-// Forgot password
 router.post("/forgot-password", authController.forgotPassword);
 
-// Reset password
 router.post("/reset-password", authController.resetPassword);
 
-// Verify email
 router.post("/verify-email", verifyEmailLimiter, authController.verifyEmail);
 
-// Resend verification
 router.post("/resend-verification", resendVerificationLimiter, authController.resendVerification);
 
 module.exports = router;
