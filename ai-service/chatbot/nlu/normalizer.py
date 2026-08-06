@@ -158,7 +158,9 @@ class TextNormalizer:
 
     def fuzzy_match(self, word: str, candidates: list, threshold: float = 0.8) -> Optional[Tuple[str, float]]:
         """
-        Fuzzy match a word against a list of candidates using Levenshtein distance.
+        Fuzzy match a word against a list of candidates using Damerau-Levenshtein
+        distance (insertions, deletions, substitutions, and adjacent-letter
+        transpositions each count as a single edit — e.g. "docotr" vs "doctor").
         Returns (best_match, score) if above threshold, else None.
         """
         if not word or not candidates:
@@ -196,18 +198,35 @@ class TextNormalizer:
         return 1.0 - (distance / max_len)
 
     def _levenshtein_distance(self, a: str, b: str) -> int:
-        """Compute Levenshtein distance between two strings."""
-        if len(a) < len(b):
-            a, b = b, a
+        """Compute Damerau-Levenshtein distance between two strings.
 
-        previous_row = list(range(len(b) + 1))
-        for i, char_a in enumerate(a):
-            current_row = [i + 1]
-            for j, char_b in enumerate(b):
-                insertions = previous_row[j + 1] + 1
-                deletions = current_row[j] + 1
-                substitutions = previous_row[j] + (char_a != char_b)
-                current_row.append(min(insertions, deletions, substitutions))
-            previous_row = current_row
+        Insertions, deletions, and substitutions each cost one edit, as in
+        plain Levenshtein distance. An adjacent-letter transposition (e.g.
+        "docotr" -> "doctor") also costs a single edit rather than two, since
+        that is the single most common typo shape and scoring it as two edits
+        was pushing common misspellings below the fuzzy-match threshold.
+        """
+        len_a, len_b = len(a), len(b)
+        d = [[0] * (len_b + 1) for _ in range(len_a + 1)]
 
-        return previous_row[-1]
+        for i in range(len_a + 1):
+            d[i][0] = i
+        for j in range(len_b + 1):
+            d[0][j] = j
+
+        for i in range(1, len_a + 1):
+            for j in range(1, len_b + 1):
+                cost = 0 if a[i - 1] == b[j - 1] else 1
+                d[i][j] = min(
+                    d[i - 1][j] + 1,        # deletion
+                    d[i][j - 1] + 1,        # insertion
+                    d[i - 1][j - 1] + cost,  # substitution
+                )
+                if (
+                    i > 1 and j > 1
+                    and a[i - 1] == b[j - 2]
+                    and a[i - 2] == b[j - 1]
+                ):
+                    d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)  # adjacent transposition
+
+        return d[len_a][len_b]
