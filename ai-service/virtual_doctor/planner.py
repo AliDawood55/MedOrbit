@@ -36,6 +36,7 @@ language-drift risk for no benefit.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -379,7 +380,7 @@ class LLMPlanner:
                 ready_for_diagnosis=True, source=f"{self.name}:turn-cap",
             )
 
-        parsed = self._ask(ctx)
+        parsed = await self._ask(ctx)
         complaint = self._clamp_complaint(parsed.get("chief_complaint"), ctx)
         updates = self._store_answer(ctx, parsed.get("findings") or {})
 
@@ -392,7 +393,7 @@ class LLMPlanner:
         merged_known = _known_summary({**ctx.profile, **updates})
         if (len(merged_known) >= COMPLETENESS_MIN_FINDINGS
                 and ctx.turn_index >= COMPLETENESS_MIN_TURNS
-                and self._check_readiness(ctx, merged_known)):
+                and await self._check_readiness(ctx, merged_known)):
             return PlannerResult(
                 reply=None, phase="interviewing", profile_updates=updates,
                 chief_complaint=complaint, ready_for_diagnosis=True, source=self.name,
@@ -462,7 +463,7 @@ class LLMPlanner:
             updates["associated_symptoms_detected"] = list(detected)
         return updates
 
-    def _ask(self, ctx: PlannerInput) -> Dict[str, Any]:
+    async def _ask(self, ctx: PlannerInput) -> Dict[str, Any]:
         known = _known_summary(ctx.profile)
         language_name = "Arabic" if ctx.lang == "ar" else "English"
         transcript = "\n".join(
@@ -506,7 +507,8 @@ Rules:
 """
 
         try:
-            response = requests.post(
+            response = await asyncio.to_thread(
+                requests.post,
                 PLANNER_CHAT_URL,
                 json={
                     "model": PLANNER_MODEL,
@@ -531,7 +533,7 @@ Rules:
             raise PlannerError("planner returned unparseable JSON")
         return parsed
 
-    def _check_readiness(self, ctx: PlannerInput, known: Dict[str, str]) -> bool:
+    async def _check_readiness(self, ctx: PlannerInput, known: Dict[str, str]) -> bool:
         """Dedicated, minimal call: is this picture complete enough to stop?
 
         See _READINESS_* above for the A/B evidence behind splitting this out
@@ -542,7 +544,8 @@ Rules:
         """
         summary = ", ".join(k.replace("_", " ") for k in known)
         try:
-            response = requests.post(
+            response = await asyncio.to_thread(
+                requests.post,
                 PLANNER_CHAT_URL,
                 json={
                     "model": PLANNER_MODEL,

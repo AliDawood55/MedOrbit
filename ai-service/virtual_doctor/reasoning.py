@@ -47,6 +47,7 @@ Two things about this are deliberate and measured (see _RETRIEVAL_NOTES):
     for Arabic consultations, because the corpus is an English textbook.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -372,7 +373,7 @@ Reminder: "condition" and "recommended_next_step" must be written entirely in {l
 """
 
 
-def _call_llm_once(
+async def _call_llm_once(
     chief_complaint: str,
     profile: Dict[str, Any],
     lang: str,
@@ -409,7 +410,8 @@ def _call_llm_once(
     temperature = 0.2 if strict else 0.4
 
     try:
-        response = requests.post(
+        response = await asyncio.to_thread(
+            requests.post,
             OLLAMA_CHAT_URL,
             json={
                 "model": MODEL_NAME,
@@ -431,12 +433,12 @@ def _call_llm_once(
         return None
 
 
-def _call_llm(
+async def _call_llm(
     chief_complaint: str, profile: Dict[str, Any], lang: str, context_block: str = "",
     history_block: str = "",
 ) -> dict:
-    parsed = _call_llm_once(chief_complaint, profile, lang, strict=False,
-                            context_block=context_block, history_block=history_block)
+    parsed = await _call_llm_once(chief_complaint, profile, lang, strict=False,
+                                  context_block=context_block, history_block=history_block)
     normalized = _normalize_llm_output(parsed, lang)
     if _output_language_ok(normalized, lang):
         return normalized
@@ -444,7 +446,7 @@ def _call_llm(
     logger.warning(
         "Reasoning LLM output failed language check (lang=%s) — retrying with a stricter prompt", lang
     )
-    parsed_retry = _call_llm_once(
+    parsed_retry = await _call_llm_once(
         chief_complaint, profile, lang, strict=True, context_block=context_block
     )
     normalized_retry = _normalize_llm_output(parsed_retry, lang)
@@ -475,8 +477,16 @@ async def run_reasoning(
     section in the prompt.
     """
     symptom_list = _build_symptom_list(chief_complaint, profile)
-    rule_result = await _symptom_engine.match(symptoms=symptom_list or [chief_complaint])
 
+    # The rule-engine match and the RAG retrieval are independent — the rule
+    # engine works off the symptom list, retrieval off the chief complaint and
+    # profile, and neither reads the other's result. Only combined afterward,
+    # so run them concurrently rather than paying two round trips back to
+    # back. Retrieval already never raises (fails soft to [] — see below), so
+    # this is not wrapped in return_exceptions=True: if the rule engine raises,
+    # the exception still propagates to the caller exactly as it did when this
+    # was sequential.
+    #
     # RAG: ground the LLM in the textbook before asking it for a differential.
     # Returns [] on any failure, in which case _call_llm behaves exactly as it
     # did before this feature existed.
@@ -490,12 +500,15 @@ async def run_reasoning(
     # radiates to the left arm" (everything known by the end), and the
     # profile-wide query already contains and exceeds what any per-turn query
     # covered. See retrieval.retrieve_for_profile / build_profile_query.
-    context_chunks = await _retrieve_medical_context(chief_complaint, profile)
+    rule_result, context_chunks = await asyncio.gather(
+        _symptom_engine.match(symptoms=symptom_list or [chief_complaint]),
+        _retrieve_medical_context(chief_complaint, profile),
+    )
     context_block = _format_medical_context(context_chunks)
 
     history_block = memory.format_history(history, lang) if history else ""
 
-    llm_result = _call_llm(chief_complaint, profile, lang, context_block, history_block)
+    llm_result = await _call_llm(chief_complaint, profile, lang, context_block, history_block)
 
     final_urgency = _more_urgent(rule_result["triage_level"], llm_result["urgency"])
 
