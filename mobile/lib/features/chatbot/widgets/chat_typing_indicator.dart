@@ -1,0 +1,2 @@
+import 'package:flutter/material.dart';
+class ChatTypingIndicator extends StatelessWidget { const ChatTypingIndicator({super.key}); @override Widget build(BuildContext context) => Semantics(liveRegion: true, label: 'Assistant is typing', child: const Padding(padding: EdgeInsets.all(12), child: Row(mainAxisSize: MainAxisSize.min, children: [SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Thinking...')]))); }
