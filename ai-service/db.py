@@ -18,6 +18,11 @@ logger = logging.getLogger("medorbit-ai.db")
 
 _pool: asyncpg.Pool | None = None
 
+# Applied to every query/command run through the pool (asyncpg's built-in
+# per-operation timeout) so a stuck query can no longer hold a connection —
+# and everything queued behind it — indefinitely.
+DB_COMMAND_TIMEOUT_SECONDS = 10
+
 DB_CONFIG = {
     "host": str(os.environ.get("DB_HOST", "localhost")),
     "port": int(os.environ.get("DB_PORT", "5432")),
@@ -26,6 +31,7 @@ DB_CONFIG = {
     "password": str(os.environ.get("DB_PASSWORD", "")),
     "min_size": 2,
     "max_size": 10,
+    "command_timeout": DB_COMMAND_TIMEOUT_SECONDS,
 }
 
 
