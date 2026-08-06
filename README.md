@@ -44,6 +44,8 @@ Then open http://localhost:8080.
 
 Full details (health checks, Ollama networking, restore options, troubleshooting) are in [DOCKER.md](DOCKER.md).
 
+For deploying this stack to an Azure VM as a staging environment (reachable from any network, not just the local LAN), see [docs/AZURE_STAGING_DEPLOYMENT.md](docs/AZURE_STAGING_DEPLOYMENT.md) and [docs/STAGING_CHECKLIST.md](docs/STAGING_CHECKLIST.md).
+
 ## Run without Docker (alternative)
 
 ```bash
