@@ -100,17 +100,7 @@ async function register(req, res, next) {
 
 
     } catch (err) {
-        // if(
-        //     err.message.includes("Email already registered") ||
-        //     err.message.includes("Password must")
-        // ) {
-        //     return error(
-        //         res,
-        //         err.message,
-        //         400,
-        //         "VALIDATION_ERROR"
-        //     );
-        // }
+    
 
         next(err);
 

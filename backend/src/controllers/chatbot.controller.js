@@ -30,7 +30,7 @@ exports.sendMessage = async (req, res) => {
 
     } catch (error) {
 
-        console.error("🔥 CONTROLLER ERROR:", error);
+        console.error("CONTROLLER ERROR:", error);
 
         res.status(500).json({
             success: false,
