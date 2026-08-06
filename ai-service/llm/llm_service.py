@@ -1,7 +1,11 @@
-import os
 import json
-import requests
+import logging
+import os
 from typing import Optional
+
+import requests
+
+logger = logging.getLogger(__name__)
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen2:7b")
@@ -24,7 +28,11 @@ def generate_response(message: str, context: str, lang: str = "ar", entities: Op
     context_data = {}
     try:
         context_data = json.loads(context) if isinstance(context, str) else context
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError) as exc:
+        logger.debug(
+            "generate_response: context was not valid JSON (%s) — using raw fallback",
+            type(exc).__name__,
+        )
         context_data = {"raw": str(context)}
 
     # Build the appropriate system prompt based on context type
@@ -70,15 +78,25 @@ Instructions for response:
 
         # Fallback if empty
         if not reply:
+            logger.warning(
+                "generate_response: provider %s returned an empty reply — using fallback text",
+                MODEL_NAME,
+            )
             return _get_fallback_reply(lang)
 
         return reply
 
     except requests.exceptions.Timeout:
+        logger.warning("generate_response: provider %s request timed out (timeout=60s)", MODEL_NAME)
         return _get_timeout_reply(lang)
     except requests.exceptions.ConnectionError:
+        logger.warning("generate_response: provider %s connection error — service unavailable", MODEL_NAME)
         return _get_unavailable_reply(lang)
-    except Exception:
+    except Exception as exc:  # noqa: BLE001 - any other provider/parsing failure, never break the chat turn
+        logger.error(
+            "generate_response: unexpected error calling provider %s (%s)",
+            MODEL_NAME, type(exc).__name__,
+        )
         return _get_error_reply(lang)
 
 
