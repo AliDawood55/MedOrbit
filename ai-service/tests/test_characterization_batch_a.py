@@ -52,6 +52,8 @@ class TestDbPoolCharacterization(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kwargs["min_size"], 2)
         self.assertEqual(kwargs["max_size"], 10)
         self.assertIs(kwargs["setup"], self.db._set_search_path)
+        self.assertEqual(kwargs["command_timeout"], self.db.DB_COMMAND_TIMEOUT_SECONDS)
+        self.assertEqual(self.db.DB_COMMAND_TIMEOUT_SECONDS, 10)
 
     async def test_get_pool_returns_same_singleton_on_second_call(self):
         fake_pool = MagicMock()
