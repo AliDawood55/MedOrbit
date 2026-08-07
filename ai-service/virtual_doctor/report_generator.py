@@ -204,12 +204,68 @@ _LABELS = {
 # Identity fields belong in the patient-information block, not the symptoms
 # table. Without "name" here the patient's name was listed as a symptom, and
 # "age" was silently dropped altogether because it is an int, not a str.
+#
+# pending_confirmation/confirmed_fields/uncertain_fields (the STT
+# Confirmation + Clinical Correction Layer's bookkeeping, interview_engine
+# ._apply_confirmation_layer) were already excluded here incidentally — they
+# are dicts, and the symptoms_summary comprehension below only keeps str
+# values. Listed explicitly now instead, so that stays true by design rather
+# than by accident of value type.
 _EXCLUDED_PROFILE_KEYS = {
     "chief_complaint_description",
     "associated_symptoms_detected",
     "name",
     "age",
+    "pending_confirmation",
+    "confirmed_fields",
+    "uncertain_fields",
 }
+
+# Report Uncertainty labels: a present-but-not-yet-verified STT fact must
+# never render identically to a confirmed one (Virtual Doctor Report
+# Uncertainty batch). Short and parenthetical, matching the report's
+# existing terse label style (_URGENCY_LABEL, _LIKELIHOOD_LABEL above).
+_UNCERTAIN_LABEL = {"ar": "غير مؤكد", "en": "unconfirmed"}
+_PENDING_LABEL = {"ar": "بانتظار التأكيد", "en": "pending confirmation"}
+
+
+def _is_field_confirmed(field: str, confirmed_fields: Dict[str, Any]) -> bool:
+    return confirmed_fields.get(field) is True
+
+
+def _is_field_uncertain(field: str, uncertain_fields: Dict[str, Any]) -> bool:
+    return field in uncertain_fields
+
+
+def _format_uncertainty_label(value: str, status: str, lang: str) -> str:
+    """Appends a short, visible qualifier to an already-prepared (escaped /
+    HTML-safe) `value`. status "confirmed" and "normal" return `value`
+    completely unchanged — a confirmed fact, or one the confirmation layer
+    never touched at all, must keep rendering exactly as it always has."""
+    if status == "uncertain":
+        return f"{value} ({_UNCERTAIN_LABEL[lang]})"
+    if status == "pending":
+        return f"{value} ({_PENDING_LABEL[lang]})"
+    return value
+
+
+def _field_status(
+    field: str,
+    confirmed_fields: Dict[str, Any],
+    uncertain_fields: Dict[str, Any],
+    pending_confirmation: Optional[Dict[str, Any]],
+) -> str:
+    """One of "pending" | "uncertain" | "confirmed" | "normal", checked in
+    that priority order: a still-open confirmation for this exact field
+    outranks a stale uncertain_fields entry that could be about an earlier,
+    already-resolved round for the same field name."""
+    if pending_confirmation and pending_confirmation.get("field") == field:
+        return "pending"
+    if _is_field_uncertain(field, uncertain_fields):
+        return "uncertain"
+    if _is_field_confirmed(field, confirmed_fields):
+        return "confirmed"
+    return "normal"
 
 
 async def build_report_data(session_id: str) -> Optional[Dict[str, Any]]:
@@ -260,6 +316,14 @@ async def build_report_data(session_id: str) -> Optional[Dict[str, Any]]:
         "symptoms_summary": symptoms_summary,
         "detected_symptoms": profile.get("associated_symptoms_detected", []),
         "differential": differential.get("conditions", []),
+        # Report Uncertainty batch: passed through so _render_html() can mark
+        # present-but-not-yet-verified STT facts instead of rendering them
+        # identically to confirmed ones. Additive — every existing report_data
+        # consumer keeps working unchanged; these three keys are new, nothing
+        # existing was renamed or removed.
+        "confirmed_fields": profile.get("confirmed_fields", {}),
+        "uncertain_fields": profile.get("uncertain_fields", {}),
+        "pending_confirmation": profile.get("pending_confirmation"),
         "urgency_level": session["urgency_level"] or "routine",
         "recommended_specialty_name_en": specialty_row["name_en"] if specialty_row else None,
         "recommended_specialty_name_ar": specialty_row["name_ar"] if specialty_row else None,
@@ -272,11 +336,35 @@ async def build_report_data(session_id: str) -> Optional[Dict[str, Any]]:
     }
 
 
-def _build_history_narrative(report: Dict[str, Any], lang: str) -> str:
+def _build_history_narrative(
+    report: Dict[str, Any],
+    lang: str,
+    confirmed_fields: Optional[Dict[str, Any]] = None,
+    uncertain_fields: Optional[Dict[str, Any]] = None,
+    pending_confirmation: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Plain text (the whole return value is HTML-escaped once, as a block,
+    by the caller) — so uncertainty qualifiers are appended as plain text
+    here too, not pre-escaped HTML. The three uncertainty args default to
+    None/empty so any existing caller passing only (report, lang) keeps
+    working exactly as before (every field then resolves to "normal" status,
+    i.e. unchanged output)."""
     labels = _SLOT_LABELS[lang]
-    parts = [report.get("chief_complaint_description") or ""]
+    confirmed_fields = confirmed_fields or {}
+    uncertain_fields = uncertain_fields or {}
+
+    complaint_text = report.get("chief_complaint_description") or ""
+    if complaint_text:
+        complaint_status = _field_status(
+            "chief_complaint", confirmed_fields, uncertain_fields, pending_confirmation,
+        )
+        complaint_text = _format_uncertainty_label(complaint_text, complaint_status, lang)
+
+    parts = [complaint_text]
     for key, value in report["symptoms_summary"].items():
         label = labels.get(key, key)
+        status = _field_status(key, confirmed_fields, uncertain_fields, pending_confirmation)
+        value = _format_uncertainty_label(value, status, lang)
         parts.append(f"{label}: {value}.")
     return " ".join(p for p in parts if p)
 
@@ -308,20 +396,42 @@ def _render_html(report: Dict[str, Any]) -> str:
         return html_escape(str(value), quote=False) if value is not None else ""
 
     info = report["patient_info"]
+    confirmed_fields = report.get("confirmed_fields") or {}
+    uncertain_fields = report.get("uncertain_fields") or {}
+    pending_confirmation = report.get("pending_confirmation")
 
     def or_missing(value: str) -> str:
         """Render a value, degrading to a muted 'not collected' note."""
         return value if value else f"<span class='muted'>{labels['no_data']}</span>"
 
+    def labeled(field: str, raw_value: Optional[str]) -> str:
+        """Escaped display text for one patient_info-style field, marked
+        (غير مؤكد)/(بانتظار التأكيد) when the STT confirmation layer flagged
+        it. Falls back to the still-open pending confirmation's
+        suggested/heard text when there is no stored value yet, so a pending
+        fact stays visible (marked pending) instead of collapsing to "not
+        collected". Returns "" when there is truly nothing to show, letting
+        or_missing() apply exactly as before."""
+        status = _field_status(field, confirmed_fields, uncertain_fields, pending_confirmation)
+        value = raw_value
+        if not value and status == "pending" and pending_confirmation:
+            value = pending_confirmation.get("suggested") or pending_confirmation.get("heard")
+        if not value:
+            return ""
+        return _format_uncertainty_label(esc(value), status, lang)
+
+    age_status = _field_status("age", confirmed_fields, uncertain_fields, pending_confirmation)
     age_display = (
-        f"{esc(info['age'])} <span class='unit'>{labels['years']}</span>"
+        _format_uncertainty_label(
+            f"{esc(info['age'])} <span class='unit'>{labels['years']}</span>", age_status, lang,
+        )
         if info.get("age") is not None else ""
     )
     # `gender` is not part of build_report_data today — the interview engine
     # never asks for it. Reading it optionally keeps the field in the layout
     # (standard on a medical report) and lets it fill itself in if the engine
     # ever starts collecting it, with no change needed here.
-    gender_display = esc(info.get("gender"))
+    gender_display = labeled("gender", info.get("gender"))
     # "2026-08-01 08:52:40" is two neutral digit runs separated by a space, so
     # in an RTL paragraph bidi reorders them and the time renders before the
     # date. Marking timestamps as an LTR run keeps them readable in Arabic.
@@ -329,7 +439,9 @@ def _render_html(report: Dict[str, Any]) -> str:
     interview_display = f"<span class='ltr'>{interview_raw}</span>" if interview_raw else ""
 
     symptoms_rows = "".join(
-        f"<tr><th>{esc(slot_labels.get(k, k))}</th><td>{esc(v)}</td></tr>"
+        f"<tr><th>{esc(slot_labels.get(k, k))}</th><td>"
+        f"{_format_uncertainty_label(esc(v), _field_status(k, confirmed_fields, uncertain_fields, pending_confirmation), lang)}"
+        f"</td></tr>"
         for k, v in report["symptoms_summary"].items()
     ) or f"<tr><td colspan='2' class='muted pad'>{labels['no_data']}</td></tr>"
 
@@ -422,7 +534,9 @@ def _render_html(report: Dict[str, Any]) -> str:
         else:
             urgency_steps += f"<td class='ustep'>{step_label}</td>"
 
-    history_text = _build_history_narrative(report, lang)
+    history_text = _build_history_narrative(
+        report, lang, confirmed_fields, uncertain_fields, pending_confirmation,
+    )
     generated_at = report["generated_at"][:19].replace("T", " ")
 
     fonts_uri = (_ASSETS_DIR / "fonts").as_uri()
@@ -688,7 +802,7 @@ p {{ margin: 0; }}
     <div class="panel-head">{labels['patient_info']}</div>
     <table class="kv">
       <tr>
-        <th>{labels['patient_name']}</th><td>{or_missing(esc(info.get('name')))}</td>
+        <th>{labels['patient_name']}</th><td>{or_missing(labeled('name', info.get('name')))}</td>
         <th>{labels['patient_age']}</th><td>{or_missing(age_display)}</td>
       </tr>
       <tr>
@@ -704,7 +818,7 @@ p {{ margin: 0; }}
     </div>
     <div class="field">
       <div class="field-label">{labels['chief_complaint']}</div>
-      <div class="lead">{or_missing(esc(report.get('chief_complaint_description')))}</div>
+      <div class="lead">{or_missing(labeled('chief_complaint', report.get('chief_complaint_description')))}</div>
     </div>
     <div class="field">
       <div class="field-label">{labels['history']}</div>

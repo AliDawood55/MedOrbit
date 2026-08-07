@@ -1,31 +1,31 @@
 """
-Characterization tests — Virtual Doctor report uncertainty gap.
+Virtual Doctor Report Uncertainty — behavior tests.
 
 The STT Confirmation + Clinical Correction Layer (interview_engine.py) can
-now leave three markers in patient_profile: pending_confirmation,
+leave three markers in patient_profile: pending_confirmation,
 confirmed_fields, and uncertain_fields (see
-interview_engine._apply_confirmation_layer, _mark_confirmed). This file pins
-CURRENT report_generator.py behavior: it was written before any of that
-existed, builds symptoms_summary/patient_info from flat profile values only,
-and — confirmed by direct source reading — never references
-confirmed_fields, uncertain_fields, or pending_confirmation anywhere
-(`grep -n "confirmed_fields\\|uncertain_fields\\|pending_confirmation"
-report_generator.py` returns zero matches). Concretely, this means an
-unconfirmed name or an uncertain chief complaint renders in the report
-identically to a fully confirmed one, with no marking of any kind.
+interview_engine._apply_confirmation_layer, _mark_confirmed). This file
+pins the FIXED report_generator.py behavior, after the Virtual Doctor
+Report Uncertainty Implementation Batch: build_report_data() now passes
+those three markers through into the report dict, and _render_html() /
+_build_history_narrative() use them (via _field_status/
+_format_uncertainty_label) to visibly mark a present-but-not-yet-verified
+fact instead of rendering it identically to a confirmed one.
 
-This is a CHARACTERIZATION file: every test here asserts what the code
-ACTUALLY does today, not what it should do. No production code is modified.
-report_generator.py is read-only in this batch.
+This file was originally written (same name, mostly the same test classes)
+to pin the PRE-fix limitation — see git history for that version. It is
+updated here to assert the corrected, desired behavior, using the same
+"characterize -> fix -> verify" discipline as every other test file in this
+session.
 
 Two layers are tested, matching the two testable units report_generator.py
 actually exposes:
   - build_report_data(session_id): async, needs the DB pool (mocked here,
     the same way every other virtual_doctor test in this repo mocks it —
     no real DB, Ollama, or network access anywhere in this file).
-  - _render_html(report) / _build_history_narrative(report, lang): pure,
-    synchronous functions that take an already-built report dict — called
-    directly with hand-built dicts, so no PDF is ever rendered and
+  - _render_html(report) / _build_history_narrative(report, lang, ...):
+    pure, synchronous functions that take an already-built report dict —
+    called directly with hand-built dicts, so no PDF is ever rendered and
     WeasyPrint/pdf_worker.py are never invoked.
 """
 
@@ -91,66 +91,55 @@ def _base_report(**overrides):
         "recommended_next_step": None,
         "ai_confidence": None,
         "sources": [],
+        "confirmed_fields": {},
+        "uncertain_fields": {},
+        "pending_confirmation": None,
     }
     report.update(overrides)
     return report
 
 
 # ===========================================================================
-# 1. build_report_data(): confirmed_fields is ignored
+# 1. Unconfirmed name is visibly marked
 # ===========================================================================
 
-class TestBuildReportDataIgnoresConfirmedFields(unittest.IsolatedAsyncioTestCase):
-    async def test_unconfirmed_name_appears_in_patient_info_same_as_confirmed(self):
-        """A name the STT confirmation layer explicitly marked
-        confirmed_fields["name"] = False (i.e. the patient never actually
-        confirmed it — see interview_engine._mark_confirmed) still renders
-        in patient_info.name exactly as if it had been confirmed."""
-        profile = {
-            "name": "درج",
-            "age": 30,
-            "confirmed_fields": {"name": False, "chief_complaint": True},
-        }
+class TestUnconfirmedNameVisiblyMarked(unittest.IsolatedAsyncioTestCase):
+    async def test_build_report_data_passes_confirmed_fields_through(self):
+        profile = {"name": "درج", "confirmed_fields": {"name": False}, "uncertain_fields": {"name": "درج"}}
         report = await _build(profile)
 
         self.assertEqual(report["patient_info"]["name"], "درج")
+        self.assertEqual(report["confirmed_fields"], {"name": False})
+        self.assertEqual(report["uncertain_fields"], {"name": "درج"})
 
-    async def test_confirmed_fields_key_itself_does_not_survive_into_report_data(self):
-        """confirmed_fields is dropped entirely during the profile -> report
-        transformation — there is no field anywhere in the returned dict a
-        future renderer could even check, confirmed vs not."""
-        profile = {"name": "علي", "confirmed_fields": {"name": True}}
-        report = await _build(profile)
+    def test_render_html_marks_uncertain_name_with_arabic_label(self):
+        report = _base_report(
+            patient_info={**_base_report()["patient_info"], "name": "درج"},
+            confirmed_fields={"name": False},
+            uncertain_fields={"name": "درج"},
+        )
+        html = report_generator._render_html(report)
 
-        self.assertNotIn("confirmed_fields", report)
-        self.assertNotIn("confirmed_fields", report["patient_info"])
+        self.assertIn("<td>درج (غير مؤكد)</td>", html)
 
-    async def test_confirmed_fields_dict_never_leaks_into_symptoms_summary(self):
-        """confirmed_fields is itself a dict value on the profile; the
-        symptoms_summary comprehension's isinstance(value, str) filter
-        happens to exclude it, but incidentally — not because the code knows
-        what it is."""
-        profile = {
-            "duration": "3 days",
-            "confirmed_fields": {"duration": True},
-        }
-        report = await _build(profile)
+    def test_render_html_marks_uncertain_name_with_english_label(self):
+        report = _base_report(
+            language="en",
+            patient_info={**_base_report()["patient_info"], "name": "Draj"},
+            confirmed_fields={"name": False},
+            uncertain_fields={"name": "Draj"},
+        )
+        html = report_generator._render_html(report)
 
-        self.assertEqual(report["symptoms_summary"], {"duration": "3 days"})
-        self.assertNotIn("confirmed_fields", report["symptoms_summary"])
+        self.assertIn("<td>Draj (unconfirmed)</td>", html)
 
 
 # ===========================================================================
-# 2. build_report_data(): uncertain_fields is ignored
+# 2. Uncertain chief complaint is visibly marked
 # ===========================================================================
 
-class TestBuildReportDataIgnoresUncertainFields(unittest.IsolatedAsyncioTestCase):
-    async def test_uncertain_chief_complaint_renders_with_no_marking(self):
-        """A chief complaint the confirmation layer gave up on (attempts
-        exhausted — see interview_engine._resolve_pending_confirmation's
-        "gave_up" outcome) stores BOTH the fallback value under
-        chief_complaint_description AND a copy under uncertain_fields. The
-        report reads only the former; the latter is never consulted."""
+class TestUncertainChiefComplaintVisiblyMarked(unittest.IsolatedAsyncioTestCase):
+    async def test_build_report_data_passes_uncertain_chief_complaint_through(self):
         profile = {
             "chief_complaint_description": "عندي صدق شديد فجأة",
             "uncertain_fields": {"chief_complaint": "عندي صدق شديد فجأة"},
@@ -158,110 +147,191 @@ class TestBuildReportDataIgnoresUncertainFields(unittest.IsolatedAsyncioTestCase
         report = await _build(profile)
 
         self.assertEqual(report["chief_complaint_description"], "عندي صدق شديد فجأة")
-        self.assertNotIn("uncertain_fields", report)
+        self.assertEqual(report["uncertain_fields"], {"chief_complaint": "عندي صدق شديد فجأة"})
 
-    async def test_uncertain_fields_values_do_not_appear_anywhere_in_symptoms_summary(self):
-        profile = {
-            "duration": "2 hours",
-            "uncertain_fields": {"name": "درج", "chief_complaint": "..."},
-        }
-        report = await _build(profile)
+    def test_render_html_marks_uncertain_chief_complaint(self):
+        report = _base_report(
+            chief_complaint_description="عندي صدق شديد فجأة",
+            uncertain_fields={"chief_complaint": "عندي صدق شديد فجأة"},
+        )
+        html = report_generator._render_html(report)
 
-        self.assertEqual(report["symptoms_summary"], {"duration": "2 hours"})
+        self.assertIn("عندي صدق شديد فجأة (غير مؤكد)", html)
 
 
 # ===========================================================================
-# 3. build_report_data(): pending_confirmation (an edge case — a report
-#    generated while a confirmation is still open) is also silently dropped
+# 3. pending_confirmation is visible in the rendered report
 # ===========================================================================
 
-class TestBuildReportDataIgnoresPendingConfirmation(unittest.IsolatedAsyncioTestCase):
-    async def test_open_pending_confirmation_does_not_surface_or_break_report(self):
-        profile = {
-            "pending_confirmation": {
+class TestPendingConfirmationVisible(unittest.IsolatedAsyncioTestCase):
+    def test_pending_name_shows_heard_value_marked_pending(self):
+        """No confirmed name is stored yet (see interview_engine
+        ._apply_confirmation_layer — a suspicious name is never written to
+        profile["name"] until resolved), so the only candidate to show is
+        the pending confirmation's "heard" text."""
+        report = _base_report(
+            pending_confirmation={
+                "field": "name", "heard": "درج", "suggested": None,
+                "question": "هل سمعت اسمك بشكل صحيح: درج؟", "attempts": 0,
+            },
+        )
+        html = report_generator._render_html(report)
+
+        self.assertIn("<td>درج (بانتظار التأكيد)</td>", html)
+
+    def test_pending_chief_complaint_shows_suggested_value_marked_pending(self):
+        report = _base_report(
+            chief_complaint_description=None,
+            pending_confirmation={
                 "field": "chief_complaint", "heard": "عندي صدق شديد فجأة",
                 "suggested": "صداع شديد بدأ فجأة",
                 "question": "هل تقصد صداع شديد بدأ فجأة؟", "attempts": 0,
             },
+        )
+        html = report_generator._render_html(report)
+
+        self.assertIn("صداع شديد بدأ فجأة (بانتظار التأكيد)", html)
+
+
+# ===========================================================================
+# 4. Confirmed fields render normally
+# ===========================================================================
+
+class TestConfirmedFieldsRenderNormally(unittest.IsolatedAsyncioTestCase):
+    def test_confirmed_name_has_no_uncertainty_suffix(self):
+        report = _base_report(
+            patient_info={**_base_report()["patient_info"], "name": "علي"},
+            confirmed_fields={"name": True},
+        )
+        html = report_generator._render_html(report)
+
+        self.assertIn("<td>علي</td>", html)
+        self.assertNotIn("غير مؤكد", html)
+        self.assertNotIn("بانتظار التأكيد", html)
+
+    def test_field_never_touched_by_confirmation_layer_also_renders_normally(self):
+        """A field that simply never appears in confirmed_fields/
+        uncertain_fields at all (e.g. today, "age" — the confirmation layer
+        added in the prior batch never touches it) must render exactly as
+        before this batch: plain, no suffix."""
+        report = _base_report(
+            patient_info={**_base_report()["patient_info"], "age": 34},
+        )
+        html = report_generator._render_html(report)
+
+        self.assertIn("34 <span class='unit'>سنة</span></td>", html)
+        self.assertNotIn("غير مؤكد", html)
+        self.assertNotIn("بانتظار التأكيد", html)
+
+
+# ===========================================================================
+# 5. Missing fields still render as missing/not collected
+# ===========================================================================
+
+class TestMissingFieldsStillRenderAsMissing(unittest.IsolatedAsyncioTestCase):
+    def test_absent_name_shows_not_collected_note_not_a_blank_or_pending_label(self):
+        report = _base_report()  # name is None, no pending_confirmation
+        html = report_generator._render_html(report)
+
+        self.assertIn(
+            "<td><span class='muted'>لم يتم جمعها خلال هذه المقابلة.</span></td>", html,
+        )
+        self.assertNotIn("بانتظار التأكيد", html)
+
+    def test_absent_chief_complaint_still_shows_not_collected(self):
+        report = _base_report()
+        html = report_generator._render_html(report)
+
+        self.assertIn(
+            "<div class=\"lead\"><span class='muted'>لم يتم جمعها خلال هذه المقابلة.</span></div>", html,
+        )
+
+
+# ===========================================================================
+# 6. uncertain_fields/confirmed_fields are not blindly rendered as symptom rows
+# ===========================================================================
+
+class TestConfirmationMetadataNotRenderedAsSymptoms(unittest.IsolatedAsyncioTestCase):
+    async def test_build_report_data_excludes_confirmation_keys_from_symptoms_summary(self):
+        profile = {
+            "duration": "3 days",
+            "confirmed_fields": {"duration": True},
+            "uncertain_fields": {"name": "درج"},
+            "pending_confirmation": {"field": "chief_complaint", "heard": "x", "suggested": None,
+                                     "question": "q", "attempts": 0},
         }
         report = await _build(profile)
 
-        self.assertNotIn("pending_confirmation", report)
-        self.assertEqual(report["symptoms_summary"], {})
-        # No hint anywhere that a question was ever left unanswered.
-        self.assertIsNone(report["chief_complaint_description"])
+        self.assertEqual(report["symptoms_summary"], {"duration": "3 days"})
+        self.assertNotIn("confirmed_fields", report["symptoms_summary"])
+        self.assertNotIn("uncertain_fields", report["symptoms_summary"])
+        self.assertNotIn("pending_confirmation", report["symptoms_summary"])
 
-
-# ===========================================================================
-# 4. _render_html(): an unconfirmed/uncertain fact renders identically to a
-#    confirmed one — no badge, no muted styling, no textual marker
-# ===========================================================================
-
-class TestRenderHtmlDoesNotDistinguishUncertainty(unittest.IsolatedAsyncioTestCase):
-    def test_name_cell_identical_regardless_of_confirmed_fields_presence(self):
-        """_render_html() only ever reads report['patient_info']['name'] —
-        confirmed_fields is not part of the report dict at all after
-        build_report_data() (Section 1), but even if a future caller passed
-        it through as an extra, unused key, the rendered <td> for the name is
-        byte-for-byte identical either way."""
-        confirmed_report = _base_report(
-            patient_info={**_base_report()["patient_info"], "name": "درج"},
-        )
-        unconfirmed_report = _base_report(
-            patient_info={**_base_report()["patient_info"], "name": "درج"},
-            confirmed_fields={"name": False},  # extra key; _render_html ignores it
-        )
-
-        confirmed_html = report_generator._render_html(confirmed_report)
-        unconfirmed_html = report_generator._render_html(unconfirmed_report)
-
-        name_cell = "<td>درج</td>"
-        self.assertIn(name_cell, confirmed_html)
-        self.assertIn(name_cell, unconfirmed_html)
-        self.assertEqual(confirmed_html, unconfirmed_html)
-
-    def test_uncertain_name_is_not_flagged_muted_or_annotated(self):
-        """The renderer's only "special" treatment of a field is or_missing()
-        — a muted "not collected" note when the value is falsy. A present but
-        UNCERTAIN name gets none of that: it renders through the normal,
-        confident-looking bold <td>, not the muted branch."""
+    def test_uncertain_symptom_row_is_marked_not_dropped(self):
+        """A symptoms_summary key that DOES appear in uncertain_fields (not
+        exercised by today's interview_engine, which only ever flags name/
+        chief_complaint, but the mechanism is generic) is marked, not
+        silently rendered as fact and not silently removed."""
         report = _base_report(
-            patient_info={**_base_report()["patient_info"], "name": "درج"},
+            symptoms_summary={"duration": "يومين"},
+            uncertain_fields={"duration": "يومين"},
         )
         html = report_generator._render_html(report)
 
-        self.assertIn("<td>درج</td>", html)
-        # The muted/no-data branch (used elsewhere in this same document for
-        # genuinely missing fields like age/gender, which this fixture
-        # deliberately leaves unset) is not what rendered the name specifically.
-        self.assertNotIn("<span class='muted'>درج", html)
+        self.assertIn("يومين (غير مؤكد)", html)
 
-    def test_chief_complaint_lead_shows_uncertain_text_unmarked(self):
-        report = _base_report(chief_complaint_description="عندي صدق شديد فجأة")
+    def test_confirmed_symptom_row_unmarked(self):
+        report = _base_report(
+            symptoms_summary={"duration": "يومين"},
+            confirmed_fields={"duration": True},
+        )
         html = report_generator._render_html(report)
 
-        self.assertIn("عندي صدق شديد فجأة", html)
-        # No "(unconfirmed)"/"reported"-style qualifier anywhere near it.
-        self.assertNotIn("unconfirmed", html.lower())
-        self.assertNotIn("غير مؤكد", html)
+        self.assertIn("<td>يومين</td>", html)
 
 
 # ===========================================================================
-# 5. _build_history_narrative(): uncertain chief-complaint text flows into
-#    the narrative unmarked too
+# 7. History narrative does not falsely present uncertainty as confirmed
 # ===========================================================================
 
-class TestHistoryNarrativeDoesNotDistinguishUncertainty(unittest.IsolatedAsyncioTestCase):
-    def test_uncertain_chief_complaint_text_included_verbatim(self):
+class TestHistoryNarrativeReflectsUncertainty(unittest.IsolatedAsyncioTestCase):
+    def test_uncertain_chief_complaint_marked_in_narrative(self):
         report = _base_report(
             chief_complaint_description="عندي صدق شديد فجأة",
             symptoms_summary={"duration": "منذ ساعة"},
+            uncertain_fields={"chief_complaint": "عندي صدق شديد فجأة"},
+        )
+        narrative = report_generator._build_history_narrative(
+            report, "ar", report["confirmed_fields"], report["uncertain_fields"],
+            report["pending_confirmation"],
+        )
+
+        self.assertIn("عندي صدق شديد فجأة (غير مؤكد)", narrative)
+
+    def test_confirmed_chief_complaint_unmarked_in_narrative(self):
+        report = _base_report(
+            chief_complaint_description="صداع شديد بدأ فجأة",
+            confirmed_fields={"chief_complaint": True},
+        )
+        narrative = report_generator._build_history_narrative(
+            report, "ar", report["confirmed_fields"], report["uncertain_fields"],
+            report["pending_confirmation"],
+        )
+
+        self.assertIn("صداع شديد بدأ فجأة", narrative)
+        self.assertNotIn("غير مؤكد", narrative)
+
+    def test_default_arguments_keep_old_two_arg_call_backward_compatible(self):
+        """A caller that still invokes _build_history_narrative(report, lang)
+        with no uncertainty args (as this file's pre-fix version did) keeps
+        working exactly as before — every field resolves to "normal" status."""
+        report = _base_report(
+            chief_complaint_description="صداع شديد بدأ فجأة",
+            uncertain_fields={"chief_complaint": "..."},  # ignored: not passed in below
         )
         narrative = report_generator._build_history_narrative(report, "ar")
 
-        self.assertIn("عندي صدق شديد فجأة", narrative)
-        self.assertNotIn("غير مؤكد", narrative)
-        self.assertNotIn("uncertain", narrative.lower())
+        self.assertEqual(narrative, "صداع شديد بدأ فجأة")
 
 
 if __name__ == "__main__":
