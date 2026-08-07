@@ -98,6 +98,30 @@ class IntentClassifier:
             cls._keyword_pattern_cache[keyword_norm] = patterns
         return any(p.search(text) is not None for p in patterns)
 
+    # Mirrors chatbot/nlu/safety.py's own informational-ER-place exemption
+    # (same policy, same narrow phrasing) — distinguishes "the emergency
+    # department" as a place/service from a personal emergency being
+    # reported. Matches ONLY the department-as-place phrasing "قسم
+    # الطوارئ"/"غرفة الطوارئ" — never bare "طوارئ" alone, which must
+    # always still win Step 9 on its own.
+    _ER_PLACE_PATTERN = re.compile(r"قسم\s+الطوارئ|غرفة\s+الطوارئ", re.IGNORECASE)
+
+    def _is_informational_er_place_query(
+        self, text: str, matched_kw: List[str], matched_pat: List[str]
+    ) -> bool:
+        """True only when the sole reason the "emergency" intent scored is
+        the bare "طوارئ" keyword AND the text specifically names the
+        emergency department as a place, rather than reporting a personal
+        emergency. Any other matched emergency keyword or regex pattern
+        (a real symptom, a self-report, "اسعاف", "حالة طارئة", etc.) means
+        this returns False and Step 9 still forces "emergency" outright.
+        """
+        if matched_pat:
+            return False
+        if matched_kw != ["طوارئ"]:
+            return False
+        return bool(self._ER_PLACE_PATTERN.search(text))
+
     def classify(self, text: str, context: Optional[Dict] = None) -> Dict:
         """
         Full hybrid NLU classification.
@@ -236,15 +260,32 @@ class IntentClassifier:
 
         # Step 9: Emergency override (double-check through entity detection)
         if "emergency" in scores and scores["emergency"] >= 1.0:
-            return {
-                "intent": "emergency",
-                "confidence": 1.0,
-                "matched_keywords": matched_keywords.get("emergency", []),
-                "matched_patterns": matched_patterns.get("emergency", []),
-                "is_emergency": True,
-                "_pipeline": pipeline_log,
-                "_processing_ms": round((time.time() - start_time) * 1000, 2)
-            }
+            if self._is_informational_er_place_query(
+                text, matched_keywords.get("emergency", []), matched_patterns.get("emergency", [])
+            ):
+                # Informational/place query naming the ER (see
+                # _is_informational_er_place_query) — let it continue to
+                # normal ranking instead of forcing "emergency". The
+                # emergency intent is removed from contention entirely so
+                # it can't also win Step 10 purely on this same,
+                # now-exempted "طوارئ" match.
+                del scores["emergency"]
+                matched_keywords.pop("emergency", None)
+                matched_patterns.pop("emergency", None)
+                pipeline_log.append({
+                    "step": "emergency_override_exempted",
+                    "reason": "informational_er_place_query"
+                })
+            else:
+                return {
+                    "intent": "emergency",
+                    "confidence": 1.0,
+                    "matched_keywords": matched_keywords.get("emergency", []),
+                    "matched_patterns": matched_patterns.get("emergency", []),
+                    "is_emergency": True,
+                    "_pipeline": pipeline_log,
+                    "_processing_ms": round((time.time() - start_time) * 1000, 2)
+                }
 
         # Step 10: Multi-intent ranking with calibration
         if not scores:
