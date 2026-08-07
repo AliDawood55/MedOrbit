@@ -52,6 +52,20 @@ class MedicalSafetyLayer:
         r"(uncontrollable\s+bleeding)",
     ]
 
+    # The single combined pattern (from EMERGENCY_PATTERNS_AR above) whose
+    # alternatives are the bare words "طوارئ"/"حالة طارئة"/"إسعاف"/"اسعاف" —
+    # the only pattern the informational-ER-place exemption below is allowed
+    # to suppress. No other emergency pattern (real symptoms, self-reports)
+    # is ever affected by it.
+    _EMERGENCY_WORD_PATTERN = r"(طوارئ|حالة\s+طارئة|إسعاف|اسعاف)"
+
+    # Distinguishes "the emergency department" as a place/service (a
+    # location or wayfinding query) from a personal emergency being
+    # reported. Matches ONLY the department-as-place phrasing "قسم
+    # الطوارئ"/"غرفة الطوارئ" — never bare "طوارئ" or "حالة طارئة" alone,
+    # which must always still bypass routing on their own.
+    _ER_PLACE_PATTERN = re.compile(r"قسم\s+الطوارئ|غرفة\s+الطوارئ", re.IGNORECASE)
+
     def __init__(self):
         self._compile_patterns()
 
@@ -59,6 +73,21 @@ class MedicalSafetyLayer:
         """Compile regex patterns for performance."""
         self.emergency_re = [re.compile(p, re.IGNORECASE) for p in self.EMERGENCY_PATTERNS_AR]
         self.urgent_re = [re.compile(p, re.IGNORECASE) for p in self.URGENT_PATTERNS_AR]
+
+    def _is_informational_er_place_query(self, text: str, matched_patterns: List[Dict]) -> bool:
+        """True only when the sole reason this text tripped an emergency
+        pattern is the bare "طوارئ"/"إسعاف" word group AND the text
+        specifically names the emergency department as a place ("قسم
+        الطوارئ"/"غرفة الطوارئ") rather than reporting a personal
+        emergency. Any other emergency pattern matching at the same time
+        (a real symptom, "حالة طارئة" as a self-report, etc.) means this
+        returns False and the bypass still wins outright.
+        """
+        if len(matched_patterns) != 1:
+            return False
+        if matched_patterns[0]["pattern"] != self._EMERGENCY_WORD_PATTERN:
+            return False
+        return bool(self._ER_PLACE_PATTERN.search(text))
 
     def check(self, text: str, entities: Optional[Dict] = None) -> Dict:
         """
@@ -96,6 +125,15 @@ class MedicalSafetyLayer:
                     "matched": match.group(),
                     "pattern": pattern.pattern
                 })
+
+        # Narrow exemption: a query that only names the emergency
+        # department as a place ("قسم الطوارئ") rather than reporting an
+        # actual emergency continues to normal intent routing instead of
+        # bypassing it. See _is_informational_er_place_query for the exact,
+        # narrow condition — any real symptom or self-reported emergency
+        # matched alongside it still bypasses routing as before.
+        if self._is_informational_er_place_query(text, matched_patterns):
+            matched_patterns = []
 
         # If emergency detected, return immediately
         if matched_patterns:

@@ -117,17 +117,17 @@ class TestClusterEPoisoningSubstringFalsePositive(unittest.TestCase):
     def setUpClass(cls):
         cls.safety = MedicalSafetyLayer()
 
-    def test_hospital_emergency_department_now_matches_only_the_legitimate_pattern(self):
+    def test_hospital_emergency_department_no_longer_matches_the_poison_bug(self):
         # FIXED by Cluster E2: the "سم " substring bug (embedded in "قسم")
-        # no longer fires. Only the legitimate "طوارئ" match remains — this
-        # is the pure Cluster I policy question now, not a bug (see
-        # TestClusterEHospitalEmergencyPolicyQuestion below).
+        # no longer fires for this input. Separately, Cluster I's
+        # informational-ER-place exemption (see
+        # TestClusterEHospitalEmergencyPolicyQuestion below) means the
+        # "طوارئ" match is now also exempted at the safety.py layer for
+        # this specific place-naming phrasing — so safety.check() itself
+        # now returns "normal" with no matched patterns at all.
         result = self.safety.check("قسم الطوارئ في المستشفى")
-        self.assertEqual(result["severity"], "emergency")
-        patterns_matched = [m["pattern"] for m in result["matched_patterns"]]
-        self.assertNotIn(r"(تسمم|\bسم\s+|جرعة\s+زائدة)", patterns_matched)
-        self.assertIn(r"(طوارئ|حالة\s+طارئة|إسعاف|اسعاف)", patterns_matched)
-        self.assertEqual(len(result["matched_patterns"]), 1)
+        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["matched_patterns"], [])
 
     def test_body_word_no_longer_a_false_positive_emergency(self):
         # FIXED: "جسم" (body) followed by a space — unrelated to poisoning.
@@ -172,22 +172,37 @@ class TestClusterEPoisoningSubstringFalsePositive(unittest.TestCase):
 
 
 class TestClusterEHospitalEmergencyPolicyQuestion(unittest.TestCase):
-    """Pins current behavior for the informational-ER-query case, which is
-    a policy question, not purely a bug — see module docstring."""
+    """Pins current behavior for the informational-ER-query case.
+
+    Cluster I implemented the approved policy exemption at the safety.py
+    layer only (per its explicit file scope) — MedicalSafetyLayer.check()
+    for this input now correctly returns severity="normal" (see
+    TestClusterEPoisoningSubstringFalsePositive above). However,
+    classify() below STILL returns "emergency" for the same input, via a
+    SECOND, INDEPENDENT mechanism entirely inside classifier.py: its own
+    Step 9 override (`if scores["emergency"] >= 1.0: return emergency`)
+    fires because intents.json's "emergency" intent lists the bare keyword
+    "طوارئ" in its own keywords_ar list — a code path completely unrelated
+    to safety.py's regex patterns, unaffected by any fix made there.
+    Resolving this fully requires touching classifier.py and/or
+    intents.json, both explicitly out of scope for the Cluster I batch as
+    approved. Flagged for a follow-up decision — not fixed here.
+    """
 
     @classmethod
     def setUpClass(cls):
         cls.classifier = IntentClassifier()
 
-    def test_hospital_emergency_department_query_currently_bypasses_routing(self):
-        # Unchanged by Cluster E2: the "سم " bug (embedded in "قسم") is
-        # fixed, but "طوارئ" still legitimately, correctly matches on its
-        # own — this is now purely the Cluster I policy question (should an
-        # informational query naming the ER as a place be exempted from the
-        # bypass?), not a bug. Explicitly out of scope for E1/E2.
+    def test_hospital_emergency_department_query_still_bypasses_routing_via_classifier(self):
+        # safety.py's own bypass for this input is fixed (see above), but
+        # classify() still returns "emergency" via classifier.py's
+        # independent Step 9 override, matching intents.json's "emergency"
+        # intent's own "طوارئ" keyword — a second mechanism outside
+        # Cluster I's approved file scope (safety.py only).
         result = self.classifier.classify("قسم الطوارئ في المستشفى")
         self.assertEqual(result["intent"], "emergency")
         self.assertEqual(result["confidence"], 1.0)
+        self.assertEqual(result["matched_keywords"], ["طوارئ"])
 
     def test_true_arabic_emergency_word_alone_remains_protected(self):
         # The bare word "طوارئ" alone (no "قسم" prefix, so the "سم " bug
