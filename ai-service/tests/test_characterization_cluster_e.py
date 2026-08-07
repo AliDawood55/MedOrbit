@@ -109,47 +109,58 @@ class TestClusterECardiFalsePositive(unittest.TestCase):
 
 
 class TestClusterEPoisoningSubstringFalsePositive(unittest.TestCase):
-    """Pins the confirmed "سم " regex defect and its broader blast radius
-    beyond the one failing test."""
+    """Pins the FIXED "سم " regex (now boundary-safe via \\b) and confirms
+    the true poisoning/overdose alternatives in the same pattern still
+    fire correctly."""
 
     @classmethod
     def setUpClass(cls):
         cls.safety = MedicalSafetyLayer()
 
-    def test_hospital_emergency_department_currently_matches_both_patterns(self):
-        # Confirms test_hospital_emergency's failure has TWO independent
-        # causes: the "سم " substring bug (embedded in "قسم") AND the
-        # legitimate "طوارئ" match — fixing only the "سم " bug would not by
-        # itself change this test's outcome, since "طوارئ" still fires.
+    def test_hospital_emergency_department_now_matches_only_the_legitimate_pattern(self):
+        # FIXED by Cluster E2: the "سم " substring bug (embedded in "قسم")
+        # no longer fires. Only the legitimate "طوارئ" match remains — this
+        # is the pure Cluster I policy question now, not a bug (see
+        # TestClusterEHospitalEmergencyPolicyQuestion below).
         result = self.safety.check("قسم الطوارئ في المستشفى")
         self.assertEqual(result["severity"], "emergency")
         patterns_matched = [m["pattern"] for m in result["matched_patterns"]]
-        self.assertIn(r"(تسمم|سم\s+|جرعة\s+زائدة)", patterns_matched)
+        self.assertNotIn(r"(تسمم|\bسم\s+|جرعة\s+زائدة)", patterns_matched)
         self.assertIn(r"(طوارئ|حالة\s+طارئة|إسعاف|اسعاف)", patterns_matched)
+        self.assertEqual(len(result["matched_patterns"]), 1)
 
-    def test_body_word_is_currently_a_false_positive_emergency(self):
-        # "جسم" (body) followed by a space — unrelated to poisoning.
+    def test_body_word_no_longer_a_false_positive_emergency(self):
+        # FIXED: "جسم" (body) followed by a space — unrelated to poisoning.
         result = self.safety.check("جسم كامل")
-        self.assertEqual(result["severity"], "emergency")
-        self.assertEqual(result["matched_patterns"][0]["matched"], "سم ")
+        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["matched_patterns"], [])
 
-    def test_name_word_is_currently_a_false_positive_emergency(self):
-        # "اسم" (name) followed by a space — asked in virtually every
-        # intake/onboarding flow. Highest real-world blast radius of the
-        # confirmed false positives.
+    def test_name_word_no_longer_a_false_positive_emergency(self):
+        # FIXED: "اسم" (name) followed by a space — asked in virtually
+        # every intake/onboarding flow. This was the highest real-world
+        # blast radius of the confirmed false positives.
         result = self.safety.check("اسم كامل")
-        self.assertEqual(result["severity"], "emergency")
-        self.assertEqual(result["matched_patterns"][0]["matched"], "سم ")
+        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["matched_patterns"], [])
 
-    def test_fee_or_drawing_word_is_currently_a_false_positive_emergency(self):
-        # "رسم" (fee/drawing) followed by a space — unrelated to poisoning.
+    def test_fee_or_drawing_word_no_longer_a_false_positive_emergency(self):
+        # FIXED: "رسم" (fee/drawing) followed by a space — unrelated to
+        # poisoning.
         result = self.safety.check("رسم توضيحي")
+        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["matched_patterns"], [])
+
+    def test_standalone_poison_word_is_still_protected(self):
+        # The intended, legitimate use of the bare "سم" alternative — a
+        # real standalone poison word — must still fire after the fix.
+        result = self.safety.check("سم قاتل")
         self.assertEqual(result["severity"], "emergency")
+        self.assertTrue(result["bypass_intent_routing"])
         self.assertEqual(result["matched_patterns"][0]["matched"], "سم ")
 
     def test_true_poisoning_remains_protected(self):
-        # The intended, legitimate use of this pattern — a real poisoning
-        # word — must remain firing after any fix.
+        # The "تسمم" alternative — a real poisoning word — must remain
+        # firing after the fix.
         result = self.safety.check("تسمم غذائي")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
@@ -169,6 +180,11 @@ class TestClusterEHospitalEmergencyPolicyQuestion(unittest.TestCase):
         cls.classifier = IntentClassifier()
 
     def test_hospital_emergency_department_query_currently_bypasses_routing(self):
+        # Unchanged by Cluster E2: the "سم " bug (embedded in "قسم") is
+        # fixed, but "طوارئ" still legitimately, correctly matches on its
+        # own — this is now purely the Cluster I policy question (should an
+        # informational query naming the ER as a place be exempted from the
+        # bypass?), not a bug. Explicitly out of scope for E1/E2.
         result = self.classifier.classify("قسم الطوارئ في المستشفى")
         self.assertEqual(result["intent"], "emergency")
         self.assertEqual(result["confidence"], 1.0)
