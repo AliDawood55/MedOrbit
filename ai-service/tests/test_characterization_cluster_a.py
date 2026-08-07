@@ -95,13 +95,15 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         self.assertAlmostEqual(result["confidence"], 0.3333, places=3)
         self.assertEqual(result["matched_keywords"], ["how"])
 
-    def test_travel_time_phrase_still_misclassified_as_platform_support(self):
-        # NOT fixed — mechanism (b). "how" standalone-matches inside
-        # "how_much" (underscore is not a boundary character, by design).
+    def test_travel_time_phrase_now_classifies_correctly(self):
+        # FIXED by the separate "travel_time only" bug-fix batch: added
+        # "يستغرق الوصول" as an explicit travel_time keyword, matching the
+        # exact ngram that survives the "كم"->"how_much" dialect
+        # substitution. This outweighs platform_support's "how" match.
         result = self.classifier.classify("كم يستغرق الوصول")
-        self.assertEqual(result["intent"], "platform_support")
-        self.assertEqual(result["confidence"], 1.0)
-        self.assertEqual(result["matched_keywords"], ["how"])
+        self.assertEqual(result["intent"], "travel_time")
+        self.assertAlmostEqual(result["confidence"], 0.625, places=3)
+        self.assertEqual(result["matched_keywords"], ["يستغرق الوصول"])
 
     def test_doctor_fee_phrase_now_classifies_correctly(self):
         # FIXED by the separate "doctor_fee only" bug-fix batch: added
@@ -182,7 +184,6 @@ class TestClusterAIntendedBehavior(unittest.TestCase):
         result = self.classifier.classify("كيفك")
         self.assertEqual(result["intent"], "how_are_you")
 
-    @unittest.expectedFailure  # (b): "how" matches inside "how_much" by design.
     def test_travel_time_phrase_should_classify_correctly(self):
         result = self.classifier.classify("كم يستغرق الوصول")
         self.assertIn(result["intent"], ["travel_time", "show_route"])

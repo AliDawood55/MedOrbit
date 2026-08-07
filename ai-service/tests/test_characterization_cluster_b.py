@@ -177,11 +177,12 @@ class TestClusterBIntentClassificationImpact(unittest.TestCase):
         self.assertEqual(result["intent"], "platform_support")
         self.assertIn("how", result["matched_keywords"])
 
-    def test_travel_time_still_misclassified_as_platform_support_cluster_a(self):
-        # Same Cluster A "how" collision as above, via "how_much".
+    def test_travel_time_now_classifies_correctly(self):
+        # Fixed by the separate "travel_time only" bug-fix batch (added
+        # "يستغرق الوصول" as an explicit travel_time keyword) — the "how_much"
+        # collision this test previously documented no longer wins.
         result = self.classifier.classify("كم يستغرق الوصول")
-        self.assertEqual(result["intent"], "platform_support")
-        self.assertIn("how", result["matched_keywords"])
+        self.assertEqual(result["intent"], "travel_time")
 
     def test_doctor_fee_now_classifies_correctly(self):
         # Fixed by the separate "doctor_fee only" bug-fix batch (added
@@ -264,7 +265,6 @@ class TestClusterBIntendedBoundarySafeBehavior(unittest.TestCase):
         info = self.normalizer.normalize_with_metadata("كم يستغرق الوصول")
         self.assertIn("يستغرق", info["normalized"])
 
-    @unittest.expectedFailure  # Cluster A: "how_much" collides with platform_support's generic "how" keyword — not yet fixed.
     def test_travel_time_should_classify_correctly(self):
         result = self.classifier.classify("كم يستغرق الوصول")
         self.assertIn(result["intent"], ["travel_time", "show_route"])
