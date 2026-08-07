@@ -154,17 +154,22 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         self.assertAlmostEqual(result["confidence"], 0.3333, places=3)
         self.assertEqual(result["matched_keywords"], ["بانادول"])
 
-    def test_arabic_show_route_phrase_still_misclassified_as_find_doctor(self):
-        # NOT fixed — mechanism (e), same proclitic-driven re-exposure:
-        # find_doctor's "عيادة" legitimately matches "للعيادة" (لل + عيادة)
-        # once "لل" is recognized as a proclitic. show_route's own keyword
-        # "كيف اوصل" still can't match, for the separate, previously-
-        # documented reason that the (correct) dialect normalizer already
-        # replaced standalone "كيف" with "how" before keyword matching runs.
+    def test_arabic_show_route_phrase_now_classifies_correctly(self):
+        # FIXED by the separate "Arabic show_route only" bug-fix batch: added
+        # "اوصل للعيادة" (matching the surviving ngram) and "how اوصل"
+        # (matching the surviving post-dialect-substitution form, since
+        # "كيف" was already legitimately replaced by "how") as explicit
+        # show_route keywords. Together these give show_route 2 matched
+        # keywords (triggering the ranker's keyword-count boost), decisively
+        # outranking find_doctor/clinic_info's shared "عيادة" match rather
+        # than merely tying with it.
         result = self.classifier.classify("كيف اوصل للعيادة")
-        self.assertEqual(result["intent"], "find_doctor")
-        self.assertAlmostEqual(result["confidence"], 0.3846, places=3)
-        self.assertEqual(result["matched_keywords"], ["عيادة"])
+        self.assertEqual(result["intent"], "show_route")
+        self.assertAlmostEqual(result["confidence"], 0.48, places=3)
+        self.assertEqual(
+            sorted(result["matched_keywords"]),
+            sorted(["how اوصل", "اوصل للعيادة"]),
+        )
 
 
 class TestClusterAIntendedBehavior(unittest.TestCase):
@@ -206,7 +211,6 @@ class TestClusterAIntendedBehavior(unittest.TestCase):
         result = self.classifier.classify("هل يتعارض بانادول مع الضغط")
         self.assertIn(result["intent"], ["medication_interaction", "medication_info"])
 
-    @unittest.expectedFailure  # (e): keyword overlap, re-exposed by the ال/لل proclitic allowance.
     def test_arabic_show_route_phrase_should_classify_correctly(self):
         result = self.classifier.classify("كيف اوصل للعيادة")
         self.assertEqual(result["intent"], "show_route")
