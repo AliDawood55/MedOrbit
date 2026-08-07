@@ -166,16 +166,13 @@ class TestClusterBIntentClassificationImpact(unittest.TestCase):
         result = self.classifier.classify("أقدر امشي")
         self.assertIn(result["intent"], ["walking_route", "show_route"])
 
-    def test_how_are_you_still_misclassified_as_platform_support_cluster_a(self):
-        # Cluster B fixed: "كيفك" -> "how_are_you" now fires as a clean,
-        # correct whole-word dialect match instead of "howك". But the
-        # resulting English text "how are you" still contains the substring
-        # "how", which collides with platform_support's own overly-generic
-        # single-word keyword "how" (Cluster A) — a keyword-collision/
-        # tie-handling issue, not a text-corruption issue.
+    def test_how_are_you_now_classifies_correctly(self):
+        # Fixed by the separate "how_are_you only" bug-fix batch (added
+        # "are you" as an explicit how_are_you keyword) — the platform_support
+        # "how" collision this test previously documented no longer wins,
+        # since how_are_you now has 2 matched keywords vs. platform_support's 1.
         result = self.classifier.classify("كيفك")
-        self.assertEqual(result["intent"], "platform_support")
-        self.assertIn("how", result["matched_keywords"])
+        self.assertEqual(result["intent"], "how_are_you")
 
     def test_travel_time_now_classifies_correctly(self):
         # Fixed by the separate "travel_time only" bug-fix batch (added
@@ -250,7 +247,6 @@ class TestClusterBIntendedBoundarySafeBehavior(unittest.TestCase):
         # the corrupted fragment shape rather than a blanket substring ban.
         self.assertNotIn("howك", info["dialect_normalized"] or "")
 
-    @unittest.expectedFailure  # Cluster A: platform_support's generic "how" keyword collision — not yet fixed.
     def test_how_are_you_should_classify_correctly(self):
         result = self.classifier.classify("كيفك")
         self.assertEqual(result["intent"], "how_are_you")
