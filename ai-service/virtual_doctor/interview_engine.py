@@ -37,7 +37,7 @@ import os
 import re
 import time
 import uuid
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from chatbot.entities.extractor import EntityExtractor
 from chatbot.nlu.safety import MedicalSafetyLayer
@@ -132,6 +132,119 @@ SAFETY_EMERGENCY_REMINDER = {
     "ar": "(تذكير: هذه حالة قد تكون طارئة — توجه للطوارئ إن لم تكن قد فعلت بعد.) ",
     "en": "(Reminder: this may be an emergency — seek emergency care now if you have not already.) ",
 }
+
+# --- Critical-field confirmation (STT Confirmation + Clinical Correction) --
+#
+# The system must not blindly trust STT output for critical fields (name,
+# chief complaint). See _apply_confirmation_layer() below for the full
+# design: a suspicious name or a likely ASR-garbled chief complaint is held
+# in profile["pending_confirmation"] instead of being stored/routed on
+# immediately, and the NEXT patient turn is interpreted as a confirm/
+# correct/unclear response to it before anything else. Deterministic only —
+# the LLM planner is never involved in this decision (constraint: "Do not
+# make the LLM responsible for confirmation decisions").
+#
+# One retry after an unclear/empty response, then fall back gracefully
+# (accept the originally-heard value, marked uncertain, and keep the
+# interview moving) rather than looping forever.
+MAX_CONFIRMATION_ATTEMPTS = 1
+
+NAME_CONFIRM_QUESTION = {
+    "ar": "هل سمعت اسمك بشكل صحيح: {heard_name}؟ إذا لا، أعد الاسم من فضلك.",
+    "en": "Did I hear your name correctly: {heard_name}? If not, please say it again.",
+}
+NAME_CONFIRM_RETRY = {
+    "ar": "من فضلك، قل اسمك مرة أخرى بوضوح.",
+    "en": "Please say your name again, clearly.",
+}
+CHIEF_COMPLAINT_CONFIRM_RETRY = {
+    "ar": "من فضلك وضّح أكثر: ما الذي يزعجك بالضبط؟",
+    "en": "Please clarify: what exactly is bothering you?",
+}
+FOCUSED_FLANK_URINARY_QUESTION = {
+    "ar": "هل الألم في جنبك (الخاصرة) وهل تشعر بحرقان أو تغيّر في لون البول؟",
+    "en": "Is the pain in your side (flank), and do you have burning or a color change in your urine?",
+}
+
+# Everyday objects, medical terms, and non-answers STT is very unlikely to
+# ever genuinely mishear a real spoken name as — a small, specific list
+# rather than a general "is this a real name" classifier, which would need a
+# name database this project does not have. Deliberately conservative: an
+# unfamiliar-but-real name is never rejected, only these concrete confusable
+# categories are.
+_SUSPICIOUS_NAME_WORDS = {
+    normalize_text(w, "ar") for w in (
+        "درج", "طاولة", "كرسي", "باب", "شباك", "سيارة", "كمبيوتر", "تلفون",
+        "صداع", "الم", "ألم", "وجع", "دكتور", "طبيب", "مريض",
+        "لا اعرف", "لا أعرف", "مش عارف", "مش متأكد",
+    )
+}
+
+# HIGH-RISK correction: the "heard" word has a real, independent Arabic
+# meaning of its own ("صدق" = "honesty/truth"), so this is asked rather than
+# silently rewritten — see constraint #5. Gated on nearby symptom-suggestive
+# words so an unrelated sentence using "صدق" normally is never falsely
+# flagged. "صدمة" (shock/trauma — a real and different medical concept) is
+# never matched or altered by this pattern; only the distinct word "صدق" is.
+_HEADACHE_CONTEXT_RE = re.compile(r"شديد|فجأة|مفاجئ")
+_SUDDEN_HEADACHE_ASR_RE = re.compile(r"\bصدق\b")
+
+# SILENT corrections: the heard form is not a real independent Arabic word
+# (or is an unambiguous spelling garble), so there is no plausible alternate
+# reading to disambiguate — unlike the high-risk pattern above, these are
+# safe to apply directly rather than asking.
+#
+# Plain substring replacement, NOT \b-bounded regex: Arabic prepositions
+# (ب/ل/و/ف) fuse directly onto the following word with no space
+# ("بإرهاف" = "ب" + "إرهاف"), so a word-boundary check does not match the
+# very phrasing a patient would actually say ("أشعر بإرهاف" = "I feel
+# [with-]fatigue"). Confirmed missing this case with \b during manual
+# verification. medical_entities.json's own symptom vocabulary and
+# retrieval.py's TOPIC_LEXICON already use substring matching for exactly
+# this reason (see retrieval.py's own comment on Arabic prefixing) — this
+# follows the same established convention rather than inventing a new one.
+_SILENT_ASR_CORRECTIONS = (
+    ("إرهاف", "إرهاق"),
+    ("الواخصر", "الخاصرة"),
+    ("خواصر", "الخاصرة"),
+    ("الزائده", "الزائدة"),
+    ("زايدة", "الزائدة"),
+)
+
+# Clinically relevant terms chatbot.entities.medical_entities.json does not
+# (yet) recognize as symptoms — see docs/virtual_doctor_clinical_voice_
+# improvement_plan.md Sections 4/7/8 for the underlying gap. Preserved as
+# context here rather than silently dropped ("أملاح should not be ignored").
+_UNCERTAIN_CLINICAL_TERMS = {
+    "الخاصرة": "flank_pain",
+    "خاصرة": "flank_pain",
+    "الزائدة": "appendicitis_context",
+    "زائدة": "appendicitis_context",
+    "جفاف": "dehydration_context",
+    "أملاح": "urinary_or_dehydration_context",
+    "املاح": "urinary_or_dehydration_context",
+}
+
+_CONFIRM_WORDS_AR = {"نعم", "اه", "آه", "ايوه", "أيوه", "ايوة", "صح", "صحيح", "تمام"}
+_REJECT_WORDS_AR = {"لا", "لأ", "مش"}
+_REJECT_PHRASES_AR = ("لا أقصد", "قصدي", "أقصد", "اقصد", "بحكي")
+
+# Checked BEFORE _REJECT_WORDS_AR: "مش" alone is a genuine rejection signal
+# ("مش هيك" = "not like that"), but "مش فاهم"/"مش عارف" ("I don't
+# understand"/"I don't know") are common idiomatic non-answers that happen to
+# start with the same word — confirmed misclassifying as "reject" (and then
+# extracting nonsense like "فاهم" as a "corrected" value) during manual
+# verification. These must resolve to "unclear" instead.
+_CONFUSION_PHRASES_AR = (
+    "مش فاهم", "مش فاهمة", "مش عارف", "مش عارفة",
+    "لا اعرف", "لا أعرف", "مش متاكد", "مش متأكد",
+)
+
+# Strips a leading rejection/correction marker ("لا، قصدي ...") the same way
+# _NAME_PREFIXES strips greeting prefixes, to recover what the patient meant.
+_REJECTION_PREFIX_RE = re.compile(
+    r"^\s*(?:لا|لأ|مش)?\s*[,،]?\s*(?:قصدي|أقصد|اقصد|بحكي|يعني)?\s*[:,،]?\s*",
+)
 
 # Leading politeness the patient is likely to speak before their actual name;
 # stripped so the profile stores "Ali" rather than "my name is Ali".
@@ -243,6 +356,246 @@ def _extract_age(message: str) -> Optional[int]:
         if word in lowered:
             return value
     return None
+
+
+def _is_suspicious_name(name: str) -> bool:
+    """Deterministic and deliberately conservative: flags a name for
+    confirmation rather than trusting STT blindly. Never rejects outright —
+    the patient always gets a chance to confirm or correct it."""
+    stripped = name.strip()
+    if not stripped:
+        return True
+    if normalize_text(stripped, "ar") in _SUSPICIOUS_NAME_WORDS:
+        return True
+    if any(ch.isdigit() for ch in stripped):
+        return True
+    words = stripped.split()
+    if len(words) == 1 and len(words[0]) <= 1:
+        return True  # a single letter is not a plausible spoken name
+    return False
+
+
+def _detect_high_risk_correction(text: str) -> Optional[Dict[str, str]]:
+    """A small, deterministic set of ASR confusions where the "heard" word
+    has a real, independent meaning of its own, so confirmation is required
+    rather than silently rewriting — see _HEADACHE_CONTEXT_RE's comment."""
+    if _SUDDEN_HEADACHE_ASR_RE.search(text) and _HEADACHE_CONTEXT_RE.search(text):
+        suggested = "صداع شديد بدأ فجأة"
+        return {"suggested": suggested, "question": f"هل تقصد {suggested}؟"}
+    return None
+
+
+def _apply_silent_asr_corrections(text: str) -> str:
+    """Unambiguous ASR fixes — see _SILENT_ASR_CORRECTIONS' comment for why
+    these are safe to apply directly rather than asking, and why substring
+    replacement (not \\b-bounded regex) is used."""
+    for heard, replacement in _SILENT_ASR_CORRECTIONS:
+        text = text.replace(heard, replacement)
+    return text
+
+
+def _detect_uncertain_clinical_terms(text: str) -> List[str]:
+    """See _UNCERTAIN_CLINICAL_TERMS' comment."""
+    found: List[str] = []
+    for term, tag in _UNCERTAIN_CLINICAL_TERMS.items():
+        if term in text and tag not in found:
+            found.append(tag)
+    return found
+
+
+def _classify_confirmation_reply(message: str, lang: str) -> str:
+    """Deterministic "confirm" / "reject" / "unclear" classification — the
+    LLM is never involved in this decision."""
+    norm = normalize_text(message, lang).strip()
+    if not norm:
+        return "unclear"
+
+    def _word_present(word: str) -> bool:
+        return re.search(rf"(?:^|\s){re.escape(word)}(?:$|\s|[.,!،؟?])", norm) is not None
+
+    if any(phrase in norm for phrase in _CONFUSION_PHRASES_AR):
+        return "unclear"
+    if any(phrase in norm for phrase in _REJECT_PHRASES_AR) or any(
+        _word_present(w) for w in _REJECT_WORDS_AR
+    ):
+        return "reject"
+    if any(_word_present(w) for w in _CONFIRM_WORDS_AR):
+        return "confirm"
+    return "unclear"
+
+
+def _extract_correction_text(message: str, lang: str) -> str:
+    """What the patient meant instead, after a rejection — strips leading
+    rejection/correction markers ("لا، قصدي ...") the same way _extract_name
+    strips greeting prefixes."""
+    cleaned = _REJECTION_PREFIX_RE.sub("", message.strip())
+    return cleaned.strip(" .،,!?؟\"'").strip()
+
+
+def _start_pending_confirmation(
+    profile: Dict[str, Any], field: str, heard: str, suggested: Optional[str], question: str,
+) -> Dict[str, Any]:
+    profile = dict(profile)
+    profile["pending_confirmation"] = {
+        "field": field, "heard": heard, "suggested": suggested,
+        "question": question, "attempts": 0,
+    }
+    return profile
+
+
+def _mark_confirmed(profile: Dict[str, Any], field: str, confirmed: bool) -> Dict[str, Any]:
+    """Records whether `field`'s just-stored value was confirmed by the
+    patient. When not confirmed, the value is ALSO recorded under
+    uncertain_fields — never silently treated as a confirmed fact just
+    because the confirmation loop gave up (see MAX_CONFIRMATION_ATTEMPTS)."""
+    profile = dict(profile)
+    confirmed_fields = dict(profile.get("confirmed_fields", {}))
+    confirmed_fields[field] = confirmed
+    profile["confirmed_fields"] = confirmed_fields
+    if not confirmed:
+        uncertain = dict(profile.get("uncertain_fields", {}))
+        uncertain[field] = profile.get(field)
+        profile["uncertain_fields"] = uncertain
+    return profile
+
+
+def _resolve_pending_confirmation(
+    pending: Dict[str, Any], message: str, lang: str,
+) -> Tuple[str, Optional[Any], Optional[str]]:
+    """Interprets one turn as a reply to profile["pending_confirmation"].
+    Never mutates `pending` — the caller builds any updated
+    pending_confirmation dict itself, so this function cannot accidentally
+    corrupt a copy of the profile the caller is still holding a reference to.
+
+    Returns (outcome, resolved_value, reply_override):
+      outcome         "confirmed" | "corrected" | "retry" | "gave_up"
+      resolved_value  "confirmed"/"corrected"/"gave_up": the value for
+                       pending["field"]. "retry": the new attempts count
+                       (int) for the caller to store.
+      reply_override  exact reply text when outcome == "retry"; None otherwise
+    """
+    classification = _classify_confirmation_reply(message, lang)
+
+    if classification == "confirm":
+        return "confirmed", pending.get("suggested") or pending["heard"], None
+
+    if classification == "reject":
+        corrected = _extract_correction_text(message, lang)
+        if corrected:
+            return "corrected", corrected, None
+        classification = "unclear"  # a bare "no" with nothing else to go on
+
+    # classification == "unclear"
+    attempts = int(pending.get("attempts", 0)) + 1
+    if attempts <= MAX_CONFIRMATION_ATTEMPTS:
+        retry_text = (
+            NAME_CONFIRM_RETRY[lang] if pending["field"] == "name"
+            else CHIEF_COMPLAINT_CONFIRM_RETRY[lang]
+        )
+        return "retry", attempts, retry_text
+
+    # Gave up after MAX_CONFIRMATION_ATTEMPTS retries: proceed with the
+    # originally-heard value so the interview does not stall forever, but
+    # mark it uncertain via _mark_confirmed — never silently confirmed.
+    return "gave_up", pending["heard"], None
+
+
+def _apply_name_resolution(profile: Dict[str, Any], name: str, confirmed: bool) -> Dict[str, Any]:
+    profile = dict(profile)
+    profile["name"] = name
+    profile.pop("pending_confirmation", None)
+    return _mark_confirmed(profile, "name", confirmed)
+
+
+def _apply_chief_complaint_resolution(profile: Dict[str, Any], text: str, confirmed: bool) -> Dict[str, Any]:
+    profile = dict(profile)
+    profile["chief_complaint_description"] = text
+    profile.pop("pending_confirmation", None)
+    return _mark_confirmed(profile, "chief_complaint", confirmed)
+
+
+def _apply_confirmation_layer(
+    profile: Dict[str, Any], phase: str, message: str, lang: str,
+) -> Tuple[Dict[str, Any], str, str, Optional[str]]:
+    """The critical-field confirmation/correction gate, run once per turn
+    before entity extraction/RAG/the planner.
+
+    Returns (profile, phase, effective_message, confirmation_reply):
+      effective_message  what the REST of the turn's pipeline should reason
+                          about instead of the raw message — unchanged,
+                          silently corrected, or resolved from a prior turn's
+                          pending_confirmation.
+      confirmation_reply is not None exactly when this turn is fully
+                          answered by this layer alone (a new confirmation
+                          question, a retry, or the name "gave up -> ask age"
+                          fallback) — the caller must NOT call the planner.
+
+    Deterministic throughout; the LLM planner is never consulted here.
+    """
+    effective_message = message
+    confirmation_reply: Optional[str] = None
+
+    pending = profile.get("pending_confirmation")
+    if pending:
+        outcome, resolved_value, reply_override = _resolve_pending_confirmation(pending, message, lang)
+
+        if outcome == "retry":
+            profile = dict(profile)
+            profile["pending_confirmation"] = {**pending, "attempts": resolved_value}
+            return profile, phase, effective_message, reply_override
+
+        confirmed = outcome in ("confirmed", "corrected")
+        if pending["field"] == "name":
+            profile = _apply_name_resolution(profile, resolved_value, confirmed)
+            confirmation_reply = ASK_AGE[lang].format(name=resolved_value)
+            return profile, phase, effective_message, confirmation_reply
+
+        # chief_complaint: confirmed / corrected / gave_up all fall through
+        # to the normal planner using the resolved text, so the EXISTING
+        # greeting->interviewing detection logic (StaticPlanner/LLMPlanner)
+        # runs on the corrected value instead of being reimplemented here.
+        profile = _apply_chief_complaint_resolution(profile, resolved_value, confirmed)
+        effective_message = resolved_value
+        return profile, phase, effective_message, None
+
+    if phase == "intake" and not profile.get("name"):
+        heard = _extract_name(message)
+        if _is_suspicious_name(heard):
+            question = NAME_CONFIRM_QUESTION[lang].format(heard_name=heard)
+            profile = _start_pending_confirmation(profile, "name", heard, None, question)
+            confirmation_reply = question
+        return profile, phase, effective_message, confirmation_reply
+
+    if phase == "greeting":
+        high_risk = _detect_high_risk_correction(message)
+        if high_risk:
+            profile = _start_pending_confirmation(
+                profile, "chief_complaint", message, high_risk["suggested"], high_risk["question"],
+            )
+            return profile, phase, effective_message, high_risk["question"]
+
+        corrected = _apply_silent_asr_corrections(message)
+        effective_message = corrected
+        probe_symptoms = _extractor.extract(corrected).get("symptoms") or []
+        terms = _detect_uncertain_clinical_terms(corrected)
+        if terms:
+            profile = dict(profile)
+            uncertain = dict(profile.get("uncertain_fields", {}))
+            uncertain["clinical_terms"] = terms
+            profile["uncertain_fields"] = uncertain
+            if not probe_symptoms:
+                # No recognized symptom at all: ask a focused flank/urinary
+                # question instead of letting the interview fall to the
+                # fully generic flow. This turn fully answers "what's
+                # bothering you" (the original text is preserved verbatim in
+                # chief_complaint_description), so advance phase ourselves —
+                # there is no planner call left this turn to do it.
+                profile["chief_complaint_description"] = message
+                confirmation_reply = FOCUSED_FLANK_URINARY_QUESTION[lang]
+                return profile, "interviewing", effective_message, confirmation_reply
+
+    return profile, phase, effective_message, confirmation_reply
+
 
 def _load_flows() -> Dict[str, dict]:
     flows: Dict[str, dict] = {}
@@ -601,60 +954,81 @@ async def handle_message(session_id: str, message: str) -> dict:
     # interview: see _apply_safety_continuation()'s docstring for the design.
     safety_result = _check_safety(message, lang)
 
-    entities = _extractor.extract(message)
     profile = _load_jsonb(session["patient_profile"])
     phase = session["phase"]
     chief_complaint = session["chief_complaint"]
+
+    # --- critical-field confirmation/correction --------------------------
+    # Must not blindly trust STT output for the name or chief complaint: a
+    # suspicious name or a likely ASR-garbled chief complaint is held in
+    # pending_confirmation instead of being stored/routed immediately, and
+    # this turn is checked against any confirmation left pending from the
+    # PRIOR turn first. effective_message is what the rest of this turn's
+    # pipeline reasons about — unchanged, silently corrected, or resolved
+    # from pending_confirmation. Deterministic only; the LLM is never
+    # consulted for this decision. See _apply_confirmation_layer().
+    profile, phase, effective_message, confirmation_reply = _apply_confirmation_layer(
+        profile, phase, message, lang,
+    )
+
+    entities = _extractor.extract(effective_message)
 
     safety_prefix, session_urgency, profile = _apply_safety_continuation(
         safety_result, session, profile, lang,
     )
 
-    # --- memory -> embedding -> RAG -------------------------------------
-    # Both stages are best-effort: they return empty on any failure and can
-    # never fail a turn.
-    turn_context = await _build_turn_context(session, message, chief_complaint, lang)
+    if confirmation_reply is not None:
+        # This turn is fully answered by the confirmation layer itself (a
+        # new question, a retry, or the name "gave up -> ask age" fallback)
+        # — the planner is not consulted, matching how a safety-flagged turn
+        # skips it too, but for a different reason.
+        plan = None
+    else:
+        # --- memory -> embedding -> RAG -----------------------------------
+        # Both stages are best-effort: they return empty on any failure and
+        # can never fail a turn.
+        turn_context = await _build_turn_context(session, effective_message, chief_complaint, lang)
 
-    # --- planner --------------------------------------------------------
-    # The planner decides what to say next and what the answer told us; the
-    # engine below owns persistence, the rule engine, the final diagnosis, and
-    # the safety wrap, none of which are delegated. safety_hint may nudge
-    # *which* question the LLM planner asks next toward a red-flag-relevant
-    # topic (requirement: prioritize red-flag questions) but never decides
-    # whether to warn or what severity/urgency to report — that stays entirely
-    # inside _apply_safety_continuation() above, driven only by the
-    # deterministic safety layer.
-    # Counted over the whole transcript, not the memory window: the window is
-    # capped at HISTORY_LIMIT, so counting doctor turns inside it stops rising
-    # once the interview outgrows it — and the turn cap that guarantees every
-    # consultation terminates would then never fire.
-    asked = await memory.doctor_turns(session["id"])
-    plan = await _run_planner(PlannerInput(
-        message=message,
-        lang=lang,
-        phase=phase,
-        chief_complaint=chief_complaint,
-        profile=profile,
-        entities=entities,
-        history=turn_context["history"],
-        chunks=turn_context["chunks"],
-        context_block=turn_context["context_block"],
-        turn_index=max(0, len(asked) - _intake_questions(profile)),
-        asked_questions=asked,
-        safety_hint=_safety_hint_text(safety_result),
-    ))
+        # --- planner --------------------------------------------------------
+        # The planner decides what to say next and what the answer told us; the
+        # engine below owns persistence, the rule engine, the final diagnosis, and
+        # the safety wrap, none of which are delegated. safety_hint may nudge
+        # *which* question the LLM planner asks next toward a red-flag-relevant
+        # topic (requirement: prioritize red-flag questions) but never decides
+        # whether to warn or what severity/urgency to report — that stays entirely
+        # inside _apply_safety_continuation() above, driven only by the
+        # deterministic safety layer.
+        # Counted over the whole transcript, not the memory window: the window is
+        # capped at HISTORY_LIMIT, so counting doctor turns inside it stops rising
+        # once the interview outgrows it — and the turn cap that guarantees every
+        # consultation terminates would then never fire.
+        asked = await memory.doctor_turns(session["id"])
+        plan = await _run_planner(PlannerInput(
+            message=effective_message,
+            lang=lang,
+            phase=phase,
+            chief_complaint=chief_complaint,
+            profile=profile,
+            entities=entities,
+            history=turn_context["history"],
+            chunks=turn_context["chunks"],
+            context_block=turn_context["context_block"],
+            turn_index=max(0, len(asked) - _intake_questions(profile)),
+            asked_questions=asked,
+            safety_hint=_safety_hint_text(safety_result),
+        ))
 
-    profile.update(plan.profile_updates)
-    phase = plan.phase
-    if plan.chief_complaint:
-        chief_complaint = plan.chief_complaint
+        profile.update(plan.profile_updates)
+        phase = plan.phase
+        if plan.chief_complaint:
+            chief_complaint = plan.chief_complaint
 
     urgency_level = session_urgency
     recommended_specialty_id = session["recommended_specialty_id"]
     differential = _load_jsonb(session["differential"]) if session["differential"] else None
     reasoning_result: Optional[dict] = None
 
-    if plan.ready_for_diagnosis:
+    if plan is not None and plan.ready_for_diagnosis:
         # The interview is finished — run the reasoning phase now, in the same
         # turn, exactly as before. Specialty and the differential come from
         # reasoning.run_reasoning(); the planner only decided *when* to stop
@@ -697,15 +1071,21 @@ async def handle_message(session_id: str, message: str) -> dict:
         # Fire-and-forget: this response must not wait on it, and a failure
         # here is invisible — the next call simply reloads as it did before.
         asyncio.get_running_loop().run_in_executor(None, planner.warm)
-    elif plan.reply is not None:
+    elif plan is not None and plan.reply is not None:
         reply = plan.reply
-    else:
+    elif plan is not None:
         reply = WRAP_UP[lang]
+    # else: plan is None — the confirmation layer already fully answered this
+    # turn, and `reply` below resolves to confirmation_reply.
 
-    # Combine: safety warning (if any) + the planner's one focused question —
-    # deterministic string composition, never delegated to the LLM. Applied
-    # after the reasoning branch too, so a same-turn "ready for diagnosis"
-    # response on a safety-flagged turn still carries the warning.
+    if confirmation_reply is not None:
+        reply = confirmation_reply
+
+    # Combine: safety warning (if any) + this turn's reply (planner question,
+    # reasoning result, or confirmation/correction question) — deterministic
+    # string composition, never delegated to the LLM. Applied after the
+    # reasoning branch too, so a same-turn "ready for diagnosis" response on
+    # a safety-flagged turn still carries the warning.
     if safety_prefix:
         reply = f"{safety_prefix}{reply}"
 
