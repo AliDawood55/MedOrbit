@@ -236,7 +236,7 @@
   },
 
   "medications": {
-    "panadol": {
+    "paracetamol": {
       "ar": ["بانادول", "بنادول"],
       "en": ["panadol", "paracetamol"]
     },
