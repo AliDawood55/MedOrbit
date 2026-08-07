@@ -103,18 +103,20 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         self.assertEqual(result["confidence"], 1.0)
         self.assertEqual(result["matched_keywords"], ["how"])
 
-    def test_doctor_fee_phrase_falls_back_to_unknown(self):
-        # NOT fixed. With the (a') "ال" proclitic allowance restored (needed
-        # to keep other, previously-passing tests working), "دكتور" is once
-        # again a legitimate match inside "الدكتور", recreating a multi-way
-        # tie (find_doctor, doctor_by_name, book_appointment all matching
-        # generic/shared keywords) that collapses back to "unknown" — a
-        # Cluster C-shaped canonical-keyword-gap issue (doctor_fee's own
-        # phrase keywords are destroyed by synonym canonicalization),
-        # unrelated to substring safety.
+    def test_doctor_fee_phrase_now_classifies_correctly(self):
+        # FIXED by the separate "doctor_fee only" bug-fix batch: added
+        # "سعر كشف" and "سعر كشف الدكتور" as explicit doctor_fee keywords
+        # (targeting the ngram-fallback-matched, post-dialect-substitution
+        # form of this input), giving doctor_fee enough raw score to clear
+        # its own 0.4 confidence threshold despite competing with
+        # find_doctor/doctor_by_name/book_appointment's generic matches.
         result = self.classifier.classify("كم سعر كشف الدكتور")
-        self.assertEqual(result["intent"], "unknown")
-        self.assertEqual(result["confidence"], 0.0)
+        self.assertEqual(result["intent"], "doctor_fee")
+        self.assertAlmostEqual(result["confidence"], 0.4643, places=3)
+        self.assertEqual(
+            sorted(result["matched_keywords"]),
+            sorted(["سعر كشف", "سعر كشف الدكتور", "price"]),
+        )
 
     def test_clinic_doctors_phrase_still_misclassified_as_find_doctor(self):
         # NOT fixed — mechanism (e), keyword overlap, re-exposed by the (a')
@@ -185,7 +187,6 @@ class TestClusterAIntendedBehavior(unittest.TestCase):
         result = self.classifier.classify("كم يستغرق الوصول")
         self.assertIn(result["intent"], ["travel_time", "show_route"])
 
-    @unittest.expectedFailure  # Cluster C-shaped canonical-keyword-gap issue.
     def test_doctor_fee_phrase_should_classify_correctly(self):
         result = self.classifier.classify("كم سعر كشف الدكتور")
         self.assertIn(result["intent"], ["doctor_fee", "find_doctor"])
