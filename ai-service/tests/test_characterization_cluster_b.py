@@ -192,17 +192,14 @@ class TestClusterBIntentClassificationImpact(unittest.TestCase):
         result = self.classifier.classify("كم سعر كشف الدكتور")
         self.assertEqual(result["intent"], "doctor_fee")
 
-    def test_clinic_doctors_still_misclassified_as_find_doctor_cluster_a(self):
-        # Cluster B fixed: "أطباء" is no longer corrupted. But find_doctor's
-        # own keyword list independently contains BOTH "أطباء" and "عيادة",
-        # so it now outscores clinic_doctors (which only lists "أطباء") on
-        # this input — a keyword-overlap/ranking issue between two intents,
-        # not a text-corruption issue. This changed from "unknown" (before
-        # the fix, since "أطباء" was corrupted into "الاokayاء" and matched
-        # nothing) to "find_doctor" (after the fix, now that "أطباء" is
-        # intact and matches two intents' keyword lists at once).
+    def test_clinic_doctors_now_classifies_correctly(self):
+        # Fixed by the separate "clinic_doctors only" bug-fix batch (added
+        # "الأطباء العيادة" as an explicit clinic_doctors keyword) — the
+        # find_doctor keyword-overlap tie this test previously documented no
+        # longer wins, since clinic_doctors now has one more matched
+        # keyword than find_doctor for this input.
         result = self.classifier.classify("من هم الأطباء في العيادة")
-        self.assertEqual(result["intent"], "find_doctor")
+        self.assertEqual(result["intent"], "clinic_doctors")
 
     def test_clinic_insurance_now_classifies_correctly(self):
         result = self.classifier.classify("هل العيادة تقبل التأمين")
@@ -277,7 +274,6 @@ class TestClusterBIntendedBoundarySafeBehavior(unittest.TestCase):
         info = self.normalizer.normalize_with_metadata("من هم الأطباء في العيادة")
         self.assertNotIn("okay", info["normalized"])
 
-    @unittest.expectedFailure  # Cluster A: find_doctor's keyword list overlaps clinic_doctors' ("أطباء", "عيادة") — not yet fixed.
     def test_clinic_doctors_should_classify_correctly(self):
         result = self.classifier.classify("من هم الأطباء في العيادة")
         self.assertIn(result["intent"], ["clinic_doctors", "clinic_info"])
