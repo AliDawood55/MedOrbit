@@ -135,12 +135,17 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         alt_intents = {a["intent"] for a in result["alternative_intents"]}
         self.assertIn("clinic_doctors", alt_intents)
 
-    def test_clinic_hours_phrase_falls_back_to_unknown(self):
-        # NOT fixed — mechanism (e)/(d), same proclitic-driven re-exposure as
-        # clinic_doctors above; a multi-way tie collapses to "unknown".
+    def test_clinic_hours_phrase_now_classifies_correctly(self):
+        # FIXED by the separate "clinic_hours only" bug-fix batch: added
+        # "ساعات دوام" as an explicit clinic_hours keyword. Combined with the
+        # pre-existing bare "دوام" match, this gives clinic_hours 2 matched
+        # keywords (triggering the ranker's keyword-count boost), decisively
+        # outranking find_doctor/doctor_availability/clinic_info's single
+        # 1.0 matches rather than tying with them into "unknown".
         result = self.classifier.classify("ساعات دوام العيادة")
-        self.assertEqual(result["intent"], "unknown")
-        self.assertEqual(result["confidence"], 0.0)
+        self.assertEqual(result["intent"], "clinic_hours")
+        self.assertAlmostEqual(result["confidence"], 0.4444, places=3)
+        self.assertEqual(sorted(result["matched_keywords"]), sorted(["دوام", "ساعات دوام"]))
 
     def test_medication_interaction_phrase_now_classifies_acceptably(self):
         # FIXED (reaches an accepted answer). Clean 3-way tie between
@@ -202,7 +207,6 @@ class TestClusterAIntendedBehavior(unittest.TestCase):
         result = self.classifier.classify("من هم الأطباء في العيادة")
         self.assertIn(result["intent"], ["clinic_doctors", "clinic_info"])
 
-    @unittest.expectedFailure  # (e)/(d): keyword overlap ("دوام") + tie.
     def test_clinic_hours_phrase_should_classify_correctly(self):
         result = self.classifier.classify("ساعات دوام العيادة")
         self.assertIn(result["intent"], ["clinic_hours", "clinic_info"])
