@@ -87,13 +87,17 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         self.assertEqual(result["confidence"], 0.5)
         self.assertEqual(result["matched_keywords"], ["how do I get"])
 
-    def test_kaifak_still_misclassified_as_platform_support(self):
-        # NOT fixed — mechanism (b)+(d), a genuine "how"/"how are you" tie,
-        # unrelated to substring safety. Unchanged by A1.
+    def test_kaifak_now_classifies_correctly(self):
+        # FIXED by the separate "how_are_you only" bug-fix batch: added
+        # "are you" as an explicit how_are_you keyword. Combined with its
+        # pre-existing "how are you" match, this gives how_are_you 2 matched
+        # keywords (triggering the ranker's keyword-count boost), decisively
+        # outranking platform_support's single "how" match and small_talk's
+        # single "how are you" match rather than tying with them.
         result = self.classifier.classify("كيفك")
-        self.assertEqual(result["intent"], "platform_support")
-        self.assertAlmostEqual(result["confidence"], 0.3333, places=3)
-        self.assertEqual(result["matched_keywords"], ["how"])
+        self.assertEqual(result["intent"], "how_are_you")
+        self.assertAlmostEqual(result["confidence"], 0.5455, places=3)
+        self.assertEqual(sorted(result["matched_keywords"]), sorted(["how are you", "are you"]))
 
     def test_travel_time_phrase_now_classifies_correctly(self):
         # FIXED by the separate "travel_time only" bug-fix batch: added
@@ -191,7 +195,6 @@ class TestClusterAIntendedBehavior(unittest.TestCase):
         result = self.classifier.classify("How do I get there")
         self.assertEqual(result["intent"], "show_route")
 
-    @unittest.expectedFailure  # (b)+(d): genuine "how"/"how are you" tie.
     def test_kaifak_should_classify_as_how_are_you(self):
         result = self.classifier.classify("كيفك")
         self.assertEqual(result["intent"], "how_are_you")
