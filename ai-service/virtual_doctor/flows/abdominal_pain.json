@@ -1,6 +1,6 @@
 {
   "complaint": "abdominal_pain",
-  "match_symptoms": ["stomach_pain"],
+  "match_symptoms": ["stomach_pain", "stomach_ache"],
   "slots": [
     {
       "key": "duration",

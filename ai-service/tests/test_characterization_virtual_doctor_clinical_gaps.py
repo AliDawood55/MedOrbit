@@ -1,28 +1,32 @@
 """
 Characterization tests — Virtual Doctor clinical safety/routing gaps.
 
-Pins the CURRENT (imperfect) behavior of three live-verified gaps found while
-producing docs/virtual_doctor_clinical_voice_improvement_plan.md, before any
-fix is implemented:
+Pins the FIXED behavior of three live-verified gaps found while producing
+docs/virtual_doctor_clinical_voice_improvement_plan.md, after the Virtual
+Doctor Clinical Safety Gaps Implementation Batch:
 
-  A. Arabic thunderclap/sudden-severe-headache is not flagged by
-     MedicalSafetyLayer, even though the product's own target red-flag list
-     names it explicitly.
-  B. The Arabic hematuria phrase "دم بالبول" is not flagged either, while the
-     equivalent English concept ("blood in urine") already has a pattern in
-     URGENT_PATTERNS_AR — an asymmetry, not a missing concept.
+  A. Arabic thunderclap/sudden-severe-headache is now flagged as "urgent" by
+     MedicalSafetyLayer (chatbot/nlu/safety.py's URGENT_PATTERNS_AR gained a
+     dedicated pattern — "صداع" does not share a root with "الم"/"وجع", so it
+     was never covered by the existing generic severe-pain pattern).
+  B. The Arabic hematuria phrases "دم بالبول" / "دم في البول" are now flagged
+     as "urgent" too, bringing Arabic to parity with the English "blood in
+     urine" pattern that already existed.
   C. EntityExtractor correctly extracts "stomach_ache" from the Palestinian
-     dialect phrase "بطني بوجعني من اليمين" (right-sided belly pain), but
-     flows/abdominal_pain.json's match_symptoms only accepts "stomach_pain",
-     so interview_engine._detect_chief_complaint() routes it to "generic"
-     instead of "abdominal_pain" despite a real symptom being detected.
+     dialect phrase "بطني بوجعني من اليمين" (right-sided belly pain), and
+     flows/abdominal_pain.json's match_symptoms now accepts "stomach_ache"
+     alongside the pre-existing "stomach_pain", so
+     interview_engine._detect_chief_complaint() routes it to "abdominal_pain"
+     instead of falling through to "generic".
 
-These tests intentionally assert TODAY'S behavior, including the gaps
-themselves — they are expected to PASS against current code and are meant to
-start FAILING (by design) once each gap is fixed, at which point the
-assertion describing the gap should be flipped to the corrected expectation.
-No production code is changed here. No network, Ollama, or database access
-occurs anywhere in this file: MedicalSafetyLayer, EntityExtractor, and
+These tests were originally written (same file, same test names in most
+cases) to pin the PRE-fix behavior — see git history for that version. They
+are updated here to assert the corrected, desired behavior post-fix, while
+the accompanying contrast tests are kept exactly as before to confirm the fix
+did not touch unrelated, already-correct behavior (English hematuria, Arabic
+blood-in-stool, the generic severe-pain pattern, and the formal MSA
+stomach_pain phrasing). No network, Ollama, or database access occurs
+anywhere in this file: MedicalSafetyLayer, EntityExtractor, and
 interview_engine._detect_chief_complaint()/FLOWS are all pure/local.
 """
 
@@ -38,109 +42,130 @@ from virtual_doctor.interview_engine import FLOWS, _detect_chief_complaint
 
 
 # ===========================================================================
-# A. Arabic thunderclap / sudden-severe-headache safety gap
+# A. Arabic thunderclap / sudden-severe-headache safety fix
 # ===========================================================================
 
-class TestArabicThunderclapHeadacheSafetyGapCurrentBehavior(unittest.TestCase):
-    """CURRENT GAP: a sudden, severe headache ("صداع شديد فجأة" — the classic
-    thunderclap/SAH red-flag pattern this project's own audit calls out) does
-    not trip either the emergency or the urgent pattern lists today."""
+class TestArabicThunderclapHeadacheSafetyFix(unittest.TestCase):
+    """FIXED: a sudden, severe headache ("صداع شديد فجأة" — the classic
+    thunderclap/SAH red-flag pattern this project's own audit calls out) now
+    escalates to "urgent"."""
 
     def setUp(self):
         self.safety = MedicalSafetyLayer()
 
-    def test_sudden_severe_headache_is_not_escalated_today(self):
+    def test_sudden_severe_headache_is_escalated_urgent(self):
         result = self.safety.check("صداع شديد فجأة")
 
-        # This is the gap: a thunderclap headache should be at least
-        # "urgent", but URGENT_PATTERNS_AR's severity modifier is anchored to
-        # "الم"/"وجع" roots, not "صداع", so this phrase matches nothing.
-        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["severity"], "urgent")
         self.assertFalse(result["is_emergency"])
-        self.assertFalse(result["is_urgent"])
-        self.assertEqual(result["matched_patterns"], [])
+        self.assertTrue(result["is_urgent"])
+        self.assertEqual(len(result["matched_patterns"]), 1)
 
-    def test_headache_with_nausea_also_not_escalated_today(self):
-        """Companion case from the same audit: severe headache + nausea is
-        correctly recognized as symptoms by the extractor (see the audit's
-        Section 15) but is likewise not escalated by the safety layer."""
+    def test_other_sudden_severe_headache_phrasings_are_escalated_urgent(self):
+        """The other word-order/synonym variants this batch was asked to
+        cover, beyond the single primary phrase above."""
+        for phrase in (
+            "صداع مفاجئ شديد",
+            "صداع شديد ومفاجئ",
+            "أسوأ صداع",
+            "اسوأ صداع",
+        ):
+            with self.subTest(phrase=phrase):
+                result = self.safety.check(phrase)
+                self.assertEqual(result["severity"], "urgent")
+
+    def test_headache_with_nausea_is_not_escalated_by_this_fix(self):
+        """"عندي صداع شديد مع غثيان" is severe-but-not-sudden — a real symptom
+        (correctly recognized by the extractor, per the audit's Section 15)
+        that this narrowly-scoped fix does not claim to escalate, since it
+        does not match the sudden/thunderclap wording this batch targeted."""
         result = self.safety.check("عندي صداع شديد مع غثيان")
 
         self.assertEqual(result["severity"], "normal")
 
-    def test_contrast_the_generic_severe_pain_pattern_does_escalate(self):
-        """Sanity check that URGENT_PATTERNS_AR is not broken outright: the
-        generic "severe pain" root (الم شديد) DOES escalate today. This
-        isolates gap A to a vocabulary/coverage gap (no pattern anchored on
-        "صداع") rather than a wholesale failure of the urgent pattern list."""
+    def test_contrast_the_generic_severe_pain_pattern_still_escalates(self):
+        """Sanity check that the pre-existing generic "severe pain" root
+        (الم شديد) is unchanged by this batch."""
         result = self.safety.check("الم شديد")
 
         self.assertEqual(result["severity"], "urgent")
 
+    def test_contrast_bare_headache_alone_remains_normal(self):
+        """The new pattern is anchored to severity+suddenness, not to the
+        word "صداع" alone — an ordinary headache report must not become
+        urgent as a side effect of this fix."""
+        result = self.safety.check("عندي صداع")
+
+        self.assertEqual(result["severity"], "normal")
+
 
 # ===========================================================================
-# B. Arabic hematuria safety gap (asymmetric with the existing English one)
+# B. Arabic hematuria safety fix (brings Arabic to parity with English)
 # ===========================================================================
 
-class TestArabicHematuriaSafetyGapCurrentBehavior(unittest.TestCase):
-    """CURRENT GAP: "دم بالبول" / "دم في البول" (blood in urine) has no
-    Arabic pattern in URGENT_PATTERNS_AR, even though the English concept
-    ("blood in urine") already does — see the contrast test below."""
+class TestArabicHematuriaSafetyFix(unittest.TestCase):
+    """FIXED: "دم بالبول" / "دم في البول" (blood in urine) now escalate to
+    "urgent" in Arabic, matching the English "blood in urine" pattern that
+    already existed."""
 
     def setUp(self):
         self.safety = MedicalSafetyLayer()
 
-    def test_arabic_hematuria_phrase_is_not_escalated_today(self):
+    def test_arabic_hematuria_phrase_is_escalated_urgent(self):
         result = self.safety.check("عندي دم بالبول")
 
-        self.assertEqual(result["severity"], "normal")
-        self.assertFalse(result["is_urgent"])
-        self.assertEqual(result["matched_patterns"], [])
+        self.assertEqual(result["severity"], "urgent")
+        self.assertTrue(result["is_urgent"])
+        self.assertEqual(len(result["matched_patterns"]), 1)
 
-    def test_arabic_hematuria_alternate_phrasing_is_also_not_escalated_today(self):
+    def test_arabic_hematuria_alternate_phrasing_is_escalated_urgent(self):
         result = self.safety.check("دم في البول")
 
-        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["severity"], "urgent")
 
-    def test_dysuria_alone_is_also_not_recognized_today(self):
-        """Companion finding: burning urination has no Arabic safety pattern
-        either — reported together with hematuria in the same audit case
-        ("عندي حرقان بول ودم بالبول")."""
+    def test_other_hematuria_phrasings_are_escalated_urgent(self):
+        for phrase in ("بول مع دم", "تبول دم"):
+            with self.subTest(phrase=phrase):
+                result = self.safety.check(phrase)
+                self.assertEqual(result["severity"], "urgent")
+
+    def test_dysuria_plus_hematuria_combined_phrase_is_escalated_urgent(self):
+        """The combined case from the same audit ("عندي حرقان بول ودم
+        بالبول") now escalates because of the hematuria half — dysuria
+        (burning urination) alone still has no dedicated pattern, which this
+        narrowly-scoped batch did not add."""
         result = self.safety.check("عندي حرقان بول ودم بالبول")
 
-        self.assertEqual(result["severity"], "normal")
+        self.assertEqual(result["severity"], "urgent")
 
-    def test_contrast_the_english_hematuria_pattern_already_exists(self):
-        """This is what makes gap B an ASYMMETRY, not a missing concept:
-        URGENT_PATTERNS_AR already contains an English "blood in urine"
-        alternative (the "blood in (vomit|stool|urine)" pattern) despite the
-        Arabic side having no equivalent."""
+    def test_contrast_the_english_hematuria_pattern_is_unchanged(self):
         result = self.safety.check("blood in urine")
 
         self.assertEqual(result["severity"], "urgent")
         self.assertTrue(result["is_urgent"])
 
-    def test_contrast_arabic_blood_in_stool_does_already_escalate(self):
-        """Further isolates the gap: the Arabic pattern list DOES cover
-        blood in stool ("دم في البراز") — urine is the specific omission,
-        not Arabic gastrointestinal bleeding coverage in general."""
+    def test_contrast_arabic_blood_in_stool_is_unchanged(self):
         result = self.safety.check("دم في البراز")
 
         self.assertEqual(result["severity"], "urgent")
 
+    def test_contrast_bare_blood_word_alone_remains_normal(self):
+        """The new pattern is anchored to a urine-context word every time —
+        the bare word "دم" alone must not become urgent as a side effect."""
+        result = self.safety.check("دم")
+
+        self.assertEqual(result["severity"], "normal")
+
 
 # ===========================================================================
-# C. stomach_ache vs stomach_pain — dialect-detected symptom routes to the
-#    wrong (generic) flow instead of abdominal_pain
+# C. stomach_ache vs stomach_pain — routing fix
 # ===========================================================================
 
-class TestStomachAcheVsStomachPainMismatchCurrentBehavior(unittest.TestCase):
-    """CURRENT GAP: the Palestinian-dialect layer correctly recognizes
-    "بطني بوجعني من اليمين" (right-sided belly pain — a classic appendicitis
-    presentation) as a stomach symptom, but under the key "stomach_ache",
-    while flows/abdominal_pain.json's match_symptoms only accepts
-    "stomach_pain" — so chief-complaint detection silently falls through to
-    the generic flow instead of the abdominal-pain-specific one."""
+class TestStomachAcheVsStomachPainRoutingFix(unittest.TestCase):
+    """FIXED: flows/abdominal_pain.json's match_symptoms now accepts
+    "stomach_ache" alongside "stomach_pain", so the Palestinian-dialect
+    phrase "بطني بوجعني من اليمين" (right-sided belly pain — a classic
+    appendicitis presentation) correctly routes to the abdominal_pain flow."""
 
     def setUp(self):
         self.extractor = EntityExtractor()
@@ -150,30 +175,34 @@ class TestStomachAcheVsStomachPainMismatchCurrentBehavior(unittest.TestCase):
 
         self.assertIn("stomach_ache", entities["symptoms"])
 
-    def test_abdominal_pain_flow_only_declares_stomach_pain_as_a_match_symptom(self):
-        """Pins the exact source of the mismatch: the flow's own vocabulary,
-        read directly rather than assumed."""
-        self.assertEqual(FLOWS["abdominal_pain"]["match_symptoms"], ["stomach_pain"])
-        self.assertNotIn("stomach_ache", FLOWS["abdominal_pain"]["match_symptoms"])
+    def test_abdominal_pain_flow_now_declares_both_stomach_keys(self):
+        """Pins the exact fix: stomach_ache was added, stomach_pain was kept."""
+        self.assertIn("stomach_pain", FLOWS["abdominal_pain"]["match_symptoms"])
+        self.assertIn("stomach_ache", FLOWS["abdominal_pain"]["match_symptoms"])
 
-    def test_dialect_phrase_therefore_routes_to_generic_not_abdominal_pain(self):
-        """The end-to-end consequence: a real, correctly-detected right-sided
-        abdominal symptom does not reach the abdominal_pain flow today."""
+    def test_dialect_phrase_now_routes_to_abdominal_pain(self):
+        """The end-to-end fix: a real, correctly-detected right-sided
+        abdominal symptom now reaches the abdominal_pain flow."""
         entities = self.extractor.extract("بطني بوجعني من اليمين")
 
         complaint = _detect_chief_complaint(entities)
 
-        self.assertEqual(complaint, "generic")
+        self.assertEqual(complaint, "abdominal_pain")
 
-    def test_contrast_the_formal_msa_phrasing_does_route_correctly(self):
-        """Isolates the gap to the dialect-mapped key specifically: the
-        formal Modern Standard Arabic phrasing ("وجع بطن", listed verbatim
-        in medical_entities.json's stomach_pain vocabulary) already extracts
-        the matching "stomach_pain" key and routes correctly today."""
+    def test_contrast_the_formal_msa_phrasing_still_routes_correctly(self):
+        """The pre-existing, already-correct path (formal MSA "وجع بطن",
+        extracting "stomach_pain") is unchanged by this fix."""
         entities = self.extractor.extract("عندي وجع بطن")
 
         self.assertIn("stomach_pain", entities["symptoms"])
         self.assertEqual(_detect_chief_complaint(entities), "abdominal_pain")
+
+    def test_contrast_unrelated_flows_are_unchanged(self):
+        """Only abdominal_pain's match_symptoms was touched by this batch."""
+        self.assertEqual(FLOWS["headache"]["match_symptoms"], ["headache"])
+        self.assertEqual(FLOWS["chest_pain"]["match_symptoms"], ["chest_pain"])
+        self.assertEqual(FLOWS["fever_cough"]["match_symptoms"], ["fever", "cough"])
+        self.assertEqual(FLOWS["rash"]["match_symptoms"], ["skin_rash"])
 
 
 if __name__ == "__main__":
