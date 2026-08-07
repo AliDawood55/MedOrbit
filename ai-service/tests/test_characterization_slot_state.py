@@ -1,13 +1,23 @@
 """
 Characterization tests for SlotFiller.conversation_states growth/collision behavior.
 
-These tests pin the CURRENT behavior of chatbot/nlu/slots.py, in particular:
-  - how chatbot/main.py keys conversation_states via str(hash(message))
-    rather than a real session/conversation identifier (the collision risk
-    is a separate, not-yet-fixed issue -- see the "Remaining issue" note in
-    the SlotFiller State Bounding Implementation batch), and
-  - the now-bounded (max size + TTL + LRU eviction) storage behavior added
-    in the SlotFiller State Bounding Implementation batch.
+These tests exercise chatbot/nlu/slots.py directly (not via chatbot/main.py),
+using str(hash(message))-style keys as a stand-in for arbitrary caller-supplied
+conversation_id values. They pin two things:
+  - SlotFiller.conversation_states is caller-keyed and content-agnostic: if a
+    caller passes the same key twice (whatever that key's origin), the state
+    is shared/merged -- this is inherent to any dict-keyed-by-caller-supplied-id
+    design, not specific to any particular key-derivation strategy.
+  - the bounded (max size + TTL + LRU eviction) storage behavior added in the
+    SlotFiller State Bounding Implementation batch.
+
+NOTE: As of the Chatbot Slot State Keying Implementation batch, chatbot/main.py
+itself no longer derives its SlotFiller key from str(hash(message)) -- it now
+uses req.conversation_id when supplied, falling back to a per-request UUID
+otherwise. The str(hash(message))-based collision scenario below remains a
+valid characterization of SlotFiller's own keying behavior (which is still
+purely caller-supplied-key-based), but no longer describes how main.py's
+/chat route derives that key in production.
 """
 import time
 import unittest
@@ -17,7 +27,7 @@ from chatbot.nlu.slots import SlotFiller
 
 
 class TestSlotFillerStateKeying(unittest.TestCase):
-    """Pins how conversation_states is keyed, per main.py's str(hash(message)) pattern."""
+    """Pins how conversation_states is keyed, given an arbitrary caller-supplied conversation_id."""
 
     def setUp(self):
         self.slots = SlotFiller()

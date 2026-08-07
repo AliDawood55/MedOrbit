@@ -114,6 +114,7 @@ class ChatRequest(BaseModel):
     record: Optional[Dict[str, Any]] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    conversation_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -588,17 +589,25 @@ async def chat(req: ChatRequest):
             entities["longitude"] = req.longitude
 
         # Step 5: Slot Filling
+        # NOTE: conversation_id is optional on ChatRequest. When the caller
+        # doesn't supply one, we fall back to a per-request UUID rather than
+        # hash(message) -- this avoids cross-user state collisions on
+        # identical message text, but (unlike a real conversation_id) it
+        # does NOT provide multi-turn continuity across requests. True
+        # continuity requires the backend/frontend to send a stable
+        # conversation_id, which is a separate follow-up.
         slot_info = None
+        slot_conversation_id = req.conversation_id or str(uuid.uuid4())
         if intent_result["intent"] != "unknown" and not intent_result.get("is_fallback"):
             slot_filler.update_state(
-                str(hash(message)),
+                slot_conversation_id,
                 intent_result["intent"],
                 entities,
             )
-            slot_state = slot_filler.get_state_summary(str(hash(message)))
+            slot_state = slot_filler.get_state_summary(slot_conversation_id)
             if slot_state.get("active") and not slot_state.get("completed"):
                 next_question = slot_filler.get_next_question(
-                    str(hash(message)),
+                    slot_conversation_id,
                     "ar" if any("\u0600" <= c <= "\u06FF" for c in message) else "en",
                 )
                 slot_info = {"state": slot_state, "next_question": next_question}
