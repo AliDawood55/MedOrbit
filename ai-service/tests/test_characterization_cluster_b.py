@@ -183,11 +183,13 @@ class TestClusterBIntentClassificationImpact(unittest.TestCase):
         self.assertEqual(result["intent"], "platform_support")
         self.assertIn("how", result["matched_keywords"])
 
-    def test_doctor_fee_still_falls_back_to_unknown_cluster_a(self):
-        # Same "كم"->"how_much" substitution destroys doctor_fee's own
-        # keyword phrase "كم سعر"; unrelated to the boundary-corruption bug.
+    def test_doctor_fee_now_classifies_correctly(self):
+        # Fixed by the separate "doctor_fee only" bug-fix batch (added
+        # explicit "سعر كشف"/"سعر كشف الدكتور" keywords) — the "كم"->
+        # "how_much" substitution this test previously documented no longer
+        # matters, since doctor_fee no longer depends on "كم سعر" to win.
         result = self.classifier.classify("كم سعر كشف الدكتور")
-        self.assertEqual(result["intent"], "unknown")
+        self.assertEqual(result["intent"], "doctor_fee")
 
     def test_clinic_doctors_still_misclassified_as_find_doctor_cluster_a(self):
         # Cluster B fixed: "أطباء" is no longer corrupted. But find_doctor's
@@ -267,7 +269,6 @@ class TestClusterBIntendedBoundarySafeBehavior(unittest.TestCase):
         result = self.classifier.classify("كم يستغرق الوصول")
         self.assertIn(result["intent"], ["travel_time", "show_route"])
 
-    @unittest.expectedFailure  # Cluster A/C: "كم"->"how_much" still destroys doctor_fee's own keyword phrase "كم سعر" — not yet fixed.
     def test_doctor_fee_should_classify_correctly(self):
         result = self.classifier.classify("كم سعر كشف الدكتور")
         self.assertIn(result["intent"], ["doctor_fee", "find_doctor"])
