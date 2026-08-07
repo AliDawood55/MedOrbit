@@ -23,7 +23,7 @@ class MedicalSafetyLayer:
         r"(كسور\s+مفتوحة|عظم\s+بارز)",
         r"(غيبوبة|لا\s+يستجيب|غير\s+مستجيب)",
         r"(طوارئ|حالة\s+طارئة|إسعاف|اسعاف)",
-        r"( Cardi|heart\s+attack|stroke|severe\s+bleeding)",
+        r"(cardiac\s+arrest|heart\s+attack|stroke|severe\s+bleeding)",
         r"(can('t|not)\s+breathe|difficulty\s+breathe|shortness\s+of\s+breath)",
         r"(unconscious|passed\s+out|fainted|not\s+responding)",
         r"(suicide|kill\s+myself|self.harm|overdose)",
