@@ -582,11 +582,21 @@ class TestBuildTurnContext(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["context_block"], "")
 
 
-class TestEmergencyShortCircuit(unittest.IsolatedAsyncioTestCase):
-    """Confirms the safety check runs, and short-circuits, before the planner
-    or per-turn RAG retrieval are ever reached."""
+class TestEmergencyContinuesIntoPlannerAndRetrieval(unittest.IsolatedAsyncioTestCase):
+    """As of the Virtual Doctor Safety-Continuation Interview Mode batch, an
+    emergency-flagged turn no longer hard-stops the interview — the safety
+    check still runs first and is still the sole source of truth for
+    severity, but the planner and per-turn RAG retrieval ARE now reached too,
+    and the reply combines the (unmodified, still-present) safety warning
+    with the planner's next question rather than returning the warning alone.
+    See tests/test_virtual_doctor_safety_continuation.py for the full
+    behavior suite this feature introduced; this test's role is narrower —
+    pinning that _build_turn_context/_run_planner are genuinely invoked,
+    which was this test's original, still-relevant purpose before the
+    product decision to stop hard-stopping changed what "invoked" means for
+    a safety-flagged turn."""
 
-    async def test_emergency_message_never_reaches_planner_or_retrieval(self):
+    async def test_emergency_message_still_reaches_planner_and_retrieval(self):
         fake_session = {
             "id": "row-id", "session_id": "public-id", "language": "en",
             "phase": "interviewing", "chief_complaint": "headache",
@@ -597,18 +607,32 @@ class TestEmergencyShortCircuit(unittest.IsolatedAsyncioTestCase):
         fake_pool.fetchrow = AsyncMock(return_value=fake_session)
         fake_pool.execute = AsyncMock()
 
-        build_context_mock = AsyncMock()
-        run_planner_mock = AsyncMock()
+        build_context_mock = AsyncMock(return_value={
+            "history": [], "chunks": [], "context_block": "",
+            "memory_ms": 0.0, "rag_ms": 0.0,
+        })
+        run_planner_mock = AsyncMock(return_value=planner.PlannerResult(
+            reply="How old are you?", phase="intake", source="static",
+        ))
 
         with patch.object(interview_engine, "get_pool", new=AsyncMock(return_value=fake_pool)), \
              patch.object(interview_engine, "_build_turn_context", new=build_context_mock), \
-             patch.object(interview_engine, "_run_planner", new=run_planner_mock):
+             patch.object(interview_engine, "_run_planner", new=run_planner_mock), \
+             patch.object(interview_engine.memory, "doctor_turns", new=AsyncMock(return_value=[])):
             result = await interview_engine.handle_message("public-id", "emergency")
 
-        self.assertEqual(result["phase"], "complete")
+        # The interview is NOT forced to 'complete' just because a red flag
+        # fired — phase reflects whatever the (mocked) planner decided.
+        self.assertEqual(result["phase"], "intake")
         self.assertEqual(result["urgency_level"], "emergency")
-        build_context_mock.assert_not_called()
-        run_planner_mock.assert_not_called()
+        build_context_mock.assert_called_once()
+        run_planner_mock.assert_called_once()
+
+        # The reply combines the existing canned emergency warning (Red
+        # Crescent/101 — never removed or replaced) with the planner's
+        # question, not the warning alone.
+        self.assertIn("Palestinian Red Crescent", result["reply"])
+        self.assertIn("How old are you?", result["reply"])
 
     def test_check_safety_severity_matches_known_trigger_words(self):
         self.assertEqual(interview_engine._check_safety("emergency", "en")["severity"], "emergency")

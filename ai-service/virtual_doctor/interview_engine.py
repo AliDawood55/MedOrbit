@@ -3,8 +3,22 @@ Virtual Doctor — interview engine (Track A, Phases 1-2).
 
 State machine: chief-complaint detection -> ordered slot filling -> hand-off
 to reasoning.run_reasoning() once every required slot is filled, all within
-the same turn. A safety check runs on every patient message and short-circuits
-the interview immediately if a red flag fires.
+the same turn. A safety check runs on every patient message.
+
+SAFETY-CONTINUATION MODE (Virtual Doctor Safety-Continuation Interview Mode)
+-----------------------------------------------------------------------------
+Urgent/emergency severity no longer hard-stops the interview. Instead:
+  - the deterministic safety layer's severity is escalated into the session's
+    urgency_level (escalate-only — reuses reasoning._more_urgent, the same
+    invariant that already governs the final rule-engine-vs-LLM decision, so
+    urgency can never be silently downgraded by a later, milder turn);
+  - a short, deterministic warning (never delegated to the LLM) is prepended
+    to the reply, in full on first reaching a severity tier and as a brief
+    reminder on repeat turns at the same tier;
+  - the planner still runs and still produces the next question, optionally
+    nudged (never overridden) toward a red-flag-relevant topic via
+    PlannerInput.safety_hint.
+See _apply_safety_continuation() below.
 
 Reuses, without modifying:
   - chatbot.entities.extractor.EntityExtractor  (chief-complaint + symptom detection)
@@ -23,7 +37,7 @@ import os
 import re
 import time
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from chatbot.entities.extractor import EntityExtractor
 from chatbot.nlu.safety import MedicalSafetyLayer
@@ -78,6 +92,45 @@ ASK_COMPLAINT = {
 WRAP_UP = {
     "en": "Thank you, I've noted everything you've told me.",
     "ar": "شكراً لك، سجّلت كل ما أخبرتني به.",
+}
+
+# Safety-continuation reply prefixes. Shown IN FULL the first time a severity
+# tier is reached (or on escalation to a higher tier); a short reminder
+# replaces the full text on repeat turns at the same tier, so the interview
+# does not repeat a long warning every turn while still never dropping the
+# danger signal entirely (requirement: "do not ignore the danger signal").
+#
+# Emergency reuses safety_result["response"] verbatim (the existing canned
+# Red Crescent/101 message from chatbot.nlu.safety) rather than a rewritten
+# text — that message must never be removed or weakened — and only ADDS a
+# short continuation lead-in after it.
+SAFETY_URGENT_WARNING = {
+    "ar": (
+        "هذا العرض قد يحتاج تقييمًا طبيًا عاجلًا، لكن سأطرح عليك أسئلة سريعة ومهمة "
+        "لتوثيق الحالة بشكل أدق. إذا كان الألم شديدًا جدًا أو لديك إغماء أو ضيق تنفس "
+        "أو ضعف مفاجئ، توجه للطوارئ فورًا أو اتصل بالإسعاف. "
+    ),
+    "en": (
+        "This symptom may need urgent medical evaluation, but I'll ask a few quick, "
+        "important questions to document your case more accurately. If the pain is "
+        "very severe, or you have fainting, shortness of breath, or sudden weakness, "
+        "go to the emergency room immediately or call an ambulance. "
+    ),
+}
+
+SAFETY_URGENT_REMINDER = {
+    "ar": "(تذكير: ما زلت بحاجة لتقييم طبي عاجل.) ",
+    "en": "(Reminder: this still needs urgent medical evaluation.) ",
+}
+
+SAFETY_EMERGENCY_CONTINUATION = {
+    "ar": " إذا استطعت، أجبني بسرعة على سؤال واحد فقط: ",
+    "en": " If you can, please quickly answer just one question: ",
+}
+
+SAFETY_EMERGENCY_REMINDER = {
+    "ar": "(تذكير: هذه حالة قد تكون طارئة — توجه للطوارئ إن لم تكن قد فعلت بعد.) ",
+    "en": "(Reminder: this may be an emergency — seek emergency care now if you have not already.) ",
 }
 
 # Leading politeness the patient is likely to speak before their actual name;
@@ -224,6 +277,87 @@ def _check_safety(message: str, lang: str) -> dict:
     if _SEVERITY_RANK[normalized_result["severity"]] > _SEVERITY_RANK[raw_result["severity"]]:
         return normalized_result
     return raw_result
+
+
+def _safety_hint_text(safety_result: dict) -> Optional[str]:
+    """A short, deterministic description of what the safety layer matched,
+    for the planner to (optionally) prioritize — see PlannerInput.safety_hint.
+    This only ever describes WHAT matched; it never decides severity, urgency,
+    or whether to warn, all of which stay entirely inside
+    _apply_safety_continuation()/the safety layer itself."""
+    if safety_result["severity"] not in ("emergency", "urgent"):
+        return None
+    matched = [m.get("matched") for m in safety_result.get("matched_patterns", []) if m.get("matched")]
+    return ", ".join(matched) if matched else None
+
+
+def _apply_safety_continuation(
+    safety_result: dict, session, profile: Dict[str, Any], lang: str,
+) -> Tuple[str, Optional[str], Dict[str, Any]]:
+    """Turn one turn's safety-layer result into (reply_prefix, session_urgency,
+    updated_profile) instead of hard-stopping the interview.
+
+    Deterministic and safety-layer-driven only: the LLM planner never sees or
+    influences severity/urgency here, only (optionally) the topic of the next
+    question via safety_hint. Never downgrades: session_urgency is always the
+    more severe of whatever the session already had and what this turn found,
+    via reasoning._more_urgent() — the same escalate-only invariant that
+    already governs the final rule-engine-vs-LLM decision in reasoning.py,
+    reused rather than reimplemented.
+
+    Once the session has ever reached "emergency", every later safety-
+    triggering turn keeps the emergency-tier framing (full text first time,
+    short reminder after) even if that turn's own phrase only matched an
+    "urgent" pattern on its own — this is what keeps urgency "sticky" at the
+    worst level ever seen, matching the same escalate-only spirit as
+    session_urgency itself. A profile flag (safety_warning_shown_for) tracks
+    the highest tier already shown so repeat turns get a short reminder
+    instead of the full warning again, unless the tier escalates.
+    """
+    severity = safety_result["severity"]
+    prior_session_urgency = session["urgency_level"]
+
+    if severity not in ("emergency", "urgent"):
+        return "", prior_session_urgency, profile
+
+    session_urgency = (
+        reasoning._more_urgent(prior_session_urgency, severity)
+        if prior_session_urgency else severity
+    )
+
+    already_shown = profile.get("safety_warning_shown_for")
+    escalated = (
+        already_shown is None
+        or _SEVERITY_RANK.get(session_urgency, 0) > _SEVERITY_RANK.get(already_shown, 0)
+    )
+
+    if session_urgency == "emergency":
+        prefix = (
+            safety_result["response"] + SAFETY_EMERGENCY_CONTINUATION[lang]
+            if escalated else SAFETY_EMERGENCY_REMINDER[lang]
+        )
+    else:
+        prefix = SAFETY_URGENT_WARNING[lang] if escalated else SAFETY_URGENT_REMINDER[lang]
+
+    profile = dict(profile)
+    if escalated:
+        profile["safety_warning_shown_for"] = session_urgency
+
+    # Lightweight, additive audit trail of what triggered escalation this
+    # session — lives entirely inside the existing patient_profile JSONB
+    # column, no schema/migration change needed. Not a substitute for the
+    # audit's proposed structured red_flags field (see Section 6 of
+    # docs/virtual_doctor_clinical_voice_improvement_plan.md) — that would
+    # need per-flag categorization this file does not attempt to add here.
+    matched = [m.get("matched") for m in safety_result.get("matched_patterns", []) if m.get("matched")]
+    if matched:
+        flags = list(profile.get("safety_flags_detected", []))
+        for m in matched:
+            if m not in flags:
+                flags.append(m)
+        profile["safety_flags_detected"] = flags
+
+    return prefix, session_urgency, profile
 
 
 def _lang(text: str, requested: Optional[str] = None) -> str:
@@ -460,47 +594,36 @@ async def handle_message(session_id: str, message: str) -> dict:
     lang = session["language"] or _lang(message)
     await _log_message(pool, session["id"], "patient", message)
 
-    # Safety check runs on every turn, before anything else.
+    # Safety check runs on every turn, before anything else. It remains the
+    # sole, deterministic source of truth for severity — nothing below (the
+    # LLM planner, the reasoning phase) can override or downgrade what it
+    # decides here. Unlike before, urgent/emergency no longer hard-stops the
+    # interview: see _apply_safety_continuation()'s docstring for the design.
     safety_result = _check_safety(message, lang)
-
-    if safety_result["severity"] in ("emergency", "urgent"):
-        reply = safety_result["response"]
-        await pool.execute(
-            """
-            UPDATE virtual_doctor_sessions
-            SET phase = 'complete', urgency_level = $2, updated_at = CURRENT_TIMESTAMP
-            WHERE session_id = $1
-            """,
-            session_id,
-            safety_result["severity"],
-        )
-        await _log_message(pool, session["id"], "doctor", reply)
-        return {
-            "session_id": session_id,
-            "reply": reply,
-            "phase": "complete",
-            "chief_complaint": session["chief_complaint"],
-            "urgency_level": safety_result["severity"],
-            "profile_snapshot": _load_jsonb(session["patient_profile"]),
-        }
 
     entities = _extractor.extract(message)
     profile = _load_jsonb(session["patient_profile"])
     phase = session["phase"]
     chief_complaint = session["chief_complaint"]
 
+    safety_prefix, session_urgency, profile = _apply_safety_continuation(
+        safety_result, session, profile, lang,
+    )
+
     # --- memory -> embedding -> RAG -------------------------------------
-    # Runs only once the emergency short-circuit above has declined to fire, so
-    # a red flag still ends the consultation immediately without waiting on
-    # Ollama. Both stages are best-effort: they return empty on any failure and
-    # can never fail a turn.
+    # Both stages are best-effort: they return empty on any failure and can
+    # never fail a turn.
     turn_context = await _build_turn_context(session, message, chief_complaint, lang)
 
     # --- planner --------------------------------------------------------
-    # Reached only after the safety layer has declined to fire, so no planner
-    # can ever suppress a red flag. The planner decides what to say next and
-    # what the answer told us; the engine below owns persistence, the rule
-    # engine and the final diagnosis, none of which are delegated.
+    # The planner decides what to say next and what the answer told us; the
+    # engine below owns persistence, the rule engine, the final diagnosis, and
+    # the safety wrap, none of which are delegated. safety_hint may nudge
+    # *which* question the LLM planner asks next toward a red-flag-relevant
+    # topic (requirement: prioritize red-flag questions) but never decides
+    # whether to warn or what severity/urgency to report — that stays entirely
+    # inside _apply_safety_continuation() above, driven only by the
+    # deterministic safety layer.
     # Counted over the whole transcript, not the memory window: the window is
     # capped at HISTORY_LIMIT, so counting doctor turns inside it stops rising
     # once the interview outgrows it — and the turn cap that guarantees every
@@ -518,6 +641,7 @@ async def handle_message(session_id: str, message: str) -> dict:
         context_block=turn_context["context_block"],
         turn_index=max(0, len(asked) - _intake_questions(profile)),
         asked_questions=asked,
+        safety_hint=_safety_hint_text(safety_result),
     ))
 
     profile.update(plan.profile_updates)
@@ -525,16 +649,16 @@ async def handle_message(session_id: str, message: str) -> dict:
     if plan.chief_complaint:
         chief_complaint = plan.chief_complaint
 
-    urgency_level = session["urgency_level"]
+    urgency_level = session_urgency
     recommended_specialty_id = session["recommended_specialty_id"]
     differential = _load_jsonb(session["differential"]) if session["differential"] else None
     reasoning_result: Optional[dict] = None
 
     if plan.ready_for_diagnosis:
         # The interview is finished — run the reasoning phase now, in the same
-        # turn, exactly as before. Urgency, specialty and the differential all
-        # still come from reasoning.run_reasoning(); the planner only decided
-        # *when* to stop asking, never what the answer is.
+        # turn, exactly as before. Specialty and the differential come from
+        # reasoning.run_reasoning(); the planner only decided *when* to stop
+        # asking, never what the answer is.
         #
         # Full transcript, not the per-turn memory window: this call happens
         # once per consultation (not once per turn), so it can afford every
@@ -547,7 +671,15 @@ async def handle_message(session_id: str, message: str) -> dict:
             chief_complaint, profile, lang, history=full_history
         )
         phase = "complete"
-        urgency_level = reasoning_result["urgency_level"]
+        # Escalate-only merge against session_urgency: a safety-layer signal
+        # from an earlier turn in THIS interview (which continued instead of
+        # hard-stopping) must never be silently downgraded by a later,
+        # milder reasoning pass — the same invariant reasoning.py already
+        # applies internally between its own rule-engine and LLM opinions.
+        urgency_level = (
+            reasoning._more_urgent(urgency_level, reasoning_result["urgency_level"])
+            if urgency_level else reasoning_result["urgency_level"]
+        )
         recommended_specialty_id = reasoning_result["recommended_specialty_id"]
         differential = reasoning_result["differential"]
         reply = reasoning_result["reply"]
@@ -569,6 +701,13 @@ async def handle_message(session_id: str, message: str) -> dict:
         reply = plan.reply
     else:
         reply = WRAP_UP[lang]
+
+    # Combine: safety warning (if any) + the planner's one focused question —
+    # deterministic string composition, never delegated to the LLM. Applied
+    # after the reasoning branch too, so a same-turn "ready for diagnosis"
+    # response on a safety-flagged turn still carries the warning.
+    if safety_prefix:
+        reply = f"{safety_prefix}{reply}"
 
     await pool.execute(
         """

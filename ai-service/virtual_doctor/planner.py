@@ -20,11 +20,18 @@ same contract.
 
 WHAT PLANNERS DO NOT DO
 -----------------------
-  * They never see a turn that MedicalSafetyLayer flagged. interview_engine
-    runs the safety check first and short-circuits before any planner is
-    consulted, so no model output can suppress a red flag.
+  * They never decide severity, urgency, or whether to warn the patient. As
+    of the Safety-Continuation Interview Mode batch, a turn MedicalSafetyLayer
+    flagged as urgent/emergency still reaches the planner (the interview no
+    longer hard-stops) — but only PlannerInput.safety_hint, a plain string
+    describing what matched, is passed in, purely to nudge LLMPlanner toward
+    a relevant question. The planner cannot see or influence the safety
+    layer's severity decision, and interview_engine composes the warning text
+    entirely outside any planner call — see interview_engine
+    ._apply_safety_continuation().
   * They never decide urgency or specialty. Those stay with the DB-backed
-    rule engine in reasoning.py, which owns the specialty foreign key.
+    rule engine in reasoning.py, which owns the specialty foreign key, plus
+    (for urgent/emergency reached mid-interview) the safety layer itself.
   * They never write to the database. They return a description of what
     changed and the engine persists it.
 
@@ -150,6 +157,13 @@ class PlannerInput:
     # load-bearing for the turn cap.
     turn_index: int = 0
     asked_questions: List[str] = field(default_factory=list)
+    # Optional, deterministic-safety-layer-derived hint of what red-flag text
+    # this turn matched (see interview_engine._safety_hint_text). Nudges
+    # LLMPlanner toward asking about it next; never used to decide severity,
+    # urgency, or whether to warn — that stays entirely in interview_engine's
+    # _apply_safety_continuation(). None on every turn with no safety match,
+    # and ignored entirely by StaticPlanner.
+    safety_hint: Optional[str] = None
 
 
 @dataclass
@@ -478,6 +492,17 @@ class LLMPlanner:
         # consultation — before this block existed.
         already_asked = "\n".join(f"- {q}" for q in ctx.asked_questions) or "- (none yet)"
 
+        # Deterministic-safety-layer-derived, never LLM-derived: this only
+        # ever nudges WHICH topic the next question covers. It cannot change
+        # severity/urgency or suppress/alter the warning text, both of which
+        # are composed entirely in interview_engine.py outside this call.
+        safety_priority = (
+            f"URGENT PRIORITY: the patient's answer may contain a red-flag symptom "
+            f"(matched: {ctx.safety_hint}). Your next question MUST specifically "
+            f"explore this red flag before anything else.\n\n"
+            if ctx.safety_hint else ""
+        )
+
         # No readiness field here — see _READINESS_* above for why. This call
         # has exactly one job: the next question, plus what the patient just
         # said. Readiness is a separate, dedicated call (_check_readiness).
@@ -492,7 +517,7 @@ that means the same thing:
 ALREADY ESTABLISHED: {json.dumps(known, ensure_ascii=False) if known else "nothing yet"}
 PATIENT'S LATEST ANSWER: {ctx.message}
 
-Return ONLY this JSON object:
+{safety_priority}Return ONLY this JSON object:
 {{
   "chief_complaint": "one of: {', '.join(sorted(CANONICAL_COMPLAINTS))}",
   "findings": {{"<one of: {', '.join(sorted(KNOWN_FINDING_KEYS))}>": "<what the patient just told you>"}},
