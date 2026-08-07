@@ -65,31 +65,34 @@ class TestClusterECardiFalsePositive(unittest.TestCase):
         cls.safety = MedicalSafetyLayer()
         cls.classifier = IntentClassifier()
 
-    def test_cardiologist_is_currently_a_false_positive_emergency(self):
-        # Confirmed bug: " Cardi" matches inside "cardiologist" via the
-        # space before "cardi" (case-insensitive). Pinning current (wrong)
-        # behavior so a future fix can be verified against it.
+    def test_cardiologist_no_longer_a_false_positive_emergency(self):
+        # FIXED by Cluster E1: the broken " Cardi" alternative was replaced
+        # with "cardiac\s+arrest". Asking for a cardiologist no longer
+        # matches any emergency pattern.
         result = self.safety.check("I need a cardiologist")
+        self.assertEqual(result["severity"], "normal")
+        self.assertFalse(result["bypass_intent_routing"])
+        self.assertEqual(result["matched_patterns"], [])
+
+    def test_cardiologist_no_longer_short_circuits_intent_classification(self):
+        # Confirms the normal classification pipeline (Steps 4-10) now runs
+        # for this input instead of being short-circuited by safety.py.
+        result = self.classifier.classify("I need a cardiologist")
+        self.assertNotEqual(result["intent"], "emergency")
+
+    def test_cardiac_arrest_is_protected_by_the_new_alternative(self):
+        # The replacement phrase itself must fire — this is the specific,
+        # complete phrase " Cardi" was almost certainly meant to represent.
+        result = self.safety.check("I think he is in cardiac arrest")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
         matched = result["matched_patterns"][0]
-        self.assertEqual(matched["matched"], " cardi")
-        self.assertEqual(matched["pattern"], r"( Cardi|heart\s+attack|stroke|severe\s+bleeding)")
-
-    def test_cardiologist_currently_short_circuits_intent_classification(self):
-        # Confirms safety.py runs BEFORE classifier.py's own keyword
-        # matching: classify()'s matched_keywords for this input is
-        # safety.py's matched_patterns structure, not a keyword list —
-        # proof the normal classification pipeline (Steps 4-10) never runs.
-        result = self.classifier.classify("I need a cardiologist")
-        self.assertEqual(result["intent"], "emergency")
-        self.assertEqual(result["confidence"], 1.0)
-        self.assertIsInstance(result["matched_keywords"], list)
-        self.assertEqual(result["matched_keywords"][0]["matched"], " cardi")
+        self.assertEqual(matched["matched"], "cardiac arrest")
+        self.assertEqual(matched["pattern"], r"(cardiac\s+arrest|heart\s+attack|stroke|severe\s+bleeding)")
 
     def test_true_heart_attack_remains_protected(self):
         # Same combined pattern's "heart\s+attack" alternative — must
-        # remain firing after any fix to the " Cardi" fragment.
+        # remain firing after the " Cardi" fragment was replaced.
         result = self.safety.check("I think I am having a heart attack")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
