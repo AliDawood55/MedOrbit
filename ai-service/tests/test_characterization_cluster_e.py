@@ -172,42 +172,51 @@ class TestClusterEPoisoningSubstringFalsePositive(unittest.TestCase):
 
 
 class TestClusterEHospitalEmergencyPolicyQuestion(unittest.TestCase):
-    """Pins current behavior for the informational-ER-query case.
+    """Pins the FIXED behavior for the informational-ER-query case.
 
     Cluster I implemented the approved policy exemption at the safety.py
-    layer only (per its explicit file scope) — MedicalSafetyLayer.check()
-    for this input now correctly returns severity="normal" (see
-    TestClusterEPoisoningSubstringFalsePositive above). However,
-    classify() below STILL returns "emergency" for the same input, via a
-    SECOND, INDEPENDENT mechanism entirely inside classifier.py: its own
+    layer (MedicalSafetyLayer.check() returns severity="normal" for this
+    input — see TestClusterEPoisoningSubstringFalsePositive above).
+    Cluster I2 closed the remaining gap: classifier.py's own, independent
     Step 9 override (`if scores["emergency"] >= 1.0: return emergency`)
-    fires because intents.json's "emergency" intent lists the bare keyword
-    "طوارئ" in its own keywords_ar list — a code path completely unrelated
-    to safety.py's regex patterns, unaffected by any fix made there.
-    Resolving this fully requires touching classifier.py and/or
-    intents.json, both explicitly out of scope for the Cluster I batch as
-    approved. Flagged for a follow-up decision — not fixed here.
+    now has the same narrow exemption
+    (IntentClassifier._is_informational_er_place_query), mirroring
+    safety.py's helper. When the exemption applies, the "emergency" intent
+    is removed from scoring entirely and normal ranking decides the
+    result — which now correctly lands on hospital_emergency, using that
+    intent's own pre-existing keywords ("طوارئ" + "قسم الطوارئ"), with no
+    intents.json change required.
     """
 
     @classmethod
     def setUpClass(cls):
         cls.classifier = IntentClassifier()
 
-    def test_hospital_emergency_department_query_still_bypasses_routing_via_classifier(self):
-        # safety.py's own bypass for this input is fixed (see above), but
-        # classify() still returns "emergency" via classifier.py's
-        # independent Step 9 override, matching intents.json's "emergency"
-        # intent's own "طوارئ" keyword — a second mechanism outside
-        # Cluster I's approved file scope (safety.py only).
+    def test_hospital_emergency_department_query_now_classifies_correctly(self):
+        # FIXED by Cluster I2: classify() no longer force-returns
+        # "emergency" for this input. hospital_emergency's own existing
+        # keywords ("طوارئ", "قسم الطوارئ") provide enough signal to win
+        # normal ranking outright once the Step 9 override stops
+        # short-circuiting before ranking runs.
         result = self.classifier.classify("قسم الطوارئ في المستشفى")
-        self.assertEqual(result["intent"], "emergency")
-        self.assertEqual(result["confidence"], 1.0)
-        self.assertEqual(result["matched_keywords"], ["طوارئ"])
+        self.assertEqual(result["intent"], "hospital_emergency")
+        self.assertAlmostEqual(result["confidence"], 0.5854, places=3)
+        self.assertEqual(sorted(result["matched_keywords"]), sorted(["طوارئ", "قسم الطوارئ"]))
 
     def test_true_arabic_emergency_word_alone_remains_protected(self):
-        # The bare word "طوارئ" alone (no "قسم" prefix, so the "سم " bug
-        # cannot also be a factor here) — must remain firing after any fix.
+        # The bare word "طوارئ" alone (no "قسم" prefix) — must remain
+        # firing after the fix, since the exemption only applies to the
+        # department-as-place phrasing, never to the bare word by itself.
         result = self.classifier.classify("طوارئ")
+        self.assertEqual(result["intent"], "emergency")
+
+    def test_symptom_reported_at_er_place_still_forces_emergency(self):
+        # A real symptom co-occurring with the ER-place phrasing must still
+        # force emergency — the exemption only fires when "طوارئ" is the
+        # SOLE matched emergency keyword. Here safety.py's own bypass fires
+        # first (severe bleeding is its own protected pattern), so this
+        # never even reaches classifier.py's Step 9 exemption logic.
+        result = self.classifier.classify("عندي نزيف شديد بقسم الطوارئ")
         self.assertEqual(result["intent"], "emergency")
 
 
