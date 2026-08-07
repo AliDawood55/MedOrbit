@@ -38,6 +38,14 @@ class MedicalSafetyLayer:
         r"(حرارة\s+مرتفعة|حرارة\s+عالية|حمى\s+شديدة)",
         r"(الم\s+شديد|وجع\s+مستمر|ألم\s+لا\s+يحتمل)",
         r"(تقيؤ\s+دم|دم\s+في\s+البراز|نزيف\s+داخلي)",
+        # Hematuria: mirrors the existing English "blood in urine" alternative
+        # above, which had no Arabic equivalent. Anchored to a urine-context
+        # word every time so it can never match "دم" alone.
+        r"(دم\s+في\s+البول|دم\s+بالبول|بول\s+مع\s+دم|تبول\s+دم)",
+        # Sudden/severe ("thunderclap") headache — a distinct red-flag pattern
+        # from the generic "الم شديد" above, since "صداع" does not share a
+        # root with "الم"/"وجع" and so is not covered by it.
+        r"(صداع\s+شديد\s+فجأة|صداع\s+مفاجئ\s+شديد|صداع\s+شديد\s+ومفاجئ|أسوأ\s+صداع|اسوأ\s+صداع)",
         r"(ضغط\s+مرتفع\s+جداً|ارتفاع\s+ضغط\s+خطر)",
         r"(سكر\s+مرتفع|ارتفاع\s+سكر|هبوط\s+سكر)",
         r"(تشنج|نوبة\s+صرع|صرع)",
