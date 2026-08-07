@@ -120,20 +120,22 @@ class TestClusterACurrentOutputs(unittest.TestCase):
             sorted(["سعر كشف", "سعر كشف الدكتور", "price"]),
         )
 
-    def test_clinic_doctors_phrase_still_misclassified_as_find_doctor(self):
-        # NOT fixed — mechanism (e), keyword overlap, re-exposed by the (a')
-        # proclitic allowance (see module docstring). find_doctor's own
-        # "عيادة"/"أطباء" legitimately match "العيادة"/"الأطباء" once the
-        # definite article is recognized as a grammatical particle rather
-        # than an unrelated word — so find_doctor and clinic_doctors compete
-        # on genuinely equal footing again, just no longer via a substring
-        # bug.
+    def test_clinic_doctors_phrase_now_classifies_correctly(self):
+        # FIXED by the separate "clinic_doctors only" bug-fix batch: added
+        # "الأطباء العيادة" as an explicit clinic_doctors keyword, matching
+        # the surviving 2-word ngram. Combined with its pre-existing "أطباء"
+        # and "الأطباء" matches, this gives clinic_doctors 3 matched
+        # keywords (vs. find_doctor's 2), decisively outranking find_doctor
+        # rather than tying with it.
         result = self.classifier.classify("من هم الأطباء في العيادة")
-        self.assertEqual(result["intent"], "find_doctor")
-        self.assertAlmostEqual(result["confidence"], 0.4138, places=3)
-        self.assertEqual(sorted(result["matched_keywords"]), ["أطباء", "عيادة"])
+        self.assertEqual(result["intent"], "clinic_doctors")
+        self.assertAlmostEqual(result["confidence"], 0.5143, places=3)
+        self.assertEqual(
+            sorted(result["matched_keywords"]),
+            sorted(["أطباء", "الأطباء", "الأطباء العيادة"]),
+        )
         alt_intents = {a["intent"] for a in result["alternative_intents"]}
-        self.assertIn("clinic_doctors", alt_intents)
+        self.assertIn("find_doctor", alt_intents)
 
     def test_clinic_hours_phrase_now_classifies_correctly(self):
         # FIXED by the separate "clinic_hours only" bug-fix batch: added
@@ -202,7 +204,6 @@ class TestClusterAIntendedBehavior(unittest.TestCase):
         result = self.classifier.classify("كم سعر كشف الدكتور")
         self.assertIn(result["intent"], ["doctor_fee", "find_doctor"])
 
-    @unittest.expectedFailure  # (e): keyword overlap ("عيادة"/"أطباء" with find_doctor).
     def test_clinic_doctors_phrase_should_classify_correctly(self):
         result = self.classifier.classify("من هم الأطباء في العيادة")
         self.assertIn(result["intent"], ["clinic_doctors", "clinic_info"])
