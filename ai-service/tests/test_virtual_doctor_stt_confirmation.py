@@ -111,7 +111,7 @@ class TestSuspiciousNameRequiresConfirmation(unittest.IsolatedAsyncioTestCase):
         result, next_session, run_planner_mock = await _run_turn("درج", fake_session)
 
         self.assertIn("درج", result["reply"])
-        self.assertIn("سمعت اسمك بشكل صحيح", result["reply"])
+        self.assertIn("هل هذا اسمك", result["reply"])
         run_planner_mock.assert_not_called()
 
         persisted_profile = json.loads(next_session["patient_profile"])
@@ -286,7 +286,7 @@ class TestNoInfiniteConfirmationLoop(unittest.IsolatedAsyncioTestCase):
             "ايش قصدك؟", pending_session,
         )
         retry_planner_mock.assert_not_called()
-        self.assertIn("قل اسمك مرة أخرى", retry_result["reply"])
+        self.assertIn("أعد ذكر اسمك", retry_result["reply"])
         retry_profile = json.loads(retry_session["patient_profile"])
         self.assertEqual(retry_profile["pending_confirmation"]["attempts"], 1)
 
