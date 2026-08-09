@@ -6,9 +6,7 @@ import '../../../shared/widgets/page_sections.dart';
 import '../models/symptom_check_result.dart';
 
 /// Renders one completed triage result. Framed throughout as a suggestion,
-/// never a diagnosis: "suggested specialty", not "your diagnosis"; a
-/// confidence percentage taken as-is from the server, never invented or
-/// rounded to sound more certain than it is.
+/// never a diagnosis: "suggested specialty", not "your diagnosis".
 class SymptomResultCard extends StatelessWidget {
   const SymptomResultCard({
     super.key,
@@ -33,8 +31,6 @@ class SymptomResultCard extends StatelessWidget {
     final specialty = isArabic
         ? (result.recommendedSpecialtyNameAr ?? result.recommendedSpecialtyNameEn)
         : (result.recommendedSpecialtyNameEn ?? result.recommendedSpecialtyNameAr);
-    final confidencePercent = (result.confidenceScore.clamp(0.0, 1.0) * 100).round();
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spaceLg),
@@ -55,12 +51,6 @@ class SymptomResultCard extends StatelessWidget {
               Text(specialty, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppTheme.spaceMd),
             ],
-            SectionHeader(title: strings.symptomConfidenceLabel),
-            Text(
-              '$confidencePercent%',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: AppTheme.spaceMd),
             SectionHeader(title: strings.symptomRecommendationsLabel),
             Text(
               result.recommendations,
