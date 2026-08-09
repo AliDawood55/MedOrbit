@@ -29,6 +29,7 @@ const VirtualDoctorSession = (() => {
     let busy = false;
     let cfg = {};
     let turnCount = 0;
+    let generation = 0;
 
     function emit(name, payload) {
         const fn = cfg[name];
@@ -77,10 +78,12 @@ const VirtualDoctorSession = (() => {
     }
 
     async function start(lang) {
+        const myGeneration = ++generation;
         language = (lang === 'ar' || lang === 'en') ? lang : 'en';
         emit('onState', { state: 'connecting' });
 
         const res = await jsonPost('/virtual-doctor/start', { language, user_id: null });
+        if (myGeneration !== generation) return null;
         sessionId = res.session_id;
         phase = res.phase;
         // The server echoes the session language; pin STT to it rather than
@@ -88,6 +91,7 @@ const VirtualDoctorSession = (() => {
         language = res.language || language;
 
         await doctorSpeaks(res.reply);
+        if (myGeneration !== generation) return null;
         emit('onState', { state: 'listening' });
         return { sessionId, language, reply: res.reply, phase };
     }
@@ -95,6 +99,7 @@ const VirtualDoctorSession = (() => {
     /** Feed one transcribed patient utterance into the interview engine. */
     async function submit(text) {
         if (!sessionId || busy || phase === 'complete') return null;
+        const myGeneration = generation;
         busy = true;
         turnCount += 1;
         const startedAt = performance.now();
@@ -107,10 +112,12 @@ const VirtualDoctorSession = (() => {
                 session_id: sessionId,
                 message: text
             });
+            if (myGeneration !== generation) return null;
             phase = res.phase;
             const elapsedMs = Math.round(performance.now() - startedAt);
 
             await doctorSpeaks(res.reply, { elapsedMs, turn: turnCount });
+            if (myGeneration !== generation) return null;
 
             if (phase === 'complete') {
                 emit('onState', { state: 'complete' });
@@ -128,6 +135,7 @@ const VirtualDoctorSession = (() => {
             }
             return res;
         } catch (err) {
+            if (myGeneration !== generation) return null;
             console.error('[vd-session] message failed:', err);
             emit('onError', { key: 'session.errEngine', detail: err.message, fatal: false });
             emit('onState', { state: 'listening' });
@@ -161,11 +169,20 @@ const VirtualDoctorSession = (() => {
         cfg = options || {};
     }
 
+    function reset() {
+        generation += 1;
+        sessionId = null;
+        phase = 'idle';
+        busy = false;
+        turnCount = 0;
+    }
+
     return {
         init,
         start,
         submit,
         requestReport,
+        reset,
         getPhase: () => phase,
         getLanguage: () => language,
         getSessionId: () => sessionId,
