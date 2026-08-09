@@ -1,0 +1,2187 @@
+{
+  "schema": "medorbit.understanding_benchmark.v1",
+  "generated_at": "2026-08-08T22:49:27.384751+00:00",
+  "model": "qwen2:7b",
+  "prompt_version": "v1",
+  "split": "all",
+  "categories_filter": [
+    "irrelevant",
+    "negative_control",
+    "positive_control",
+    "question_not_report",
+    "third_party"
+  ],
+  "temperature": 0.1,
+  "timeout_s": 180.0,
+  "vocabulary_size": 20,
+  "safety_atoms": [
+    "hematuria",
+    "seizure",
+    "unconscious",
+    "severe_bleeding"
+  ],
+  "metrics": {
+    "n_cases": 41,
+    "symptom_micro": {
+      "precision": 0.3871,
+      "recall": 0.8571,
+      "f1": 0.5333,
+      "tp": 12,
+      "fp": 19,
+      "fn": 2
+    },
+    "polarity": {
+      "present": {
+        "precision": 0.3571,
+        "recall": 1.0,
+        "f1": 0.5263,
+        "tp": 10,
+        "fp": 18,
+        "fn": 0
+      },
+      "absent": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6667,
+        "tp": 2,
+        "fp": 0,
+        "fn": 2
+      },
+      "uncertain": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 1,
+        "fn": 0
+      }
+    },
+    "by_language": {
+      "ar": {
+        "precision": 0.3125,
+        "recall": 0.7143,
+        "f1": 0.4348,
+        "tp": 5,
+        "fp": 11,
+        "fn": 2
+      },
+      "en": {
+        "precision": 0.4667,
+        "recall": 1.0,
+        "f1": 0.6364,
+        "tp": 7,
+        "fp": 8,
+        "fn": 0
+      }
+    },
+    "exact_match_rate": 56.1,
+    "exact_match_count": 23,
+    "multi_symptom_recall": null,
+    "multi_symptom_found": 0,
+    "multi_symptom_expected": 0,
+    "safety_atom_recall": 1.0,
+    "safety_atom_found": 8,
+    "safety_atom_expected": 8,
+    "safety_atom_misses": [],
+    "safety_polarity_errors": [],
+    "safety_false_positives": [
+      "ar_neg_third_01:seizure(present)",
+      "en_neg_third_01:seizure(present)",
+      "en_neg_third_02:severe_bleeding(present)",
+      "ar_neg_q_01:hematuria(present)",
+      "en_neg_q_01:severe_bleeding(present)",
+      "en_neg_q_02:seizure(present)",
+      "ar_third_03:severe_bleeding(present)",
+      "ar_third_05:hematuria(present)",
+      "en_third_03:hematuria(present)",
+      "en_third_04:unconscious(present)",
+      "ar_q_02:seizure(present)",
+      "en_q_03:hematuria(present)",
+      "en_q_04:unconscious(present)"
+    ],
+    "safety_false_positive_count": 13,
+    "by_category": {
+      "colloquial": null,
+      "code_switch": null,
+      "asr_like": null,
+      "negative_control": {
+        "precision": 0.0952,
+        "recall": 0.5,
+        "f1": 0.16,
+        "tp": 2,
+        "fp": 19,
+        "fn": 2,
+        "n_cases": 28,
+        "exact_match_rate": 35.7
+      },
+      "uncertainty": null,
+      "multi_symptom": null,
+      "negation": {
+        "precision": 0.5,
+        "recall": 0.5,
+        "f1": 0.5,
+        "tp": 1,
+        "fp": 1,
+        "fn": 1,
+        "n_cases": 2,
+        "exact_match_rate": 50.0
+      },
+      "third_party": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 10,
+        "fn": 0,
+        "n_cases": 11,
+        "exact_match_rate": 18.2
+      },
+      "question_not_report": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 7,
+        "fn": 0,
+        "n_cases": 7,
+        "exact_match_rate": 0.0
+      }
+    },
+    "negative_controls": {
+      "n_cases": 28,
+      "invented_atoms": [
+        "ar_neg_third_01:seizure",
+        "en_neg_third_01:seizure",
+        "en_neg_third_02:severe_bleeding",
+        "ar_neg_q_01:hematuria",
+        "en_neg_q_01:severe_bleeding",
+        "en_neg_q_02:seizure",
+        "ar_third_03:severe_bleeding",
+        "ar_third_04:headache",
+        "ar_third_05:hematuria",
+        "en_third_03:hematuria",
+        "en_third_04:unconscious",
+        "ar_third_06:cough",
+        "ar_third_06:fever",
+        "ar_q_02:seizure",
+        "ar_q_03:shortness_of_breath",
+        "en_q_03:hematuria",
+        "en_q_04:unconscious"
+      ],
+      "invented_count": 17,
+      "clean_rate": 42.9,
+      "safety_invented": [
+        "ar_neg_third_01:seizure",
+        "en_neg_third_01:seizure",
+        "en_neg_third_02:severe_bleeding",
+        "ar_neg_q_01:hematuria",
+        "en_neg_q_01:severe_bleeding",
+        "en_neg_q_02:seizure",
+        "ar_third_03:severe_bleeding",
+        "ar_third_05:hematuria",
+        "en_third_03:hematuria",
+        "en_third_04:unconscious",
+        "ar_q_02:seizure",
+        "en_q_03:hematuria",
+        "en_q_04:unconscious"
+      ],
+      "safety_invented_count": 13
+    },
+    "hallucinated_atoms": {
+      "seizure": 4,
+      "severe_bleeding": 3,
+      "hematuria": 4,
+      "headache": 1,
+      "unconscious": 2,
+      "cough": 1,
+      "fever": 1,
+      "shortness_of_breath": 1
+    },
+    "hallucinated_total": 17,
+    "malformed_rate": 0.0,
+    "malformed_count": 0,
+    "failure_rate": 0.0,
+    "failure_count": 0,
+    "forbidden_key_rate": 0.0,
+    "forbidden_key_count": 0,
+    "latency_ms": {
+      "mean": 7149.6,
+      "median": 7026.4,
+      "p95": 8065.4,
+      "min": 6010.7,
+      "max": 8719.1
+    },
+    "exact_match_by_category": {
+      "correction_intent": {
+        "rate": 100.0,
+        "n": 1
+      },
+      "hematuria": {
+        "rate": 66.7,
+        "n": 3
+      },
+      "irrelevant": {
+        "rate": 100.0,
+        "n": 8
+      },
+      "name_correction": {
+        "rate": 100.0,
+        "n": 1
+      },
+      "negation": {
+        "rate": 50.0,
+        "n": 2
+      },
+      "negative_control": {
+        "rate": 35.7,
+        "n": 28
+      },
+      "positive_control": {
+        "rate": 100.0,
+        "n": 10
+      },
+      "question_not_report": {
+        "rate": 0.0,
+        "n": 7
+      },
+      "seizure": {
+        "rate": 100.0,
+        "n": 2
+      },
+      "severe_bleeding": {
+        "rate": 100.0,
+        "n": 2
+      },
+      "third_party": {
+        "rate": 18.2,
+        "n": 11
+      },
+      "unconscious": {
+        "rate": 100.0,
+        "n": 3
+      }
+    },
+    "cold_latency_ms": 17106.0
+  },
+  "cases": [
+    {
+      "case_id": "en_irrelevant_01",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location_character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "no_symptom"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 8286.6,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_irrelevant_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location_character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "uncertain"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7190.4,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_irrelevant_02",
+      "lang": "en",
+      "split": "dev",
+      "categories": [
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "unusable label"
+        }
+      ],
+      "rejected_raw": [
+        "None"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6010.7,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_neg_admin_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location_character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "uncertain"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7432.9,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_neg_admin_02",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        },
+        {
+          "field": "finding",
+          "reason": "slot not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "uncertain",
+        "price"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7770.2,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_neg_admin_03",
+      "lang": "ar",
+      "split": "dev",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        },
+        {
+          "field": "finding",
+          "reason": "slot not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "uncertain",
+        "chief_complaint"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7975.5,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_neg_admin_01",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        },
+        {
+          "field": "finding",
+          "reason": "slot not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "none",
+        "question"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7502.9,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_neg_admin_02",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "unusable label"
+        },
+        {
+          "field": "finding",
+          "reason": "slot not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "None",
+        "language"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6447.1,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_neg_third_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "duration"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6949.8,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_neg_third_02",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "duration"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "historical, not current"
+        }
+      ],
+      "rejected_raw": [
+        "unconscious"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7026.4,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_neg_third_01",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6433.4,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_neg_third_02",
+      "lang": "en",
+      "split": "dev",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "severity"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7748.9,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_neg_q_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7858.4,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_neg_q_01",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "severity"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7337.1,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_neg_q_02",
+      "lang": "en",
+      "split": "dev",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6446.8,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_neg_severe_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "severe_bleeding"
+        ],
+        "uncertain": []
+      },
+      "expected_findings": [
+        "severity"
+      ],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "severe_bleeding"
+        ]
+      },
+      "actual_findings": [
+        "severity"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7274.6,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_neg_severe_01",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "severe_bleeding"
+        ],
+        "uncertain": []
+      },
+      "expected_findings": [
+        "severity"
+      ],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [
+          "severe_bleeding"
+        ],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "severity"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6776.5,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_neg_deny_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "negation",
+        "hematuria"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "hematuria"
+        ],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6971.1,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_neg_deny_01",
+      "lang": "en",
+      "split": "dev",
+      "categories": [
+        "negative_control",
+        "negation",
+        "unconscious"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "unconscious"
+        ],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [
+          "unconscious"
+        ],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6408.8,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_neg_name_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "correction_intent",
+        "name_correction"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [
+        "name"
+      ],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "not in vocabulary"
+        }
+      ],
+      "rejected_raw": [
+        "name"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7205.8,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_third_03",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7475.8,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_third_04",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7787.7,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_third_05",
+      "lang": "ar",
+      "split": "dev",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7482.4,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_third_03",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7381.5,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_third_04",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location_character"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7355.5,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_third_05",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "duration"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "symptom",
+          "reason": "historical, not current"
+        },
+        {
+          "field": "symptom",
+          "reason": "historical, not current"
+        }
+      ],
+      "rejected_raw": [
+        "cough",
+        "fever"
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 8719.1,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_third_06",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 8065.4,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_q_02",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "severity"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6948.2,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_q_03",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "finding.character",
+          "reason": "unusable value"
+        }
+      ],
+      "rejected_raw": [
+        ""
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6911.1,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_q_03",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6847.5,
+      "exact_match": false
+    },
+    {
+      "case_id": "en_q_04",
+      "lang": "en",
+      "split": "dev",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "associated_symptoms"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6984.1,
+      "exact_match": false
+    },
+    {
+      "case_id": "ar_pos_self_01",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "severe_bleeding",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "severe_bleeding"
+      ],
+      "actual": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6870.3,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_pos_self_02",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "unconscious",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "unconscious"
+      ],
+      "actual": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "duration"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6913.7,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_pos_self_03",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "hematuria",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "hematuria"
+      ],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6842.7,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_pos_self_04",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "seizure",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "seizure"
+      ],
+      "actual": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [
+        {
+          "field": "finding.character",
+          "reason": "unusable value"
+        }
+      ],
+      "rejected_raw": [
+        ""
+      ],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6699.8,
+      "exact_match": true
+    },
+    {
+      "case_id": "ar_pos_self_05",
+      "lang": "ar",
+      "split": "held_out",
+      "categories": [
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7179.7,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_pos_self_01",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "hematuria",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "hematuria"
+      ],
+      "actual": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 7089.5,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_pos_self_02",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "unconscious",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "unconscious"
+      ],
+      "actual": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6625.0,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_pos_self_03",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "severe_bleeding",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "severe_bleeding"
+      ],
+      "actual": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [
+        "location"
+      ],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6880.2,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_pos_self_04",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "seizure",
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [
+        "seizure"
+      ],
+      "actual": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6400.3,
+      "exact_match": true
+    },
+    {
+      "case_id": "en_pos_self_05",
+      "lang": "en",
+      "split": "held_out",
+      "categories": [
+        "positive_control"
+      ],
+      "expected": {
+        "present": [
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "expected_findings": [],
+      "expected_corrections": [],
+      "safety_atoms": [],
+      "actual": {
+        "present": [
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "actual_findings": [],
+      "actual_corrections": [],
+      "available": true,
+      "malformed": false,
+      "failure_reason": null,
+      "rejected": [],
+      "rejected_raw": [],
+      "forbidden_keys": [],
+      "unknown_keys": [],
+      "raw_top_level_keys": [
+        "corrections",
+        "findings",
+        "language",
+        "symptoms"
+      ],
+      "conflicts": [],
+      "latency_ms": 6618.5,
+      "exact_match": true
+    }
+  ]
+}
