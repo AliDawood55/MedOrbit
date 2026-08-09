@@ -6,13 +6,15 @@
 const I18n = (() => {
     const dict = {
         ar: {
-            'brand.tagline': 'منصة طبية ذكية',
+            'brand.tagline': 'منصة رعاية صحية',
             'search.placeholder': 'ابحث عن عيادة، صيدلية، تخصص...',
             'filter.all': 'الكل',
             'filter.clinic': 'العيادات',
+            'filter.dental': 'عيادات الأسنان',
             'filter.pharmacy': 'الصيدليات',
             'filter.hospital': 'المستشفيات',
             'filter.doctor': 'الأطباء',
+            'filter.healthcare': 'مرفق صحي',
             'meta.results': 'النتائج',
             'chat.title': 'مساعد MedOrbit',
             'chat.subtitle': 'متصل الآن',
@@ -128,7 +130,7 @@ const I18n = (() => {
             'home.feature4Desc': 'فحص الأعراض، التحقق من تداخل الأدوية، وتلخيص التقارير الطبية.',
             'home.tryNow': 'جرّب الآن',
             'home.browse': 'تصفح',
-            'home.comingSoon': 'قريباً',
+            'home.comingSoon': 'استكشف الأدوات',
             'home.ctaTitle': 'ابدأ رحلتك الصحية اليوم',
             'home.ctaSubtitle': 'أنشئ حساباً مجانياً لحفظ محادثاتك والوصول السريع لأطبائك المفضلين',
 
@@ -170,7 +172,7 @@ const I18n = (() => {
             'clinics.nearMe': 'بالقرب مني',
             'clinics.locating': 'جارٍ تحديد موقعك...',
             'clinics.viewDetails': 'عرض التفاصيل',
-            'clinics.empty': 'لم يتم العثور على نتائج',
+            'clinics.empty': 'لم يتم العثور على مرافق صحية',
             'clinics.error': 'تعذر تحميل قائمة العيادات',
             'clinics.typeAll': 'الكل',
 
@@ -200,11 +202,15 @@ const I18n = (() => {
             'common.error': 'حدث خطأ',
             'common.page': 'صفحة',
             'common.close': 'إغلاق',
+            'common.clearInput': 'مسح النص',
+            'common.showMap': 'عرض الخريطة',
+            'common.showList': 'عرض القائمة',
+            'common.showChat': 'عرض المحادثة',
 
             // AI Tools — shared
             'aitools.disclaimer': 'هذه الأداة لا تُقدّم تشخيصاً طبياً ولا تُغني عن استشارة الطبيب. في حال وجود أعراض خطيرة أو حالة طارئة، توجّه فوراً لأقرب مستشفى أو اتصل بالإسعاف.',
             'aitools.loginPrompt': 'سجّل الدخول لحفظ سجل استخدامك لهذه الأداة',
-            'aitools.serverError': 'تعذر الوصول إلى خدمة الذكاء الاصطناعي. تأكد من تشغيلها ثم حاول مرة أخرى.',
+            'aitools.serverError': 'الخدمة غير متاحة حالياً. تحقق من اتصالك ثم حاول مرة أخرى.',
 
             // Symptom Checker
             'symptomChecker.title': 'فحص الأعراض',
@@ -220,7 +226,6 @@ const I18n = (() => {
             'symptomChecker.urgentTitle': 'يُنصح بموعد عاجل',
             'symptomChecker.routineTitle': 'يُنصح بموعد عادي',
             'symptomChecker.recommendedSpecialty': 'التخصص المقترح',
-            'symptomChecker.confidence': 'درجة الثقة',
             'symptomChecker.recommendations': 'التوصيات',
             'symptomChecker.findSpecialist': 'ابحث عن أطباء هذا التخصص',
             'symptomChecker.checkAnother': 'فحص أعراض أخرى',
@@ -387,8 +392,8 @@ const I18n = (() => {
             'dashboard.viewAll': 'عرض الكل',
             'dashboard.apptEmptyTitle': 'لا توجد مواعيد قادمة',
             'dashboard.apptEmptyHint': 'احجز موعداً جديداً مع أحد أطبائنا',
-            'dashboard.doctorApptNoticeTitle': 'إدارة المواعيد للأطباء قريباً',
-            'dashboard.doctorApptNoticeHint': 'ميزة عرض وإدارة مواعيد المرضى الخاصة بك كطبيب غير متاحة بعد',
+            'dashboard.doctorApptNoticeTitle': 'لا توجد مواعيد لعرضها',
+            'dashboard.doctorApptNoticeHint': 'ستظهر مواعيد مرضاك هنا عندما تصبح متاحة لحسابك.',
             'dashboard.notifications': 'الإشعارات',
             'dashboard.markAllRead': 'تعليم الكل كمقروء',
             'dashboard.notifEmptyTitle': 'لا توجد إشعارات',
@@ -406,8 +411,8 @@ const I18n = (() => {
             'prescriptions.filterAnyDate': 'أي تاريخ',
             'prescriptions.filterLast30': 'آخر 30 يوماً',
             'prescriptions.filterLastYear': 'آخر سنة',
-            'prescriptions.emptyTitle': 'هذه الميزة غير متاحة بعد',
-            'prescriptions.emptyHint': 'نعمل على ربط وصفاتك الطبية من عيادتك مباشرة بحسابك. بمجرد توفر هذه الميزة، ستظهر وصفاتك هنا تلقائياً.',
+            'prescriptions.emptyTitle': 'لا توجد وصفات طبية لعرضها',
+            'prescriptions.emptyHint': 'ستظهر هنا الوصفات الطبية التي تتم مشاركتها مع حسابك.',
 
             // Medical records (no backend yet — full UI shell + honest empty state)
             'records.title': 'سجلاتي الطبية',
@@ -455,6 +460,7 @@ const I18n = (() => {
             'feedback.recommendNo': 'لا',
             'feedback.commentLabel': 'تعليق إضافي (اختياري)',
             'feedback.commentPlaceholder': 'أخبرنا بمزيد من التفاصيل عن تجربتك...',
+            'feedback.starLabel': '{rating} من 5',
             'feedback.submit': 'إرسال الملاحظات',
             'feedback.errorRatingRequired': 'الرجاء اختيار تقييم عام قبل الإرسال',
             'feedback.savedTitle': 'شكراً لملاحظاتك',
@@ -468,7 +474,7 @@ const I18n = (() => {
             'analytics.subtitle': 'إحصاءات مجمّعة عن استخدام المنصة',
             'analytics.restrictedTitle': 'هذه الصفحة مخصصة للمشرفين',
             'analytics.restrictedHint': 'تحليلات المنصة متاحة فقط لحسابات المشرفين. إذا كنت تعتقد أن هذا خطأ، تواصل مع الدعم الفني.',
-            'analytics.awaitingData': 'بانتظار بيانات الخادم',
+            'analytics.awaitingData': 'لا تتوفر بيانات حالياً',
             'analytics.appointmentsOverTime': 'المواعيد عبر الزمن',
             'analytics.usersByRole': 'المستخدمون حسب الدور',
             'analytics.topSpecialties': 'أكثر التخصصات طلباً',
@@ -633,8 +639,8 @@ const I18n = (() => {
             'myDoctor.noUpcoming': 'لا توجد مواعيد قادمة',
 
             // Avatar preview (standalone spike page, not linked from nav)
-            'avatarPreview.title': 'الطبيب الافتراضي — معاينة الشخصية ثلاثية الأبعاد',
-            'avatarPreview.subtitle': 'معاينة مبكرة للشكل المرئي فقط — غير متصلة بعد بمحرك المقابلة الحقيقي.',
+            'avatarPreview.title': 'الطبيب الافتراضي',
+            'avatarPreview.subtitle': 'استشارة صوتية موجهة.',
             'avatarPreview.statusIdle': 'خامل',
             'avatarPreview.statusThinking': 'يفكّر',
             'avatarPreview.statusSpeaking': 'يتحدث',
@@ -643,10 +649,6 @@ const I18n = (() => {
             'avatarPreview.speakArBtn': 'تحدّث (عربي)',
             'avatarPreview.moodHappy': 'سعيد',
             'avatarPreview.moodNeutral': 'محايد',
-            'avatarPreview.devInfoToggle': 'معلومات المطوّر',
-            'avatarPreview.loadTimeLabel': 'زمن التحميل',
-            'avatarPreview.statusLabel': 'الحالة',
-
             // --- Microphone errors ---
             'stt.errDenied': 'تم رفض إذن الميكروفون. لن تعمل الاستشارة الصوتية حتى تسمح بالوصول إليه.',
             'stt.errNoDevice': 'لم يتم العثور على ميكروفون. وصّل ميكروفوناً ثم حاول مرة أخرى.',
@@ -654,8 +656,8 @@ const I18n = (() => {
             'stt.errInsecure': 'يتطلب المتصفح اتصالاً آمناً (HTTPS أو localhost) لاستخدام الميكروفون.',
             'stt.errFileProtocol': 'هذه الصفحة مفتوحة كملف محلي (file://)، والمتصفح يمنع الميكروفون. افتحها عبر خادم محلي (http://localhost).',
             'stt.errTooLong': 'المقطع الصوتي طويل جداً. جرّب إجابة أقصر.',
-            'stt.errServer': 'تعذّر تحويل الكلام إلى نص على الخادم. سنواصل الاستماع.',
-            'stt.errNetwork': 'تعذّر الوصول إلى خدمة الذكاء الاصطناعي. تأكد من تشغيلها ثم حاول مرة أخرى.',
+            'stt.errServer': 'تعذّر فهم التسجيل. سنواصل الاستماع.',
+            'stt.errNetwork': 'الخدمة غير متاحة حالياً. تحقق من اتصالك ثم حاول مرة أخرى.',
             'stt.errNoSpeech': 'لم أتمكن من فهم ذلك. هل يمكنك إعادة ما قلته؟',
             'stt.errTimeout': 'استغرق تحويل الكلام وقتاً طويلاً. يرجى إعادة ما قلته.',
             'stt.errGeneric': 'حدث خطأ غير متوقع في الميكروفون. حاول مرة أخرى.',
@@ -667,7 +669,8 @@ const I18n = (() => {
             'consult.startBody': 'سنطلب إذن الميكروفون مرة واحدة فقط. بعدها يبدأ الطبيب بالتحدث معك، وكل ما عليك هو الإجابة بصوتك.',
             'consult.startBtn': 'ابدأ الاستشارة',
             'consult.startNote': 'يعمل بشكل أفضل في مكان هادئ.',
-            'consult.cpuWarning': 'يعمل على المعالج (CPU) — ستكون الردود أبطأ بشكل ملحوظ.',
+            'consult.safetyNote': 'هذه الاستشارة للإرشاد العام ولا تغني عن الرعاية الطبية. في الحالات الطارئة، اتصل بخدمات الطوارئ فوراً.',
+            'consult.endBtn': 'إنهاء الاستشارة',
             'consult.stateIdle': 'جاهز',
             'consult.stateConnecting': 'جارٍ الاتصال…',
             'consult.stateListening': 'أستمع إليك',
@@ -684,26 +687,27 @@ const I18n = (() => {
             'consult.fieldAge': 'العمر',
             'consult.fieldComplaint': 'الشكوى الرئيسية',
             'consult.fieldSpecialty': 'التخصص المقترح',
-            'consult.fieldConfidence': 'ثقة الذكاء الاصطناعي',
             'consult.urgency.emergency': 'طارئة',
             'consult.urgency.urgent': 'عاجلة',
             'consult.urgency.routine': 'اعتيادية',
             'consult.downloadReport': 'تحميل التقرير PDF',
             'consult.retryMic': 'إعادة المحاولة',
-            'consult.errStart': 'تعذّر بدء الاستشارة. تأكد من تشغيل خدمة الذكاء الاصطناعي ثم حاول مرة أخرى.',
+            'consult.errStart': 'تعذّر بدء الاستشارة. تحقق من اتصالك ثم حاول مرة أخرى.',
             'session.errEngine': 'تعذّر إرسال إجابتك. سنواصل الاستماع، جرّب مرة أخرى.',
             'consult.stateSpeakingAloud': 'الطبيب يتحدث',
             'tts.errUnavailable': 'تعذّر تشغيل صوت الطبيب. ستستمر الاستشارة بالنص المكتوب.',
             'tts.errBlocked': 'منع المتصفح تشغيل الصوت تلقائياً. ستستمر الاستشارة بالنص المكتوب.'
         },
         en: {
-            'brand.tagline': 'Smart Healthcare AI',
+            'brand.tagline': 'Healthcare Platform',
             'search.placeholder': 'Search clinic, pharmacy, specialty...',
             'filter.all': 'All',
             'filter.clinic': 'Clinics',
+            'filter.dental': 'Dental clinics',
             'filter.pharmacy': 'Pharmacies',
             'filter.hospital': 'Hospitals',
             'filter.doctor': 'Doctors',
+            'filter.healthcare': 'Healthcare facility',
             'meta.results': 'Results',
             'chat.title': 'MedOrbit Assistant',
             'chat.subtitle': 'Online',
@@ -819,7 +823,7 @@ const I18n = (() => {
             'home.feature4Desc': 'Symptom checker, drug interaction checker, and medical report summarizer.',
             'home.tryNow': 'Try it now',
             'home.browse': 'Browse',
-            'home.comingSoon': 'Coming soon',
+            'home.comingSoon': 'Explore tools',
             'home.ctaTitle': 'Start your health journey today',
             'home.ctaSubtitle': 'Create a free account to save your conversations and quickly reach your favorite doctors',
 
@@ -861,7 +865,7 @@ const I18n = (() => {
             'clinics.nearMe': 'Near me',
             'clinics.locating': 'Locating you...',
             'clinics.viewDetails': 'View details',
-            'clinics.empty': 'No results found',
+            'clinics.empty': 'No healthcare facilities found',
             'clinics.error': 'Could not load the clinics list',
             'clinics.typeAll': 'All',
 
@@ -891,11 +895,15 @@ const I18n = (() => {
             'common.error': 'Something went wrong',
             'common.page': 'Page',
             'common.close': 'Close',
+            'common.clearInput': 'Clear text',
+            'common.showMap': 'Show map',
+            'common.showList': 'Show list',
+            'common.showChat': 'Show conversation',
 
             // AI Tools — shared
             'aitools.disclaimer': 'This tool does not provide a medical diagnosis and is not a substitute for seeing a doctor. If you have severe symptoms or a medical emergency, go to the nearest emergency room or call an ambulance immediately.',
             'aitools.loginPrompt': 'Log in to save your history for this tool',
-            'aitools.serverError': 'Could not reach the AI service. Make sure it is running, then try again.',
+            'aitools.serverError': 'This service is temporarily unavailable. Check your connection and try again.',
 
             // Symptom Checker
             'symptomChecker.title': 'Symptom Checker',
@@ -911,7 +919,6 @@ const I18n = (() => {
             'symptomChecker.urgentTitle': 'Urgent appointment recommended',
             'symptomChecker.routineTitle': 'Routine appointment recommended',
             'symptomChecker.recommendedSpecialty': 'Recommended specialty',
-            'symptomChecker.confidence': 'Confidence',
             'symptomChecker.recommendations': 'Recommendations',
             'symptomChecker.findSpecialist': 'Find doctors in this specialty',
             'symptomChecker.checkAnother': 'Check other symptoms',
@@ -1078,8 +1085,8 @@ const I18n = (() => {
             'dashboard.viewAll': 'View all',
             'dashboard.apptEmptyTitle': 'No upcoming appointments',
             'dashboard.apptEmptyHint': 'Book a new appointment with one of our doctors',
-            'dashboard.doctorApptNoticeTitle': 'Appointment management for doctors is coming soon',
-            'dashboard.doctorApptNoticeHint': "Viewing and managing your patients' appointments as a doctor isn't available yet",
+            'dashboard.doctorApptNoticeTitle': 'No appointments to show',
+            'dashboard.doctorApptNoticeHint': "Your patients' appointments will appear here when they are available to your account.",
             'dashboard.notifications': 'Notifications',
             'dashboard.markAllRead': 'Mark all as read',
             'dashboard.notifEmptyTitle': 'No notifications',
@@ -1097,8 +1104,8 @@ const I18n = (() => {
             'prescriptions.filterAnyDate': 'Any date',
             'prescriptions.filterLast30': 'Last 30 days',
             'prescriptions.filterLastYear': 'Last year',
-            'prescriptions.emptyTitle': "This feature isn't available yet",
-            'prescriptions.emptyHint': "We're working on connecting your prescriptions directly from your clinic to your account. Once this feature is live, your prescriptions will show up here automatically.",
+            'prescriptions.emptyTitle': 'No prescriptions to show',
+            'prescriptions.emptyHint': 'Prescriptions shared with your account will appear here.',
 
             // Medical records (no backend yet — full UI shell + honest empty state)
             'records.title': 'My Medical Records',
@@ -1146,6 +1153,7 @@ const I18n = (() => {
             'feedback.recommendNo': 'No',
             'feedback.commentLabel': 'Additional comments (optional)',
             'feedback.commentPlaceholder': 'Tell us more about your experience...',
+            'feedback.starLabel': '{rating} out of 5',
             'feedback.submit': 'Submit Feedback',
             'feedback.errorRatingRequired': 'Please select an overall rating before submitting',
             'feedback.savedTitle': 'Thank you for your feedback',
@@ -1159,7 +1167,7 @@ const I18n = (() => {
             'analytics.subtitle': 'Aggregate statistics about platform usage',
             'analytics.restrictedTitle': 'This page is for administrators only',
             'analytics.restrictedHint': "Platform analytics are only available to admin accounts. If you think this is a mistake, contact support.",
-            'analytics.awaitingData': 'Awaiting backend data',
+            'analytics.awaitingData': 'No data available yet',
             'analytics.appointmentsOverTime': 'Appointments Over Time',
             'analytics.usersByRole': 'Users by Role',
             'analytics.topSpecialties': 'Top Requested Specialties',
@@ -1324,8 +1332,8 @@ const I18n = (() => {
             'myDoctor.noUpcoming': 'No upcoming appointments',
 
             // Avatar preview (standalone spike page, not linked from nav)
-            'avatarPreview.title': 'AI Virtual Doctor — Avatar Preview',
-            'avatarPreview.subtitle': "An early look at the visual character only — not connected to the real interview engine yet.",
+            'avatarPreview.title': 'Virtual Doctor',
+            'avatarPreview.subtitle': 'A guided voice consultation.',
             'avatarPreview.statusIdle': 'Idle',
             'avatarPreview.statusThinking': 'Thinking',
             'avatarPreview.statusSpeaking': 'Speaking',
@@ -1334,10 +1342,6 @@ const I18n = (() => {
             'avatarPreview.speakArBtn': 'Speak (Arabic)',
             'avatarPreview.moodHappy': 'Happy',
             'avatarPreview.moodNeutral': 'Neutral',
-            'avatarPreview.devInfoToggle': 'Developer info',
-            'avatarPreview.loadTimeLabel': 'Load time',
-            'avatarPreview.statusLabel': 'Status',
-
             // --- Microphone errors ---
             'stt.errDenied': 'Microphone permission was denied. The voice consultation cannot run until you allow access.',
             'stt.errNoDevice': 'No microphone found. Connect one and try again.',
@@ -1345,8 +1349,8 @@ const I18n = (() => {
             'stt.errInsecure': 'Your browser requires a secure connection (HTTPS or localhost) to use the microphone.',
             'stt.errFileProtocol': 'This page was opened as a local file (file://), so the browser blocks the microphone. Open it over a local server (http://localhost) instead.',
             'stt.errTooLong': 'That was too long to process. Try a shorter answer.',
-            'stt.errServer': 'The server could not transcribe that audio. Still listening.',
-            'stt.errNetwork': 'Could not reach the AI service. Check that it is running and try again.',
+            'stt.errServer': 'We could not understand that recording. Still listening.',
+            'stt.errNetwork': 'This service is temporarily unavailable. Check your connection and try again.',
             'stt.errNoSpeech': "I didn't catch that. Could you say it again?",
             'stt.errTimeout': 'That took too long to transcribe. Please say it again.',
             'stt.errGeneric': 'An unexpected microphone error occurred. Please try again.',
@@ -1358,7 +1362,8 @@ const I18n = (() => {
             'consult.startBody': 'We will ask for microphone permission once. After that the doctor starts talking to you, and all you have to do is answer out loud.',
             'consult.startBtn': 'Start consultation',
             'consult.startNote': 'Works best somewhere quiet.',
-            'consult.cpuWarning': 'Running on CPU — replies will be noticeably slower.',
+            'consult.safetyNote': 'This consultation offers general guidance and does not replace medical care. In an emergency, contact emergency services immediately.',
+            'consult.endBtn': 'End consultation',
             'consult.stateIdle': 'Ready',
             'consult.stateConnecting': 'Connecting…',
             'consult.stateListening': 'Listening',
@@ -1375,13 +1380,12 @@ const I18n = (() => {
             'consult.fieldAge': 'Age',
             'consult.fieldComplaint': 'Chief complaint',
             'consult.fieldSpecialty': 'Recommended specialty',
-            'consult.fieldConfidence': 'AI confidence',
             'consult.urgency.emergency': 'Emergency',
             'consult.urgency.urgent': 'Urgent',
             'consult.urgency.routine': 'Routine',
             'consult.downloadReport': 'Download PDF report',
             'consult.retryMic': 'Try again',
-            'consult.errStart': 'Could not start the consultation. Check that the AI service is running and try again.',
+            'consult.errStart': 'Could not start the consultation. Check your connection and try again.',
             'session.errEngine': 'Could not send your answer. Still listening — please try again.',
             'consult.stateSpeakingAloud': 'Doctor is speaking',
             'tts.errUnavailable': "The doctor's voice is unavailable. The consultation continues in text.",
@@ -1402,15 +1406,19 @@ const I18n = (() => {
 
         const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
         const setPlaceholder = (id, val) => { const el = document.getElementById(id); if (el) el.placeholder = val; };
-        const setTitle = (id, val) => { const el = document.getElementById(id); if (el) el.title = val; };
-
         setText('chatTitle', t('chat.title'));
         setText('chatSubtitle', t('chat.subtitle'));
         setPlaceholder('chatInput', t('chat.placeholder'));
         setPlaceholder('quickSearch', t('search.placeholder'));
 
-        ['sendBtn', 'locateBtn', 'themeToggle', 'langToggle', 'clearChatBtn', 'locationBtn', 'recenterBtn', 'layerBtn', 'fitAllBtn']
-            .forEach(id => setTitle(id, t(document.getElementById(id)?.dataset?.i18nTitle || id)));
+        // Keep icon-only controls understandable to both pointer users and
+        // assistive technology in every language.
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const text = t(el.getAttribute('data-i18n-title'));
+            if (!text) return;
+            el.title = text;
+            el.setAttribute('aria-label', text);
+        });
 
         // Translate all data-i18n elements
         document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -1424,6 +1432,11 @@ const I18n = (() => {
             const key = el.getAttribute('data-i18n-placeholder');
             const text = t(key);
             if (text) el.placeholder = text;
+        });
+
+        document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+            const text = t(el.getAttribute('data-i18n-aria'));
+            if (text) el.setAttribute('aria-label', text);
         });
 
         // Translate rich-text elements (dictionary value may contain inline markup,

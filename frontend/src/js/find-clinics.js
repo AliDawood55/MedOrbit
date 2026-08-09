@@ -8,6 +8,15 @@ const FindClinics = (() => {
 
     const PAGE_SIZE = 20;
     const NEARBY_RADIUS_KM = 10;
+    const FACILITY_TYPES = Object.freeze({
+        clinic: { labelKey: 'filter.clinic', icon: 'fa-hospital', category: 'clinic' },
+        dental: { labelKey: 'filter.dental', icon: 'fa-tooth', category: 'dental' },
+        hospital: { labelKey: 'filter.hospital', icon: 'fa-hospital-user', category: 'hospital' },
+        pharmacy: { labelKey: 'filter.pharmacy', icon: 'fa-pills', category: 'pharmacy' }
+    });
+    const GENERIC_FACILITY = Object.freeze({
+        labelKey: 'filter.healthcare', icon: 'fa-notes-medical', category: 'healthcare'
+    });
 
     let mode = 'list'; // 'list' | 'nearby'
     let currentType = '';
@@ -33,22 +42,34 @@ const FindClinics = (() => {
             .replace(/"/g, '&quot;');
     }
 
+    function optionalText(value) {
+        if (value == null) return '';
+        const text = String(value).trim();
+        return /^(?:n\/?a|undefined|null)$/i.test(text) ? '' : text;
+    }
+
+    function typePresentation(type) {
+        const key = optionalText(type).toLowerCase();
+        return FACILITY_TYPES[key] || GENERIC_FACILITY;
+    }
+
     function clinicName(c) {
-        return (isAr() ? c.name_ar : c.name_en) || c.name_ar || c.name_en || '';
+        return optionalText(isAr() ? c.name_ar : c.name_en) || optionalText(c.name_ar) || optionalText(c.name_en);
     }
 
     function clinicAddress(c) {
-        return (isAr() ? c.address_ar : c.address_en) || c.address_ar || c.address_en || '';
+        return optionalText(isAr() ? c.address_ar : c.address_en) || optionalText(c.address_ar) || optionalText(c.address_en);
     }
 
     function toPlace(c) {
+        const type = typePresentation(c.type);
         return {
             id: c.id,
             name: clinicName(c),
             lat: parseFloat(c.latitude),
             lng: parseFloat(c.longitude),
-            type: c.type || 'clinic',
-            phone: c.phone,
+            type: type.category,
+            phone: optionalText(c.phone),
             address: clinicAddress(c),
             distance: c.distance_km != null ? Number(c.distance_km) * 1000 : null,
             rating: c.average_rating
@@ -195,21 +216,26 @@ const FindClinics = (() => {
     function renderCard(c, showDistance) {
         const cName = escapeHtml(clinicName(c));
         const address = escapeHtml(clinicAddress(c));
-        const typeLabel = c.type ? escapeHtml(t('filter.' + c.type) !== 'filter.' + c.type ? t('filter.' + c.type) : c.type) : '';
+        const type = typePresentation(c.type);
+        const typeLabel = escapeHtml(t(type.labelKey));
         const distText = showDistance && c.distance_km != null ? Number(c.distance_km).toFixed(2) + (isAr() ? ' كم' : ' km') : '';
-        const typeIcon = { clinic: 'fa-hospital', pharmacy: 'fa-pills', hospital: 'fa-hospital-user' }[c.type] || 'fa-hospital';
+        const phone = escapeHtml(optionalText(c.phone));
+        const verifiedBadge = c.verification_status === 'verified'
+            ? '<span class="badge badge-success"><i class="fas fa-circle-check"></i> ' + escapeHtml(t('clinic.verified')) + '</span>'
+            : '';
 
         return (
             '<div class="entity-card" style="margin-bottom:10px;" data-clinic-id="' + escapeHtml(c.id) + '">' +
                 '<div class="entity-card-body">' +
-                    '<div class="entity-avatar" style="background:var(--cat-' + (c.type || 'clinic') + ', var(--primary-gradient));"><i class="fas ' + typeIcon + '"></i></div>' +
+                    '<div class="entity-avatar" style="background:var(--cat-' + type.category + ', var(--primary-gradient));"><i class="fas ' + type.icon + '"></i></div>' +
                     '<div class="entity-card-info">' +
                         '<div class="entity-card-title">' + cName + '</div>' +
                         (address ? '<div class="entity-card-subtitle" style="color:var(--text-mute);font-weight:500;">' + address + '</div>' : '') +
+                        (verifiedBadge ? '<div class="entity-card-badges">' + verifiedBadge + '</div>' : '') +
                         '<div class="entity-card-meta">' +
-                            (typeLabel ? '<span><i class="fas ' + typeIcon + '"></i>' + typeLabel + '</span>' : '') +
+                            '<span><i class="fas ' + type.icon + '"></i>' + typeLabel + '</span>' +
                             (distText ? '<span><i class="fas fa-route"></i>' + distText + '</span>' : '') +
-                            (c.phone ? '<span><i class="fas fa-phone"></i>' + escapeHtml(c.phone) + '</span>' : '') +
+                            (phone ? '<span><i class="fas fa-phone"></i>' + phone + '</span>' : '') +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -259,8 +285,12 @@ const FindClinics = (() => {
 
         document.querySelectorAll('.filter-chip').forEach(chip => {
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.filter-chip').forEach(c => {
+                    c.classList.remove('active');
+                    c.setAttribute('aria-pressed', 'false');
+                });
                 chip.classList.add('active');
+                chip.setAttribute('aria-pressed', 'true');
                 currentType = chip.dataset.type || '';
                 if (mode === 'nearby') {
                     loadNearby();

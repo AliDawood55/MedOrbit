@@ -121,7 +121,7 @@ const ReportSummary = (() => {
 
         } catch (err) {
             console.error('ReportSummary: request failed', err);
-            showError(err?.message);
+            showError();
         } finally {
             setLoading(false);
         }
@@ -142,16 +142,11 @@ const ReportSummary = (() => {
         result.classList.remove('hidden');
     }
 
-    function showError(detail) {
+    function showError() {
         const result = document.getElementById('resultSection');
         if (!result) return;
 
-        // Server-side validation errors (bad file/no extractable text) have a
-        // specific `detail` message worth showing as-is; anything else
-        // (network failure, service down) gets the generic friendly message.
-        const message = (detail && typeof detail === 'string' && detail.length < 300)
-            ? detail
-            : t('aitools.serverError');
+        const message = t('aitools.serverError');
 
         result.innerHTML =
             '<div class="tool-error">' +

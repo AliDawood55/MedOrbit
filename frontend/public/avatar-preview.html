@@ -57,6 +57,10 @@
                 <span data-i18n="consult.startBtn">ابدأ الاستشارة</span>
             </button>
             <p class="consult-start-note" id="startNote" data-i18n="consult.startNote">يعمل بشكل أفضل في مكان هادئ.</p>
+            <div class="consult-safety-note" role="note">
+                <i class="fas fa-shield-heart" aria-hidden="true"></i>
+                <p data-i18n="consult.safetyNote">هذه الاستشارة للإرشاد العام ولا تغني عن الرعاية الطبية. في الحالات الطارئة، اتصل بخدمات الطوارئ فوراً.</p>
+            </div>
         </section>
 
         <!-- Kept OUTSIDE the consultation shell on purpose: a denied
@@ -67,7 +71,6 @@
             <i class="fas fa-triangle-exclamation"></i>
             <div class="mic-error-body">
                 <p class="mic-error-msg" id="micErrorMsg"></p>
-                <p class="mic-error-detail" id="micErrorDetail" hidden></p>
                 <div class="mic-error-help" id="micErrorHelp" hidden>
                     <p lang="ar">افتح قفل الكاميرا/الميكروفون بجوار شريط العنوان، اختر «السماح» للميكروفون، ثم أعد تحميل الصفحة وحاول مرة أخرى.</p>
                     <p lang="en">Open the lock/settings icon next to the address bar, set Microphone to “Allow”, then reload the page and try again.</p>
@@ -78,9 +81,9 @@
             </div>
         </div>
 
-        <div class="avatar-shell" id="consultShell" hidden>
+        <div class="avatar-shell" id="consultShell" data-i18n-aria="consult.title" aria-label="الاستشارة الصوتية" hidden>
             <div class="avatar-stage-card">
-                <div class="avatar-status-strip state-idle" id="statusStrip">
+                <div class="avatar-status-strip state-idle" id="statusStrip" role="status" aria-live="polite">
                     <span class="status-indicator-dot"></span>
                     <span class="status-label" id="statusLabel" data-i18n="consult.stateIdle">جاهز</span>
                     <span class="status-timer" id="statusTimer"></span>
@@ -112,6 +115,12 @@
             </div>
 
             <div class="consult-panel">
+                <div class="consult-panel-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" id="btnEndConsult">
+                        <i class="fas fa-circle-stop" aria-hidden="true"></i>
+                        <span data-i18n="consult.endBtn">إنهاء الاستشارة</span>
+                    </button>
+                </div>
                 <div class="consult-transcript" id="conversation" aria-live="polite"></div>
 
                 <div class="mic-status" id="micStatus" aria-live="polite" hidden></div>
@@ -148,17 +157,6 @@
                     </div>
                 </div>
 
-                <hr class="dev-info-divider">
-                <div class="collapsible-toggle" id="devInfoToggle">
-                    <i class="fas fa-chevron-down"></i>
-                    <span data-i18n="avatarPreview.devInfoToggle">معلومات المطوّر</span>
-                </div>
-                <div class="collapsible-content" id="devInfoContent">
-                    <div class="dev-status-row"><span data-i18n="avatarPreview.statusLabel">الحالة</span><span id="statusText">—</span></div>
-                    <div class="dev-status-row"><span>STT</span><span id="sttInfoText">—</span></div>
-                    <div class="dev-status-row"><span>TTS</span><span id="ttsInfoText">—</span></div>
-                    <div id="log"></div>
-                </div>
             </div>
         </div>
     </main>
@@ -190,12 +188,12 @@
 
         function logLine(msg) {
             const el = els.log;
+            console.debug('[consult]', msg);
             if (!el) return;
             const line = document.createElement('div');
             line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
             el.appendChild(line);
             el.scrollTop = el.scrollHeight;
-            console.log('[consult]', msg);
         }
 
         function tr(key, fallback) {
@@ -224,8 +222,6 @@
             els.statusStrip.className = 'avatar-status-strip state-' + entry[2];
             els.statusLabel.setAttribute('data-i18n', entry[0]);
             els.statusLabel.textContent = tr(entry[0], entry[1]);
-            els.statusText.textContent = state;
-
             // The voice indicator reuses the strip's own state vocabulary
             // (idle | listening | capturing | thinking | speaking) so there is
             // exactly one source of truth for what the UI is showing.
@@ -295,8 +291,6 @@
         function showError(detail) {
             els.micError.hidden = false;
             els.micErrorMsg.textContent = tr(detail.key, 'Microphone error.');
-            els.micErrorDetail.hidden = !detail.detail;
-            if (detail.detail) els.micErrorDetail.textContent = detail.detail;
             els.micErrorHelp.hidden = !detail.showHelp;
             // A fatal error killed the mic, so offer an explicit way back in
             // rather than leaving a hands-free page with no hands.
@@ -400,11 +394,6 @@
                 [tr('consult.fieldSpecialty', 'Recommended specialty'),
                  (lang === 'ar' ? result.specialtyAr : result.specialtyEn) || '—']
             ];
-            if (result.confidence != null) {
-                rows.push([tr('consult.fieldConfidence', 'AI confidence'),
-                           Math.round(result.confidence * 100) + '%']);
-            }
-
             els.summaryGrid.innerHTML = '';
             rows.forEach(([label, value]) => {
                 const dt = document.createElement('dt');
@@ -455,21 +444,10 @@
 
             // Kick both model loads off now, before the permission prompt, so
             // they run behind the greeting rather than delaying the first turn.
-            VirtualDoctorSTT.warmup().then((status) => {
-                if (status) {
-                    els.sttInfoText.textContent =
-                        status.model + ' / ' + status.device + ' / ' + status.compute_type;
-                    logLine('STT warm on ' + status.device + '/' + status.compute_type);
-                }
-            });
+            VirtualDoctorSTT.warmup();
             VirtualDoctorTTS.warmup().then((status) => {
-                if (status) {
-                    els.ttsInfoText.textContent =
-                        status.engine + ' / ' + Object.values(status.voices || {}).join(' + ');
-                    logLine('TTS warm: ' + JSON.stringify(status.voices));
-                } else {
+                if (!status) {
                     ttsEnabled = false;
-                    els.ttsInfoText.textContent = 'unavailable';
                     els.ttsWarning.hidden = false;
                     logLine('TTS unavailable — continuing with text only');
                 }
@@ -490,6 +468,7 @@
 
             try {
                 const res = await VirtualDoctorSession.start(lang === 'ar' ? 'ar' : 'en');
+                if (!res || !sessionActive) return;
                 VirtualDoctorSTT.setLanguage(res.language);
                 logLine('Session ' + res.sessionId.slice(0, 8) + ' started (' + res.language + ')');
             } catch (err) {
@@ -498,14 +477,33 @@
             }
         }
 
+        function endConsultation() {
+            sessionActive = false;
+            VirtualDoctorSTT.stop();
+            VirtualDoctorTTS.stop();
+            VirtualDoctorSession.reset();
+            hideSubtitle();
+            stopTimer();
+            clearError();
+            setMicStatus('');
+            els.conversation.innerHTML = '';
+            els.summaryGrid.innerHTML = '';
+            els.summaryPanel.hidden = true;
+            els.reportUnavailable.hidden = true;
+            els.consultShell.hidden = true;
+            els.startCard.hidden = false;
+            els.btnStartConsult.disabled = false;
+            setStatus('idle');
+        }
+
         function initConsultation() {
             [
                 'startCard', 'btnStartConsult', 'startNote', 'consultShell', 'statusStrip',
                 'statusLabel', 'statusTimer', 'conversation', 'micStatus', 'micError',
-                'micErrorMsg', 'micErrorDetail', 'micErrorHelp', 'btnRetryMic', 'micLevelFill',
+                'micErrorMsg', 'micErrorHelp', 'btnRetryMic', 'micLevelFill',
                 'summaryPanel', 'summaryGrid', 'urgencyBadge', 'btnDownloadReport',
-                'reportUnavailable', 'statusText', 'sttInfoText', 'log',
-                'subtitleBar', 'subtitleText', 'ttsWarning', 'ttsInfoText',
+                'reportUnavailable', 'log', 'btnEndConsult',
+                'subtitleBar', 'subtitleText', 'ttsWarning',
                 'voiceStage', 'voiceLabel'
             ].forEach((id) => { els[id] = document.getElementById(id); });
 
@@ -586,26 +584,7 @@
                 beginConsultation();
             });
             els.btnDownloadReport.addEventListener('click', offerReport);
-
-            document.getElementById('devInfoToggle')?.addEventListener('click', () => {
-                document.getElementById('devInfoToggle')?.classList.toggle('open');
-                document.getElementById('devInfoContent')?.classList.toggle('open');
-            });
-
-            VirtualDoctorSTT.fetchStatus().then((status) => {
-                if (!status) {
-                    els.sttInfoText.textContent = 'unreachable';
-                    logLine('AI service unreachable on :8001');
-                    return;
-                }
-                els.sttInfoText.textContent = status.model + ' / ' + status.device + ' / ' + status.compute_type;
-                logLine('STT ' + status.model + ' on ' + status.device + '/' + status.compute_type +
-                        (status.device_fallback_reason ? ' (CUDA fallback: ' + status.device_fallback_reason + ')' : ''));
-                if (status.device === 'cpu') {
-                    els.startNote.textContent = tr('consult.cpuWarning',
-                        'Running on CPU — replies will be noticeably slower.');
-                }
-            });
+            els.btnEndConsult.addEventListener('click', endConsultation);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
