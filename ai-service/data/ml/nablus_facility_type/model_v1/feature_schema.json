@@ -1,0 +1,14 @@
+{
+  "input": {
+    "text": "non-empty UTF-8 facility name or alias"
+  },
+  "normalization": "TfidfVectorizer char_wb 2-5 grams; no clinical text",
+  "output": {
+    "facility_type": [
+      "clinic",
+      "dental",
+      "hospital",
+      "pharmacy"
+    ]
+  }
+}

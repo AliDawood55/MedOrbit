@@ -20,17 +20,32 @@ const Feedback = (() => {
         });
     }
 
+    function updateRatingLabels() {
+        document.querySelectorAll('.star-btn').forEach((button) => {
+            button.setAttribute(
+                'aria-label',
+                t('feedback.starLabel').replace('{rating}', button.dataset.star)
+            );
+        });
+    }
+
     function initStarWidget(widget) {
         const buttons = widget.querySelectorAll('.star-btn');
+        widget.setAttribute('role', 'radiogroup');
 
         buttons.forEach((btn) => {
             const val = Number(btn.dataset.star);
+            btn.setAttribute('aria-label', t('feedback.starLabel').replace('{rating}', String(val)));
+            btn.setAttribute('aria-pressed', 'false');
 
             btn.addEventListener('mouseenter', () => paintStars(widget, val));
             btn.addEventListener('click', () => {
                 widget.dataset.value = String(val);
                 widget.classList.remove('required-empty');
                 paintStars(widget, val);
+                buttons.forEach((option) => {
+                    option.setAttribute('aria-pressed', String(option === btn));
+                });
             });
         });
 
@@ -44,6 +59,7 @@ const Feedback = (() => {
     function initRecommendToggle() {
         const wrap = document.getElementById('recommendToggle');
         wrap.querySelectorAll('.recommend-btn').forEach((btn) => {
+            btn.setAttribute('aria-pressed', 'false');
             btn.addEventListener('click', () => {
                 const val = btn.dataset.value;
                 if (recommendValue === val) {
@@ -54,6 +70,7 @@ const Feedback = (() => {
                 }
                 wrap.querySelectorAll('.recommend-btn').forEach((b) => {
                     b.classList.toggle('active', b.dataset.value === recommendValue);
+                    b.setAttribute('aria-pressed', String(b.dataset.value === recommendValue));
                 });
             });
         });
@@ -138,10 +155,16 @@ const Feedback = (() => {
             widget.dataset.value = '0';
             widget.classList.remove('required-empty');
             paintStars(widget, 0);
+            widget.querySelectorAll('.star-btn').forEach((button) => {
+                button.setAttribute('aria-pressed', 'false');
+            });
         });
 
         recommendValue = null;
-        document.querySelectorAll('.recommend-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.recommend-btn').forEach((b) => {
+            b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
+        });
 
         const comment = document.getElementById('commentInput');
         comment.value = '';
@@ -163,6 +186,7 @@ const Feedback = (() => {
         document.querySelectorAll('.star-rating').forEach(initStarWidget);
         initRecommendToggle();
         initCommentCounter();
+        window.addEventListener('languageChanged', updateRatingLabels);
 
         document.getElementById('submitFeedbackBtn')?.addEventListener('click', submit);
         document.getElementById('startOverBtn')?.addEventListener('click', resetForm);

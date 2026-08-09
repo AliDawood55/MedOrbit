@@ -167,7 +167,7 @@ class _HoursSection extends StatelessWidget {
           children: [
             const SectionHeader(
               title: 'Listed hours',
-              subtitle: 'These are backend-listed hours. Open-now status is not calculated.',
+              subtitle: 'Hours are provided by the clinic and may change. Contact the clinic to confirm before visiting.',
             ),
             if (days.isEmpty)
               Text('No operating hours are listed.', style: Theme.of(context).textTheme.bodyMedium)

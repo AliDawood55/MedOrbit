@@ -35,7 +35,8 @@
 
     /**
      * Map known backend error codes to friendly bilingual messages.
-     * Falls back to the server's own message (e.g. dynamic password-policy text).
+     * Unknown server responses use a generic message so implementation details
+     * never reach the account screens.
      */
     function authErrorMessage(err) {
         const ar = isAr();
@@ -46,13 +47,13 @@
             RATE_LIMITED: ar ? 'محاولات كثيرة جداً، حاول لاحقاً' : 'Too many attempts, please try again later',
             UNAUTHORIZED: ar ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials'
         };
-        return map[err?.code] || err?.message || (ar ? 'حدث خطأ غير متوقع' : 'Something went wrong');
+        return map[err?.code] || (ar ? 'تعذّر إكمال الطلب. حاول مرة أخرى.' : 'Could not complete the request. Please try again.');
     }
 
     function connectionErrorMessage() {
         return isAr()
-            ? 'تعذر الاتصال بالخادم. تأكد من تشغيل الباكند على المنفذ 3001'
-            : 'Could not reach the server. Make sure the backend is running on port 3001';
+            ? 'تعذّر الاتصال بالخدمة. تحقق من اتصالك ثم حاول مرة أخرى.'
+            : 'Could not reach the service. Check your connection and try again.';
     }
 
     function alertForError(err) {

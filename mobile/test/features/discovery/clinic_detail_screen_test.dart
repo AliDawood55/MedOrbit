@@ -74,7 +74,7 @@ void main() {
     expect(find.text('Family medicine'), findsWidgets);
     expect(find.text('Public insurance'), findsOneWidget);
     expect(find.text('Listed hours'), findsOneWidget);
-    expect(find.textContaining('Open-now status is not calculated'), findsOneWidget);
+    expect(find.textContaining('Contact the clinic to confirm before visiting'), findsOneWidget);
     expect(find.text('Mariam Saleh'), findsOneWidget);
     expect(find.byKey(const ValueKey('discovery-map-place-clinic-1')), findsOneWidget);
     expect(find.textContaining('may not be verified'), findsNothing);

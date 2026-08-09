@@ -83,6 +83,10 @@
     background: var(--cat-clinic);
 }
 
+.marker-pin.dental {
+    background: var(--cat-dental);
+}
+
 .marker-pin.pharmacy {
     background: var(--cat-pharmacy);
 }
@@ -93,6 +97,10 @@
 
 .marker-pin.doctor {
     background: var(--cat-doctor);
+}
+
+.marker-pin.healthcare {
+    background: var(--cat-healthcare);
 }
 
 .marker-pin.hidden {
@@ -507,9 +515,11 @@
 }
 
 .popup-type.clinic { background: rgba(37, 99, 235, 0.1); color: var(--cat-clinic); }
+.popup-type.dental { background: rgba(13, 148, 136, 0.1); color: var(--cat-dental); }
 .popup-type.pharmacy { background: rgba(245, 158, 11, 0.1); color: var(--cat-pharmacy); }
 .popup-type.hospital { background: rgba(220, 38, 38, 0.1); color: var(--cat-hospital); }
 .popup-type.doctor { background: rgba(124, 58, 237, 0.1); color: var(--cat-doctor); }
+.popup-type.healthcare { background: rgba(100, 116, 139, 0.1); color: var(--cat-healthcare); }
 
 .popup-meta {
     display: flex;
