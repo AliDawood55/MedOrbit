@@ -194,6 +194,13 @@ class _StartView extends StatelessWidget {
             ),
             const SizedBox(height: AppTheme.spaceMd),
             FeatureCard(
+              title: strings.vdSafetyTitle,
+              subtitle: strings.vdSafetyHint,
+              icon: Icons.health_and_safety_outlined,
+              color: AppTheme.warning,
+            ),
+            const SizedBox(height: AppTheme.spaceSm),
+            FeatureCard(
               title: strings.vdPrivacyTitle,
               subtitle: strings.vdPrivacyHint,
               icon: Icons.privacy_tip_outlined,
@@ -957,11 +964,6 @@ class _ConsultationSummary extends StatelessWidget {
           ? [state.specialtyAr, state.specialtyEn]
           : [state.specialtyEn, state.specialtyAr],
     );
-    final confidence = state.confidence == null
-        ? null
-        : strings.vdConfidenceValue(
-            (state.confidence!.clamp(0, 1) * 100).round(),
-          );
     final urgency = _urgencyVisual(state.urgencyLevel, strings);
     final fields = <_SummaryField>[
       if (name != null)
@@ -978,12 +980,6 @@ class _ConsultationSummary extends StatelessWidget {
         _SummaryField(
           label: strings.vdRecommendedSpecialty,
           value: specialty,
-        ),
-      if (confidence != null)
-        _SummaryField(
-          label: strings.vdAiConfidence,
-          value: confidence,
-          textDirection: TextDirection.ltr,
         ),
     ];
 

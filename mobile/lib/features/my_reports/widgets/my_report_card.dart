@@ -52,10 +52,6 @@ class _MyReportCardState extends State<MyReportCard> {
                 Text(dateFormat.format(report.createdAt), style: mutedStyle),
               ],
             ),
-            if (report.sourceFileType != null && report.sourceFileType!.isNotEmpty) ...[
-              const SizedBox(height: AppTheme.spaceXs),
-              Text('${strings.myReportSourceLabel}: ${report.sourceFileType}', style: mutedStyle),
-            ],
             if (preview != null && preview.isNotEmpty) ...[
               const SizedBox(height: AppTheme.spaceMd),
               Text(

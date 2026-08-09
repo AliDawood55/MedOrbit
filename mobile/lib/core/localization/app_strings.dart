@@ -25,8 +25,8 @@ class AppStrings {
   /// Shown whenever the AI service itself is not reachable or not healthy.
   /// Deliberately says nothing about hosts, ports or diagnostics.
   String get aiServiceUnavailable => _t(
-        'خدمة الذكاء الاصطناعي غير متاحة حاليًا. حاول لاحقًا.',
-        'The AI service is currently unavailable. Please try again later.',
+        'الخدمة غير متاحة حاليًا. تحقق من اتصالك ثم حاول مرة أخرى.',
+        'This service is temporarily unavailable. Check your connection and try again.',
       );
 
   // Chat failure categories. Kept distinct so an unreachable service is never
@@ -46,10 +46,10 @@ class AppStrings {
         'The reply was incomplete. Please try again.',
       );
   String get chatErrServer => _t(
-        'تعذّر على الخادم إكمال الطلب. أعد المحاولة.',
-        'The server could not complete the request. Please try again.',
+        'تعذّر إكمال الطلب. أعد المحاولة.',
+        'We could not complete the request. Please try again.',
       );
-  String get comingSoon => _t('هذه الميزة غير متاحة بعد', 'This feature is coming soon');
+  String get comingSoon => _t('هذه الميزة غير متاحة حالياً', 'This feature is currently unavailable');
   String get brandTagline => _t('منصة رعاية صحية ذكية', 'Smart Healthcare Platform');
   String get moreActionsTooltip => _t('المزيد من الإجراءات', 'More actions');
   String get appStarting => _t('جارٍ تجهيز ميد أوربت', 'Preparing MedOrbit');
@@ -680,6 +680,11 @@ class AppStrings {
         'سيطلب التطبيق الوصول إلى الميكروفون عند بدء الاستشارة لتسجيل إجاباتك.',
         'The app will request microphone access when the consultation starts so it can record your answers.',
       );
+  String get vdSafetyTitle => _t('مهم قبل البدء', 'Before you begin');
+  String get vdSafetyHint => _t(
+        'هذه الاستشارة للإرشاد العام ولا تغني عن الرعاية الطبية. في الحالات الطارئة، اتصل بخدمات الطوارئ فورًا.',
+        'This consultation offers general guidance and does not replace medical care. In an emergency, contact emergency services immediately.',
+      );
   String get startConsultation => _t('ابدأ الاستشارة', 'Start Consultation');
   String get endConsultation => _t('إنهاء الاستشارة', 'End Consultation');
   String get vdConversationTitle => _t('المحادثة', 'Conversation');
@@ -707,8 +712,6 @@ class AppStrings {
   String get vdPatientAge => _t('العمر', 'Age');
   String get vdChiefComplaint => _t('الشكوى الرئيسية', 'Chief complaint');
   String get vdSummaryTitle => _t('ملخص الاستشارة', 'Consultation summary');
-  String get vdAiConfidence => _t('درجة ثقة الذكاء الاصطناعي', 'AI confidence');
-  String vdConfidenceValue(int percent) => _t('$percent٪', '$percent%');
   String get vdUrgencyTitle => _t('درجة الاستعجال', 'Urgency level');
   String get vdUrgencyEmergency => _t('طارئة', 'Emergency');
   String get vdUrgencyUrgent => _t('عاجلة', 'Urgent');
@@ -866,7 +869,6 @@ class AppStrings {
   String get symptomUrgentTitle => _t('يُنصح بموعد عاجل', 'Urgent appointment recommended');
   String get symptomRoutineTitle => _t('يُنصح بموعد عادي', 'Routine appointment recommended');
   String get symptomRecommendedSpecialty => _t('التخصص المقترح', 'Suggested specialty');
-  String get symptomConfidenceLabel => _t('درجة الثقة', 'Confidence');
   String get symptomRecommendationsLabel => _t('التوصيات', 'Recommendations');
   String get symptomCheckAnotherAction => _t('فحص أعراض أخرى', 'Check other symptoms');
 
@@ -948,9 +950,6 @@ class AppStrings {
   String get arabicSummary => _t('الملخص بالعربية', 'Arabic summary');
   String get englishSummary => _t('الملخص بالإنجليزية', 'English summary');
   String get extractedTextPreview => _t('معاينة النص المستخرج', 'Extracted text preview');
-  String get processingTime => _t('وقت المعالجة', 'Processing time');
-  String get modelUsed => _t('النموذج المستخدم', 'Model used');
-  String get sourceFileType => _t('نوع المصدر', 'Source type');
   String get reportSummaryEmptyError => _t(
         'يرجى إدخال نص تقرير كافٍ للتلخيص (20 حرفًا على الأقل).',
         'Please enter enough report text to summarize (at least 20 characters).',
@@ -1017,7 +1016,6 @@ class AppStrings {
   String get myReportViewDetails => _t('عرض التفاصيل', 'View details');
   String get myReportHideDetails => _t('إخفاء التفاصيل', 'Hide details');
   String get myReportDownloadAction => _t('تنزيل', 'Download');
-  String get myReportSourceLabel => _t('المصدر', 'Source');
 }
 
 final appStringsProvider = Provider<AppStrings>((ref) {
