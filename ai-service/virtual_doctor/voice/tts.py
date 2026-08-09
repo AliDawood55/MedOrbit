@@ -79,17 +79,117 @@ _AR_TRANSLITERATIONS = {
 }
 _LATIN_RUN = re.compile(r"[A-Za-z][A-Za-z0-9'’\-]*(?:\s+[A-Za-z][A-Za-z0-9'’\-]*)*")
 
+# --- Arabic TTS text normalization (Virtual Doctor Formal Arabic Voice
+# Quality batch) ------------------------------------------------------------
+#
+# Cleans up punctuation/formatting NOISE before synthesis — it never touches
+# words, so medical terms and meaning are always preserved by construction.
+#
+# Deliberately does NOT attempt sentence-level chunking/splitting of its own:
+# verified by reading the installed piper-tts==1.6.0 source
+# (PiperVoice.synthesize()/synthesize_wav()), Piper's own phonemizer already
+# batches text into one phoneme sequence PER SENTENCE internally (via
+# espeak-ng's sentence boundary detection) before synthesizing each one in
+# turn — "long text splitting" is already handled by Piper itself, provided
+# the text has real sentence-ending punctuation. This function's job is
+# narrower and more useful: make sure that punctuation is actually clean
+# (not tripled, not markdown, not a stray literal "**") so Piper's own
+# per-sentence segmentation has real boundaries to work with.
+_REPEATED_EXCLAIM_RE = re.compile(r"!{2,}")
+_REPEATED_QUESTION_RE = re.compile(r"[؟?]{2,}")
+_REPEATED_STOP_RE = re.compile(r"([.،,؛:])\1+")
+_MARKDOWN_BULLET_RE = re.compile(r"^[ \t]*[-*•][ \t]+", re.MULTILINE)
+_MULTI_SPACE_RE = re.compile(r"[ \t]{2,}")
+_MULTI_NEWLINE_RE = re.compile(r"\n{2,}")
+
+
+def _normalize_arabic_tts_text(text: str) -> str:
+    """Prepares Arabic text for clearer, calmer Piper synthesis.
+
+    Safe by design: only ever collapses REPEATED punctuation/whitespace and
+    strips markdown-only artifacts (**, ##, bullet markers) that a template
+    or LLM reply should never contain as literal text in the first place —
+    never removes or rewrites a word, never adds diacritics, never changes
+    meaning. Preserves the Arabic question mark (؟) and every other
+    single-occurrence punctuation mark untouched.
+    """
+    text = (text or "").strip()
+    if not text:
+        return text
+
+    # Markdown-ish artifacts: read aloud as literal symbols ("نجمة نجمة") if
+    # left in, which no patient-facing reply should ever actually need.
+    text = text.replace("**", "").replace("##", "").replace("__", "")
+    text = _MARKDOWN_BULLET_RE.sub("", text)
+
+    # Repeated punctuation reads as agitated/shouting when spoken; collapse
+    # it to the single, calm form. "!!!" specifically becomes "." rather
+    # than "!" — an exclamation mark itself already pushes Piper toward a
+    # more emphatic reading than this assistant's tone calls for (see the
+    # "no scary exaggeration" style requirement).
+    text = _REPEATED_EXCLAIM_RE.sub(".", text)
+    text = _REPEATED_QUESTION_RE.sub("؟", text)
+    text = _REPEATED_STOP_RE.sub(r"\1", text)
+
+    # Whitespace/newline cleanup — a stray double space or newline is a
+    # micro-pause Piper renders as dead air, not a real sentence boundary.
+    text = _MULTI_NEWLINE_RE.sub(" ", text)
+    text = text.replace("\n", " ")
+    text = _MULTI_SPACE_RE.sub(" ", text)
+
+    return text.strip()
+
 
 def _prepare_text(text: str, language: str) -> str:
     text = (text or "").strip()
     if not text:
         return text
     if language == "ar":
+        text = _normalize_arabic_tts_text(text)
+
         def replace(match: re.Match) -> str:
             token = match.group(0)
             return _AR_TRANSLITERATIONS.get(token.strip().lower(), token)
         text = _LATIN_RUN.sub(replace, text)
     return text
+
+
+# --- Optional Piper SynthesisConfig tuning (Arabic voice only) -------------
+#
+# Verified directly against the installed piper-tts==1.6.0 (`from piper import
+# SynthesisConfig`) rather than assumed: the dataclass exposes exactly
+# `speaker_id, length_scale, noise_scale, noise_w_scale, normalize_audio,
+# volume`. There is NO `sentence_silence` field in this version — a
+# VD_TTS_SENTENCE_SILENCE env var was considered but deliberately NOT
+# implemented, since piper-tts 1.6.0 has no parameter it could map to; adding
+# one would either silently do nothing or require hand-rolled WAV splicing,
+# neither of which is the safe, verified tuning this batch asked for.
+#
+# Every var below defaults to unset. When unset, `_synthesis_config_for()`
+# returns None and `synthesize_wav(..., syn_config=None)` behaves exactly as
+# before this batch — verified by reading `phoneme_ids_to_audio()`, which
+# falls back to the voice's own tuned `.onnx.json` defaults whenever a
+# SynthesisConfig field is None. So this plumbing is a no-op until an
+# operator deliberately sets one of these env vars.
+_AR_LENGTH_SCALE = os.getenv("VD_TTS_AR_LENGTH_SCALE")
+_AR_NOISE_SCALE = os.getenv("VD_TTS_AR_NOISE_SCALE")
+_AR_NOISE_W_SCALE = os.getenv("VD_TTS_AR_NOISE_W_SCALE")
+
+
+def _synthesis_config_for(language: str):
+    """Builds a Piper SynthesisConfig from env overrides, or None if unset."""
+    if language != "ar":
+        return None
+    if _AR_LENGTH_SCALE is None and _AR_NOISE_SCALE is None and _AR_NOISE_W_SCALE is None:
+        return None
+
+    from piper import SynthesisConfig
+
+    return SynthesisConfig(
+        length_scale=float(_AR_LENGTH_SCALE) if _AR_LENGTH_SCALE is not None else None,
+        noise_scale=float(_AR_NOISE_SCALE) if _AR_NOISE_SCALE is not None else None,
+        noise_w_scale=float(_AR_NOISE_W_SCALE) if _AR_NOISE_W_SCALE is not None else None,
+    )
 
 
 def resolve_language(language: Optional[str]) -> str:
@@ -191,12 +291,13 @@ def _synthesize_sync(text: str, language: str) -> Dict[str, Any]:
 
     voice = _get_voice(language)
     prepared = _prepare_text(text, language)
+    syn_config = _synthesis_config_for(language)
 
     started = time.time()
     buffer = io.BytesIO()
     try:
         with wave.open(buffer, "wb") as wav_file:
-            voice.synthesize_wav(prepared, wav_file)
+            voice.synthesize_wav(prepared, wav_file, syn_config=syn_config)
     except Exception as exc:  # noqa: BLE001 - any Piper failure is a TTS failure
         logger.exception("Piper synthesis failed")
         raise TtsError(str(exc)) from exc

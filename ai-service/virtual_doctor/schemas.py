@@ -93,6 +93,30 @@ class TtsStatusResponse(BaseModel):
     stats: Dict[str, int] = {}
 
 
+class ReasoningHealthResponse(BaseModel):
+    """Symbolic reasoning layer health. Audit/ops only — no patient data.
+
+    `enabled` is the VD_SYMBOLIC flag; `loaded` is whether SWI-Prolog actually
+    booted. They are separate on purpose: a machine with the flag on and no
+    Prolog runtime is a real deployment state, and it should be visible rather
+    than inferred from silence in the logs.
+    """
+    enabled: bool
+    # Phase 2 rollout state: off | shadow | active. Always "off" when the
+    # master switch is off, so one field answers "is the interview symbolic?".
+    interview_mode: str = "off"
+    # Phase 3 rollout state: off | shadow | active. Independent of
+    # interview_mode; also forced "off" when the master switch is off.
+    safety_mode: str = "off"
+    inference_limit: int = 0
+    loaded: bool
+    load_error: Optional[str] = None
+    rule_files: List[str] = []
+    init_ms: float = 0.0
+    max_results: int = 0
+    prolog_version: Optional[str] = None
+
+
 class SessionResponse(BaseModel):
     session_id: str
     language: str

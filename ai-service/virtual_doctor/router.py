@@ -6,10 +6,11 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 
 from . import interview_engine as engine
-from . import report_generator
+from . import reasoning_engine, report_generator
 from .schemas import (
     MessageRequest,
     MessageResponse,
+    ReasoningHealthResponse,
     ReportResponse,
     SessionResponse,
     SpeakRequest,
@@ -47,6 +48,19 @@ async def get_session(session_id: str):
     if not state:
         raise HTTPException(status_code=404, detail="Session not found")
     return SessionResponse(**state)
+
+
+@router.get("/reasoning/health", response_model=ReasoningHealthResponse)
+async def reasoning_health():
+    """Whether the symbolic reasoning layer is enabled and its rules loaded.
+
+    Boots the Prolog engine on first call if the runtime is present, so this
+    doubles as a warm-up. Never raises: a missing SWI-Prolog reports
+    loaded=false with the error rather than failing the request, because in
+    Phase 1 that state is entirely survivable — the consultation path does not
+    depend on this layer at all.
+    """
+    return ReasoningHealthResponse(**reasoning_engine.status())
 
 
 @router.get("/speak/status", response_model=TtsStatusResponse)

@@ -148,8 +148,6 @@ const SymptomChecker = (() => {
 
         const specialtyDisplay = (ar ? data.recommended_specialty_name_ar : data.recommended_specialty_name_en)
             || data.recommended_specialty_name_en || data.recommended_specialty_name_ar || '';
-        const confidencePct = Math.max(0, Math.min(100, Math.round((data.confidence_score || 0) * 100)));
-
         let html = '';
 
         html += '<div class="triage-banner ' + level + '">' +
@@ -167,10 +165,6 @@ const SymptomChecker = (() => {
                 '<span class="triage-detail-value">' + escapeHtml(specialtyDisplay) + '</span>' +
             '</div>';
         }
-        html += '<div class="triage-detail-row">' +
-            '<span class="triage-detail-label">' + escapeHtml(t('symptomChecker.confidence')) + '</span>' +
-            '<div class="confidence-bar"><div class="confidence-bar-fill" style="width:' + confidencePct + '%;"></div></div>' +
-        '</div>';
         if (data.recommendations) {
             html += '<div style="margin-top:16px;">' +
                 '<div class="triage-detail-label" style="margin-bottom:8px;">' + escapeHtml(t('symptomChecker.recommendations')) + '</div>' +

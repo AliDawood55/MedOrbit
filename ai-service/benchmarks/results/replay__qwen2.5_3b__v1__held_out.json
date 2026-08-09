@@ -1,0 +1,2522 @@
+{
+  "schema": "medorbit.understanding_replay.v1",
+  "generated_at": "2026-08-08T22:21:06.202589+00:00",
+  "model": "qwen2.5:3b",
+  "prompt_version": "v1",
+  "split": "held_out",
+  "n_cases": 88,
+  "divergence_counts": {
+    "BOTH_CORRECT": 28,
+    "LEGACY_ONLY_CORRECT": 5,
+    "STRUCTURED_ONLY_CORRECT": 15,
+    "BOTH_WRONG": 10,
+    "STRUCTURED_FALSE_POSITIVE": 26,
+    "STRUCTURED_FALSE_NEGATIVE": 22,
+    "POLARITY_ERROR": 10,
+    "SAFETY_FALSE_POSITIVE": 11,
+    "SAFETY_FALSE_NEGATIVE": 8
+  },
+  "examples": {
+    "BOTH_CORRECT": [
+      "ar_single_02",
+      "en_fever_01",
+      "ar_fever_01",
+      "en_multi_hn_02",
+      "ar_multi_hn_02",
+      "en_multi_02",
+      "en_multi_03",
+      "ar_multi_03"
+    ],
+    "LEGACY_ONLY_CORRECT": [
+      "ar_multi_hn_02",
+      "ar_multi_02",
+      "ar_colloq_multi_05",
+      "ar_cs_04"
+    ],
+    "STRUCTURED_ONLY_CORRECT": [
+      "en_single_02",
+      "en_multi_hn_02",
+      "ar_multi_02",
+      "en_multi_03",
+      "en_hematuria_01",
+      "ar_hematuria_01",
+      "en_seizure_01",
+      "ar_seizure_01"
+    ],
+    "BOTH_WRONG": [
+      "ar_mixed_pd_01",
+      "en_unconscious_01",
+      "ar_bleeding_01",
+      "ar_colloq_02",
+      "ar_colloq_multi_03",
+      "ar_colloq_multi_04",
+      "ar_asr_02",
+      "ar_safety_col_03"
+    ],
+    "STRUCTURED_FALSE_POSITIVE": [
+      "ar_negation_01",
+      "ar_mixed_pd_01",
+      "en_unconscious_01",
+      "ar_severity_01",
+      "en_location_01",
+      "en_radiation_01",
+      "ar_radiation_01",
+      "en_name_corr_01"
+    ],
+    "STRUCTURED_FALSE_NEGATIVE": [
+      "ar_negation_01",
+      "ar_multi_hn_02",
+      "ar_multi_02",
+      "en_mixed_pd_02",
+      "ar_mixed_pd_01",
+      "en_unconscious_01",
+      "ar_bleeding_01",
+      "ar_colloq_02"
+    ],
+    "POLARITY_ERROR": [
+      "en_uncertain_02",
+      "en_uncertain_03",
+      "ar_uncertain_02",
+      "ar_mixed_pu_01",
+      "ar_uncert_col_02",
+      "ar_uncert_col_03",
+      "ar_uncert_col_05",
+      "en_uncert_04"
+    ],
+    "SAFETY_FALSE_POSITIVE": [
+      "en_unconscious_01",
+      "ar_severity_01",
+      "en_name_corr_01",
+      "en_irrelevant_01",
+      "ar_colloq_neg_02",
+      "en_safety_04",
+      "ar_neg_third_01",
+      "ar_neg_third_02"
+    ],
+    "SAFETY_FALSE_NEGATIVE": [
+      "en_unconscious_01",
+      "ar_bleeding_01",
+      "ar_safety_col_03",
+      "en_safety_04"
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "en_single_02",
+      "lang": "en",
+      "categories": [
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "back_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "back_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3605.8
+    },
+    {
+      "case_id": "ar_single_02",
+      "lang": "ar",
+      "categories": [
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "dizziness"
+      ],
+      "structured": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3228.1
+    },
+    {
+      "case_id": "en_fever_01",
+      "lang": "en",
+      "categories": [
+        "single_symptom",
+        "fever"
+      ],
+      "expected": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3359.3
+    },
+    {
+      "case_id": "ar_fever_01",
+      "lang": "ar",
+      "categories": [
+        "single_symptom",
+        "fever"
+      ],
+      "expected": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3329.6
+    },
+    {
+      "case_id": "en_fever_deny_02",
+      "lang": "en",
+      "categories": [
+        "negation",
+        "fever_denial"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "fever"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [
+          "fever"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3297.1
+    },
+    {
+      "case_id": "ar_fever_deny_02",
+      "lang": "ar",
+      "categories": [
+        "negation",
+        "fever_denial"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "fever"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [
+          "fever"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3335.2
+    },
+    {
+      "case_id": "en_negation_01",
+      "lang": "en",
+      "categories": [
+        "negation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "cough"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "cough"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [
+          "cough"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3273.9
+    },
+    {
+      "case_id": "ar_negation_01",
+      "lang": "ar",
+      "categories": [
+        "negation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "diarrhea"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "diarrhea"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [
+          "stomach_pain"
+        ],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3354.2
+    },
+    {
+      "case_id": "en_uncertain_02",
+      "lang": "en",
+      "categories": [
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "cough"
+        ]
+      },
+      "legacy_present": [
+        "cough"
+      ],
+      "structured": {
+        "present": [
+          "cough"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3407.1
+    },
+    {
+      "case_id": "en_uncertain_03",
+      "lang": "en",
+      "categories": [
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "dizziness"
+        ]
+      },
+      "legacy_present": [
+        "dizziness"
+      ],
+      "structured": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3450.8
+    },
+    {
+      "case_id": "ar_uncertain_02",
+      "lang": "ar",
+      "categories": [
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "nausea"
+        ]
+      },
+      "legacy_present": [
+        "nausea"
+      ],
+      "structured": {
+        "present": [
+          "nausea"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3388.2
+    },
+    {
+      "case_id": "en_historical_02",
+      "lang": "en",
+      "categories": [
+        "historical"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "skin_rash"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3454.8
+    },
+    {
+      "case_id": "ar_historical_01",
+      "lang": "ar",
+      "categories": [
+        "historical"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3372.9
+    },
+    {
+      "case_id": "en_multi_hn_02",
+      "lang": "en",
+      "categories": [
+        "multi_symptom",
+        "headache_nausea"
+      ],
+      "expected": {
+        "present": [
+          "headache",
+          "nausea"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "nausea"
+      ],
+      "structured": {
+        "present": [
+          "headache",
+          "nausea"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3671.7
+    },
+    {
+      "case_id": "ar_multi_hn_02",
+      "lang": "ar",
+      "categories": [
+        "multi_symptom",
+        "headache_nausea"
+      ],
+      "expected": {
+        "present": [
+          "headache",
+          "nausea"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "headache",
+        "nausea"
+      ],
+      "structured": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "LEGACY_ONLY_CORRECT",
+        "STRUCTURED_FALSE_NEGATIVE"
+      ],
+      "latency_ms": 3402.2
+    },
+    {
+      "case_id": "en_multi_02",
+      "lang": "en",
+      "categories": [
+        "multi_symptom",
+        "chest_pain_dyspnea"
+      ],
+      "expected": {
+        "present": [
+          "chest_pain",
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "chest_pain",
+        "shortness_of_breath"
+      ],
+      "structured": {
+        "present": [
+          "chest_pain",
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3688.3
+    },
+    {
+      "case_id": "ar_multi_02",
+      "lang": "ar",
+      "categories": [
+        "multi_symptom",
+        "chest_pain_dyspnea"
+      ],
+      "expected": {
+        "present": [
+          "chest_pain",
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "chest_pain"
+      ],
+      "structured": {
+        "present": [
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "LEGACY_ONLY_CORRECT",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3428.8
+    },
+    {
+      "case_id": "en_multi_03",
+      "lang": "en",
+      "categories": [
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "diarrhea",
+          "fatigue",
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "diarrhea",
+        "fatigue"
+      ],
+      "structured": {
+        "present": [
+          "diarrhea",
+          "fatigue",
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 4034.0
+    },
+    {
+      "case_id": "ar_multi_03",
+      "lang": "ar",
+      "categories": [
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "cough",
+          "fatigue",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "cough",
+        "fatigue",
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "cough",
+          "fatigue",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 4038.4
+    },
+    {
+      "case_id": "en_mixed_pd_02",
+      "lang": "en",
+      "categories": [
+        "mixed_present_denied"
+      ],
+      "expected": {
+        "present": [
+          "chest_pain"
+        ],
+        "absent": [
+          "shortness_of_breath"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "chest_pain"
+      ],
+      "structured": {
+        "present": [
+          "chest_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "STRUCTURED_FALSE_NEGATIVE"
+      ],
+      "latency_ms": 3461.4
+    },
+    {
+      "case_id": "ar_mixed_pd_01",
+      "lang": "ar",
+      "categories": [
+        "mixed_present_denied"
+      ],
+      "expected": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [
+          "diarrhea"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "diarrhea"
+      ],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3453.9
+    },
+    {
+      "case_id": "ar_mixed_pu_01",
+      "lang": "ar",
+      "categories": [
+        "mixed_present_uncertain"
+      ],
+      "expected": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": [
+          "dizziness"
+        ]
+      },
+      "legacy_present": [
+        "dizziness",
+        "headache"
+      ],
+      "structured": {
+        "present": [
+          "dizziness",
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3687.1
+    },
+    {
+      "case_id": "en_hematuria_01",
+      "lang": "en",
+      "categories": [
+        "hematuria"
+      ],
+      "expected": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3424.0
+    },
+    {
+      "case_id": "ar_hematuria_01",
+      "lang": "ar",
+      "categories": [
+        "hematuria"
+      ],
+      "expected": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3424.1
+    },
+    {
+      "case_id": "en_seizure_01",
+      "lang": "en",
+      "categories": [
+        "seizure"
+      ],
+      "expected": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3345.0
+    },
+    {
+      "case_id": "ar_seizure_01",
+      "lang": "ar",
+      "categories": [
+        "seizure"
+      ],
+      "expected": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3489.7
+    },
+    {
+      "case_id": "en_unconscious_01",
+      "lang": "en",
+      "categories": [
+        "unconscious"
+      ],
+      "expected": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "SAFETY_FALSE_NEGATIVE",
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3312.9
+    },
+    {
+      "case_id": "ar_unconscious_01",
+      "lang": "ar",
+      "categories": [
+        "unconscious"
+      ],
+      "expected": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3389.9
+    },
+    {
+      "case_id": "en_bleeding_01",
+      "lang": "en",
+      "categories": [
+        "severe_bleeding"
+      ],
+      "expected": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3424.7
+    },
+    {
+      "case_id": "ar_bleeding_01",
+      "lang": "ar",
+      "categories": [
+        "severe_bleeding"
+      ],
+      "expected": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "SAFETY_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_NEGATIVE"
+      ],
+      "latency_ms": 3385.6
+    },
+    {
+      "case_id": "ar_duration_01",
+      "lang": "ar",
+      "categories": [
+        "duration"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3464.0
+    },
+    {
+      "case_id": "en_severity_01",
+      "lang": "en",
+      "categories": [
+        "severity"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3405.9
+    },
+    {
+      "case_id": "ar_severity_01",
+      "lang": "ar",
+      "categories": [
+        "severity"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "severe_bleeding"
+        ]
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3396.3
+    },
+    {
+      "case_id": "en_location_01",
+      "lang": "en",
+      "categories": [
+        "location"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "flank_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3381.2
+    },
+    {
+      "case_id": "en_radiation_01",
+      "lang": "en",
+      "categories": [
+        "radiation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3384.9
+    },
+    {
+      "case_id": "ar_radiation_01",
+      "lang": "ar",
+      "categories": [
+        "radiation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3456.5
+    },
+    {
+      "case_id": "ar_age_corr_01",
+      "lang": "ar",
+      "categories": [
+        "correction_intent",
+        "age_correction"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3264.7
+    },
+    {
+      "case_id": "en_name_corr_01",
+      "lang": "en",
+      "categories": [
+        "correction_intent",
+        "name_correction"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [
+          "seizure"
+        ],
+        "uncertain": []
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3656.0
+    },
+    {
+      "case_id": "en_adversarial_01",
+      "lang": "en",
+      "categories": [
+        "adversarial"
+      ],
+      "expected": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "headache"
+      ],
+      "structured": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3293.9
+    },
+    {
+      "case_id": "ar_adversarial_01",
+      "lang": "ar",
+      "categories": [
+        "adversarial"
+      ],
+      "expected": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3476.0
+    },
+    {
+      "case_id": "en_unsupported_01",
+      "lang": "en",
+      "categories": [
+        "unsupported_term"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3448.7
+    },
+    {
+      "case_id": "en_unsupported_02",
+      "lang": "en",
+      "categories": [
+        "unsupported_term"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3344.1
+    },
+    {
+      "case_id": "en_irrelevant_01",
+      "lang": "en",
+      "categories": [
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "seizure"
+        ]
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3399.4
+    },
+    {
+      "case_id": "ar_irrelevant_01",
+      "lang": "ar",
+      "categories": [
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3317.0
+    },
+    {
+      "case_id": "ar_colloq_02",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "stomach_ache"
+      ],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3372.0
+    },
+    {
+      "case_id": "ar_colloq_03",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "fatigue"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fatigue"
+      ],
+      "structured": {
+        "present": [
+          "fatigue"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3236.0
+    },
+    {
+      "case_id": "ar_colloq_04",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "cough"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "cough"
+      ],
+      "structured": {
+        "present": [
+          "cough"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3426.2
+    },
+    {
+      "case_id": "ar_colloq_06",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "dizziness"
+      ],
+      "structured": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3289.4
+    },
+    {
+      "case_id": "ar_colloq_multi_02",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "cough",
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3564.7
+    },
+    {
+      "case_id": "ar_colloq_multi_03",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "nausea",
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "stomach_ache"
+      ],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3409.5
+    },
+    {
+      "case_id": "ar_colloq_multi_04",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "multi_symptom",
+        "chest_pain_dyspnea"
+      ],
+      "expected": {
+        "present": [
+          "chest_pain",
+          "shortness_of_breath"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "chest_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3351.4
+    },
+    {
+      "case_id": "ar_colloq_multi_05",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "diarrhea",
+          "fatigue",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "diarrhea",
+        "fatigue",
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "diarrhea"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "LEGACY_ONLY_CORRECT",
+        "STRUCTURED_FALSE_NEGATIVE"
+      ],
+      "latency_ms": 3571.2
+    },
+    {
+      "case_id": "ar_colloq_neg_02",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "negation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "cough"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [
+          "seizure"
+        ],
+        "uncertain": []
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3341.3
+    },
+    {
+      "case_id": "ar_colloq_neg_03",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "negation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "headache"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [
+          "stomach_ache"
+        ],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3389.4
+    },
+    {
+      "case_id": "ar_uncert_col_02",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "cough"
+        ]
+      },
+      "legacy_present": [
+        "cough"
+      ],
+      "structured": {
+        "present": [
+          "cough"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3429.8
+    },
+    {
+      "case_id": "ar_uncert_col_03",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "dizziness"
+        ]
+      },
+      "legacy_present": [
+        "dizziness"
+      ],
+      "structured": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3541.4
+    },
+    {
+      "case_id": "ar_uncert_col_04",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "nausea"
+        ]
+      },
+      "legacy_present": [
+        "nausea"
+      ],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3363.3
+    },
+    {
+      "case_id": "ar_uncert_col_05",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "fever"
+        ]
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3382.8
+    },
+    {
+      "case_id": "en_uncert_04",
+      "lang": "en",
+      "categories": [
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "fever"
+        ]
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3449.6
+    },
+    {
+      "case_id": "en_uncert_05",
+      "lang": "en",
+      "categories": [
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "nausea"
+        ]
+      },
+      "legacy_present": [
+        "nausea"
+      ],
+      "structured": {
+        "present": [
+          "nausea"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3429.8
+    },
+    {
+      "case_id": "ar_cs_02",
+      "lang": "ar",
+      "categories": [
+        "code_switch",
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "cough",
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3480.8
+    },
+    {
+      "case_id": "ar_cs_03",
+      "lang": "ar",
+      "categories": [
+        "code_switch",
+        "negation"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "nausea"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "nausea"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [
+          "nausea"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3272.3
+    },
+    {
+      "case_id": "ar_cs_04",
+      "lang": "ar",
+      "categories": [
+        "code_switch",
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "dizziness",
+          "fatigue"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "dizziness",
+        "fatigue"
+      ],
+      "structured": {
+        "present": [
+          "dizziness"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT",
+        "LEGACY_ONLY_CORRECT",
+        "STRUCTURED_FALSE_NEGATIVE"
+      ],
+      "latency_ms": 3348.2
+    },
+    {
+      "case_id": "ar_cs_05",
+      "lang": "ar",
+      "categories": [
+        "code_switch",
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "fever"
+        ]
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "fever"
+        ]
+      },
+      "labels": [],
+      "latency_ms": 3316.4
+    },
+    {
+      "case_id": "ar_asr_02",
+      "lang": "ar",
+      "categories": [
+        "asr_like",
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "stomach_ache"
+      ],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3438.4
+    },
+    {
+      "case_id": "ar_asr_03",
+      "lang": "ar",
+      "categories": [
+        "asr_like",
+        "multi_symptom"
+      ],
+      "expected": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "cough",
+        "fever"
+      ],
+      "structured": {
+        "present": [
+          "cough",
+          "fever"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3682.8
+    },
+    {
+      "case_id": "ar_asr_04",
+      "lang": "ar",
+      "categories": [
+        "asr_like",
+        "negation",
+        "fever_denial"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "fever"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "fever"
+      ],
+      "structured": {
+        "present": [],
+        "absent": [
+          "fever"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3274.2
+    },
+    {
+      "case_id": "en_asr_01",
+      "lang": "en",
+      "categories": [
+        "asr_like",
+        "single_symptom"
+      ],
+      "expected": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [
+        "headache"
+      ],
+      "structured": {
+        "present": [
+          "headache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_CORRECT"
+      ],
+      "latency_ms": 3363.8
+    },
+    {
+      "case_id": "en_asr_02",
+      "lang": "en",
+      "categories": [
+        "asr_like",
+        "uncertainty"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "cough"
+        ]
+      },
+      "legacy_present": [
+        "cough"
+      ],
+      "structured": {
+        "present": [
+          "cough"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "POLARITY_ERROR"
+      ],
+      "latency_ms": 3382.5
+    },
+    {
+      "case_id": "ar_safety_col_01",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "hematuria"
+      ],
+      "expected": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3446.5
+    },
+    {
+      "case_id": "ar_safety_col_02",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "seizure"
+      ],
+      "expected": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3371.1
+    },
+    {
+      "case_id": "ar_safety_col_03",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "unconscious"
+      ],
+      "expected": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "SAFETY_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3434.8
+    },
+    {
+      "case_id": "ar_safety_col_04",
+      "lang": "ar",
+      "categories": [
+        "colloquial",
+        "severe_bleeding"
+      ],
+      "expected": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3285.7
+    },
+    {
+      "case_id": "en_safety_04",
+      "lang": "en",
+      "categories": [
+        "unconscious"
+      ],
+      "expected": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "BOTH_WRONG",
+        "SAFETY_FALSE_NEGATIVE",
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3413.0
+    },
+    {
+      "case_id": "en_safety_05",
+      "lang": "en",
+      "categories": [
+        "severe_bleeding"
+      ],
+      "expected": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "severe_bleeding"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_ONLY_CORRECT"
+      ],
+      "latency_ms": 3500.2
+    },
+    {
+      "case_id": "ar_neg_admin_01",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_ache"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3434.3
+    },
+    {
+      "case_id": "ar_neg_admin_02",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3391.3
+    },
+    {
+      "case_id": "en_neg_admin_01",
+      "lang": "en",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 2897.5
+    },
+    {
+      "case_id": "en_neg_admin_02",
+      "lang": "en",
+      "categories": [
+        "negative_control",
+        "irrelevant"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3326.7
+    },
+    {
+      "case_id": "ar_neg_third_01",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3436.5
+    },
+    {
+      "case_id": "ar_neg_third_02",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "unconscious"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3522.5
+    },
+    {
+      "case_id": "en_neg_third_01",
+      "lang": "en",
+      "categories": [
+        "negative_control",
+        "third_party"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "seizure"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3249.4
+    },
+    {
+      "case_id": "ar_neg_q_01",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "hematuria"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3305.3
+    },
+    {
+      "case_id": "en_neg_q_01",
+      "lang": "en",
+      "categories": [
+        "negative_control",
+        "question_not_report"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": [
+          "severe_bleeding"
+        ]
+      },
+      "labels": [
+        "SAFETY_FALSE_POSITIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3460.4
+    },
+    {
+      "case_id": "ar_neg_severe_01",
+      "lang": "ar",
+      "categories": [
+        "negative_control"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "severe_bleeding"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [
+          "stomach_pain"
+        ],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [
+        "STRUCTURED_FALSE_NEGATIVE",
+        "STRUCTURED_FALSE_POSITIVE"
+      ],
+      "latency_ms": 3531.8
+    },
+    {
+      "case_id": "en_neg_severe_01",
+      "lang": "en",
+      "categories": [
+        "negative_control"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "severe_bleeding"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [
+          "severe_bleeding"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3370.7
+    },
+    {
+      "case_id": "ar_neg_deny_01",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "negation",
+        "hematuria"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [
+          "hematuria"
+        ],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [
+          "hematuria"
+        ],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3397.4
+    },
+    {
+      "case_id": "ar_neg_name_01",
+      "lang": "ar",
+      "categories": [
+        "negative_control",
+        "correction_intent",
+        "name_correction"
+      ],
+      "expected": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "legacy_present": [],
+      "structured": {
+        "present": [],
+        "absent": [],
+        "uncertain": []
+      },
+      "labels": [],
+      "latency_ms": 3643.4
+    }
+  ]
+}

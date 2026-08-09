@@ -58,7 +58,7 @@ import requests
 
 from chatbot.medical.symptom_engine import SymptomSpecialtyEngine
 
-from . import memory, retrieval
+from . import memory, reasoning_engine, retrieval
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.reasoning")
 
@@ -84,7 +84,13 @@ EMBED_MODEL = retrieval.EMBED_MODEL
 
 # emergency > urgent > routine — used to decide which of the two urgency
 # opinions (rule engine vs LLM) wins. Higher number always wins.
-_URGENCY_RANK = {"emergency": 3, "urgent": 2, "routine": 1}
+#
+# DERIVED, not restated (Phase 3). The values are byte-identical to the literal
+# that used to live here; the change is that there is now exactly one urgency
+# ranking in the service, in reasoning_engine.vocabulary, and every other
+# module reads it. Two independently-maintained rank tables in a safety path is
+# a latent bug waiting for someone to edit one of them.
+_URGENCY_RANK = dict(reasoning_engine.vocabulary.URGENCY_RANK)
 _VALID_URGENCY = set(_URGENCY_RANK)
 
 _symptom_engine = SymptomSpecialtyEngine()
@@ -539,9 +545,14 @@ async def run_reasoning(
     }
 
     if lang == "ar":
+        # Simplified formal Arabic (Virtual Doctor Formal Arabic Voice
+        # Quality batch), superseding an earlier dialect version
+        # ("حسب اللي حكيتلي إياه، الأفضل تراجع ..."). Wording only — the
+        # specialty, the urgency level and the next step are the exact same
+        # values, and the urgency label table is unchanged.
         reply = (
-            f"بناءً على ما أخبرتني به، أقترح مراجعة تخصص {rule_result['recommended_specialty_name_ar']}. "
-            f"درجة الأولوية: {_URGENCY_LABEL_AR[final_urgency]}. {llm_result['recommended_next_step']}"
+            f"بحسب المعلومات التي ذكرتها، يُفضّل مراجعة {rule_result['recommended_specialty_name_ar']} قريبًا. "
+            f"الأولوية: {_URGENCY_LABEL_AR[final_urgency]}. {llm_result['recommended_next_step']}"
         )
     else:
         reply = (

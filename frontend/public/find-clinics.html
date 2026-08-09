@@ -60,19 +60,23 @@
         </header>
 
         <div class="filter-bar" id="filterBar">
-            <button class="filter-chip active" data-type="">
+            <button class="filter-chip active" data-type="" aria-pressed="true">
                 <i class="fas fa-globe"></i>
                 <span data-i18n="clinics.typeAll">الكل</span>
             </button>
-            <button class="filter-chip" data-type="clinic">
+            <button class="filter-chip" data-type="clinic" aria-pressed="false">
                 <i class="fas fa-hospital"></i>
                 <span data-i18n="filter.clinic">العيادات</span>
             </button>
-            <button class="filter-chip" data-type="pharmacy">
+            <button class="filter-chip" data-type="dental" aria-pressed="false">
+                <i class="fas fa-tooth"></i>
+                <span data-i18n="filter.dental">عيادات الأسنان</span>
+            </button>
+            <button class="filter-chip" data-type="pharmacy" aria-pressed="false">
                 <i class="fas fa-pills"></i>
                 <span data-i18n="filter.pharmacy">الصيدليات</span>
             </button>
-            <button class="filter-chip" data-type="hospital">
+            <button class="filter-chip" data-type="hospital" aria-pressed="false">
                 <i class="fas fa-hospital-user"></i>
                 <span data-i18n="filter.hospital">المستشفيات</span>
             </button>
@@ -107,7 +111,7 @@
             </section>
         </main>
 
-        <button type="button" class="mobile-view-toggle" id="mobileViewToggle">
+        <button type="button" class="mobile-view-toggle" id="mobileViewToggle" data-i18n-title="common.showMap" title="عرض الخريطة">
             <i class="fas fa-map-location-dot"></i>
         </button>
     </div>
@@ -163,6 +167,9 @@
                 document.documentElement.classList.toggle('mobile-map-active', showingMap);
                 document.body.classList.toggle('mobile-map-active', showingMap);
                 this.innerHTML = showingMap ? '<i class="fas fa-list"></i>' : '<i class="fas fa-map-location-dot"></i>';
+                const viewLabel = I18n.t(showingMap ? 'common.showList' : 'common.showMap');
+                this.title = viewLabel;
+                this.setAttribute('aria-label', viewLabel);
                 if (showingMap) MapApp.invalidateSize();
             });
         });

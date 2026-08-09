@@ -13,7 +13,8 @@ const int _extractedTextPreviewLimit = 320;
 /// Renders one completed summary: both language summaries (each forced to
 /// its own text direction regardless of app locale, since `summary_ar` is
 /// always Arabic and `summary_en` is always English), a truncated extracted
-/// text preview, and the model/processing-time/source-type metadata.
+/// text preview. Service implementation metadata remains in the response
+/// model but is intentionally not presented to patients.
 class ReportSummaryResultCard extends StatelessWidget {
   const ReportSummaryResultCard({
     super.key,
@@ -69,21 +70,6 @@ class ReportSummaryResultCard extends StatelessWidget {
               ),
               const SizedBox(height: AppTheme.spaceMd),
             ],
-            Wrap(
-              spacing: AppTheme.spaceLg,
-              runSpacing: AppTheme.spaceXs,
-              children: [
-                if (result.modelUsed.isNotEmpty)
-                  _MetaItem(label: strings.modelUsed, value: result.modelUsed),
-                if (result.processingTimeMs > 0)
-                  _MetaItem(
-                    label: strings.processingTime,
-                    value: '${(result.processingTimeMs / 1000).toStringAsFixed(1)}s',
-                  ),
-                if (result.sourceFileType.isNotEmpty)
-                  _MetaItem(label: strings.sourceFileType, value: result.sourceFileType),
-              ],
-            ),
             const SizedBox(height: AppTheme.spaceLg),
             OutlinedButton(
               onPressed: onSummarizeAnother,
@@ -92,31 +78,6 @@ class ReportSummaryResultCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MetaItem extends StatelessWidget {
-  const _MetaItem({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: textTheme.labelSmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        Text(value, style: textTheme.bodyMedium),
-      ],
     );
   }
 }

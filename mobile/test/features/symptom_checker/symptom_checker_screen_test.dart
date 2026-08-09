@@ -78,7 +78,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('a successful check renders the result: level, specialty, confidence, recommendations', (tester) async {
+  testWidgets('a successful check renders patient-relevant guidance without confidence metadata', (tester) async {
     await _useTallSurface(tester);
     final api = _FakeSymptomCheckerApi()..checkSymptomsResults.add(_result());
     await tester.pumpWidget(_app(api: api));
@@ -91,7 +91,7 @@ void main() {
 
     expect(find.text(_strings.symptomRoutineTitle), findsOneWidget);
     expect(find.text('General Practice'), findsOneWidget);
-    expect(find.text('50%'), findsOneWidget);
+    expect(find.text('50%'), findsNothing);
     expect(find.text('See a general practitioner if symptoms persist.'), findsOneWidget);
     expect(find.byType(TextFormField), findsNothing, reason: 'the input is replaced by the result, not shown alongside it');
   });

@@ -82,7 +82,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('a successful summary renders both language summaries and the metadata', (tester) async {
+  testWidgets('a successful summary renders both languages without implementation metadata', (tester) async {
     await _useTallSurface(tester);
     final api = _FakeReportSummarizerApi()..summarizeTextResults.add(_result());
     await tester.pumpWidget(_app(api: api));
@@ -95,9 +95,8 @@ void main() {
 
     expect(find.text('ملخص الحالة'), findsOneWidget);
     expect(find.text('Patient summary text'), findsOneWidget);
-    expect(find.text('qwen2:7b'), findsOneWidget);
-    expect(find.text('16.1s'), findsOneWidget);
-    expect(find.text('text'), findsOneWidget);
+    expect(find.text('qwen2:7b'), findsNothing);
+    expect(find.text('16.1s'), findsNothing);
     expect(find.byType(TextFormField), findsNothing, reason: 'the input is replaced by the result, not shown alongside it');
   });
 
