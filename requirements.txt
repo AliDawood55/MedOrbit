@@ -32,3 +32,21 @@ huggingface-hub>=0.34.0
 # LICENSE: piper-tts is GPL-3.0 from 1.3.0 onwards (it links espeak-ng).
 # Relevant only if MedOrbit is ever distributed as a binary.
 piper-tts==1.6.0
+
+# Virtual Doctor symbolic reasoning layer (virtual_doctor/reasoning_engine).
+# Python bindings for SWI-Prolog, which is a SYSTEM package, not a wheel — the
+# Dockerfile installs swi-prolog-core alongside this. Importing pyswip without
+# the runtime raises, which reasoning_engine catches: the layer reports itself
+# unavailable and the consultation continues on its existing path.
+#
+# The import is deliberately lazy (prolog_engine._load_engine), so a service
+# running with VD_SYMBOLIC=0 — the default — pays none of its ~80ms import.
+#
+# LICENSE: same footnote as piper-tts above. SWI-Prolog is BSD-2-Clause, but
+# it is invoked here as a linked runtime rather than a separate process.
+pyswip==0.3.3
+
+# Healthcare facility metadata classification baseline only. This is not a
+# diagnostic model; training is gated on class/split sufficiency.
+scikit-learn>=1.5,<2.0
+joblib>=1.4,<2.0
