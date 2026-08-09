@@ -1,87 +1,69 @@
-"""
-Phase A — Nablus clinic data collection for manual review.
-Fetches real OSM records (amenity=hospital|clinic|doctors|pharmacy and
-healthcare=*) for the Nablus bbox and writes a CSV for human review.
-Does NOT touch the database — that only happens after manual approval,
-via a separately-written SQL file.
-"""
-import csv
+"""Collect and build the auditable Nablus facility review dataset."""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+from facility_pipeline import (
+    CITY_BBOX,
+    GREATER_NABLUS_BBOX,
+    load_legacy_osm_csv,
+    load_official_sources,
+    load_scope_overrides,
+    run_pipeline,
+)
 from osm_collector import OSMCollector
 
-BBOX = (32.18, 35.21, 32.26, 35.31)  # south, west, north, east
-OUT_CSV = "nablus_osm_review.csv"
 
-FIELDS = [
-    "osm_type", "osm_id", "osm_url",
-    "name_ar", "name_en", "name_raw",
-    "type_raw_amenity", "type_raw_healthcare", "type_normalized",
-    "lat", "lng", "phone", "address",
-    "name_ar_provided", "name_en_provided", "phone_provided", "address_provided", "type_provided",
-]
+HERE = Path(__file__).resolve().parent
+DEFAULT_OUTPUT = HERE / "reports" / "nablus"
+DEFAULT_OFFICIAL = HERE / "official_nablus_sources.json"
+LEGACY_SNAPSHOT = HERE / "nablus_wide_review2.csv"
 
 
-def main():
-    collector = OSMCollector()
-    places = collector.fetch_healthcare(bbox=BBOX)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--scope", choices=("city", "greater"), default="greater")
+    parser.add_argument("--refresh", action="store_true", help="Ignore a valid Overpass cache and fetch once")
+    parser.add_argument("--offline", action="store_true", help="Use the immutable legacy CSV snapshot; make no network call")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--official-sources", type=Path, default=DEFAULT_OFFICIAL)
+    return parser.parse_args()
 
-    print(f"Collected {len(places)} unique OSM records")
 
-    rows = []
-    for p in places:
-        rows.append({
-            "osm_type": p["osm_type"],
-            "osm_id": p["osm_id"],
-            "osm_url": p["osm_url"],
-            "name_ar": p["name_ar"],
-            "name_en": p["name_en"],
-            "name_raw": p["name_raw"],
-            "type_raw_amenity": p["type_raw_amenity"],
-            "type_raw_healthcare": p["type_raw_healthcare"],
-            "type_normalized": p["type_normalized"],
-            "lat": p["latitude"],
-            "lng": p["longitude"],
-            "phone": p["phone"],
-            "address": p["address"],
-            "name_ar_provided": bool(p["name_ar"]),
-            "name_en_provided": bool(p["name_en"]),
-            "phone_provided": bool(p["phone"]),
-            "address_provided": bool(p["address"]),
-            "type_provided": bool(p["type_normalized"]),
-        })
-
-    with open(OUT_CSV, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=FIELDS)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    print(f"Wrote {OUT_CSV}")
-
-    # ---- Summary report ----
-    by_type = {}
-    for r in rows:
-        t = r["type_normalized"] or "(unmapped)"
-        by_type[t] = by_type.get(t, 0) + 1
-
-    print("\nCounts per normalized type:")
-    for t, c in sorted(by_type.items(), key=lambda x: -x[1]):
-        print(f"  {t}: {c}")
-
-    total = len(rows)
-    has_name_ar = sum(1 for r in rows if r["name_ar_provided"])
-    has_name_en = sum(1 for r in rows if r["name_en_provided"])
-    has_name_raw = sum(1 for r in rows if r["name_raw"])
-    has_phone = sum(1 for r in rows if r["phone_provided"])
-    has_address = sum(1 for r in rows if r["address_provided"])
-    has_neither_name = sum(1 for r in rows if not r["name_ar"] and not r["name_en"] and not r["name_raw"])
-
-    print(f"\nTotal records: {total}")
-    print(f"  name:ar tag present: {has_name_ar}")
-    print(f"  name:en tag present: {has_name_en}")
-    print(f"  generic name tag present: {has_name_raw}")
-    print(f"  no name at all (name/name:ar/name:en all missing): {has_neither_name}")
-    print(f"  phone present: {has_phone}")
-    print(f"  address (any addr:* part) present: {has_address}")
-    print(f"  unmapped type (neither amenity nor healthcare recognized): {by_type.get('(unmapped)', 0)}")
+def main() -> None:
+    args = parse_args()
+    if args.offline and args.refresh:
+        raise SystemExit("--offline and --refresh are mutually exclusive")
+    bbox = CITY_BBOX if args.scope == "city" else GREATER_NABLUS_BBOX
+    if args.offline:
+        osm_records = load_legacy_osm_csv(LEGACY_SNAPSHOT)
+        collection_mode = "legacy_snapshot"
+    else:
+        collector = OSMCollector(cache_dir=HERE / "cache", cache_max_age_hours=168)
+        osm_records = collector.fetch_healthcare(bbox=bbox, force_refresh=args.refresh)
+        collection_mode = "overpass_cache_or_refresh"
+    official_records = load_official_sources(args.official_sources)
+    scope_overrides = load_scope_overrides(args.official_sources)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = args.output_dir / "nablus_osm_raw.json"
+    raw_path.write_text(
+        json.dumps(
+            {
+                "collection_mode": collection_mode,
+                "bbox": list(bbox),
+                "records": osm_records,
+            },
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    summary = run_pipeline(osm_records, official_records, args.output_dir, scope_overrides)
+    print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":
