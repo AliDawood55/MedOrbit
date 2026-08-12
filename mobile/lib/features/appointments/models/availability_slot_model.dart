@@ -1,10 +1,7 @@
-/// A doctor's recurring or one-off availability window, as returned verbatim
-/// by `GET /appointments/available-slots` (a raw `doctor_availability` row).
+/// One exact bookable slot returned by `GET /appointments/available-slots`,
+/// after the backend has applied schedule overrides, blocks, existing
+/// appointments, and past-time filtering.
 ///
-/// This is *not* a bookable slot — the backend does not subtract already
-/// booked appointments, so a window only says the doctor is generally
-/// reachable then. [generateSlotsFromWindows] turns it into discrete,
-/// individually selectable [GeneratedSlot]s.
 class AvailabilityWindow {
   const AvailabilityWindow({
     required this.startTime,
@@ -36,8 +33,7 @@ int? _asInt(Object? value) {
   return null;
 }
 
-/// A single bookable time slot, generated client-side by chunking an
-/// [AvailabilityWindow] into pieces of its own `slotDurationMinutes`.
+/// The mobile UI representation of one backend-derived bookable slot.
 class GeneratedSlot {
   const GeneratedSlot({
     required this.id,
