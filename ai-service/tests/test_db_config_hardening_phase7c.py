@@ -17,7 +17,9 @@ and the documented default is loaded — which is the property that was actually
 broken.
 
 A note on `.env`: `db.py` calls `load_dotenv(root_env)`, and the project's
-`.env` sets `DB_PORT=5432`. `load_dotenv` defaults to `override=False`, so an
+host-side `.env` sets `DB_PORT=5433` for the loopback-only Docker PostgreSQL
+binding. Compose services explicitly use the container port 5432.
+`load_dotenv` defaults to `override=False`, so an
 explicitly exported variable still wins — which is why the malformed-value
 tests below work, and why "unset" is exercised against the helper directly
 rather than by unsetting the variable.
