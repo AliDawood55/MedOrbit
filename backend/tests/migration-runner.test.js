@@ -3,7 +3,7 @@ const os = require('os');
 const path = require('path');
 const { Pool } = require('pg');
 const { poolConfig } = require('./helpers/test-environment');
-const { run } = require('../scripts/migrate');
+const { checksum, run } = require('../scripts/migrate');
 
 const pool = new Pool(poolConfig);
 let passed = 0;
@@ -20,6 +20,13 @@ function check(name, condition, detail = '') {
 }
 
 async function runTests() {
+    const lfMigration = 'SELECT 1;\nSELECT 2;\n';
+    const crlfMigration = lfMigration.replace(/\n/g, '\r\n');
+    check(
+        'migration checksum is stable across LF and CRLF',
+        checksum(lfMigration) === checksum(crlfMigration)
+    );
+
     const before = await pool.query(
         `SELECT version, checksum, applied_at
          FROM medorbit.schema_migrations
