@@ -46,6 +46,12 @@ DB_CONFIG = {
     "command_timeout": DB_COMMAND_TIMEOUT_SECONDS,
 }
 
+if os.environ.get("NODE_ENV") == "test":
+    if os.environ.get("MEDORBIT_TEST_ISOLATION") != "docker":
+        raise RuntimeError("Unsafe AI test database: MEDORBIT_TEST_ISOLATION must be docker")
+    if DB_CONFIG["host"] != "postgres" or not DB_CONFIG["database"].endswith("_test"):
+        raise RuntimeError("Unsafe AI test database: Docker postgres and a *_test database are required")
+
 
 async def _set_search_path(conn: asyncpg.Connection):
     await conn.execute("SET search_path TO medorbit, public")
