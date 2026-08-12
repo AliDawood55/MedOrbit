@@ -54,6 +54,32 @@ services:
       retries: 10
       start_period: 10s
 
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: medorbit-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - medorbit_kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
   backend:
     build:
       context: ./backend
@@ -75,6 +101,7 @@ services:
       # format for container log collectors. The .env default (development)
       # is correct for running the backend directly on the host.
       NODE_ENV: production
+      KAFKA_ENABLED: "true"
     ports:
       - "${PORT:-3001}:3001"
     depends_on:
@@ -92,6 +119,165 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+
+  outbox-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medorbit-outbox-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
+      WORKER_HEALTH_PORT: 3002
+    command: ["node", "scripts/outbox-worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  event-consumer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medorbit-event-consumer
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
+      WORKER_HEALTH_PORT: 3003
+    command: ["node", "scripts/event-consumer.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      outbox-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3003/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  recommendation-consumer:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medorbit-recommendation-consumer
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_RECOMMENDATION_CONSUMER_GROUP: recommendation-profile-v1
+      WORKER_HEALTH_PORT: 3004
+    command: ["node", "scripts/recommendation-consumer.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      outbox-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3004/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  test-db-init:
+    image: postgis/postgis:18-3.6
+    profiles: ["test"]
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+      SOURCE_DB_NAME: ${DB_NAME}
+      TEST_DB_NAME: medorbit_test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./scripts/init-test-database.sh:/usr/local/bin/init-test-database.sh:ro
+    entrypoint: ["bash", "/usr/local/bin/init-test-database.sh"]
+
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    profiles: ["test"]
+    container_name: medorbit-backend-test
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_NAME: medorbit_test
+      DB_SCHEMA: medorbit
+      NODE_ENV: test
+      MEDORBIT_TEST_ISOLATION: docker
+      PORT: 3001
+      AI_SERVICE_URL: http://ai-service-test:8001
+      KAFKA_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      test-db-init:
+        condition: service_completed_successfully
+      ai-service-test:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://localhost:3001/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  db-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    profiles: ["tools"]
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_NAME: ${DB_NAME}
+      DB_SCHEMA: medorbit
+      NODE_ENV: migration
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["node", "scripts/migrate.js"]
+    command: ["status"]
 
   ai-service:
     build:
@@ -138,6 +324,36 @@ services:
       # switching between the CPU and GPU overlays.
       - medorbit_hf_cache:/root/.cache/huggingface
 
+  ai-service-test:
+    image: medorbit-backend-test
+    profiles: ["test"]
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_NAME: medorbit_test
+      DB_SCHEMA: medorbit
+      NODE_ENV: test
+      MEDORBIT_TEST_ISOLATION: docker
+      PORT: 8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      test-db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://localhost:8001/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    command: ["node", "tests/helpers/ai-test-server.js"]
+
   frontend:
     build:
       context: ./frontend
@@ -152,5 +368,7 @@ services:
 volumes:
   medorbit_pgdata:
     name: medorbit_pgdata
+  medorbit_kafka_data:
+    name: medorbit_kafka_data
   medorbit_hf_cache:
     name: medorbit_hf_cache

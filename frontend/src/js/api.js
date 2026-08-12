@@ -120,6 +120,32 @@ const API = (() => {
 
     // ================= CORE REQUEST =================
 
+    function retryAfterSeconds(response) {
+        const value = response.headers.get('Retry-After');
+        if (!value) return null;
+
+        const seconds = Number(value);
+        if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds));
+
+        const retryAt = Date.parse(value);
+        return Number.isNaN(retryAt) ? null : Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+    }
+
+    function responseError(response, data, fallback) {
+        const isRateLimited = response.status === 429;
+        const isArabic = typeof I18n !== 'undefined' && I18n.getLang?.() === 'ar';
+        const message = isRateLimited
+            ? (isArabic
+                ? 'تم إرسال طلبات كثيرة خلال وقت قصير. حاول مرة أخرى بعد قليل.'
+                : 'Too many requests. Please try again shortly.')
+            : (data?.error?.message || fallback);
+        const err = new Error(message);
+        err.code = data?.error?.code;
+        err.status = response.status;
+        err.retryAfterSeconds = isRateLimited ? retryAfterSeconds(response) : null;
+        return err;
+    }
+
     async function request(path, options = {}) {
 
         const {
@@ -176,10 +202,7 @@ const API = (() => {
         }
 
         if (!response.ok) {
-            const err = new Error(data?.error?.message || 'Request failed');
-            err.code = data?.error?.code;
-            err.status = response.status;
-            throw err;
+            throw responseError(response, data, 'Request failed');
         }
 
         if (method === 'GET' && cacheTTL) {
@@ -223,10 +246,7 @@ const API = (() => {
         }
 
         if (!response.ok) {
-            const err = new Error(data?.error?.message || 'Upload failed');
-            err.code = data?.error?.code;
-            err.status = response.status;
-            throw err;
+            throw responseError(response, data, 'Upload failed');
         }
 
         return data;
@@ -333,7 +353,19 @@ const API = (() => {
     const doctors = {
         list: (query, options) => get('/doctors', query, options),
         get: (id, options) => get(`/doctors/${id}`, null, options),
-        availability: (id, query, options) => get(`/doctors/${id}/availability`, query, options)
+        availability: (id, query, options) => get(`/doctors/${id}/availability`, query, options),
+        myProfile: (options) => get('/doctors/me/profile', null, options),
+        updateMyProfile: (body, options) => put('/doctors/me/profile', body, options),
+        mySchedule: (options) => get('/doctors/me/schedule', null, options),
+        addAvailability: (body, options) => post('/doctors/me/availability', body, options),
+        updateAvailability: (id, body, options) => put(`/doctors/me/availability/${id}`, body, options),
+        deleteAvailability: (id, options) => del(`/doctors/me/availability/${id}`, options)
+    };
+
+    const patientProfiles = {
+        me: (options) => get('/patients/me/profile', null, options),
+        updateMe: (body, options) => put('/patients/me/profile', body, options),
+        discover: (query, options) => get('/patients/discover', query, options)
     };
 
     // ================= CLINICS (public read) =================
@@ -361,6 +393,8 @@ const API = (() => {
         get: (id, options) => get(`/appointments/${id}`, null, options),
         create: (body, options) => post('/appointments', body, options),
         cancel: (id, body, options) => put(`/appointments/${id}/cancel`, body, options),
+        confirm: (id, options) => put(`/appointments/${id}/confirm`, {}, options),
+        complete: (id, options) => put(`/appointments/${id}/complete`, {}, options),
         availableSlots: (query, options) => get('/appointments/available-slots', query, options)
     };
 
@@ -368,9 +402,21 @@ const API = (() => {
 
     const notifications = {
         list: (options) => get('/notifications', null, options),
+        unreadCount: (options) => get('/notifications/unread-count', null, options),
         markRead: (id, options) => put(`/notifications/${id}/read`, null, options),
         markAllRead: (options) => patch('/notifications/read-all', null, options),
         remove: (id, options) => del(`/notifications/${id}`, options)
+    };
+
+    // Human text messaging is separate from `conversations` (AI chatbot).
+    const messaging = {
+        list: (query, options) => get('/messages/conversations', query, options),
+        start: (counterpartId, options) => post('/messages/conversations', { counterpartId }, options),
+        history: (id, query, options) => get(`/messages/conversations/${id}/messages`, query, options),
+        send: (id, body, clientMessageId, options) => post(`/messages/conversations/${id}/messages`, { body, client_message_id: clientMessageId }, options),
+        markRead: (id, messageId, options) => post(`/messages/conversations/${id}/read`, messageId ? { message_id: messageId } : {}, options),
+        accept: (id, options) => post(`/messages/conversations/${id}/accept`, {}, options),
+        decline: (id, options) => post(`/messages/conversations/${id}/decline`, {}, options)
     };
 
     // ================= ANALYTICS (JWT required, admin only) =================
@@ -425,8 +471,38 @@ const API = (() => {
         prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
     };
 
+    const social = {
+        feed: (query, options) => get('/feed/posts', query, options),
+        comments: (postId, options) => get(`/feed/posts/${postId}/comments`, null, options),
+        addComment: (postId, body, options) => post(`/feed/posts/${postId}/comments`, body, options),
+        like: (postId, options) => post(`/feed/posts/${postId}/like`, {}, options),
+        unlike: (postId, options) => del(`/feed/posts/${postId}/like`, options),
+        view: (postId, options) => post(`/feed/posts/${postId}/view`, {}, options),
+        follow: (doctorId, options) => post(`/doctors/${doctorId}/follow`, {}, options),
+        unfollow: (doctorId, options) => del(`/doctors/${doctorId}/follow`, options),
+        doctorView: (doctorId, options) => post(`/doctors/${doctorId}/view`, {}, options),
+        specialtySearch: (specialtyId, options) => post(`/recommendations/specialties/${specialtyId}/search`, {}, options),
+        moderationPosts: (query, options) => get('/admin/social/posts', query, options),
+        moderatePost: (id, action, options) => post(`/admin/social/posts/${id}/moderate`, { action }, options),
+        moderationComments: (query, options) => get('/admin/social/comments', query, options),
+        moderateComment: (id, action, options) => post(`/admin/social/comments/${id}/moderate`, { action }, options)
+    };
+
     function getOrigin() {
         return API_ORIGIN;
+    }
+
+    /**
+     * Resolves backend-owned media paths (for example `/uploads/avatars/...`)
+     * against the API origin. Public profile responses intentionally contain
+     * relative paths, while the static frontend is served from a different
+     * origin in production. Absolute/data/blob URLs are already complete.
+     */
+    function assetUrl(value) {
+        const source = String(value || '').trim();
+        if (!source) return '';
+        if (/^(?:https?:|data:|blob:)/i.test(source)) return source;
+        return API_ORIGIN + '/' + source.replace(/^\/+/, '');
     }
 
     function getAiOrigin() {
@@ -445,11 +521,25 @@ const API = (() => {
         stats: (options) => get('/feedback/stats', null, options)
     };
 
+    const contact = {
+        submit: (body, options) => post('/contact', body, options),
+        adminList: (query, options) => get('/admin/contact-messages', query, options),
+        adminGet: (id, options) => get(`/admin/contact-messages/${id}`, null, options),
+        markRead: (id, options) => post(`/admin/contact-messages/${id}/read`, {}, options),
+        resolve: (id, options) => post(`/admin/contact-messages/${id}/resolve`, {}, options)
+    };
+
+    const adminInvitations = {
+        list: (options) => get('/admin/invitations', null, options),
+        create: (email, options) => post('/admin/invitations', { email }, options),
+        revoke: (id, options) => del(`/admin/invitations/${id}`, options)
+    };
+
     return {
-        request, get, post, put, del, patch,
-        sendChatMessage, makeCancellable, conversations, doctors, clinics, users, appointments, notifications, analytics, care, feedback,
+        request, get, post, put, del, patch, uploadFile,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
-        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, resolveServiceOrigin, clearCache
+        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
 
 })();

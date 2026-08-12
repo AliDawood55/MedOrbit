@@ -2,10 +2,9 @@
  * MedOrbit v2 - Book Appointment
  * 3-step wizard: doctor -> time slot -> confirm.
  * GET /api/doctors/:id (profile + clinics), GET /api/appointments/available-slots
- * (returns raw doctor_availability windows — discrete slots are generated
- * client-side by dividing each window into slot_duration chunks), and
- * POST /api/appointments to book. There is no way to know which generated
- * slots are already taken until submit (SLOT_BUSY), which is handled below.
+ * (returns exact server-derived slots after blocks/bookings are removed), and
+ * POST /api/appointments to book. Submit is revalidated transactionally and
+ * SLOT_BUSY refreshes the selected date when another patient wins the slot.
  */
 const BookAppointment = (() => {
 
@@ -76,36 +75,35 @@ const BookAppointment = (() => {
         return pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60);
     }
 
-    function buildSlotsFromWindows(windows, forDateKey) {
-        const isToday = forDateKey === todayKey();
-        const now = new Date();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
+    function normalizeServerSlots(rows) {
         const seen = new Set();
         const slots = [];
 
-        (windows || []).forEach((w) => {
-            const dur = w.slot_duration || 30;
-            const startM = timeToMinutes(w.start_time);
-            const endM = timeToMinutes(w.end_time);
+        (rows || []).forEach((row) => {
+            const startM = timeToMinutes(row.start_time);
+            const endM = timeToMinutes(row.end_time);
+            const duration = Number(row.duration_minutes ?? row.slot_duration);
+            if (!Number.isInteger(startM) || !Number.isInteger(endM)
+                || !Number.isInteger(duration) || duration <= 0
+                || endM - startM !== duration) return;
 
-            for (let cur = startM; cur + dur <= endM; cur += dur) {
-                if (isToday && cur <= nowMinutes) continue;
+            const telemedicine = row.appointment_type
+                ? row.appointment_type === 'telemedicine'
+                : Boolean(row.is_telemedicine);
+            const key = startM + '|' + endM + '|' + duration + '|' + (telemedicine ? 1 : 0);
+            if (seen.has(key)) return;
+            seen.add(key);
 
-                const key = cur + '|' + dur + '|' + (w.is_telemedicine ? 1 : 0);
-                if (seen.has(key)) continue;
-                seen.add(key);
-
-                slots.push({
-                    startMinutes: cur,
-                    startDisplay: minutesToHHMM(cur),
-                    endDisplay: minutesToHHMM(cur + dur),
-                    startFull: minutesToHHMM(cur) + ':00',
-                    endFull: minutesToHHMM(cur + dur) + ':00',
-                    duration: dur,
-                    telemedicine: !!w.is_telemedicine
-                });
-            }
+            slots.push({
+                startMinutes: startM,
+                startDisplay: minutesToHHMM(startM),
+                endDisplay: minutesToHHMM(endM),
+                startFull: minutesToHHMM(startM) + ':00',
+                endFull: minutesToHHMM(endM) + ':00',
+                duration,
+                telemedicine,
+                clinicId: row.clinic_id || null
+            });
         });
 
         slots.sort((a, b) => a.startMinutes - b.startMinutes);
@@ -160,7 +158,6 @@ const BookAppointment = (() => {
         document.getElementById('doctorPickerWrap').classList.add('hidden');
         document.getElementById('selectedDoctorWrap').classList.remove('hidden');
         renderSelectedDoctor();
-        document.getElementById('step1NextBtn').disabled = false;
     }
 
     function renderSelectedDoctor() {
@@ -169,10 +166,17 @@ const BookAppointment = (() => {
 
         const initial = (doctorName(d) || '?').trim().charAt(0).toUpperCase();
         document.getElementById('selectedDoctorAvatar').innerHTML = d.profile_image_url
-            ? '<img src="' + escapeHtml(d.profile_image_url) + '" alt="">'
+            ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">'
             : escapeHtml(initial);
         document.getElementById('selectedDoctorName').textContent = doctorName(d);
         document.getElementById('selectedDoctorSpecialty').textContent = name(d, 'specialty_ar', 'specialty_en');
+        const accepting = d.is_accepting_patients !== false;
+        const closedNote = document.getElementById('bookingClosedNote');
+        closedNote.textContent = isAr()
+            ? 'هذا الطبيب لا يستقبل حجوزات جديدة حالياً.'
+            : 'This doctor is not accepting new bookings right now.';
+        closedNote.classList.toggle('hidden', accepting);
+        document.getElementById('step1NextBtn').disabled = !accepting;
     }
 
     function onChangeDoctor() {
@@ -183,6 +187,7 @@ const BookAppointment = (() => {
         state.slot = null;
 
         document.getElementById('selectedDoctorWrap').classList.add('hidden');
+        document.getElementById('bookingClosedNote').classList.add('hidden');
         document.getElementById('doctorPickerWrap').classList.remove('hidden');
         document.getElementById('step1NextBtn').disabled = true;
 
@@ -198,7 +203,7 @@ const BookAppointment = (() => {
         return (
             '<button type="button" class="doctor-pick-item">' +
                 '<div class="entity-avatar">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(d.profile_image_url) + '" alt="">' : escapeHtml(initial)) +
+                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initial)) +
                 '</div>' +
                 '<div class="doctor-pick-item-body">' +
                     '<div class="doctor-pick-item-name">' + escapeHtml(doctorName(d)) + '</div>' +
@@ -344,7 +349,7 @@ const BookAppointment = (() => {
         lastSlots = [];
         document.getElementById('step2NextBtn').disabled = true;
 
-        if (!state.clinic || !state.date) return;
+        if (!state.doctorId || !state.date) return;
 
         const grid = document.getElementById('slotGrid');
         const empty = document.getElementById('slotsEmpty');
@@ -357,11 +362,11 @@ const BookAppointment = (() => {
         try {
             const res = await API.appointments.availableSlots({
                 doctor_id: state.doctorId,
-                clinic_id: state.clinic.id,
+                ...(state.clinic ? { clinic_id: state.clinic.id } : {}),
                 date: state.date
             });
 
-            const slots = buildSlotsFromWindows(res?.data || [], state.date);
+            const slots = normalizeServerSlots(res?.data || []);
             loading.classList.add('hidden');
 
             if (!slots.length) {
@@ -381,15 +386,6 @@ const BookAppointment = (() => {
     function setupStep2() {
         state.slot = null;
         document.getElementById('step2NextBtn').disabled = true;
-
-        if (!state.clinics.length) {
-            document.getElementById('noClinicsState').classList.remove('hidden');
-            document.getElementById('clinicFieldBlock').classList.add('hidden');
-            document.getElementById('dateFieldBlock').classList.add('hidden');
-            document.getElementById('slotGrid').innerHTML = '';
-            document.getElementById('slotsEmpty').classList.add('hidden');
-            return;
-        }
 
         document.getElementById('noClinicsState').classList.add('hidden');
         document.getElementById('dateFieldBlock').classList.remove('hidden');
@@ -411,7 +407,7 @@ const BookAppointment = (() => {
         const d = state.doctor;
         const c = state.clinic;
         const s = state.slot;
-        if (!d || !c || !s) return;
+        if (!d || !s) return;
 
         const dateObj = new Date(state.date + 'T00:00:00');
         const dateDisplay = dateObj.toLocaleDateString(isAr() ? 'ar' : 'en-US', {
@@ -420,7 +416,7 @@ const BookAppointment = (() => {
 
         box.innerHTML =
             summaryRow(t('appt.doctorLabel'), escapeHtml(doctorName(d))) +
-            summaryRow(t('appt.clinicLabel'), escapeHtml(name(c, 'name_ar', 'name_en'))) +
+            (c && s.clinicId ? summaryRow(t('appt.clinicLabel'), escapeHtml(name(c, 'name_ar', 'name_en'))) : '') +
             summaryRow(t('appt.dateLabel'), escapeHtml(dateDisplay)) +
             summaryRow(t('appt.timeLabel'), escapeHtml(s.startDisplay + ' – ' + s.endDisplay)) +
             summaryRow(t('appt.typeLabel'), escapeHtml(t(s.telemedicine ? 'appt.typeTelemedicine' : 'appt.typeInPerson')));
@@ -435,7 +431,7 @@ const BookAppointment = (() => {
 
         const body = {
             doctor_id: state.doctorId,
-            clinic_id: state.clinic.id,
+            clinic_id: state.slot.clinicId,
             scheduled_date: state.date,
             start_time: state.slot.startFull,
             end_time: state.slot.endFull,

@@ -14,9 +14,11 @@ const Layout = (() => {
 
     const PAGES = [
         { href: 'home.html', key: 'nav.home', match: ['home.html', ''] },
+        { href: 'feed.html', key: 'nav.feed', match: ['feed.html'] },
         { href: 'index.html', key: 'nav.chat', match: ['index.html'] },
         { href: 'find-doctors.html', key: 'nav.doctors', match: ['find-doctors.html', 'doctor.html'] },
         { href: 'find-clinics.html', key: 'nav.clinics', match: ['find-clinics.html', 'clinic.html'] },
+        { href: 'contact.html', key: 'nav.contactUs', match: ['contact.html'] },
         {
             key: 'nav.aiTools',
             match: ['symptom-checker.html', 'drug-checker.html', 'report-summary.html', 'avatar-preview.html'],
@@ -28,6 +30,14 @@ const Layout = (() => {
             ]
         }
     ];
+
+    const NOTIFICATION_POLL_MS = 60_000;
+    const NOTIFICATION_FOCUS_MIN_MS = 15_000;
+    let initialized = false;
+    let notificationTimer = null;
+    let notificationRequest = null;
+    let lastNotificationRefreshAt = 0;
+    let lastUnreadCount = 0;
 
     function currentPage() {
         const parts = window.location.pathname.split('/');
@@ -121,28 +131,41 @@ const Layout = (() => {
         }
 
         const user = API.getUser();
-        const isAdmin = user?.role === 'admin';
+        const isAdmin = ['admin', 'super_admin'].includes(user?.role);
+        const isSuperAdmin = user?.role === 'super_admin';
         const isDoctor = user?.role === 'doctor';
         const isPatient = user?.role === 'patient';
 
         el.innerHTML =
+            '<a href="notifications.html" class="icon-btn notification-bell" id="notificationBell" title="Notifications / الإشعارات" aria-label="Notifications">' +
+                '<i class="fas fa-bell" aria-hidden="true"></i>' +
+                '<span class="notification-badge hidden" id="notificationBadge" aria-hidden="true"></span>' +
+            '</a>' +
             '<div class="user-chip" id="userChip">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
                 '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
                 '<i class="fas fa-chevron-down"></i>' +
                 '<div class="user-menu" id="userMenu">' +
                     '<a href="dashboard.html" class="user-menu-item" data-i18n="nav.dashboard"></a>' +
-                    '<a href="book-appointment.html" class="user-menu-item" data-i18n="nav.bookAppointment"></a>' +
-                    '<a href="my-appointments.html" class="user-menu-item" data-i18n="nav.myAppointments"></a>' +
-                    '<a href="my-prescriptions.html" class="user-menu-item" data-i18n="nav.myPrescriptions"></a>' +
-                    '<a href="my-records.html" class="user-menu-item" data-i18n="nav.myRecords"></a>' +
-                    '<a href="my-reports.html" class="user-menu-item" data-i18n="nav.myReports"></a>' +
-                    '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
-                    (isDoctor ? '<a href="my-patients.html" class="user-menu-item" data-i18n="nav.myPatients"></a>' : '') +
+                    (isPatient ? '<a href="find-doctors.html" class="user-menu-item" data-i18n="nav.doctors"></a>' : '') +
+                    (isPatient ? '<a href="feed.html" class="user-menu-item" data-i18n="nav.feed"></a>' : '') +
+                    ((isPatient || isDoctor) ? '<a href="direct-messages.html" class="user-menu-item" data-i18n="nav.messages"></a>' : '') +
+                    (isPatient ? '<a href="my-appointments.html" class="user-menu-item" data-i18n="nav.myAppointments"></a>' : '') +
+                    (isDoctor ? '<a href="my-schedule.html" class="user-menu-item" data-i18n="nav.mySchedule"></a>' : '') +
+                    (isDoctor ? '<a href="my-schedule.html#appointments" class="user-menu-item" data-i18n="nav.doctorAppointments"></a>' : '') +
+                    (isPatient ? '<a href="patient-profile.html" class="user-menu-item" data-i18n="nav.patientProfile"></a>' : '') +
+                    (isPatient ? '<a href="my-records.html" class="user-menu-item" data-i18n="nav.myRecords"></a>' : '') +
+                    (isPatient ? '<a href="my-prescriptions.html" class="user-menu-item" data-i18n="nav.myPrescriptions"></a>' : '') +
+                    (isDoctor ? '<a href="doctor-profile-edit.html" class="user-menu-item" data-i18n="nav.professionalProfile"></a>' : '') +
                     (isDoctor ? '<a href="doctor-posts.html" class="user-menu-item" data-i18n="nav.doctorPosts"></a>' : '') +
-                    (isPatient ? '<a href="my-doctor.html" class="user-menu-item" data-i18n="nav.myDoctor"></a>' : '') +
-                    '<a href="feedback.html" class="user-menu-item" data-i18n="nav.feedback"></a>' +
+                    (isDoctor ? '<a href="my-patients.html" class="user-menu-item" data-i18n="nav.myPatients"></a>' : '') +
+                    (isAdmin ? '<a href="admin-doctor-applications.html" class="user-menu-item" data-i18n="nav.doctorApplications"></a>' : '') +
+                    (isAdmin ? '<a href="admin-contact-messages.html" class="user-menu-item" data-i18n="nav.contactMessages"></a>' : '') +
+                    (isAdmin ? '<a href="admin-social.html" class="user-menu-item" data-i18n="nav.socialModeration"></a>' : '') +
+                    (isSuperAdmin ? '<a href="admin-invitations.html" class="user-menu-item">Admin Invitations</a>' : '') +
                     (isAdmin ? '<a href="analytics.html" class="user-menu-item" data-i18n="nav.analytics"></a>' : '') +
+                    '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
+                    (!isAdmin ? '<a href="contact.html" class="user-menu-item" data-i18n="nav.contactUs"></a>' : '') +
                     '<a href="profile.html" class="user-menu-item" data-i18n="nav.account"></a>' +
                     '<button type="button" class="user-menu-item" id="logoutBtn" data-i18n="auth.logout"></button>' +
                 '</div>' +
@@ -155,8 +178,6 @@ const Layout = (() => {
                 chip.classList.toggle('open');
             });
         }
-
-        document.addEventListener('click', () => chip?.classList.remove('open'));
 
         document.getElementById('logoutBtn')?.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -204,7 +225,8 @@ const Layout = (() => {
         }
 
         const user = API.getUser();
-        const isAdmin = user?.role === 'admin';
+        const isAdmin = ['admin', 'super_admin'].includes(user?.role);
+        const isSuperAdmin = user?.role === 'super_admin';
         const isDoctor = user?.role === 'doctor';
         const isPatient = user?.role === 'patient';
         return (
@@ -213,17 +235,25 @@ const Layout = (() => {
                 '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
             '</div>' +
             '<a href="dashboard.html" class="drawer-link" data-i18n="nav.dashboard"></a>' +
-            '<a href="book-appointment.html" class="drawer-link" data-i18n="nav.bookAppointment"></a>' +
-            '<a href="my-appointments.html" class="drawer-link" data-i18n="nav.myAppointments"></a>' +
-            '<a href="my-prescriptions.html" class="drawer-link" data-i18n="nav.myPrescriptions"></a>' +
-            '<a href="my-records.html" class="drawer-link" data-i18n="nav.myRecords"></a>' +
-            '<a href="my-reports.html" class="drawer-link" data-i18n="nav.myReports"></a>' +
-            '<a href="notifications.html" class="drawer-link" data-i18n="nav.notifications"></a>' +
-            (isDoctor ? '<a href="my-patients.html" class="drawer-link" data-i18n="nav.myPatients"></a>' : '') +
+            (isPatient ? '<a href="find-doctors.html" class="drawer-link" data-i18n="nav.doctors"></a>' : '') +
+            (isPatient ? '<a href="feed.html" class="drawer-link" data-i18n="nav.feed"></a>' : '') +
+            ((isPatient || isDoctor) ? '<a href="direct-messages.html" class="drawer-link" data-i18n="nav.messages"></a>' : '') +
+            (isPatient ? '<a href="my-appointments.html" class="drawer-link" data-i18n="nav.myAppointments"></a>' : '') +
+            (isDoctor ? '<a href="my-schedule.html" class="drawer-link" data-i18n="nav.mySchedule"></a>' : '') +
+            (isDoctor ? '<a href="my-schedule.html#appointments" class="drawer-link" data-i18n="nav.doctorAppointments"></a>' : '') +
+            (isPatient ? '<a href="patient-profile.html" class="drawer-link" data-i18n="nav.patientProfile"></a>' : '') +
+            (isPatient ? '<a href="my-records.html" class="drawer-link" data-i18n="nav.myRecords"></a>' : '') +
+            (isPatient ? '<a href="my-prescriptions.html" class="drawer-link" data-i18n="nav.myPrescriptions"></a>' : '') +
+            (isDoctor ? '<a href="doctor-profile-edit.html" class="drawer-link" data-i18n="nav.professionalProfile"></a>' : '') +
             (isDoctor ? '<a href="doctor-posts.html" class="drawer-link" data-i18n="nav.doctorPosts"></a>' : '') +
-            (isPatient ? '<a href="my-doctor.html" class="drawer-link" data-i18n="nav.myDoctor"></a>' : '') +
-            '<a href="feedback.html" class="drawer-link" data-i18n="nav.feedback"></a>' +
+            (isDoctor ? '<a href="my-patients.html" class="drawer-link" data-i18n="nav.myPatients"></a>' : '') +
+            (isAdmin ? '<a href="admin-doctor-applications.html" class="drawer-link" data-i18n="nav.doctorApplications"></a>' : '') +
+            (isAdmin ? '<a href="admin-contact-messages.html" class="drawer-link" data-i18n="nav.contactMessages"></a>' : '') +
+            (isAdmin ? '<a href="admin-social.html" class="drawer-link" data-i18n="nav.socialModeration"></a>' : '') +
+            (isSuperAdmin ? '<a href="admin-invitations.html" class="drawer-link">Admin Invitations</a>' : '') +
             (isAdmin ? '<a href="analytics.html" class="drawer-link" data-i18n="nav.analytics"></a>' : '') +
+            '<a href="notifications.html" class="drawer-link drawer-notification-link"><i class="fas fa-bell" aria-hidden="true"></i><span data-i18n="nav.notifications"></span><span class="notification-badge hidden" id="drawerNotificationBadge" aria-hidden="true"></span></a>' +
+            (!isAdmin ? '<a href="contact.html" class="drawer-link" data-i18n="nav.contactUs"></a>' : '') +
             '<a href="profile.html" class="drawer-link" data-i18n="nav.account"></a>' +
             '<button type="button" class="drawer-link" id="drawerLogoutBtn" data-i18n="auth.logout"></button>'
         );
@@ -287,6 +317,7 @@ const Layout = (() => {
 
         window.addEventListener('auth:changed', () => {
             drawer.querySelector('.mobile-drawer-auth').innerHTML = renderDrawerAuth();
+            updateNotificationBadge(lastUnreadCount);
             const btn = document.getElementById('drawerLogoutBtn');
             btn?.addEventListener('click', async () => {
                 close();
@@ -325,6 +356,71 @@ const Layout = (() => {
 
     // ================= INIT =================
 
+    function updateNotificationBadge(value) {
+        const count = Math.max(0, Number(value) || 0);
+        lastUnreadCount = count;
+        const label = count > 9 ? '9+' : String(count);
+
+        ['notificationBadge', 'drawerNotificationBadge'].forEach((id) => {
+            const badge = document.getElementById(id);
+            if (!badge) return;
+            badge.textContent = count ? label : '';
+            badge.classList.toggle('hidden', count === 0);
+            badge.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+        });
+
+        const bell = document.getElementById('notificationBell');
+        if (bell) {
+            bell.setAttribute('aria-label', count
+                ? `Notifications (${count} unread)`
+                : 'Notifications');
+        }
+    }
+
+    function stopNotificationPolling() {
+        if (notificationTimer) window.clearTimeout(notificationTimer);
+        notificationTimer = null;
+    }
+
+    function scheduleNotificationRefresh(delay = NOTIFICATION_POLL_MS) {
+        stopNotificationPolling();
+        if (typeof API === 'undefined' || !API.isAuthenticated()) return;
+        notificationTimer = window.setTimeout(() => refreshNotificationBadge(), delay);
+    }
+
+    async function refreshNotificationBadge({ force = false } = {}) {
+        if (typeof API === 'undefined' || !API.isAuthenticated()) {
+            stopNotificationPolling();
+            updateNotificationBadge(0);
+            return;
+        }
+        if (notificationRequest) return notificationRequest;
+
+        const elapsed = Date.now() - lastNotificationRefreshAt;
+        if (!force && lastNotificationRefreshAt && elapsed < NOTIFICATION_FOCUS_MIN_MS) {
+            scheduleNotificationRefresh(Math.max(NOTIFICATION_FOCUS_MIN_MS - elapsed, 1_000));
+            return;
+        }
+
+        notificationRequest = (async () => {
+            let nextDelay = NOTIFICATION_POLL_MS;
+            try {
+                const response = await API.notifications.unreadCount();
+                updateNotificationBadge(response?.data?.count || 0);
+            } catch (err) {
+                if (err.status === 429 && err.retryAfterSeconds) {
+                    nextDelay = Math.max(nextDelay, err.retryAfterSeconds * 1000);
+                }
+            } finally {
+                lastNotificationRefreshAt = Date.now();
+                notificationRequest = null;
+                scheduleNotificationRefresh(nextDelay);
+            }
+        })();
+
+        return notificationRequest;
+    }
+
     /**
      * Floating "back to top" button — document pages only (app-shell pages
      * scroll internally, not at the document level, so it has nothing to
@@ -352,6 +448,9 @@ const Layout = (() => {
     }
 
     function init() {
+        if (initialized) return;
+        initialized = true;
+
         if (typeof Theme !== 'undefined') Theme.apply();
         if (typeof I18n !== 'undefined') I18n.apply();
 
@@ -360,6 +459,8 @@ const Layout = (() => {
         renderFooter('siteFooter');
         renderDrawer();
         renderBackToTop();
+        updateNotificationBadge(lastUnreadCount);
+        refreshNotificationBadge({ force: true });
 
         // Header theme/language toggles — every page (not just index.html,
         // which used to be the only one wiring these up in app.js).
@@ -377,11 +478,29 @@ const Layout = (() => {
         // itself triggers would recurse forever.
         window.addEventListener('auth:changed', () => {
             renderAuthArea('authArea');
+            if (API.isAuthenticated()) {
+                refreshNotificationBadge({ force: true });
+            } else {
+                lastNotificationRefreshAt = 0;
+                updateNotificationBadge(0);
+                stopNotificationPolling();
+            }
         });
+
+        window.addEventListener('notifications:changed', () => {
+            refreshNotificationBadge({ force: true });
+        });
+
+        window.addEventListener('focus', () => {
+            refreshNotificationBadge();
+        });
+
+        window.addEventListener('beforeunload', stopNotificationPolling);
 
         // Single global listener (not re-registered per renderNav call, since
         // renderNav also runs for the footer) to close any open nav dropdown.
         document.addEventListener('click', () => {
+            document.getElementById('userChip')?.classList.remove('open');
             document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
         });
     }
