@@ -339,24 +339,31 @@ router.delete(
       const userId = req.user.sub;
 
 
-      await db.query(
-        `
-
-UPDATE medorbit.users
-
-SET
-
-deleted_at=NOW(),
-is_active=false
-
-
-WHERE id=$1
-
-
-`,
-        [
-          userId
-        ]);
+      const client = await db.getClient();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE medorbit.users
+           SET deleted_at=NOW(),
+               is_active=false,
+               authorization_version=authorization_version+1,
+               updated_at=NOW()
+           WHERE id=$1`,
+          [userId]
+        );
+        await client.query(
+          `UPDATE medorbit.user_sessions
+           SET revoked_at=NOW()
+           WHERE user_id=$1 AND revoked_at IS NULL`,
+          [userId]
+        );
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
 
 
 

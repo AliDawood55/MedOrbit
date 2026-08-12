@@ -38,7 +38,6 @@ async function register(req, res, next) {
         if (
             !email ||
             !password ||
-            !role ||
             !firstNameAr ||
             !lastNameAr ||
             !firstNameEn ||
@@ -52,6 +51,15 @@ async function register(req, res, next) {
                 "VALIDATION_ERROR"
             );
 
+        }
+
+        if (role != null && role !== "patient") {
+            return error(
+                res,
+                "Public registration only supports patient accounts",
+                400,
+                "INVALID_ROLE"
+            );
         }
 
         if (!validateEmail(email)) {
@@ -70,8 +78,6 @@ async function register(req, res, next) {
 
                 email,
                 password,
-                role,
-
                 firstNameAr,
                 lastNameAr,
 

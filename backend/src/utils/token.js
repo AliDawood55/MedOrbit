@@ -29,6 +29,10 @@ function hashToken(token) {
 
 }
 
+function hashRefreshToken(token) {
+    return hashToken(token);
+}
+
 function hashOtp(otp, email, secret) {
 
     return crypto
@@ -47,6 +51,8 @@ module.exports = {
     generateOtp,
 
     hashToken,
+
+    hashRefreshToken,
 
     hashOtp
 
