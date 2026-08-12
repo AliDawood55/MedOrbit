@@ -1,14 +1,9 @@
 /**
  * MedOrbit v2 - Dashboard (hub)
  * Built only from endpoints that actually exist and actually work:
- * GET /users/me, GET /conversations, GET /appointments, GET /notifications.
- * GET /appointments is known to always return [] for real patients today
- * (a backend patient_id/user_id bug, tracked in BACKEND_NEEDED.md) — its
- * empty state is written to read as "no appointments", not "broken", since
- * from the UI's point of view the two are indistinguishable anyway.
- * Role-aware: doctor accounts have no patients row, so appointment booking/
- * listing (which is patient-scoped by design) is hidden rather than shown
- * broken. Prescriptions/medical-records have no submission API — see
+ * GET /users/me, GET /conversations, GET /appointments, GET /notifications,
+ * and GET /doctors/me/schedule for the doctor's own appointment preview.
+ * Prescriptions/medical-records have no submission API — see
  * my-prescriptions.html / my-records.html. Every other page in
  * frontend/public is reachable from here via QUICK_GROUPS below.
  */
@@ -51,8 +46,11 @@ const Dashboard = (() => {
             titleKey: 'dashboard.groupCare',
             tiles: [
                 { id: 'qaBookAppt', href: 'book-appointment.html', icon: 'fa-calendar-plus', titleKey: 'nav.bookAppointment', descKey: 'dashboard.descBookAppt', hideForDoctor: true },
-                { href: 'my-appointments.html', icon: 'fa-calendar-check', titleKey: 'nav.myAppointments', descKey: 'dashboard.descMyAppts' },
+                { href: 'my-appointments.html', icon: 'fa-calendar-check', titleKey: 'nav.myAppointments', descKey: 'dashboard.descMyAppts', hideForDoctor: true },
+                { href: 'my-schedule.html', icon: 'fa-calendar-days', titleKey: 'nav.mySchedule', descKey: 'dashboard.descMySchedule', doctorOnly: true },
+                { href: 'my-schedule.html#appointments', icon: 'fa-calendar-check', titleKey: 'nav.doctorAppointments', descKey: 'dashboard.descDoctorAppointments', doctorOnly: true },
                 { href: 'find-doctors.html', icon: 'fa-user-md', titleKey: 'nav.doctors', descKey: 'dashboard.descFindDoctors' },
+                { href: 'doctor-application.html', icon: 'fa-user-doctor', titleKey: 'Apply as Doctor', descKey: 'Doctor application status', patientOnly: true },
                 { href: 'find-clinics.html', icon: 'fa-hospital', titleKey: 'nav.clinics', descKey: 'dashboard.descFindClinics' }
             ]
         },
@@ -72,8 +70,8 @@ const Dashboard = (() => {
             icon: 'fa-address-card',
             titleKey: 'dashboard.groupMyData',
             tiles: [
-                { href: 'my-records.html', icon: 'fa-file-waveform', titleKey: 'nav.myRecords', descKey: 'dashboard.descMyRecords' },
-                { href: 'my-prescriptions.html', icon: 'fa-prescription-bottle-medical', titleKey: 'nav.myPrescriptions', descKey: 'dashboard.descMyPrescriptions' },
+                { href: 'my-records.html', icon: 'fa-file-waveform', titleKey: 'nav.myRecords', descKey: 'dashboard.descMyRecords', patientOnly: true },
+                { href: 'my-prescriptions.html', icon: 'fa-prescription-bottle-medical', titleKey: 'nav.myPrescriptions', descKey: 'dashboard.descMyPrescriptions', patientOnly: true },
                 { href: 'my-reports.html', icon: 'fa-file-lines', titleKey: 'nav.myReports', descKey: 'dashboard.descMyReports' },
                 { href: 'profile.html', icon: 'fa-user-gear', titleKey: 'nav.account', descKey: 'dashboard.descProfile' }
             ]
@@ -85,7 +83,11 @@ const Dashboard = (() => {
             tiles: [
                 { href: 'feedback.html', icon: 'fa-comment-dots', titleKey: 'nav.feedback', descKey: 'dashboard.descFeedback' },
                 { href: 'notifications.html', icon: 'fa-bell', titleKey: 'nav.notifications', descKey: 'dashboard.descNotifications' },
-                { id: 'qaAnalytics', href: 'analytics.html', icon: 'fa-chart-line', titleKey: 'nav.analytics', descKey: 'dashboard.descAnalytics', adminOnly: true }
+                { id: 'qaAnalytics', href: 'analytics.html', icon: 'fa-chart-line', titleKey: 'nav.analytics', descKey: 'dashboard.descAnalytics', adminOnly: true },
+                { href: 'admin-doctor-applications.html', icon: 'fa-user-check', titleKey: 'Doctor Applications', descKey: 'Review pending doctor applications', adminOnly: true },
+                { href: 'admin-contact-messages.html', icon: 'fa-envelope-open-text', titleKey: 'Contact Messages', descKey: 'Review support messages', adminOnly: true },
+                { href: 'admin-social.html', icon: 'fa-shield-halved', titleKey: 'Social Moderation', descKey: 'Moderate posts and comments', adminOnly: true },
+                { href: 'admin-invitations.html', icon: 'fa-user-plus', titleKey: 'Admin Invitations', descKey: 'Invite and manage administrators', superAdminOnly: true }
             ]
         }
     ];
@@ -177,7 +179,7 @@ const Dashboard = (() => {
         const avatarEl = document.getElementById('dashAvatar');
         if (avatarEl) {
             if (profile.avatar_url) {
-                avatarEl.innerHTML = '<img src="' + escapeHtml(API.getOrigin() + profile.avatar_url) + '" alt="">';
+                avatarEl.innerHTML = '<img src="' + escapeHtml(API.assetUrl(profile.avatar_url)) + '" alt="">';
             } else {
                 avatarEl.textContent = (displayName() || profile.email || '?').trim().charAt(0).toUpperCase() || '?';
             }
@@ -198,7 +200,7 @@ const Dashboard = (() => {
     }
 
     function isAdmin() {
-        return profile?.role === 'admin';
+        return ['admin', 'super_admin'].includes(profile?.role);
     }
 
     // ================= ROLE-AWARE SECTIONS =================
@@ -206,14 +208,18 @@ const Dashboard = (() => {
     function applyRoleAwareness() {
         const doctor = isDoctor();
 
-        document.getElementById('statApptTile')?.classList.toggle('hidden', doctor);
+        const statTile = document.getElementById('statApptTile');
+        const viewAll = document.getElementById('dashboardAppointmentsLink');
+        if (statTile) statTile.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
+        if (viewAll) viewAll.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
+        document.getElementById('dashboardBookAppointment')?.classList.toggle('hidden', doctor);
 
         // Appointment booking/listing is patient-scoped (doctors have no
         // patients row) — show the explanatory notice instead of an empty
         // list that would otherwise look broken for a doctor account.
-        document.getElementById('apptDoctorNotice')?.classList.toggle('hidden', !doctor);
+        document.getElementById('apptDoctorNotice')?.classList.add('hidden');
         document.getElementById('apptEmpty')?.classList.add('hidden');
-        document.getElementById('apptSkeleton')?.classList.toggle('hidden', doctor);
+        document.getElementById('apptSkeleton')?.classList.remove('hidden');
         document.getElementById('apptList')?.classList.add('hidden');
     }
 
@@ -221,6 +227,9 @@ const Dashboard = (() => {
 
     function tileVisible(tile) {
         if (tile.adminOnly && !isAdmin()) return false;
+        if (tile.superAdminOnly && profile?.role !== 'super_admin') return false;
+        if (tile.patientOnly && profile?.role !== 'patient') return false;
+        if (tile.doctorOnly && !isDoctor()) return false;
         if (tile.hideForDoctor && isDoctor()) return false;
         return true;
     }
@@ -392,13 +401,15 @@ const Dashboard = (() => {
     function renderApptItem(a) {
         const doctor = doctorCache.get(a.doctor_id);
         const doctorLabel = doctor ? doctorName(doctor) : ('#' + String(a.doctor_id || '').slice(0, 8));
+        const patientLabel = (name(a, 'first_name_ar', 'first_name_en') + ' ' + name(a, 'last_name_ar', 'last_name_en')).trim();
+        const personLabel = isDoctor() ? (patientLabel || t('مريض', 'Patient')) : doctorLabel;
         const dateOnly = toDateOnlyStr(a.scheduled_date);
 
         return (
             '<div class="dashboard-list-item dashboard-appt-item">' +
-                '<div class="dashboard-appt-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-video' : 'fa-hospital') + '"></i></div>' +
+                '<div class="dashboard-appt-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-comments' : 'fa-hospital') + '"></i></div>' +
                 '<div class="dashboard-list-main">' +
-                    '<div class="dashboard-list-title">' + escapeHtml(doctorLabel) + '</div>' +
+                    '<div class="dashboard-list-title">' + escapeHtml(personLabel) + '</div>' +
                     '<div class="dashboard-list-meta">' + escapeHtml(formatDateDisplay(dateOnly) + ' · ' + String(a.start_time || '').slice(0, 5)) + '</div>' +
                 '</div>' +
                 '<span class="badge ' + (STATUS_BADGE[a.status] || 'badge-info') + '">' + escapeHtml(tk(STATUS_KEY[a.status] || a.status)) + '</span>' +
@@ -407,15 +418,13 @@ const Dashboard = (() => {
     }
 
     async function loadAppointments() {
-        if (isDoctor()) return;
-
         document.getElementById('apptSkeleton')?.classList.remove('hidden');
         document.getElementById('apptList')?.classList.add('hidden');
         document.getElementById('apptEmpty')?.classList.add('hidden');
 
         try {
-            const res = await API.appointments.list();
-            const all = res?.data || [];
+            const res = isDoctor() ? await API.doctors.mySchedule() : await API.appointments.list();
+            const all = isDoctor() ? (res?.data?.appointments || []) : (res?.data || []);
             const upcoming = all.filter(classifyUpcoming).sort((a, b) => {
                 const da = toDateOnlyStr(a.scheduled_date) + (a.start_time || '');
                 const db = toDateOnlyStr(b.scheduled_date) + (b.start_time || '');
@@ -425,7 +434,7 @@ const Dashboard = (() => {
             Motion.countUp(document.getElementById('statApptCount'), upcoming.length);
 
             const preview = upcoming.slice(0, 4);
-            await enrichDoctors(preview);
+            if (!isDoctor()) await enrichDoctors(preview);
 
             document.getElementById('apptSkeleton')?.classList.add('hidden');
 
@@ -538,6 +547,7 @@ const Dashboard = (() => {
             await API.notifications.markAllRead();
             notifications = notifications.map((n) => ({ ...n, is_read: true }));
             renderNotifications();
+            window.dispatchEvent(new CustomEvent('notifications:changed'));
         } catch (err) {
             console.error('Dashboard: failed to mark all notifications read', err);
             if (typeof Toast !== 'undefined') {

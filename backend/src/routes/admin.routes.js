@@ -1,591 +1,149 @@
-const router = require("express").Router();
-
-
-const db = require("../config/database");
-
-
-const {
-
-    authenticate,
-    authorize
-
-} = require("../middleware/auth");
-
-
-const {
-
-    success,
-    error
-
-} = require("../utils/response");
-
-
-const {
-
-    createAudit
-
-} = require("../services/audit.service");
-
-
-
-// =====================================
-// GET ALL USERS
-// =====================================
-
-
-router.get(
-
-    "/users",
-
-    authenticate,
-
-    authorize("admin"),
-
-    async (req, res, next) => {
-
-
-        try {
-
-
-            const {
-
-                role,
-                active,
-                search
-
-            } = req.query;
-
-
-
-            let query =
-
-                `
-
-SELECT
-
-u.id,
-u.email,
-u.role,
-u.is_active,
-u.email_verified,
-
-up.first_name_en,
-up.last_name_en,
-up.phone,
-up.city
-
-FROM medorbit.users u
-
-LEFT JOIN medorbit.user_profiles up
-
-ON u.id=up.user_id
-
-WHERE 1=1
-
-            `;
-
-
-            const values = [];
-
-
-            if (role) {
-
-                values.push(role);
-
-                query +=
-
-                    `
-
-AND u.role=$${values.length}
-
-                `;
-
-            }
-
-
-            if (active) {
-
-                values.push(active === "true");
-
-                query +=
-
-                    `
-
-AND u.is_active=$${values.length}
-
-                `;
-
-            }
-
-
-
-            if (search) {
-
-                values.push(`%${search}%`);
-
-                query +=
-
-                    `
-
-AND
-
-(
-
-u.email ILIKE $${values.length}
-
-OR
-
-up.first_name_en ILIKE $${values.length}
-
-OR
-
-up.last_name_en ILIKE $${values.length}
-
-)
-
-                `;
-
-            }
-
-
-
-            query +=
-
-                `
-
-ORDER BY u.created_at DESC
-
-            `;
-
-
-
-            const result =
-
-                await db.query(
-
-                    query,
-                    values
-
-                );
-
-
-            return success(
-
-                res,
-                result.rows,
-                "Users retrieved"
-
-            );
-
-
+const router = require('express').Router();
+const db = require('../config/database');
+const { authenticate, authorizeAdmin } = require('../middleware/auth');
+const { success, error } = require('../utils/response');
+const { createAudit } = require('../services/audit.service');
+const { collectMlReadiness } = require('../services/mlReadiness.service');
+
+const SAFE_USER_COLUMNS = `
+    id, email, role, is_active, email_verified, deleted_at,
+    authorization_version, preferred_language, created_at, updated_at
+`;
+
+function mutationBlocked(req, target) {
+    if (req.user.sub === target.id) return 'Administrators cannot modify their own security state';
+    if (target.role === 'super_admin') return 'Super admin accounts cannot be modified through ordinary admin routes';
+    if (target.role === 'admin' && req.user.role !== 'super_admin') return 'Only a super admin can modify an admin account';
+    return null;
+}
+
+router.get('/ml-readiness',authenticate,authorizeAdmin,async(req,res,next)=>{
+    try{const {systemIdentifier,...report}=await collectMlReadiness();return success(res,report,'ML readiness retrieved');}
+    catch(error){return next(error);}
+});
+
+router.get('/users', authenticate, authorizeAdmin, async (req, res, next) => {
+    try {
+        const { role, active, search } = req.query;
+        let query = `
+            SELECT u.id, u.email, u.role, u.is_active, u.email_verified,
+                   u.authorization_version,
+                   up.first_name_en, up.last_name_en, up.phone, up.city
+            FROM medorbit.users u
+            LEFT JOIN medorbit.user_profiles up ON u.id=up.user_id
+            WHERE 1=1`;
+        const values = [];
+
+        if (role) {
+            values.push(role);
+            query += ` AND u.role=$${values.length}`;
         }
-
-        catch (err) {
-
-            next(err);
-
+        if (active != null) {
+            values.push(active === 'true');
+            query += ` AND u.is_active=$${values.length}`;
         }
+        if (search) {
+            values.push(`%${search}%`);
+            query += ` AND (u.email ILIKE $${values.length}
+                         OR up.first_name_en ILIKE $${values.length}
+                         OR up.last_name_en ILIKE $${values.length})`;
+        }
+        query += ' ORDER BY u.created_at DESC';
 
-
+        const result = await db.query(query, values);
+        return success(res, result.rows, 'Users retrieved');
+    } catch (err) {
+        return next(err);
     }
+});
 
-);
+async function setActiveState(req, res, next, isActive) {
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
+        const oldResult = await client.query(
+            `SELECT ${SAFE_USER_COLUMNS}
+             FROM medorbit.users
+             WHERE id=$1
+             FOR UPDATE`,
+            [req.params.id]
+        );
+        if (oldResult.rows.length !== 1) {
+            await client.query('ROLLBACK');
+            return error(res, 'User not found', 404, 'NOT_FOUND');
+        }
 
+        const oldUser = oldResult.rows[0];
+        const blocked = mutationBlocked(req, oldUser);
+        if (blocked) {
+            await client.query('ROLLBACK');
+            return error(res, blocked, 403, 'FORBIDDEN');
+        }
 
+        const updated = await client.query(
+            `UPDATE medorbit.users
+             SET is_active=$1,
+                 authorization_version=authorization_version+1,
+                 updated_at=NOW()
+             WHERE id=$2
+             RETURNING ${SAFE_USER_COLUMNS}`,
+            [isActive, req.params.id]
+        );
+        await client.query(
+            `UPDATE medorbit.user_sessions
+             SET revoked_at=NOW()
+             WHERE user_id=$1 AND revoked_at IS NULL`,
+            [req.params.id]
+        );
 
+        await createAudit({
+            user_id: req.user.sub,
+            user_role: req.user.role,
+            action: oldUser.role === 'admin'
+                ? (isActive ? 'ADMIN_REACTIVATED' : 'ADMIN_DEACTIVATED')
+                : (isActive ? 'USER_REACTIVATED' : 'USER_DEACTIVATED'),
+            entity_type: 'USER',
+            entity_id: req.params.id,
+            old_values: oldUser,
+            new_values: updated.rows[0],
+            ip_address: req.ip,
+            user_agent: req.headers['user-agent'],
+        }, client);
 
-
-// =====================================
-// DEACTIVATE USER
-// =====================================
-
+        await client.query('COMMIT');
+        return success(res, updated.rows[0], isActive ? 'User reactivated' : 'User deactivated');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        return next(err);
+    } finally {
+        client.release();
+    }
+}
 
 router.put(
-
-    "/users/:id/deactivate",
-
+    '/users/:id/deactivate',
     authenticate,
-
-    authorize("admin"),
-
-    async (req, res, next) => {
-
-
-        try {
-
-
-            const oldUser =
-
-                await db.query(
-
-                    `
-
-SELECT *
-
-FROM medorbit.users
-
-WHERE id=$1
-
-                `,
-
-                    [
-
-                        req.params.id
-
-                    ]
-
-                );
-
-
-            if (!oldUser.rows.length) {
-
-                return error(
-
-                    res,
-                    "User not found",
-                    404,
-                    "NOT_FOUND"
-
-                );
-
-            }
-
-
-
-            const result =
-
-                await db.query(
-
-                    `
-
-UPDATE medorbit.users
-
-SET
-
-is_active=false
-
-WHERE id=$1
-
-RETURNING *
-
-                `,
-
-                    [
-
-                        req.params.id
-
-                    ]
-
-                );
-
-
-
-            await createAudit({
-
-                user_id: req.user.sub,
-                user_role: req.user.role,
-
-                action: "USER_DEACTIVATED",
-
-                entity_type: "USER",
-
-                entity_id: req.params.id,
-
-                old_values: oldUser.rows[0],
-
-                new_values: result.rows[0],
-
-                ip_address: req.ip,
-
-                user_agent: req.headers["user-agent"]
-
-            });
-
-
-
-            return success(
-
-                res,
-                result.rows[0],
-                "User deactivated"
-
-            );
-
-
-        }
-
-        catch (err) {
-
-            next(err);
-
-        }
-
-
-    }
-
+    authorizeAdmin,
+    (req, res, next) => setActiveState(req, res, next, false)
 );
-
-
-
-
-// =====================================
-// REACTIVATE USER
-// =====================================
-
 
 router.put(
-
-    "/users/:id/reactivate",
-
+    '/users/:id/reactivate',
     authenticate,
-
-    authorize("admin"),
-
-    async (req, res, next) => {
-
-
-        try {
-
-
-            const oldUser =
-
-                await db.query(
-
-                    `
-SELECT *
-FROM medorbit.users
-WHERE id=$1
-                `,
-
-                    [
-
-                        req.params.id
-
-                    ]
-
-                );
-
-
-            const result =
-
-                await db.query(
-
-                    `
-UPDATE medorbit.users
-
-SET is_active=true
-
-WHERE id=$1
-
-RETURNING *
-                `,
-
-                    [
-
-                        req.params.id
-
-                    ]
-
-                );
-
-
-
-            await createAudit({
-
-                user_id: req.user.sub,
-
-                user_role: req.user.role,
-
-                action: "USER_REACTIVATED",
-
-                entity_type: "USER",
-
-                entity_id: req.params.id,
-
-                old_values: oldUser.rows[0],
-
-                new_values: result.rows[0],
-
-                ip_address: req.ip,
-
-                user_agent: req.headers["user-agent"]
-
-            });
-
-
-
-            return success(
-
-                res,
-                result.rows[0],
-                "User reactivated"
-
-            );
-
-
-        }
-
-        catch (err) {
-
-            next(err);
-
-        }
-
-
-    }
-
+    authorizeAdmin,
+    (req, res, next) => setActiveState(req, res, next, true)
 );
-
-
-
-
-// =====================================
-// CHANGE ROLE
-// =====================================
-
 
 router.put(
-
-    "/users/:id/role",
-
+    '/users/:id/role',
     authenticate,
-
-    authorize("admin"),
-
-    async (req, res, next) => {
-
-
-        try {
-
-
-            const {
-
-                role
-
-            } = req.body;
-
-
-            const allowed =
-
-                [
-
-                    "patient",
-                    "doctor",
-                    "admin"
-
-                ];
-
-
-            if (
-
-                !allowed.includes(role)
-
-            ) {
-
-                return error(
-
-                    res,
-                    "Invalid role",
-                    400,
-                    "INVALID_ROLE"
-
-                );
-
-            }
-
-
-
-            const oldUser =
-
-                await db.query(
-
-                    `
-SELECT *
-FROM medorbit.users
-WHERE id=$1
-                `,
-
-                    [
-
-                        req.params.id
-
-                    ]
-
-                );
-
-
-
-            const result =
-
-                await db.query(
-
-                    `
-UPDATE medorbit.users
-
-SET role=$1
-
-WHERE id=$2
-
-RETURNING *
-                `,
-
-                    [
-
-                        role,
-                        req.params.id
-
-                    ]
-
-                );
-
-
-
-            await createAudit({
-
-                user_id: req.user.sub,
-
-                user_role: req.user.role,
-
-                action: "ROLE_CHANGED",
-
-                entity_type: "USER",
-
-                entity_id: req.params.id,
-
-                old_values: oldUser.rows[0],
-
-                new_values: result.rows[0],
-
-                ip_address: req.ip,
-
-                user_agent: req.headers["user-agent"]
-
-            });
-
-
-
-            return success(
-
-                res,
-                result.rows[0],
-                "Role updated"
-
-            );
-
-
-        }
-
-        catch (err) {
-
-            next(err);
-
-        }
-
-
-    }
-
+    authorizeAdmin,
+    (_req, res) => error(
+        res,
+        'Role mutation is disabled until the controlled S1C administration workflow',
+        403,
+        'FORBIDDEN'
+    )
 );
-
-
 
 module.exports = router;

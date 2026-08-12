@@ -34,6 +34,8 @@ const I18n = (() => {
 
             // Navigation
             'nav.home': 'الرئيسية',
+            'nav.feed': 'المنشورات الصحية',
+            'nav.socialModeration': 'إدارة المحتوى',
             'nav.chat': 'المحادثة',
             'nav.doctors': 'الأطباء',
             'nav.clinics': 'العيادات',
@@ -41,11 +43,13 @@ const I18n = (() => {
             'nav.symptomChecker': 'فحص الأعراض',
             'nav.drugChecker': 'تداخل الأدوية',
             'nav.reportSummary': 'تلخيص التقارير',
-            'nav.voiceConsult': 'استشارة صوتية',
+            'nav.voiceConsult': 'الطبيب الافتراضي الصوتي',
             'nav.account': 'حسابي',
             'nav.dashboard': 'لوحة التحكم',
             'nav.bookAppointment': 'حجز موعد',
             'nav.myAppointments': 'مواعيدي',
+            'nav.mySchedule': 'جدولي',
+            'nav.doctorAppointments': 'مواعيد المرضى',
             'nav.myPrescriptions': 'وصفاتي الطبية',
             'nav.myRecords': 'سجلاتي الطبية',
             'nav.myReports': 'ملخصي الشخصي',
@@ -55,6 +59,13 @@ const I18n = (() => {
             'nav.myDoctor': 'طبيبي',
             'nav.feedback': 'شاركنا رأيك',
             'nav.analytics': 'التحليلات',
+
+            'nav.messages': 'رسائل الرعاية',
+            'nav.professionalProfile': 'ملفي المهني',
+            'nav.patientProfile': 'ملفي الاجتماعي',
+            'nav.doctorApplications': 'طلبات الأطباء',
+            'nav.contactMessages': 'رسائل التواصل',
+            'nav.contactUs': 'تواصل معنا',
 
             // Auth
             'auth.login': 'تسجيل الدخول',
@@ -310,7 +321,7 @@ const I18n = (() => {
 
             // Appointments — shared labels
             'appt.typeInPerson': 'حضوري',
-            'appt.typeTelemedicine': 'استشارة عن بعد',
+            'appt.typeTelemedicine': 'استشارة عبر الإنترنت',
             'appt.statusScheduled': 'مجدول',
             'appt.statusConfirmed': 'مؤكد',
             'appt.statusInProgress': 'جارٍ الآن',
@@ -511,6 +522,8 @@ const I18n = (() => {
             'dashboard.groupOther': 'أخرى',
             'dashboard.descBookAppt': 'حدد موعداً مع طبيب',
             'dashboard.descMyAppts': 'عرض وإدارة حجوزاتك',
+            'dashboard.descMySchedule': 'إدارة أوقات العمل والاستثناءات',
+            'dashboard.descDoctorAppointments': 'عرض وإدارة مواعيد المرضى',
             'dashboard.descFindDoctors': 'تصفح الأطباء حسب التخصص',
             'dashboard.descFindClinics': 'اعثر على عيادات ومراكز قريبة',
             'dashboard.descChat': 'اسأل مساعدنا الذكي أي شيء',
@@ -547,6 +560,10 @@ const I18n = (() => {
             'doctorPosts.title': 'منشوراتي',
             'doctorPosts.subtitle': 'شارك مقالات وإعلانات مع مرضاك',
             'doctorPosts.newPost': 'منشور جديد',
+            'doctorPosts.postTitle': 'عنوان المنشور',
+            'doctorPosts.postTitlePlaceholder': 'اكتب العنوان بالعربية أو الإنجليزية أو كليهما',
+            'doctorApplication.bio': 'النبذة المهنية',
+            'doctorApplication.bioPlaceholder': 'اكتب نبذتك المهنية بالعربية أو الإنجليزية أو كليهما',
             'doctorPosts.titleAr': 'العنوان (عربي)',
             'doctorPosts.titleEn': 'العنوان (إنجليزي)',
             'doctorPosts.category': 'التصنيف',
@@ -727,6 +744,8 @@ const I18n = (() => {
 
             // Navigation
             'nav.home': 'Home',
+            'nav.feed': 'Health Feed',
+            'nav.socialModeration': 'Social Moderation',
             'nav.chat': 'Chat',
             'nav.doctors': 'Doctors',
             'nav.clinics': 'Clinics',
@@ -734,11 +753,13 @@ const I18n = (() => {
             'nav.symptomChecker': 'Symptom Checker',
             'nav.drugChecker': 'Drug Interactions',
             'nav.reportSummary': 'Report Summarizer',
-            'nav.voiceConsult': 'Voice Consultation',
+            'nav.voiceConsult': 'Virtual Doctor Voice',
             'nav.account': 'Account',
             'nav.dashboard': 'Dashboard',
             'nav.bookAppointment': 'Book Appointment',
             'nav.myAppointments': 'My Appointments',
+            'nav.mySchedule': 'My Schedule',
+            'nav.doctorAppointments': 'Patient Appointments',
             'nav.myPrescriptions': 'My Prescriptions',
             'nav.myRecords': 'My Medical Records',
             'nav.myReports': 'My Reports',
@@ -748,6 +769,13 @@ const I18n = (() => {
             'nav.myDoctor': 'My Doctor',
             'nav.feedback': 'Feedback',
             'nav.analytics': 'Analytics',
+
+            'nav.messages': 'Care Messages',
+            'nav.professionalProfile': 'My Professional Profile',
+            'nav.patientProfile': 'My Social Profile',
+            'nav.doctorApplications': 'Doctor Applications',
+            'nav.contactMessages': 'Contact Messages',
+            'nav.contactUs': 'Contact Us',
 
             // Auth
             'auth.login': 'Log in',
@@ -1003,7 +1031,7 @@ const I18n = (() => {
 
             // Appointments — shared labels
             'appt.typeInPerson': 'In-person',
-            'appt.typeTelemedicine': 'Telemedicine',
+            'appt.typeTelemedicine': 'Online Consultation',
             'appt.statusScheduled': 'Scheduled',
             'appt.statusConfirmed': 'Confirmed',
             'appt.statusInProgress': 'In progress',
@@ -1204,6 +1232,8 @@ const I18n = (() => {
             'dashboard.groupOther': 'Other',
             'dashboard.descBookAppt': 'Schedule a visit with a doctor',
             'dashboard.descMyAppts': 'View and manage your bookings',
+            'dashboard.descMySchedule': 'Manage working hours and exceptions',
+            'dashboard.descDoctorAppointments': 'View and manage patient appointments',
             'dashboard.descFindDoctors': 'Browse doctors by specialty',
             'dashboard.descFindClinics': 'Find nearby clinics and centers',
             'dashboard.descChat': 'Ask our AI assistant anything',
@@ -1240,6 +1270,10 @@ const I18n = (() => {
             'doctorPosts.title': 'My Posts',
             'doctorPosts.subtitle': 'Share articles and announcements with your patients',
             'doctorPosts.newPost': 'New Post',
+            'doctorPosts.postTitle': 'Post title',
+            'doctorPosts.postTitlePlaceholder': 'Write the title in Arabic, English, or both',
+            'doctorApplication.bio': 'Professional bio',
+            'doctorApplication.bioPlaceholder': 'Write your professional bio in Arabic, English, or both',
             'doctorPosts.titleAr': 'Title (Arabic)',
             'doctorPosts.titleEn': 'Title (English)',
             'doctorPosts.category': 'Category',
@@ -1468,5 +1502,11 @@ const I18n = (() => {
         return current;
     }
 
-    return { apply, toggle, setLang, getLang, t };
+    function localizedContent(arValue, enValue) {
+        return current === 'ar'
+            ? (arValue || enValue || '')
+            : (enValue || arValue || '');
+    }
+
+    return { apply, toggle, setLang, getLang, t, localizedContent };
 })();

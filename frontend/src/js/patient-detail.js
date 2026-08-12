@@ -94,7 +94,7 @@ const PatientDetail = (() => {
         const initials = (patientName(p) || '?').trim().charAt(0).toUpperCase();
         header.innerHTML =
             '<div class="care-detail-avatar">' +
-                (p.profile_image_url ? '<img src="' + escapeHtml(p.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
+                (p.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(p.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
             '</div>' +
             '<div>' +
                 '<div class="care-detail-name">' + name + '</div>' +
@@ -113,7 +113,7 @@ const PatientDetail = (() => {
             const status = String(a.status || '').toLowerCase();
             return (
                 '<div class="records-real-card" style="cursor:default;">' +
-                    '<span class="records-real-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-video' : 'fa-hospital') + '"></i></span>' +
+                    '<span class="records-real-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-comments' : 'fa-hospital') + '"></i></span>' +
                     '<span class="records-real-card-main">' +
                         '<span class="records-real-title">' + escapeHtml(fmtDate(a.scheduled_date)) + '</span>' +
                         '<span class="records-real-meta">' +
