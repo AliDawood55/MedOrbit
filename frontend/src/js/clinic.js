@@ -234,7 +234,7 @@ const ClinicProfile = (() => {
         return (
             '<a class="sub-item" href="doctor.html?id=' + encodeURIComponent(d.id) + '" style="text-decoration:none;color:inherit;">' +
                 '<div class="entity-avatar" style="width:38px;height:38px;font-size:13px;">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(d.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
+                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="sub-item-body">' +
                     '<div class="sub-item-title">' + dName + '</div>' +

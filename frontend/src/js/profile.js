@@ -75,7 +75,7 @@ const Profile = (() => {
         const el = document.getElementById('avatarDisplay');
         if (!el) return;
         if (profile.avatar_url) {
-            el.innerHTML = '<img src="' + escapeHtml(API.getOrigin() + profile.avatar_url) + '" alt="">';
+            el.innerHTML = '<img src="' + escapeHtml(API.assetUrl(profile.avatar_url)) + '" alt="">';
         } else {
             const initial = (displayName() || profile.email || '?').trim().charAt(0).toUpperCase();
             el.textContent = initial || '?';
