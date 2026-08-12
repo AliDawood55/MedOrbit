@@ -7,7 +7,7 @@ import '../data/report_summarizer_api.dart';
 import '../models/report_summary_result.dart';
 
 final reportSummarizerApiProvider = Provider<ReportSummarizerApi>(
-  (ref) => ReportSummarizerApi(ref.watch(aiDioProvider)),
+  (ref) => ReportSummarizerApi(ref.watch(dioProvider)),
 );
 
 /// Below this many trimmed characters there isn't enough report text to

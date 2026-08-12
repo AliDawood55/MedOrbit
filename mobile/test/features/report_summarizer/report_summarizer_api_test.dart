@@ -41,7 +41,7 @@ void main() {
     final result = await api.summarizeText(text: 'Patient has blood pressure 150/95.');
 
     expect(fake.requests.single.method, 'POST');
-    expect(fake.requests.single.path, '/summarize');
+    expect(fake.requests.single.path, '/ai/summarize');
     final fields = {for (final e in fake.requests.single.data.fields) e.key: e.value};
     expect(fields['text'], 'Patient has blood pressure 150/95.');
     expect(fields.containsKey('user_id'), isFalse);
@@ -54,7 +54,7 @@ void main() {
     expect(result.sourceFileType, 'text');
   });
 
-  test('summarizeText() includes user_id and record_id only when provided', () async {
+  test('summarizeText() never sends user_id and forwards record_id only', () async {
     final fake = _FakeDio([
       _ok({
         'id': 'summary-2',
@@ -71,7 +71,7 @@ void main() {
     await api.summarizeText(text: 'Report body', userId: 'user-1', recordId: 'record-1');
 
     final fields = {for (final e in fake.requests.single.data.fields) e.key: e.value};
-    expect(fields['user_id'], 'user-1');
+    expect(fields.containsKey('user_id'), isFalse);
     expect(fields['record_id'], 'record-1');
   });
 
@@ -94,7 +94,7 @@ void main() {
     final result = await api.summarizeFile(filePath: tempFile.path, fileName: 'report.pdf');
 
     expect(fake.requests.single.method, 'POST');
-    expect(fake.requests.single.path, '/summarize');
+    expect(fake.requests.single.path, '/ai/summarize');
     final formData = fake.requests.single.data as FormData;
     expect(formData.files, hasLength(1));
     expect(formData.files.single.key, 'file');
@@ -105,7 +105,7 @@ void main() {
     expect(result.sourceFileType, 'pdf');
   });
 
-  test('summarizeFile() includes user_id and record_id only when provided', () async {
+  test('summarizeFile() never sends user_id and forwards record_id only', () async {
     final fake = _FakeDio([
       _ok({
         'id': 'summary-file-2',
@@ -130,7 +130,7 @@ void main() {
 
     final formData = fake.requests.single.data as FormData;
     final fields = {for (final e in formData.fields) e.key: e.value};
-    expect(fields['user_id'], 'user-1');
+    expect(fields.containsKey('user_id'), isFalse);
     expect(fields['record_id'], 'record-1');
   });
 

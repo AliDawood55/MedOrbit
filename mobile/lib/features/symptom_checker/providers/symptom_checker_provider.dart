@@ -6,7 +6,7 @@ import '../data/symptom_checker_api.dart';
 import '../models/symptom_check_result.dart';
 
 final symptomCheckerApiProvider = Provider<SymptomCheckerApi>(
-  (ref) => SymptomCheckerApi(ref.watch(aiDioProvider)),
+  (ref) => SymptomCheckerApi(ref.watch(dioProvider)),
 );
 
 enum SymptomCheckErrorKind { timeout, serviceUnavailable, generic }
