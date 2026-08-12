@@ -49,21 +49,45 @@ const resendVerificationLimiter = createAuthLimiter({
     message: 'Too many verification email requests. Please try again later.'
 });
 
+const sessionLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    message: 'Too many session requests. Please try again later.'
+});
+
+const forgotPasswordLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many password reset requests. Please try again later.'
+});
+
+const resetPasswordLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Too many password reset attempts. Please try again later.'
+});
+
+const changePasswordLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many password change attempts. Please try again later.'
+});
+
 router.post("/register", registerLimiter, authController.register);
 
 router.post("/login", loginLimiter, authController.login);
 
 router.post("/google", loginLimiter, authController.google);
 
-router.post("/refresh", authController.refresh);
+router.post("/refresh", sessionLimiter, authController.refresh);
 
-router.post("/logout", authController.logout);
+router.post("/logout", sessionLimiter, authController.logout);
 
-router.post("/change-password", authenticate, authController.changePassword);
+router.post("/change-password", authenticate, changePasswordLimiter, authController.changePassword);
 
-router.post("/forgot-password", authController.forgotPassword);
+router.post("/forgot-password", forgotPasswordLimiter, authController.forgotPassword);
 
-router.post("/reset-password", authController.resetPassword);
+router.post("/reset-password", resetPasswordLimiter, authController.resetPassword);
 
 router.post("/verify-email", verifyEmailLimiter, authController.verifyEmail);
 
