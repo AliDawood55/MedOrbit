@@ -12,7 +12,9 @@ import '../models/booking_draft_model.dart';
 import '../utils/slot_generation.dart';
 import 'appointments_provider.dart';
 
-final bookingApiProvider = Provider<BookingApi>((ref) => BookingApi(ref.watch(dioProvider)));
+final bookingApiProvider = Provider<BookingApi>(
+  (ref) => BookingApi(ref.watch(dioProvider)),
+);
 
 enum BookingWizardStep { doctor, slot, confirm }
 
@@ -22,7 +24,14 @@ enum BookingWizardStep { doctor, slot, confirm }
 /// specifically what happened (`err.status === 404` in book-appointment.js).
 enum PreselectDoctorFailure { notFound, loadError }
 
-enum BookingSubmitErrorKind { slotBusy, patientNotFound, timeout, serviceUnavailable, validation, generic }
+enum BookingSubmitErrorKind {
+  slotBusy,
+  patientNotFound,
+  timeout,
+  serviceUnavailable,
+  validation,
+  generic,
+}
 
 class BookingSubmitError {
   const BookingSubmitError(this.kind);
@@ -98,13 +107,17 @@ class BookingState {
     return BookingState(
       step: step ?? this.step,
       draft: draft ?? this.draft,
-      isLoadingPreselectedDoctor: isLoadingPreselectedDoctor ?? this.isLoadingPreselectedDoctor,
-      preselectFailure: clearPreselectFailure ? null : (preselectFailure ?? this.preselectFailure),
+      isLoadingPreselectedDoctor:
+          isLoadingPreselectedDoctor ?? this.isLoadingPreselectedDoctor,
+      preselectFailure: clearPreselectFailure
+          ? null
+          : (preselectFailure ?? this.preselectFailure),
       doctorQuery: doctorQuery ?? this.doctorQuery,
       doctorResults: doctorResults ?? this.doctorResults,
       isLoadingDoctors: isLoadingDoctors ?? this.isLoadingDoctors,
       doctorListFailed: doctorListFailed ?? this.doctorListFailed,
-      isLoadingDoctorDetail: isLoadingDoctorDetail ?? this.isLoadingDoctorDetail,
+      isLoadingDoctorDetail:
+          isLoadingDoctorDetail ?? this.isLoadingDoctorDetail,
       doctorDetailFailed: doctorDetailFailed ?? this.doctorDetailFailed,
       slots: slots ?? this.slots,
       isLoadingSlots: isLoadingSlots ?? this.isLoadingSlots,
@@ -118,9 +131,9 @@ class BookingState {
 
 class BookingController extends StateNotifier<BookingState> {
   BookingController(this._ref)
-      : _api = _ref.read(bookingApiProvider),
-        _discoveryApi = _ref.read(discoveryApiProvider),
-        super(const BookingState());
+    : _api = _ref.read(bookingApiProvider),
+      _discoveryApi = _ref.read(discoveryApiProvider),
+      super(const BookingState());
 
   final Ref _ref;
   final BookingApi _api;
@@ -135,7 +148,10 @@ class BookingController extends StateNotifier<BookingState> {
   /// step; otherwise loads the initial browse list for the doctor step.
   Future<void> init({String? doctorId}) async {
     if (doctorId != null && doctorId.isNotEmpty) {
-      state = state.copyWith(isLoadingPreselectedDoctor: true, clearPreselectFailure: true);
+      state = state.copyWith(
+        isLoadingPreselectedDoctor: true,
+        clearPreselectFailure: true,
+      );
       try {
         final detail = await _discoveryApi.getDoctor(doctorId);
         if (_disposed) return;
@@ -156,7 +172,9 @@ class BookingController extends StateNotifier<BookingState> {
         final isNotFound = ApiException.from(error).statusCode == 404;
         state = state.copyWith(
           isLoadingPreselectedDoctor: false,
-          preselectFailure: isNotFound ? PreselectDoctorFailure.notFound : PreselectDoctorFailure.loadError,
+          preselectFailure: isNotFound
+              ? PreselectDoctorFailure.notFound
+              : PreselectDoctorFailure.loadError,
         );
         await loadInitialDoctors();
       }
@@ -171,7 +189,10 @@ class BookingController extends StateNotifier<BookingState> {
     try {
       final response = await _discoveryApi.listDoctors(limit: 20);
       if (_disposed || requestId != _doctorSearchRequestId) return;
-      state = state.copyWith(doctorResults: response.doctors, isLoadingDoctors: false);
+      state = state.copyWith(
+        doctorResults: response.doctors,
+        isLoadingDoctors: false,
+      );
     } catch (_) {
       if (_disposed || requestId != _doctorSearchRequestId) return;
       state = state.copyWith(isLoadingDoctors: false, doctorListFailed: true);
@@ -183,11 +204,21 @@ class BookingController extends StateNotifier<BookingState> {
   Future<void> searchDoctors(String query) async {
     final trimmed = query.trim();
     final requestId = ++_doctorSearchRequestId;
-    state = state.copyWith(doctorQuery: query, isLoadingDoctors: true, doctorListFailed: false);
+    state = state.copyWith(
+      doctorQuery: query,
+      isLoadingDoctors: true,
+      doctorListFailed: false,
+    );
     try {
-      final response = await _discoveryApi.listDoctors(search: trimmed.isEmpty ? null : trimmed, limit: 20);
+      final response = await _discoveryApi.listDoctors(
+        search: trimmed.isEmpty ? null : trimmed,
+        limit: 20,
+      );
       if (_disposed || requestId != _doctorSearchRequestId) return;
-      state = state.copyWith(doctorResults: response.doctors, isLoadingDoctors: false);
+      state = state.copyWith(
+        doctorResults: response.doctors,
+        isLoadingDoctors: false,
+      );
     } catch (_) {
       if (_disposed || requestId != _doctorSearchRequestId) return;
       state = state.copyWith(isLoadingDoctors: false, doctorListFailed: true);
@@ -197,7 +228,10 @@ class BookingController extends StateNotifier<BookingState> {
   /// Doctor list results never carry clinics, so selecting one always
   /// re-fetches the detail (same as `book-appointment.js`'s `loadDoctorById`).
   Future<void> selectDoctor(Doctor doctor) async {
-    state = state.copyWith(isLoadingDoctorDetail: true, doctorDetailFailed: false);
+    state = state.copyWith(
+      isLoadingDoctorDetail: true,
+      doctorDetailFailed: false,
+    );
     try {
       final detail = await _discoveryApi.getDoctor(doctor.id);
       if (_disposed) return;
@@ -205,7 +239,10 @@ class BookingController extends StateNotifier<BookingState> {
       state = state.copyWith(isLoadingDoctorDetail: false);
     } catch (_) {
       if (_disposed) return;
-      state = state.copyWith(isLoadingDoctorDetail: false, doctorDetailFailed: true);
+      state = state.copyWith(
+        isLoadingDoctorDetail: false,
+        doctorDetailFailed: true,
+      );
     }
   }
 
@@ -245,18 +282,25 @@ class BookingController extends StateNotifier<BookingState> {
     }
   }
 
-  void backToDoctorStep() => state = state.copyWith(step: BookingWizardStep.doctor);
+  void backToDoctorStep() =>
+      state = state.copyWith(step: BookingWizardStep.doctor);
 
   void backToSlotStep() => state = state.copyWith(step: BookingWizardStep.slot);
 
   void selectClinic(DoctorClinicSummary clinic) {
-    state = state.copyWith(draft: state.draft.copyWith(clinic: clinic, clearSlot: true), slots: const []);
+    state = state.copyWith(
+      draft: state.draft.copyWith(clinic: clinic, clearSlot: true),
+      slots: const [],
+    );
     loadSlots();
   }
 
   void selectDate(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
-    state = state.copyWith(draft: state.draft.copyWith(date: normalized, clearSlot: true), slots: const []);
+    state = state.copyWith(
+      draft: state.draft.copyWith(date: normalized, clearSlot: true),
+      slots: const [],
+    );
     loadSlots();
   }
 
@@ -269,9 +313,16 @@ class BookingController extends StateNotifier<BookingState> {
     final requestId = ++_slotsRequestId;
     state = state.copyWith(isLoadingSlots: true, slotsFailed: false);
     try {
-      final windows = await _api.availableSlots(doctorId: doctor.id, clinicId: clinic.id, date: formatDateOnly(date));
+      final rows = await _api.availableSlots(
+        doctorId: doctor.id,
+        clinicId: clinic.id,
+        date: formatDateOnly(date),
+      );
       if (_disposed || requestId != _slotsRequestId) return;
-      state = state.copyWith(slots: generateSlotsFromWindows(windows, forDate: date), isLoadingSlots: false);
+      state = state.copyWith(
+        slots: normalizeServerSlots(rows),
+        isLoadingSlots: false,
+      );
     } catch (_) {
       if (_disposed || requestId != _slotsRequestId) return;
       state = state.copyWith(isLoadingSlots: false, slotsFailed: true);
@@ -282,9 +333,11 @@ class BookingController extends StateNotifier<BookingState> {
     state = state.copyWith(draft: state.draft.copyWith(slot: slot));
   }
 
-  void setReason(String value) => state = state.copyWith(draft: state.draft.copyWith(reason: value));
+  void setReason(String value) =>
+      state = state.copyWith(draft: state.draft.copyWith(reason: value));
 
-  void setNotes(String value) => state = state.copyWith(draft: state.draft.copyWith(notes: value));
+  void setNotes(String value) =>
+      state = state.copyWith(draft: state.draft.copyWith(notes: value));
 
   void goToConfirm() {
     if (state.draft.clinic == null || state.draft.slot == null) return;
@@ -301,7 +354,11 @@ class BookingController extends StateNotifier<BookingState> {
     final date = state.draft.date;
     final slot = state.draft.slot;
     if (doctor == null || clinic == null || date == null || slot == null) {
-      state = state.copyWith(submitError: const BookingSubmitError(BookingSubmitErrorKind.validation));
+      state = state.copyWith(
+        submitError: const BookingSubmitError(
+          BookingSubmitErrorKind.validation,
+        ),
+      );
       return false;
     }
 
@@ -350,7 +407,9 @@ class BookingController extends StateNotifier<BookingState> {
           isSubmitting: false,
           step: BookingWizardStep.slot,
           draft: state.draft.copyWith(clearSlot: true),
-          submitError: const BookingSubmitError(BookingSubmitErrorKind.slotBusy),
+          submitError: const BookingSubmitError(
+            BookingSubmitErrorKind.slotBusy,
+          ),
         );
         loadSlots();
         return false;
@@ -358,10 +417,17 @@ class BookingController extends StateNotifier<BookingState> {
 
       final kind = switch (api.code) {
         'PATIENT_NOT_FOUND' => BookingSubmitErrorKind.patientNotFound,
-        ApiException.codeServiceUnavailable => BookingSubmitErrorKind.serviceUnavailable,
-        _ => api.isTimeout ? BookingSubmitErrorKind.timeout : BookingSubmitErrorKind.generic,
+        ApiException.codeServiceUnavailable =>
+          BookingSubmitErrorKind.serviceUnavailable,
+        _ =>
+          api.isTimeout
+              ? BookingSubmitErrorKind.timeout
+              : BookingSubmitErrorKind.generic,
       };
-      state = state.copyWith(isSubmitting: false, submitError: BookingSubmitError(kind));
+      state = state.copyWith(
+        isSubmitting: false,
+        submitError: BookingSubmitError(kind),
+      );
       return false;
     }
   }
@@ -370,14 +436,23 @@ class BookingController extends StateNotifier<BookingState> {
   /// the wizard (leaving the screen also disposes this `autoDispose`
   /// provider, but an explicit cancel action should not wait for that).
   void discardDraft() {
-    state = state.copyWith(step: BookingWizardStep.doctor, draft: const BookingDraft(), slots: const []);
+    state = state.copyWith(
+      step: BookingWizardStep.doctor,
+      draft: const BookingDraft(),
+      slots: const [],
+    );
   }
 
   /// "Book another appointment" from the success sheet — clears [BookingState.result]
   /// (which is what keeps that sheet on screen) and reloads the doctor step
   /// from scratch.
   Future<void> startOver() async {
-    state = state.copyWith(step: BookingWizardStep.doctor, draft: const BookingDraft(), slots: const [], clearResult: true);
+    state = state.copyWith(
+      step: BookingWizardStep.doctor,
+      draft: const BookingDraft(),
+      slots: const [],
+      clearResult: true,
+    );
     await loadInitialDoctors();
   }
 
@@ -388,6 +463,7 @@ class BookingController extends StateNotifier<BookingState> {
   }
 }
 
-final bookingControllerProvider = StateNotifierProvider.autoDispose<BookingController, BookingState>(
-  (ref) => BookingController(ref),
-);
+final bookingControllerProvider =
+    StateNotifierProvider.autoDispose<BookingController, BookingState>(
+      (ref) => BookingController(ref),
+    );

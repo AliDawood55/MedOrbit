@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – My Schedule</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/experience.css">
+    <link rel="stylesheet" href="../src/css/schedule.css">
+</head>
+<body class="site-page" data-theme="light">
+    <header class="app-header">
+        <a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><h1>MedOrbit</h1><p data-i18n="brand.tagline"></p></div></a>
+        <nav class="site-nav" id="navLinks"></nav>
+        <div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle" aria-label="Theme"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle" aria-label="Language"><span id="langLabel">EN</span></button></div>
+    </header>
+
+    <main class="page-container experience-page schedule-page">
+        <div class="experience-heading">
+            <div><h1 id="scheduleTitle">جدولي</h1><p id="scheduleSubtitle">أدر ساعات العمل والاستثناءات والمواعيد القادمة.</p></div>
+            <div class="heading-actions"><a class="btn btn-secondary" href="doctor-profile-edit.html"><i class="fas fa-user-doctor"></i><span id="editProfileLabel">ملفي المهني</span></a><button class="btn btn-primary" id="addAvailabilityButton"><i class="fas fa-plus"></i><span id="addAvailabilityLabel">إضافة توفر</span></button></div>
+        </div>
+
+        <div id="scheduleFeedback" class="page-feedback hidden" role="status"></div>
+        <div id="scheduleLoading" class="schedule-loading"><div class="skeleton"></div><div class="skeleton"></div></div>
+
+        <div id="scheduleContent" class="hidden">
+            <section class="experience-card schedule-settings-card">
+                <div><h2 id="bookingSettingsTitle">إعدادات الحجز</h2><p id="bookingSettingsHint">تؤثر التغييرات على الفترات الجديدة والحجوزات المستقبلية فقط.</p></div>
+                <div class="schedule-settings">
+                    <label class="privacy-toggle compact"><input type="checkbox" id="scheduleAccepting"><span><strong id="scheduleAcceptingLabel">استقبال مواعيد جديدة</strong><small id="scheduleAcceptingHelp">عند الإيقاف لن تظهر أوقات قابلة للحجز.</small></span></label>
+                    <label><span id="scheduleDurationLabel">مدة الموعد</span><select id="scheduleDuration"><option value="15">15</option><option value="20">20</option><option value="30">30</option><option value="45">45</option><option value="60">60</option></select></label>
+                    <label><span id="scheduleFeeLabel">رسوم الاستشارة</span><input id="scheduleFee" type="number" min="0" max="100000" step="0.01"></label>
+                    <button type="button" class="btn btn-primary" id="saveScheduleSettings"><i class="fas fa-check"></i><span id="saveSettingsLabel">حفظ الإعدادات</span></button>
+                </div>
+            </section>
+
+            <div class="schedule-layout">
+                <section class="experience-card schedule-section">
+                    <div class="section-heading"><div><h2 id="weeklyTitle">الساعات الأسبوعية</h2><p id="weeklyHint">يمكنك إضافة أكثر من فترة في اليوم.</p></div><button class="btn btn-secondary btn-sm" id="weeklyAddButton"><i class="fas fa-plus"></i><span id="weeklyAddLabel">إضافة فترة</span></button></div>
+                    <div id="weeklySchedule" class="weekly-schedule"></div>
+                </section>
+
+                <section class="experience-card schedule-section">
+                    <div class="section-heading"><div><h2 id="exceptionsTitle">الاستثناءات القادمة</h2><p id="exceptionsHint">يوم إجازة أو وقت محظور أو توفر إضافي.</p></div><div class="exception-actions"><button class="btn btn-secondary btn-sm" id="addSpecialButton"><i class="fas fa-calendar-plus"></i><span id="addSpecialLabel">توفر إضافي</span></button><button class="btn btn-secondary btn-sm" id="blockTimeButton"><i class="fas fa-ban"></i><span id="blockTimeLabel">حظر وقت</span></button><button class="btn btn-ghost btn-sm" id="dayOffButton"><i class="fas fa-calendar-xmark"></i><span id="dayOffLabel">يوم إجازة</span></button></div></div>
+                    <div id="exceptionsList" class="exceptions-list"></div>
+                </section>
+            </div>
+
+            <section class="experience-card schedule-section appointments-section" id="appointments">
+                <div class="section-heading"><div><h2 id="scheduleAppointmentsTitle">مواعيدي</h2><p id="scheduleAppointmentsHint">المواعيد الحالية منفصلة عن تغييرات ساعات التوفر.</p></div></div>
+                <div class="schedule-tabs" role="tablist"><button class="active" type="button" data-appointment-tab="today" id="todayTab">اليوم</button><button type="button" data-appointment-tab="upcoming" id="upcomingTab">القادمة</button><button type="button" data-appointment-tab="past" id="pastTab">السابقة</button></div>
+                <div id="scheduleAppointments" class="schedule-appointments"></div>
+            </section>
+        </div>
+    </main>
+
+    <div class="schedule-modal hidden" id="scheduleModal" role="dialog" aria-modal="true" aria-labelledby="ruleDialogTitle">
+        <div class="schedule-dialog">
+            <div class="section-heading"><h2 id="ruleDialogTitle">إضافة توفر</h2><button class="icon-btn" id="closeScheduleModal" type="button" aria-label="Close"><i class="fas fa-xmark"></i></button></div>
+            <form id="scheduleRuleForm" class="experience-form">
+                <input type="hidden" id="ruleId">
+                <input type="hidden" id="ruleType" value="available">
+                <div class="form-grid">
+                    <div class="form-field" id="ruleWeekdayField"><label for="ruleWeekday" id="ruleWeekdayLabel">اليوم</label><select id="ruleWeekday"></select></div>
+                    <div class="form-field hidden" id="ruleDateField"><label for="ruleDate" id="ruleDateLabel">التاريخ</label><input id="ruleDate" type="date"></div>
+                    <div class="form-field" id="ruleClinicField"><label for="ruleClinic" id="ruleClinicLabel">العيادة</label><select id="ruleClinic"></select></div>
+                    <div class="form-field" id="ruleModeField"><label for="ruleMode" id="ruleModeLabel">نوع الموعد</label><select id="ruleMode"><option value="in_person">In person</option><option value="telemedicine">Online Consultation</option></select></div>
+                    <div class="form-field" id="ruleStartField"><label for="ruleStart" id="ruleStartLabel">من</label><input id="ruleStart" type="time" step="300" value="09:00"></div>
+                    <div class="form-field" id="ruleEndField"><label for="ruleEnd" id="ruleEndLabel">إلى</label><input id="ruleEnd" type="time" step="300" value="13:00"></div>
+                    <div class="form-field" id="ruleDurationField"><label for="ruleDuration" id="ruleDurationLabel">مدة الموعد</label><select id="ruleDuration"><option value="15">15</option><option value="20">20</option><option value="30">30</option><option value="45">45</option><option value="60">60</option></select></div>
+                    <label class="privacy-toggle compact full" id="ruleActiveField"><input type="checkbox" id="ruleActive" checked><span><strong id="ruleActiveLabel">مفعّل</strong></span></label>
+                </div>
+                <div id="ruleFeedback" class="page-feedback hidden" role="status"></div>
+                <div class="form-actions"><button type="button" class="btn btn-ghost" id="cancelRuleButton">إلغاء</button><button type="submit" class="btn btn-primary" id="saveRuleButton"><i class="fas fa-check"></i><span id="saveRuleLabel">حفظ</span></button></div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="site-footer" id="siteFooter"></footer><div class="toast-container" id="toastContainer"></div>
+    <script src="../src/utils/store.js"></script><script src="../src/js/api.js"></script><script src="../src/js/i18n.js"></script><script src="../src/js/theme.js"></script><script src="../src/js/toast.js"></script><script src="../src/js/layout.js"></script><script src="../src/js/my-schedule.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>{Layout.init();MySchedule.init();});</script>
+</body>
+</html>
