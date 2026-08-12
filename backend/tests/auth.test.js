@@ -4,24 +4,11 @@
 
 const http = require('http');
 const { Pool } = require('pg');
-const path = require('path');
-
-// Load root .env
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
-
-const API_BASE = process.env.AUTH_TEST_API_BASE || 'http://127.0.0.1:3001/api';
+const { apiBase: API_BASE, poolConfig } = require('./helpers/test-environment');
 
 // Database pool for cleanup — must use same schema as backend
 const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: String(process.env.DB_PASSWORD || ''),
-    max: 5,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 2000,
-    options: '-c search_path=medorbit,public',
+    ...poolConfig,
 });
 
 // =============================================

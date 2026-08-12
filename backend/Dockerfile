@@ -4,7 +4,7 @@
 # native `bcrypt` module, which ships prebuilt binaries for glibc targets but
 # often has to compile from source on musl/alpine, requiring extra build
 # tooling. Slim avoids that risk while staying reasonably small.
-FROM node:18-bullseye-slim
+FROM node:20-bullseye-slim
 
 WORKDIR /app
 
