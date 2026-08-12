@@ -423,7 +423,7 @@ class AppStrings {
   String get doctorNameUnavailable =>
       _t('بيانات الطبيب غير متاحة', 'Doctor details unavailable');
   String get appointmentTypeTelemedicine =>
-      _t('استشارة عن بُعد', 'Telemedicine');
+      _t('استشارة عبر الإنترنت', 'Online Consultation');
   String get appointmentTypeInPerson =>
       _t('زيارة في العيادة', 'In-person visit');
   String appointmentNumberValue(String value) =>

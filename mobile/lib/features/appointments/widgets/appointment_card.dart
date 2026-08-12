@@ -99,7 +99,7 @@ class AppointmentCard extends StatelessWidget {
                 timeLabel: timeLabel,
                 typeLabel: typeLabel,
                 typeIcon: isTelemedicine
-                    ? Icons.videocam_outlined
+                    ? Icons.chat_bubble_outline
                     : Icons.local_hospital_outlined,
                 statusLabel: statusLabel,
                 statusColor: statusColor,
@@ -174,7 +174,7 @@ class _DoctorAvatar extends StatelessWidget {
             )
           : Icon(
               isTelemedicine
-                  ? Icons.videocam_outlined
+                  ? Icons.chat_bubble_outline
                   : Icons.medical_information_outlined,
               color: Colors.white,
               size: AppTheme.iconLg,

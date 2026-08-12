@@ -1003,7 +1003,7 @@ class _AppointmentPreviewCard extends StatelessWidget {
           '\u2066${appointment.appointmentNumber}\u2069',
       subtitle: metadata,
       icon: appointment.appointmentType == 'telemedicine'
-          ? Icons.videocam_outlined
+          ? Icons.chat_bubble_outline
           : Icons.local_hospital_outlined,
       color: AppTheme.primary,
       trailing: StatusBadge(label: statusLabel, color: statusColor),
