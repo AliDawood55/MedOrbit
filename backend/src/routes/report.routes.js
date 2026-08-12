@@ -241,8 +241,8 @@ ORDER BY generated_at DESC
 // GET MY REPORT SUMMARIES
 // GET /api/reports/summaries
 // Patient-scoped (any authenticated role, not admin-only): returns only the
-// current user's own AI report summaries — written by the AI service's
-// POST /summarize (Report Summarizer) — ordered newest first. Only safe,
+// current user's own AI report summaries — written through the Node
+// POST /api/ai/summarize identity boundary — ordered newest first. Only safe,
 // truncated fields are returned; the full extracted_text column is never
 // sent to the client.
 // ==========================================

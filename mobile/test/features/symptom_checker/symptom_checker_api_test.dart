@@ -37,7 +37,7 @@ void main() {
     final result = await api.checkSymptoms(['headache', 'fever']);
 
     expect(fake.requests.single.method, 'POST');
-    expect(fake.requests.single.path, '/triage');
+    expect(fake.requests.single.path, '/ai/triage');
     expect(fake.requests.single.data, {
       'symptoms': ['headache', 'fever'],
     });

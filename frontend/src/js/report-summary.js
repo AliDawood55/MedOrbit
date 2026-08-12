@@ -5,7 +5,6 @@
  */
 const ReportSummary = (() => {
 
-    const AI_BASE = API.getAiOrigin();
     const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
     const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
 
@@ -102,20 +101,8 @@ const ReportSummary = (() => {
         setLoading(true);
         showLoading();
 
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
         try {
-            const res = await fetch(AI_BASE + '/summarize', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.detail || 'Request failed');
-            }
+            const data = await API.uploadFile('/ai/summarize', 'file', selectedFile);
 
             showResult(data);
 

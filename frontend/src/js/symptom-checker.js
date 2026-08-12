@@ -5,7 +5,6 @@
  */
 const SymptomChecker = (() => {
 
-    const AI_BASE = API.getAiOrigin();
 
     // Matches real seeded symptom_specialty_mappings keywords so these
     // quick-add chips reliably produce a good triage result.
@@ -87,17 +86,7 @@ const SymptomChecker = (() => {
         showLoading();
 
         try {
-            const res = await fetch(AI_BASE + '/triage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ symptoms })
-            });
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.detail || 'Request failed');
-            }
+            const data = await API.post('/ai/triage', { symptoms });
 
             showResult(data);
 

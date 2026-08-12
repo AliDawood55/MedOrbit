@@ -21,7 +21,7 @@ class SymptomCheckerApi {
 
   Future<SymptomCheckResult> checkSymptoms(List<String> symptoms) async {
     final response = await _dio.post<Map<String, dynamic>>(
-      '/triage',
+      '/ai/triage',
       data: SymptomCheckRequest(symptoms: symptoms).toJson(),
       options: Options(
         connectTimeout: AppConfig.connectTimeout,

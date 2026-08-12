@@ -14,16 +14,16 @@ class ReportSummarizerApi {
 
   Future<ReportSummaryResult> summarizeText({
     required String text,
+    // Retained as an in-process compatibility argument; never sent on the wire.
     String? userId,
     String? recordId,
   }) async {
     final formData = FormData.fromMap({
       'text': text,
-      'user_id': ?userId,
       'record_id': ?recordId,
     });
     final response = await _dio.post<Map<String, dynamic>>(
-      '/summarize',
+      '/ai/summarize',
       data: formData,
       options: Options(
         connectTimeout: AppConfig.connectTimeout,
@@ -37,16 +37,16 @@ class ReportSummarizerApi {
   Future<ReportSummaryResult> summarizeFile({
     required String filePath,
     required String fileName,
+    // Retained as an in-process compatibility argument; never sent on the wire.
     String? userId,
     String? recordId,
   }) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath, filename: fileName),
-      'user_id': ?userId,
       'record_id': ?recordId,
     });
     final response = await _dio.post<Map<String, dynamic>>(
-      '/summarize',
+      '/ai/summarize',
       data: formData,
       options: Options(
         connectTimeout: AppConfig.connectTimeout,
