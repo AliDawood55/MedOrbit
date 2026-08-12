@@ -410,7 +410,7 @@ const Analytics = (() => {
         let isAdmin = false;
         try {
             const res = await API.users.me();
-            isAdmin = res?.data?.role === 'admin';
+            isAdmin = ['admin', 'super_admin'].includes(res?.data?.role);
         } catch (err) {
             console.error('Analytics: failed to verify role', err);
             isAdmin = false;
