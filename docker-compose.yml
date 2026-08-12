@@ -46,7 +46,9 @@ services:
     volumes:
       - medorbit_pgdata:/var/lib/postgresql/data
     ports:
-      - "${DB_PORT:-5432}:5432"
+      # Dedicated loopback-only host endpoint for pgAdmin and host-side tools.
+      # Keep DB_PORT=5432 for container-to-container PostgreSQL connections.
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
@@ -93,6 +95,7 @@ services:
       # localhost (the .env default, correct when running on the host) would
       # resolve to the backend container itself, not the DB.
       DB_HOST: postgres
+      DB_PORT: 5432
       # Same reasoning: the ai-service container, not localhost.
       AI_SERVICE_URL: http://ai-service:8001
       # pino-pretty (dev-only log formatter) is a devDependency and isn't in
@@ -130,6 +133,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       NODE_ENV: production
       KAFKA_ENABLED: "true"
       KAFKA_BROKERS: kafka:9092
@@ -157,6 +161,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       NODE_ENV: production
       KAFKA_ENABLED: "true"
       KAFKA_BROKERS: kafka:9092
@@ -186,6 +191,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       NODE_ENV: production
       KAFKA_ENABLED: "true"
       KAFKA_BROKERS: kafka:9092
@@ -235,6 +241,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: medorbit_test
       DB_SCHEMA: medorbit
       NODE_ENV: test
@@ -270,6 +277,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: ${DB_NAME}
       DB_SCHEMA: medorbit
       NODE_ENV: migration
@@ -291,6 +299,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       # host.docker.internal reaches the HOST machine from inside the
       # container — this is where `ollama serve` is expected to already be
       # running (see README note in the Ollama section above).
@@ -332,6 +341,7 @@ services:
       - .env
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: medorbit_test
       DB_SCHEMA: medorbit
       NODE_ENV: test
