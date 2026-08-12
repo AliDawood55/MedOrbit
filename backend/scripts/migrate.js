@@ -14,7 +14,11 @@ const LEDGER_TABLE = 'medorbit.schema_migrations';
 const LOCK_KEY = 'medorbit:schema_migrations';
 
 function checksum(contents) {
-    return crypto.createHash('sha256').update(contents).digest('hex');
+    // Git may materialize the same migration with CRLF on Windows and LF in
+    // Linux containers. Normalize line endings for the ledger checksum only;
+    // execute the original contents unchanged.
+    const normalizedContents = contents.replace(/\r\n?/g, '\n');
+    return crypto.createHash('sha256').update(normalizedContents).digest('hex');
 }
 
 function loadMigrations(migrationsDir = DEFAULT_MIGRATIONS_DIR) {
