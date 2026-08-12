@@ -147,8 +147,20 @@ function welcomeTemplate(name) {
     };
 }
 
+function adminInvitationTemplate(acceptanceUrl, expiresAt) {
+    const expires = new Date(expiresAt).toISOString();
+    const body = `
+        <h2 style="color:#1e293b;margin:0 0 20px;font-size:20px;">Administrative invitation</h2>
+        <p style="color:#475569;font-size:15px;line-height:1.6;">You have been invited to join MedOrbit as an administrator.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 30px;"><tr><td style="background-color:#2563EB;border-radius:8px;"><a href="${acceptanceUrl}" style="display:inline-block;padding:14px 36px;color:#ffffff;font-size:16px;font-weight:600;text-decoration:none;">Accept invitation</a></td></tr></table>
+        <p style="color:#64748b;font-size:13px;word-break:break-all;">${acceptanceUrl}</p>
+        <p style="color:#94a3b8;font-size:12px;">This one-time link expires at ${expires}. Do not forward it. If you did not expect this invitation, ignore this email.</p>`;
+    return { html: baseTemplate('Administrative invitation', body), text: `You were invited to join MedOrbit as an administrator. Accept once before ${expires}: ${acceptanceUrl}` };
+}
+
 module.exports = {
     verifyEmailTemplate,
     resetPasswordTemplate,
-    welcomeTemplate
+    welcomeTemplate,
+    adminInvitationTemplate
 };
