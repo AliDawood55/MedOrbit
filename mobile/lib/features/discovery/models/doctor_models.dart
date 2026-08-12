@@ -1,5 +1,9 @@
 class DoctorListResponse {
-  const DoctorListResponse({this.doctors = const [], this.pagination, this.extra = const {}});
+  const DoctorListResponse({
+    this.doctors = const [],
+    this.pagination,
+    this.extra = const {},
+  });
 
   final List<Doctor> doctors;
   final DoctorPagination? pagination;
@@ -10,7 +14,9 @@ class DoctorListResponse {
     final pagination = _asMap(data['pagination']);
     return DoctorListResponse(
       doctors: _list(data['doctors']).map(Doctor.fromJson).toList(),
-      pagination: pagination == null ? null : DoctorPagination.fromJson(pagination),
+      pagination: pagination == null
+          ? null
+          : DoctorPagination.fromJson(pagination),
       extra: _extra(data, const {'doctors', 'pagination'}),
     );
   }
@@ -36,16 +42,28 @@ class DoctorDetailResponse {
     final doctor = _asMap(data['doctor']);
     return DoctorDetailResponse(
       doctor: doctor == null ? null : Doctor.fromJson(doctor),
-      clinics: _list(data['clinics']).map(DoctorClinicSummary.fromJson).toList(),
-      availability: _list(data['availability']).map(DoctorAvailabilitySlot.fromJson).toList(),
+      clinics: _list(
+        data['clinics'],
+      ).map(DoctorClinicSummary.fromJson).toList(),
+      availability: _list(
+        data['availability'],
+      ).map(DoctorAvailabilitySlot.fromJson).toList(),
       reviews: _list(data['reviews']).map(DoctorReview.fromJson).toList(),
-      extra: _extra(data, const {'doctor', 'clinics', 'availability', 'reviews'}),
+      extra: _extra(data, const {
+        'doctor',
+        'clinics',
+        'availability',
+        'reviews',
+      }),
     );
   }
 }
 
 class DoctorAvailabilityResponse {
-  const DoctorAvailabilityResponse({this.slots = const [], this.extra = const {}});
+  const DoctorAvailabilityResponse({
+    this.slots = const [],
+    this.extra = const {},
+  });
 
   final List<DoctorAvailabilitySlot> slots;
   final Map<String, dynamic> extra;
@@ -72,6 +90,7 @@ class Doctor {
     this.isAcceptingPatients,
     this.education = const [],
     this.certifications = const [],
+    this.professionalBio,
     this.professionalBioAr,
     this.professionalBioEn,
     this.email,
@@ -102,6 +121,7 @@ class Doctor {
   final bool? isAcceptingPatients;
   final List<String> education;
   final List<String> certifications;
+  final String? professionalBio;
   final String? professionalBioAr;
   final String? professionalBioEn;
   final String? email;
@@ -124,17 +144,34 @@ class Doctor {
     return Doctor(
       id: _asString(json['id']) ?? '',
       userId: _asString(_read(json, 'user_id', 'userId')),
-      medicalLicenseNumber: _asString(_read(json, 'medical_license_number', 'medicalLicenseNumber')),
-      yearsOfExperience: _asInt(_read(json, 'years_of_experience', 'yearsOfExperience')),
-      consultationFee: _asDouble(_read(json, 'consultation_fee', 'consultationFee')),
-      consultationDuration: _asInt(_read(json, 'consultation_duration', 'consultationDuration')),
+      medicalLicenseNumber: _asString(
+        _read(json, 'medical_license_number', 'medicalLicenseNumber'),
+      ),
+      yearsOfExperience: _asInt(
+        _read(json, 'years_of_experience', 'yearsOfExperience'),
+      ),
+      consultationFee: _asDouble(
+        _read(json, 'consultation_fee', 'consultationFee'),
+      ),
+      consultationDuration: _asInt(
+        _read(json, 'consultation_duration', 'consultationDuration'),
+      ),
       averageRating: _asDouble(_read(json, 'average_rating', 'averageRating')),
       totalRatings: _asInt(_read(json, 'total_ratings', 'totalRatings')),
-      isAcceptingPatients: _asBool(_read(json, 'is_accepting_patients', 'isAcceptingPatients')),
+      isAcceptingPatients: _asBool(
+        _read(json, 'is_accepting_patients', 'isAcceptingPatients'),
+      ),
       education: _stringList(json['education']),
       certifications: _stringList(json['certifications']),
-      professionalBioAr: _asString(_read(json, 'professional_bio_ar', 'professionalBioAr')),
-      professionalBioEn: _asString(_read(json, 'professional_bio_en', 'professionalBioEn')),
+      professionalBio: _asString(
+        _read(json, 'professional_bio', 'professionalBio'),
+      ),
+      professionalBioAr: _asString(
+        _read(json, 'professional_bio_ar', 'professionalBioAr'),
+      ),
+      professionalBioEn: _asString(
+        _read(json, 'professional_bio_en', 'professionalBioEn'),
+      ),
       email: _asString(json['email']),
       firstNameAr: _asString(_read(json, 'first_name_ar', 'firstNameAr')),
       lastNameAr: _asString(_read(json, 'last_name_ar', 'lastNameAr')),
@@ -143,10 +180,18 @@ class Doctor {
       specialtyId: _asString(_read(json, 'specialty_id', 'specialtyId')),
       specialtyAr: _asString(_read(json, 'specialty_ar', 'specialtyAr')),
       specialtyEn: _asString(_read(json, 'specialty_en', 'specialtyEn')),
-      specialtyNameAr: _asString(_read(json, 'specialty_name_ar', 'specialtyNameAr')),
-      specialtyNameEn: _asString(_read(json, 'specialty_name_en', 'specialtyNameEn')),
-      clinics: _list(json['clinics']).map(DoctorClinicSummary.fromJson).toList(),
-      availability: _list(json['availability']).map(DoctorAvailabilitySlot.fromJson).toList(),
+      specialtyNameAr: _asString(
+        _read(json, 'specialty_name_ar', 'specialtyNameAr'),
+      ),
+      specialtyNameEn: _asString(
+        _read(json, 'specialty_name_en', 'specialtyNameEn'),
+      ),
+      clinics: _list(
+        json['clinics'],
+      ).map(DoctorClinicSummary.fromJson).toList(),
+      availability: _list(
+        json['availability'],
+      ).map(DoctorAvailabilitySlot.fromJson).toList(),
       reviews: _list(json['reviews']).map(DoctorReview.fromJson).toList(),
       createdAt: _asDate(_read(json, 'created_at', 'createdAt')),
       extra: _extra(json, const {
@@ -169,6 +214,8 @@ class Doctor {
         'isAcceptingPatients',
         'education',
         'certifications',
+        'professional_bio',
+        'professionalBio',
         'professional_bio_ar',
         'professionalBioAr',
         'professional_bio_en',
@@ -205,15 +252,19 @@ class Doctor {
     ..._copyMap(extra),
     'id': id,
     if (userId != null) 'user_id': userId,
-    if (medicalLicenseNumber != null) 'medical_license_number': medicalLicenseNumber,
+    if (medicalLicenseNumber != null)
+      'medical_license_number': medicalLicenseNumber,
     if (yearsOfExperience != null) 'years_of_experience': yearsOfExperience,
     if (consultationFee != null) 'consultation_fee': consultationFee,
-    if (consultationDuration != null) 'consultation_duration': consultationDuration,
+    if (consultationDuration != null)
+      'consultation_duration': consultationDuration,
     if (averageRating != null) 'average_rating': averageRating,
     if (totalRatings != null) 'total_ratings': totalRatings,
-    if (isAcceptingPatients != null) 'is_accepting_patients': isAcceptingPatients,
+    if (isAcceptingPatients != null)
+      'is_accepting_patients': isAcceptingPatients,
     'education': List<String>.from(education),
     'certifications': List<String>.from(certifications),
+    if (professionalBio != null) 'professional_bio': professionalBio,
     if (professionalBioAr != null) 'professional_bio_ar': professionalBioAr,
     if (professionalBioEn != null) 'professional_bio_en': professionalBioEn,
     if (email != null) 'email': email,
@@ -264,9 +315,13 @@ class DoctorClinicSummary {
     return DoctorClinicSummary(
       id: _asString(json['id']) ?? '',
       nameAr: _asString(_read(json, 'name_ar', 'nameAr')),
-      nameEn: _asString(_read(json, 'name_en', 'nameEn')) ?? _asString(json['name']),
+      nameEn:
+          _asString(_read(json, 'name_en', 'nameEn')) ??
+          _asString(json['name']),
       addressAr: _asString(_read(json, 'address_ar', 'addressAr')),
-      addressEn: _asString(_read(json, 'address_en', 'addressEn')) ?? _asString(json['address']),
+      addressEn:
+          _asString(_read(json, 'address_en', 'addressEn')) ??
+          _asString(json['address']),
       city: _asString(json['city']),
       region: _asString(json['region']),
       latitude: _asDouble(json['latitude']),
@@ -400,7 +455,17 @@ class DoctorReview {
       rating: _asDouble(json['rating']),
       comment: _asString(json['comment']),
       createdAt: _asDate(_read(json, 'created_at', 'createdAt')),
-      extra: _extra(json, const {'id', 'patient_id', 'patientId', 'patient_name', 'patientName', 'rating', 'comment', 'created_at', 'createdAt'}),
+      extra: _extra(json, const {
+        'id',
+        'patient_id',
+        'patientId',
+        'patient_name',
+        'patientName',
+        'rating',
+        'comment',
+        'created_at',
+        'createdAt',
+      }),
     );
   }
 
@@ -416,7 +481,15 @@ class DoctorReview {
 }
 
 class DoctorPagination {
-  const DoctorPagination({this.page, this.limit, this.total, this.totalPages, this.hasNext, this.hasPrevious, this.extra = const {}});
+  const DoctorPagination({
+    this.page,
+    this.limit,
+    this.total,
+    this.totalPages,
+    this.hasNext,
+    this.hasPrevious,
+    this.extra = const {},
+  });
 
   final int? page;
   final int? limit;
@@ -434,25 +507,44 @@ class DoctorPagination {
       totalPages: _asInt(_read(json, 'total_pages', 'totalPages')),
       hasNext: _asBool(_read(json, 'has_next', 'hasNext')),
       hasPrevious: _asBool(_read(json, 'has_previous', 'hasPrevious')),
-      extra: _extra(json, const {'page', 'limit', 'total', 'total_pages', 'totalPages', 'has_next', 'hasNext', 'has_previous', 'hasPrevious'}),
+      extra: _extra(json, const {
+        'page',
+        'limit',
+        'total',
+        'total_pages',
+        'totalPages',
+        'has_next',
+        'hasNext',
+        'has_previous',
+        'hasPrevious',
+      }),
     );
   }
 }
 
-Map<String, dynamic> _payload(Map<String, dynamic> json) => _asMap(json['data']) ?? json;
+Map<String, dynamic> _payload(Map<String, dynamic> json) =>
+    _asMap(json['data']) ?? json;
 
-Object? _read(Map<String, dynamic> json, String snake, String camel) => json.containsKey(snake) ? json[snake] : json[camel];
+Object? _read(Map<String, dynamic> json, String snake, String camel) =>
+    json.containsKey(snake) ? json[snake] : json[camel];
 
-Map<String, dynamic>? _asMap(Object? value) => value is Map ? Map<String, dynamic>.from(value) : null;
+Map<String, dynamic>? _asMap(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : null;
 
 List<Map<String, dynamic>> _list(Object? value) {
   if (value is! List) return const [];
-  return value.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+  return value
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
 }
 
 List<String> _stringList(Object? value) {
   if (value is! List) return const [];
-  return value.where((item) => item != null).map((item) => item.toString()).toList();
+  return value
+      .where((item) => item != null)
+      .map((item) => item.toString())
+      .toList();
 }
 
 String? _asString(Object? value) => value?.toString();
@@ -481,10 +573,15 @@ bool? _asBool(Object? value) {
   return null;
 }
 
-DateTime? _asDate(Object? value) => value == null ? null : DateTime.tryParse(value.toString());
+DateTime? _asDate(Object? value) =>
+    value == null ? null : DateTime.tryParse(value.toString());
 
 Map<String, dynamic> _extra(Map<String, dynamic> json, Set<String> known) {
-  return _copyMap(Map<String, dynamic>.fromEntries(json.entries.where((entry) => !known.contains(entry.key))));
+  return _copyMap(
+    Map<String, dynamic>.fromEntries(
+      json.entries.where((entry) => !known.contains(entry.key)),
+    ),
+  );
 }
 
 Map<String, dynamic> _copyMap(Map<String, dynamic> value) {
