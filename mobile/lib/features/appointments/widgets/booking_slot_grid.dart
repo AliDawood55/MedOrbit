@@ -84,7 +84,7 @@ class _SlotButton extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      slot.isTelemedicine ? Icons.videocam_outlined : Icons.local_hospital_outlined,
+                      slot.isTelemedicine ? Icons.chat_bubble_outline : Icons.local_hospital_outlined,
                       size: AppTheme.iconSm,
                       color: foreground,
                     ),
