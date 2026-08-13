@@ -84,8 +84,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: medorbit-backend
     restart: unless-stopped
     env_file:
@@ -125,8 +125,8 @@ services:
 
   outbox-worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: medorbit-outbox-worker
     restart: unless-stopped
     env_file:
@@ -153,8 +153,8 @@ services:
 
   event-consumer:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: medorbit-event-consumer
     restart: unless-stopped
     env_file:
@@ -183,8 +183,8 @@ services:
 
   recommendation-consumer:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: medorbit-recommendation-consumer
     restart: unless-stopped
     env_file:
@@ -232,8 +232,8 @@ services:
 
   backend-test:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.test
+      context: .
+      dockerfile: backend/Dockerfile.test
     profiles: ["test"]
     container_name: medorbit-backend-test
     restart: "no"
@@ -269,8 +269,8 @@ services:
 
   db-migrate:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.test
+      context: .
+      dockerfile: backend/Dockerfile.test
     profiles: ["tools"]
     restart: "no"
     env_file:
@@ -366,8 +366,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: medorbit-frontend
     restart: unless-stopped
     ports:
