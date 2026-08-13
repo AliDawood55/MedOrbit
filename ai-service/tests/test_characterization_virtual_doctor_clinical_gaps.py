@@ -1,8 +1,7 @@
 """
 Characterization tests — Virtual Doctor clinical safety/routing gaps.
 
-Pins the FIXED behavior of three live-verified gaps found while producing
-docs/virtual_doctor_clinical_voice_improvement_plan.md, after the Virtual
+Pins the FIXED behavior of three live-verified gaps addressed by the Virtual
 Doctor Clinical Safety Gaps Implementation Batch:
 
   A. Arabic thunderclap/sudden-severe-headache is now flagged as "urgent" by
