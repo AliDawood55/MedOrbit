@@ -26,12 +26,10 @@
     "test:admin-rate-notifications:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:admin-rate-notifications && npm run test:admin-notifications-ui",
     "db:migrate": "docker compose --profile tools run --rm db-migrate up",
     "db:migrate:status": "docker compose --profile tools run --rm db-migrate status",
-    "db:migrate:dry-run": "docker compose --profile tools run --rm db-migrate dry-run",
-    "db:seed": "psql -U postgres -d medorbit -f db/06_seed_data.sql"
+    "db:migrate:dry-run": "docker compose --profile tools run --rm db-migrate dry-run"
   },
   "devDependencies": {
-    "concurrently": "^9.2.4",
-    "cypress": "^15.19.0"
+    "concurrently": "^9.2.4"
   },
   "dependencies": {
     "json2csv": "^6.0.0-alpha.2",

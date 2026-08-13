@@ -13,8 +13,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/package.json
 # -w backend scopes the install to the backend workspace's own dependencies
-# (root-only deps like uuid, root devDependencies like cypress/concurrently
-# are excluded); --omit=dev additionally drops backend's own devDependencies.
+# (root-only deps like uuid, root devDependencies like concurrently are
+# excluded); --omit=dev additionally drops backend's own devDependencies.
 RUN npm ci --omit=dev -w backend
 
 # Whole tree in one shot — .dockerignore is the only thing that should ever

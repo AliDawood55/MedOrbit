@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 """
-Ingest a medical textbook PDF into the medical_knowledge RAG table.
+Admin/maintenance tool: ingest a medical textbook PDF into the
+medical_knowledge RAG table. Not part of the normal application runtime —
+run by hand, pointed at a local copy of whatever book is being indexed.
 
-    python ai-service/rag/ingest_book.py                # full run, defaults
-    python ai-service/rag/ingest_book.py --dry-run      # chunk only, no DB/Ollama
-    python ai-service/rag/ingest_book.py --end-page 40  # small slice first
+    python ai-service/rag/ingest_book.py --pdf /path/to/book.pdf
+    python ai-service/rag/ingest_book.py --pdf book.pdf --dry-run      # chunk only, no DB/Ollama
+    python ai-service/rag/ingest_book.py --pdf book.pdf --end-page 40  # small slice first
 
 Pipeline: stream pages with pypdf -> sliding-window chunks -> batch-embed via
 Ollama (nomic-embed-text) -> batch-insert into medorbit.medical_knowledge.
 
 DESIGNED FOR A LARGE BOOK
 -------------------------
-The target file is ~65 MB / 1400+ pages, and embedding it is minutes of local
-GPU/CPU work. Three things follow from that:
+Source books here run hundreds to thousands of pages, and embedding one is
+minutes of local GPU/CPU work. Three things follow from that:
 
   * Nothing is accumulated in memory. Pages are streamed, chunks are emitted
     from a sliding buffer, and each batch is embedded and inserted before the
@@ -24,9 +26,13 @@ GPU/CPU work. Three things follow from that:
 
 EMBEDDINGS ARE STORED AS REAL[], NOT vector(768)
 ------------------------------------------------
-The postgis image has no pgvector — see db/20_medical_knowledge.sql for the
-reasoning and the later swap-in path. Nothing in this script depends on that
-choice beyond passing a plain list of floats.
+The postgis image has no pgvector, so embeddings are stored as a plain
+REAL[] column and compared with a cosine_similarity() SQL function instead
+of pgvector's native vector(768) type + operators. The swap-in path, if
+pgvector is ever added to the image, is to add a vector(768) column,
+backfill it from the REAL[] data, and switch retrieval queries over —
+nothing in this script depends on the choice beyond passing a plain list
+of floats.
 """
 
 from __future__ import annotations
@@ -52,11 +58,6 @@ from pypdf import PdfReader
 # ai-service/rag/ingest_book.py -> repo root is two levels up.
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 load_dotenv(_REPO_ROOT / ".env")
-
-# The real filename, spaces and all. The task brief called it "Macleods.pdf";
-# what is actually on disk is the full title, so that is the default and
-# --pdf overrides it.
-DEFAULT_PDF = _REPO_ROOT / "ai-service" / "data" / "Macleods Clinical Examination 14th Edition.pdf"
 
 DEFAULT_MODEL = "nomic-embed-text"
 DEFAULT_CHUNK_SIZE = 1000
@@ -353,9 +354,9 @@ def assert_table_exists(conn) -> None:
         if cur.fetchone()[0] is None:
             raise SystemExit(
                 "Table medorbit.medical_knowledge does not exist.\n"
-                "Apply the migration first:\n"
-                "  docker exec -i medorbit-postgres psql -U postgres -d medorbit "
-                "< db/20_medical_knowledge.sql"
+                "This table is not part of backend/migrations — it's created by "
+                "the RAG pipeline's own (locally-kept, not git-tracked) schema "
+                "SQL. Create it before running ingestion."
             )
 
 
@@ -410,7 +411,8 @@ def parse_args() -> argparse.Namespace:
         description="Ingest a PDF textbook into medorbit.medical_knowledge.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    p.add_argument("--pdf", type=Path, default=DEFAULT_PDF, help="Path to the PDF")
+    p.add_argument("--pdf", type=Path, required=True,
+                   help="Path to the source PDF (not bundled in the repo — supply your own local copy)")
     p.add_argument("--source", default=None,
                    help="Source label stored on every row (default: the PDF filename stem)")
     p.add_argument("--model", default=DEFAULT_MODEL, help="Ollama embedding model")

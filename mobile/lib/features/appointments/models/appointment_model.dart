@@ -1,5 +1,5 @@
-/// One row of `GET /appointments` — `SELECT *` on `medorbit.appointments`
-/// (`db/02_dependent_tables.sql:125-147`). Only the columns the UI needs.
+/// One row of `GET /appointments` — `SELECT *` on `medorbit.appointments`.
+/// Only the columns the UI needs.
 class AppointmentModel {
   const AppointmentModel({
     required this.id,

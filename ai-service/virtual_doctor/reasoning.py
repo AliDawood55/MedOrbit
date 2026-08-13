@@ -96,9 +96,10 @@ _VALID_URGENCY = set(_URGENCY_RANK)
 _symptom_engine = SymptomSpecialtyEngine()
 
 # Seed phrases fed to the rule engine's substring matcher, in the exact
-# wording used by symptom_specialty_mappings (db/07_triage_tables.sql), so
-# the DB-backed lookup fires even when the patient's free-text answers are
-# terse (e.g. a one-word severity answer).
+# wording stored in the DB's symptom_specialty_mappings table (schema kept
+# locally, not tracked in git — see backend/migrations for what is tracked),
+# so the DB-backed lookup fires even when the patient's free-text answers
+# are terse (e.g. a one-word severity answer).
 #
 # Same table retrieval.py uses to anchor its queries in English — aliased
 # rather than copied so the two can never drift apart.

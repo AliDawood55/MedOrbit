@@ -157,6 +157,10 @@ ai-service/data/nablus_wide_review*.csv
 ai-service/data/cache/
 ai-service/data/reports/
 
+# Source PDFs for ai-service/rag/ingest_book.py (e.g. medical textbooks) —
+# supplied locally via --pdf, not committed (copyrighted, and large).
+ai-service/data/*.pdf
+
 #################################################
 # ai-service/virtual_doctor — generated / downloaded artifacts
 # (merged from the nested .gitignore files formerly at
