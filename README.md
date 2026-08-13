@@ -30,10 +30,8 @@ backend/        Express API, database repositories, migrations (backend/scripts/
 frontend/       Static HTML/CSS/JS, served by nginx in Docker or python http.server locally
 ai-service/     FastAPI app: NLU pipeline, RAG, virtual doctor, OCR
 mobile/         Flutter app (see mobile/DEVELOPMENT_NETWORKING.md)
-db/             Canonical, ordered SQL migrations (run via `npm run db:migrate`)
 docs/           Setup, staging deployment, and feature-specific docs
-cypress/        End-to-end tests
-scripts/        Maintenance/dev scripts
+scripts/        Maintenance/dev scripts, CI bootstrap schema (scripts/ci/)
 ```
 
 ## Prerequisites
@@ -79,8 +77,8 @@ Needs, on the host:
 - Database: `medorbit`, schema: `medorbit`
 - Host access (dev tools, pgAdmin, psql): `127.0.0.1:5433`
 - Docker-internal access (backend/ai-service containers): `postgres:5432`
-- Migrations live in [db/](db/) as ordered, numbered SQL files, applied via `backend/scripts/migrate.js` (`npm run db:migrate`, `npm run db:migrate:status`, `npm run db:migrate:dry-run`)
-- Seed data: `npm run db:seed`
+- Canonical, ordered migrations live in [backend/migrations/](backend/migrations/), applied via `backend/scripts/migrate.js` (`npm run db:migrate`, `npm run db:migrate:status`, `npm run db:migrate:dry-run`)
+- `db/` and `database/` are local, gitignored, raw/historical SQL — not required for a normal clean-clone run; see [DOCKER.md](DOCKER.md) for how to get data into a fresh database
 
 ## Environment setup
 
@@ -95,8 +93,7 @@ All configuration is a single root `.env` file, read by the backend, ai-service,
 ## Testing / CI
 
 - `docker compose --profile test up -d --build --wait backend-test` then `npm run test:auth:docker`, `npm run test:s1a:docker`, etc. run backend integration tests against a disposable test database (see `package.json` scripts)
-- `npm run test:admin-notifications-ui`, `test:user-content-ui`, `test:doctor-scheduling-ui` — targeted frontend UI tests (Node)
-- Cypress (`cypress.config.js`) covers end-to-end browser flows
+- `npm run test:admin-notifications-ui`, `test:user-content-ui`, `test:doctor-scheduling-ui` — targeted frontend UI tests (Node, in `frontend/tests/`)
 - GitHub Actions (`.github/workflows/ci.yml`) builds and runs the Docker Compose stack on a GPU-less runner — `docker-compose.gpu.yml` is a separate opt-in overlay for CUDA-accelerated Whisper, kept out of the base compose file specifically so CI stays GPU-free
 
 ## Operational notes
