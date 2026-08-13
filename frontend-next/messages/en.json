@@ -1,0 +1,22 @@
+{
+  "brand": {
+    "tagline": "Healthcare Platform"
+  },
+  "theme": "Theme",
+  "language": "العربية",
+  "footer": {
+    "tagline": "Smart healthcare platform for Nablus",
+    "rights": "All rights reserved"
+  },
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "error": "Something went wrong",
+    "page": "Page",
+    "close": "Close",
+    "clearInput": "Clear text",
+    "showMap": "Show map",
+    "showList": "Show list",
+    "showChat": "Show conversation"
+  }
+}
