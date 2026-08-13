@@ -2,10 +2,18 @@ FROM node:20-bullseye-slim
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+# Root context: root package.json/package-lock.json carry the npm workspace
+# definition, backend/package.json is the workspace member being installed.
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+# -w backend scopes the install to the backend workspace (root-only deps and
+# root devDependencies excluded); no --omit=dev here since tests need
+# backend's own devDependencies (nodemon, pino-pretty, socket.io-client).
+RUN npm ci -w backend
 
-COPY . .
+COPY backend/ ./backend/
+
+WORKDIR /app/backend
 
 EXPOSE 3001
 
