@@ -217,11 +217,9 @@ class TestNormalSeverityBehaviorUnchanged(unittest.IsolatedAsyncioTestCase):
 # ===========================================================================
 
 class TestSafetySignalPersisted(unittest.IsolatedAsyncioTestCase):
-    """LIMITATION, documented per the task's own instruction: the current
-    schema has no dedicated structured red_flags column/table (see
-    docs/virtual_doctor_clinical_voice_improvement_plan.md, Section 4 — "red
-    flags as an explicit, stored, per-turn list" is listed there as missing
-    and still is). This test verifies the signal reaches the two fields that
+    """LIMITATION: the current schema has no dedicated structured red_flags
+    column/table — "red flags as an explicit, stored, per-turn list" remains
+    unimplemented. This test verifies the signal reaches the two fields that
     DO exist today: the session's urgency_level column, and a lightweight,
     additive audit trail inside the existing patient_profile JSONB column
     (safety_warning_shown_for / safety_flags_detected) — no schema/migration

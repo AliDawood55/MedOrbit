@@ -1,8 +1,7 @@
 # MedOrbit mobile — development networking
 
 How the Flutter app finds the backend and the AI service, and what has to change
-before a production build. This is a developer setup note; the full mobile-vs-web
-comparison lives in `../FRONTEND_MOBILE_PARITY_AUDIT.md`.
+before a production build.
 
 ## Two separate services
 
