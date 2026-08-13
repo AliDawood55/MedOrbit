@@ -162,6 +162,13 @@ ai-service/data/reports/
 ai-service/data/*.pdf
 
 #################################################
+# ai-service/benchmarks — generated benchmark result artifacts
+# (result dirs are recreated by the benchmark scripts themselves)
+#################################################
+
+/ai-service/benchmarks/results/
+
+#################################################
 # ai-service/virtual_doctor — generated / downloaded artifacts
 # (merged from the nested .gitignore files formerly at
 # ai-service/virtual_doctor/assets/tts_voices/.gitignore and
