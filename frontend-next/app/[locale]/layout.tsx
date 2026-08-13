@@ -4,6 +4,8 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { DirectionProvider } from "@/components/ui/direction";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
@@ -80,7 +82,11 @@ export default async function LocaleLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <NextIntlClientProvider messages={messages}>
-          <DirectionProvider direction={dir}>{children}</DirectionProvider>
+          <DirectionProvider direction={dir}>
+            <TooltipProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </TooltipProvider>
+          </DirectionProvider>
         </NextIntlClientProvider>
       </body>
     </html>
