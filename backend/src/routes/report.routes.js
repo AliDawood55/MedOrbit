@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 const {
     authenticate,
-    authorize
+    authorizeAdmin
 } = require("../middleware/auth");
 
 
@@ -27,7 +27,7 @@ router.get(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -76,7 +76,7 @@ router.post(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -196,7 +196,7 @@ router.get(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -307,7 +307,7 @@ router.get(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
