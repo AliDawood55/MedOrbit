@@ -419,19 +419,25 @@ const API = (() => {
         decline: (id, options) => post(`/messages/conversations/${id}/decline`, {}, options)
     };
 
-    // ================= ANALYTICS (JWT required, admin only) =================
-    // GET /api/dashboard/stats is live; analytics.js adapts the current aggregate payload.
-    // Expected response shape once it lands — analytics.js reads exactly
-    // this and shows an "awaiting backend data" state per-chart for
-    // whichever section is missing/empty:
+    // ================= ANALYTICS (JWT required, admin/super_admin only) =================
+    // GET /api/dashboard/stats — real response shape (backend/src/services/report.service.js):
     //   {
-    //     appointmentsOverTime:  { labels: string[], counts: number[] },
-    //     usersByRole:           { labels: string[], counts: number[] },
-    //     topSpecialties:        { labels: string[], counts: number[] },
-    //     conversationsPerWeek:  { labels: string[], counts: number[] },
-    //     triageLevels:          { labels: string[], emergency: number[], urgent: number[], routine: number[] },
-    //     clinicTypes:           { labels: string[], counts: number[] }
+    //     users: { total, patients, doctors },
+    //     appointments: { total, completed, cancelled, scheduled },
+    //     medical_records: { total }, prescriptions: { total }, ratings: { average },
+    //     analytics: {
+    //       usersByRole:          { data: { labels: string[], counts: number[] } } | { error: true }
+    //       appointmentsOverTime: { data: { labels: string[] (week-start ISO dates), counts: number[] } } | { error: true }
+    //       topSpecialties:       { data: { items: { nameAr, nameEn, count }[] } } | { error: true }
+    //       conversationsPerWeek: { data: { labels: string[] (week-start ISO dates), counts: number[] } } | { error: true }
+    //       triageLevels:         { data: { labels: string[], counts: number[] } } | { error: true }
+    //       clinicTypes:          { data: { labels: string[], counts: number[] } } | { error: true }
+    //     }
     //   }
+    // Each analytics.* section is independent: one query failing server-side
+    // only marks that one section { error: true } instead of failing the
+    // whole request — analytics.js renders a per-card "unavailable" state for
+    // just that section.
     const analytics = {
         dashboardStats: (options) => get('/dashboard/stats', null, options)
     };
