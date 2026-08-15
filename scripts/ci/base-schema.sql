@@ -1,9 +1,18 @@
 -- MedOrbit migration prerequisite baseline for disposable CI databases.
 --
 -- This is deliberately schema-only: no users, patients, seed rows, or
--- environment-specific data belong in CI.  Migrations 001-013 are the
+-- environment-specific data belong in CI.  The numbered migrations are the
 -- incremental history after this baseline and are applied separately by the
 -- existing migration runner.
+--
+-- WHAT BELONGS HERE
+-- Every table that existed BEFORE migration 001 and is still referenced by a
+-- migration.  A developer machine gets those tables from the SQL under db/,
+-- which is gitignored (see .gitignore) and therefore does not exist on a CI
+-- runner -- so anything a migration expects to already be there has to be
+-- restated in this file or CI is bootstrapping a different database from
+-- everybody else's.  When a migration starts referencing a pre-existing
+-- table for the first time, check it is here.
 
 \set ON_ERROR_STOP on
 
@@ -225,6 +234,60 @@ CREATE TABLE doctor_posts (
   CONSTRAINT chk_doctor_posts_title
     CHECK (title_ar IS NOT NULL OR title_en IS NOT NULL)
 );
+
+-- AI Virtual Doctor tables, created before migration 001 by
+-- db/16_virtual_doctor_tables.sql.  Reproduced here column for column from
+-- the live schema (pg_dump of medorbit.virtual_doctor_*), because db/ is
+-- gitignored and never reaches a CI runner.  Migration 014 adds an ownership
+-- index to virtual_doctor_sessions and fails outright without this.
+--
+-- All three are included rather than only the one migration 014 names.  The
+-- messages and reports tables are the same baseline, they are what the
+-- Virtual Doctor code reads and writes, and a CI database that has the parent
+-- but not the children is a shape that exists nowhere else -- which is the
+-- class of difference this whole file is meant to remove, not create.
+CREATE TABLE virtual_doctor_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  session_id VARCHAR(64) NOT NULL UNIQUE,
+  language VARCHAR(5) NOT NULL DEFAULT 'en',
+  chief_complaint VARCHAR(100),
+  -- greeting | interviewing | reasoning | complete
+  phase VARCHAR(30) NOT NULL DEFAULT 'greeting',
+  patient_profile JSONB NOT NULL DEFAULT '{}',
+  -- emergency | urgent | routine
+  urgency_level VARCHAR(20),
+  recommended_specialty_id UUID REFERENCES specialties(id),
+  differential JSONB,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE virtual_doctor_messages (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id UUID NOT NULL REFERENCES virtual_doctor_sessions(id) ON DELETE CASCADE,
+  -- patient | doctor
+  role VARCHAR(10) NOT NULL,
+  message_text TEXT NOT NULL,
+  audio_url TEXT,
+  extracted_entities JSONB,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE virtual_doctor_reports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id UUID NOT NULL REFERENCES virtual_doctor_sessions(id) ON DELETE CASCADE,
+  pdf_path TEXT,
+  report_json JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_virtual_doctor_messages_session ON virtual_doctor_messages(session_id);
+CREATE INDEX idx_virtual_doctor_reports_session ON virtual_doctor_reports(session_id);
+
+-- Deliberately NOT created here: virtual_doctor_sessions_owner_lookup.  That
+-- index is migration 014's, and leaving it out is what makes CI actually run
+-- the statement this failure was about instead of skipping it.
 
 CREATE TRIGGER update_users_updated_at
   BEFORE UPDATE ON users
