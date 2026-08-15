@@ -225,6 +225,8 @@ router.post(
 router.get(
     "/doctors/:id/reviews",
 
+    authenticate,
+
     async (req, res, next) => {
 
 

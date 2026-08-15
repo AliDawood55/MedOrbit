@@ -277,9 +277,23 @@ const FeedbackDashboard = (() => {
         const wrap = document.getElementById('feedbackMarquee');
         const track = document.getElementById('feedbackMarqueeTrack');
         const empty = document.getElementById('feedbackDashEmpty');
+        const section = wrap?.closest('.feedback-dash-users');
         if (!wrap || !track) return;
 
-        const list = Array.isArray(users) ? users : [];
+        // GET /api/feedback/stats returns the aggregates to everyone but sends
+        // `users` (real people's names and avatars) only to a signed-in caller.
+        // An absent array therefore means "not shown to guests", which is not
+        // the same as an empty one — hide the whole section rather than tell a
+        // visitor there is no feedback yet when there is.
+        if (!Array.isArray(users)) {
+            section?.classList.add('hidden');
+            track.innerHTML = '';
+            lastUserKey = '';
+            return;
+        }
+        section?.classList.remove('hidden');
+
+        const list = users;
 
         if (!list.length) {
             wrap.classList.add('hidden');

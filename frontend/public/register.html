@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/forms.css">
     <link rel="stylesheet" href="../src/css/auth.css">
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
 

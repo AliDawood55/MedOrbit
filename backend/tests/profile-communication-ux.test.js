@@ -200,9 +200,13 @@ async function residualCounts() {
             [applicationId, doctor.id, specialty.id, `${marker}-application`, admin.id, doctor.doctorId]
         );
 
-        let response = await request('GET', `/doctors/${doctor.doctorId}`);
-        check(1, 'approved doctor public profile loads', response.status === 200 && response.body?.data?.doctor?.id === doctor.doctorId, JSON.stringify(response.body));
-        check(2, 'unapproved/suspended doctor handled safely', (await request('GET', `/doctors/${suspended.doctorId}`)).status === 404);
+        // A doctor's public profile is now account-only (guest -> home.html
+        // policy), so the profile contract is asserted for a signed-in reader
+        // and the guest case is asserted as a 401 of its own.
+        check(0, 'doctor profile is not readable without an account', (await request('GET', `/doctors/${doctor.doctorId}`)).status === 401);
+        let response = await request('GET', `/doctors/${doctor.doctorId}`, token(patient));
+        check(1, 'approved doctor profile loads for a signed-in user', response.status === 200 && response.body?.data?.doctor?.id === doctor.doctorId, JSON.stringify(response.body));
+        check(2, 'unapproved/suspended doctor handled safely', (await request('GET', `/doctors/${suspended.doctorId}`, token(patient))).status === 404);
         check(3, 'follower count is correct', Number(response.body.data.doctor.follower_count) === 2);
         check(4, 'patient identities not leaked through follower count', !JSON.stringify(response.body).includes(patient.email) && !('followers' in response.body.data.doctor));
 
@@ -222,7 +226,7 @@ async function residualCounts() {
         check(12, 'expertise tags bounded/normalized', response.status === 200 && (await request('GET', '/doctors/me/profile', token(doctor))).body.data.areas_of_expertise.length === 2);
         check(13, 'interests bounded/normalized', (await request('GET', '/doctors/me/profile', token(doctor))).body.data.professional_interests.length === 1);
         await pool.query(`UPDATE medorbit.doctors SET professional_bio_ar='قديم عربي',professional_bio_en='Legacy English' WHERE id=$1`, [doctor.doctorId]);
-        response = await request('GET', `/doctors/${doctor.doctorId}`);
+        response = await request('GET', `/doctors/${doctor.doctorId}`, token(patient));
         check(14, 'legacy bilingual data still renders', response.body?.data?.doctor?.professional_bio_ar === 'قديم عربي' && response.body.data.doctor.professional_bio_en === 'Legacy English');
 
         response = await request('PUT', '/patients/me/profile', token(patient), { bio: 'Patient social bio', city: 'Ramallah', allowDoctorMessages: true });
@@ -282,11 +286,16 @@ async function residualCounts() {
         response = await request('POST', '/contact', token(patient), { subject: `${marker} Auth contact`, message: contactSecret });
         const authContactId = response.body?.data?.id;
         check(37, 'authenticated contact submit works', response.status === 201 && authContactId);
-        response = await request('POST', '/contact', null, { name: 'Guest Person', email: `${marker}@example.test`, subject: `${marker} Guest contact`, message: 'Guest support message' });
+        // contact.html is a protected page under the guest policy, and the API
+        // now matches it: an anonymous submission is refused rather than left
+        // as a way around the UI. The second message is kept (as a second
+        // authenticated one) because a later IDOR check needs two distinct ids.
+        check(38, 'anonymous contact submission is refused', (await request('POST', '/contact', null, { name: 'Guest Person', email: `${marker}@example.test`, subject: `${marker} Guest contact`, message: 'Guest support message' })).status === 401);
+        response = await request('POST', '/contact', token(doctor), { subject: `${marker} Second contact`, message: 'Second support message' });
         const guestContactId = response.body?.data?.id;
-        check(38, 'guest contact works only if intentionally supported', response.status === 201 && guestContactId);
-        const invalidContact = await request('POST', '/contact', null, { name: '', email: 'bad', subject: '', message: '' });
-        const oversizedContact = await request('POST', '/contact', null, { name: 'Guest', email: 'guest@example.test', subject: `${marker} Oversized`, message: 'x'.repeat(4001) });
+        check(38.1, 'authenticated contact from another role works', response.status === 201 && guestContactId);
+        const invalidContact = await request('POST', '/contact', token(patient), { name: '', email: 'bad', subject: '', message: '' });
+        const oversizedContact = await request('POST', '/contact', token(patient), { name: 'Guest', email: 'guest@example.test', subject: `${marker} Oversized`, message: 'x'.repeat(4001) });
         check(39, 'invalid/oversized input rejected', invalidContact.status === 400 && oversizedContact.status === 400);
         check(40, 'contact creates admin notification', Number((await pool.query(`SELECT count(*) FROM medorbit.notifications WHERE user_id=$1 AND notification_type='NEW_CONTACT_MESSAGE' AND reference_id=$2`, [admin.id, authContactId])).rows[0].count) === 1);
         check(41, 'contact creates super_admin notification', Number((await pool.query(`SELECT count(*) FROM medorbit.notifications WHERE user_id=$1 AND notification_type='NEW_CONTACT_MESSAGE' AND reference_id=$2`, [superAdmin.id, authContactId])).rows[0].count) === 1);
@@ -300,7 +309,7 @@ async function residualCounts() {
         check(48, 'contact message body not placed in generic notification', !contactNotificationText.includes(contactSecret));
         let rateLimited = false;
         for (let index = 0; index < 6 && !rateLimited; index += 1) {
-            const attempt = await request('POST', '/contact', null, { name: 'Rate Test', email: 'rate@example.test', subject: `${marker} Rate ${index}`, message: 'Rate-limit proof' });
+            const attempt = await request('POST', '/contact', token(patient), { subject: `${marker} Rate ${index}`, message: 'Rate-limit proof' });
             rateLimited = attempt.status === 429;
         }
         check(49, 'contact endpoint rate limit works', rateLimited);

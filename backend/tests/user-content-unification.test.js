@@ -235,12 +235,15 @@ async function residualCounts() {
             'Own-post read contract exposes canonical and legacy fields',
             ownList.status === 200 && ownList.body.data.some((post) => post.id === arabic.body.data.id && post.title === arabicTitle && post.title_ar === arabicTitle)
         );
-        const publicPosts = await request('GET', `/doctors/${doctor.doctorId}/posts`, null);
+        // A doctor's post list and the health feed are account-only under the
+        // guest policy; the title contract is unchanged, only the reader is.
+        const reader = await createUser('post-reader', 'patient', true);
+        const publicPosts = await request('GET', `/doctors/${doctor.doctorId}/posts`, access(reader));
         check(
-            'Public doctor posts expose the canonical title without dropping legacy fields',
+            'Doctor posts expose the canonical title without dropping legacy fields',
             publicPosts.status === 200 && publicPosts.body.data.some((post) => post.id === mixed.body.data.id && post.title === mixedTitle && post.title_en === mixedTitle)
         );
-        const feed = await request('GET', '/feed/posts?limit=30', null);
+        const feed = await request('GET', '/feed/posts?limit=30', access(reader));
         check(
             'Recommendation feed keeps reason semantics and exposes canonical title',
             feed.status === 200 && feed.body.data.items.some((post) => post.id === mixed.body.data.id && post.title === mixedTitle && post.reason_code)

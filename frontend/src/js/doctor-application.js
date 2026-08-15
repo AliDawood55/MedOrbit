@@ -65,7 +65,7 @@ const DoctorApplication = (() => {
     }
 
     async function loadSpecialties() {
-        const response = await API.get('/specialties', null, { auth: false });
+        const response = await API.get('/specialties');
         const items = response.data?.specialties || response.data || [];
         byId('specialtyId').innerHTML = '<option value="">اختر التخصص / Select specialty</option>' + items.map((specialty) => (
             `<option value="${escapeHtml(specialty.id)}">${escapeHtml(localized(specialty.name_ar, specialty.name_en))}</option>`

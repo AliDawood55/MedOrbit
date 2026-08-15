@@ -74,7 +74,7 @@ const ClinicProfile = (() => {
         content.innerHTML = renderSkeleton();
 
         try {
-            const res = await API.clinics.get(id, { auth: false });
+            const res = await API.clinics.get(id);
             const { clinic, doctors } = res.data;
 
             content.innerHTML = renderProfile(clinic, doctors || []);

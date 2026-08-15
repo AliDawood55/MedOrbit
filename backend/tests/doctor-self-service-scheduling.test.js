@@ -250,7 +250,7 @@ async function residueCount() {
         check('in-person still requires a clinic and supplied clinics remain assignment-checked',
             cliniclessInPerson.status === 400 && cliniclessInPerson.body?.error?.code === 'CLINIC_REQUIRED'
             && forgedClinic.status === 400 && forgedClinic.body?.error?.code === 'CLINIC_NOT_ASSIGNED');
-        const cliniclessSlots = await request('GET', `/appointments/available-slots?doctor_id=${cliniclessDoctor.doctorId}&date=${dates.special_day}`);
+        const cliniclessSlots = await request('GET', `/appointments/available-slots?doctor_id=${cliniclessDoctor.doctorId}&date=${dates.special_day}`, doctorToken);
         const cliniclessBooking = await request('POST', '/appointments', patientBToken, {
             doctor_id: cliniclessDoctor.doctorId,
             scheduled_date: dates.special_day,
@@ -334,14 +334,14 @@ async function residueCount() {
         const dayOff = await request('POST', '/doctors/me/availability', doctorToken, {
             availability_type: 'day_off', specific_date: dates.day_off,
         });
-        const dayOffSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.day_off}`);
+        const dayOffSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.day_off}`, doctorToken);
         check('date-specific day-off removes all slots', dayOff.status === 201 && dayOffSlots.status === 200 && dayOffSlots.body.data.length === 0);
 
         const block = await request('POST', '/doctors/me/availability', doctorToken, {
             availability_type: 'blocked', specific_date: dates.block_day,
             start_time: '09:30', end_time: '10:00',
         });
-        const blockSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.block_day}`);
+        const blockSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.block_day}`, doctorToken);
         check('partial blocked period removes only overlapping slots', block.status === 201
             && blockSlots.body.data.some((slot) => slot.start_time === '09:00:00')
             && !blockSlots.body.data.some((slot) => slot.start_time === '09:30:00'));
@@ -351,7 +351,7 @@ async function residueCount() {
             start_time: '18:00', end_time: '19:00', slot_duration: 30,
             clinic_id: ids.clinic, is_telemedicine: false,
         });
-        const specialSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.special_day}`);
+        const specialSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.special_day}`, doctorToken);
         check('special added availability produces bookable slots', special.status === 201
             && specialSlots.body.data.some((slot) => slot.start_time === '18:00:00'));
 
@@ -363,7 +363,7 @@ async function residueCount() {
         };
         const booking = await request('POST', '/appointments', patientAToken, bookingBody);
         const bookingId = booking.body?.data?.id;
-        const afterBookingSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.block_day}`);
+        const afterBookingSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.block_day}`, doctorToken);
         check('booked slot is excluded from future availability', booking.status === 201 && bookingId
             && !afterBookingSlots.body.data.some((slot) => slot.start_time === '09:00:00'));
 
@@ -427,16 +427,16 @@ async function residueCount() {
             && doctorAfterFee.medical_license_number === doctorA.license);
 
         const acceptingOff = await request('PUT', '/doctors/me/profile', doctorToken, { isAcceptingPatients: false });
-        const closedSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.special_day}`);
+        const closedSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.special_day}`, doctorToken);
         await request('PUT', '/doctors/me/profile', doctorToken, { isAcceptingPatients: true });
         check('accepting-patients false prevents new booking slots', acceptingOff.status === 200
             && closedSlots.status === 200 && closedSlots.body.data.length === 0);
 
-        const futureSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.special_day}`);
+        const futureSlots = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.special_day}`, doctorToken);
         check('patient sees only valid future bookable slots', futureSlots.status === 200 && futureSlots.body.data.length > 0
             && futureSlots.body.data.every((slot) => slot.scheduled_date === dates.special_day && slot.end_time > slot.start_time));
 
-        const past = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.past_day}`);
+        const past = await request('GET', `/appointments/available-slots?doctor_id=${doctorA.doctorId}&clinic_id=${ids.clinic}&date=${dates.past_day}`, doctorToken);
         check('patient cannot book a past slot', past.status === 400 && past.body?.error?.code === 'PAST_SLOT');
 
         const blockedBooking = await request('POST', '/appointments', patientAToken, {

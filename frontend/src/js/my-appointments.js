@@ -116,7 +116,7 @@ const MyAppointments = (() => {
         await Promise.all([
             ...doctorIds.map(async (id) => {
                 try {
-                    const res = await API.doctors.get(id, { auth: false });
+                    const res = await API.doctors.get(id);
                     state.doctorCache.set(id, res.data.doctor);
                 } catch {
                     state.doctorCache.set(id, null);
@@ -124,7 +124,7 @@ const MyAppointments = (() => {
             }),
             ...clinicIds.map(async (id) => {
                 try {
-                    const res = await API.clinics.get(id, { auth: false });
+                    const res = await API.clinics.get(id);
                     state.clinicCache.set(id, res.data?.clinic || res.data);
                 } catch {
                     state.clinicCache.set(id, null);

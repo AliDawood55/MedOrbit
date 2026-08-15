@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/database');
-const { authenticate, authenticateOptional } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 const { recordUserEvent } = require('../services/userEvent.service');
 const { getRankedDoctors } = require('../services/recommendation.service');
@@ -9,7 +9,7 @@ const { getRankedDoctors } = require('../services/recommendation.service');
 const router = express.Router();
 const signalLimiter = rateLimit({ windowMs:60_000,max:30,standardHeaders:true,legacyHeaders:false });
 
-router.get('/doctors',authenticateOptional,async(req,res,next)=>{
+router.get('/doctors',authenticate,async(req,res,next)=>{
     try{
         const limit=Math.min(Math.max(Number.parseInt(req.query.limit,10)||10,1),30);
         const doctors=await getRankedDoctors({userId:req.user?.sub||null,limit});

@@ -11,7 +11,7 @@ const VALID_CLINIC_TYPES = new Set([
 ]);
 
 // GET /api/clinics - List clinics with filters
-router.get('/', async (req, res, next) => {
+router.get('/', authenticate, async (req, res, next) => {
   try {
     const { region, service, insurance, search, type, page = 1, limit = 10 } = req.query;
 
@@ -87,7 +87,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // GET /api/clinics/nearby - Find nearby clinics
-router.get('/nearby', async (req, res, next) => {
+router.get('/nearby', authenticate, async (req, res, next) => {
   try {
     const { lat, lng, radius = 5, type } = req.query; // radius in km
 
@@ -143,7 +143,7 @@ router.get('/nearby', async (req, res, next) => {
 });
 
 // GET /api/clinics/:id - Get clinic details
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
