@@ -945,7 +945,9 @@ def _render_pdf_isolated(html_string: str, pdf_path: Path) -> None:
         raise PdfGenerationUnavailable("PDF worker reported success but wrote no file")
 
 
-async def generate_report(session_id: str) -> Optional[Dict[str, Any]]:
+async def generate_report(
+    session_id: str, owner_user_id: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
     """
     Build the report data, render it to PDF, and persist it to
     virtual_doctor_reports. Returns the report metadata (including
@@ -953,7 +955,23 @@ async def generate_report(session_id: str) -> Optional[Dict[str, Any]]:
 
     Raises PdfGenerationUnavailable if the report data was built but the PDF
     could not be rendered.
+
+    owner_user_id scopes the session lookup to the account that owns the
+    consultation. It is checked BEFORE any report is built, so a caller
+    supplying someone else's session id does not cause their medical data to
+    be read, rendered, or written to disk. Optional only for direct in-process
+    callers; every HTTP path supplies it.
     """
+    if owner_user_id:
+        pool = await get_pool()
+        owned = await pool.fetchrow(
+            "SELECT id FROM virtual_doctor_sessions WHERE session_id = $1 AND user_id = $2",
+            session_id,
+            uuid.UUID(owner_user_id),
+        )
+        if not owned:
+            return None
+
     report = await build_report_data(session_id)
     if not report:
         return None
@@ -982,9 +1000,28 @@ async def generate_report(session_id: str) -> Optional[Dict[str, Any]]:
     return report
 
 
-async def get_report_pdf_path(report_id: str) -> Optional[str]:
+async def get_report_pdf_path(
+    report_id: str, owner_user_id: Optional[str] = None
+) -> Optional[str]:
+    """Path to a rendered report PDF, scoped to the account that owns it.
+
+    A report id is a bearer token for a medical document if it is looked up on
+    its own, so the owning session is joined in rather than trusted.
+    """
     pool = await get_pool()
-    row = await pool.fetchrow(
-        "SELECT pdf_path FROM virtual_doctor_reports WHERE id = $1", uuid.UUID(report_id)
-    )
+    if owner_user_id:
+        row = await pool.fetchrow(
+            """
+            SELECT r.pdf_path
+            FROM virtual_doctor_reports r
+            JOIN virtual_doctor_sessions s ON s.id = r.session_id
+            WHERE r.id = $1 AND s.user_id = $2
+            """,
+            uuid.UUID(report_id),
+            uuid.UUID(owner_user_id),
+        )
+    else:
+        row = await pool.fetchrow(
+            "SELECT pdf_path FROM virtual_doctor_reports WHERE id = $1", uuid.UUID(report_id)
+        )
     return row["pdf_path"] if row else None

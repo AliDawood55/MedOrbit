@@ -66,8 +66,33 @@ function createGeneralApiLimiter(options = {}) {
     });
 }
 
+/**
+ * Per-minute burst limiter for the AI features (chatbot, Virtual Doctor).
+ *
+ * Distinct from the free-usage quota, which EntitlementService enforces per
+ * account per 24 hours. This protects the AI workers from a burst and applies
+ * to Pro subscribers too: "unlimited" describes the product quota, not
+ * permission to saturate the service.
+ *
+ * Keyed with generalApiKey so it verifies the token itself rather than reading
+ * req.user — these limiters run before the authenticate middleware, so req.user
+ * is not populated yet — and so IPv6 callers are bucketed by prefix instead of
+ * by a full address they could rotate freely within.
+ */
+function createAiFeatureLimiter({ max, message }) {
+    return rateLimit({
+        windowMs: 60 * 1000,
+        limit: max,
+        keyGenerator: generalApiKey,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: rateLimitPayload(message),
+    });
+}
+
 module.exports = {
     GENERAL_WINDOW_MS,
+    createAiFeatureLimiter,
     AUTHENTICATED_GENERAL_MAX,
     ANONYMOUS_GENERAL_MAX,
     createGeneralApiLimiter,

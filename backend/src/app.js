@@ -28,6 +28,8 @@ const adminRoutes = require("./routes/admin.routes");
 const systemSettingsRoutes = require('./routes/system-settings.routes');
 const auditLogRoutes = require('./routes/audit-log.routes');
 const aiRoutes = require('./routes/ai.routes');
+const billingRoutes = require('./routes/billing.routes');
+const virtualDoctorRoutes = require('./routes/virtual-doctor.routes');
 const adminInvitationRoutes = require('./routes/admin-invitation.routes');
 const { applicationRoutes, adminDoctorApplicationRoutes } = require('./routes/doctor-application.routes');
 const careRelationshipRoutes = require('./routes/care-relationship.routes');
@@ -35,7 +37,8 @@ const { feedRoutes, socialDoctorRoutes, adminSocialRoutes } = require('./routes/
 const messageRoutes = require('./routes/message.routes');
 const { contactRoutes, adminContactRoutes } = require('./routes/contact.routes');
 const eventHealthRoutes = require('./routes/event-health.routes');
-const { createGeneralApiLimiter } = require('./middleware/rateLimit');
+const { createGeneralApiLimiter, createAiFeatureLimiter } = require('./middleware/rateLimit');
+const { policy: billingPolicy } = require('./config/billing');
 
 
 const app = express();
@@ -66,20 +69,29 @@ app.use(cors(createCorsOptions()));
 // consume one shared IP bucket.
 app.use('/api', createGeneralApiLimiter());
 
-// Stricter rate limit for AI chatbot endpoint
-const chatLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: { code: 'CHAT_RATE_LIMITED', message: 'Too many chat messages. Please slow down.' }
-  }
+// Infrastructure fair-use limiter for the chatbot.
+//
+// Distinct from the free-message quota, which EntitlementService enforces per
+// account per 24 hours. This one protects the AI workers from a burst and
+// applies to Pro subscribers too: "unlimited" describes the product quota, not
+// permission to saturate the service.
+//
+// Keyed per authenticated user rather than per IP so that a clinic or campus
+// behind one address does not share a single bucket. The limit comes from the
+// central billing policy so it is configurable rather than hardcoded here.
+const chatLimiter = createAiFeatureLimiter({
+  max: billingPolicy.fairUse.chatbotMessagesPerMinute,
+  message: 'Too many chat messages. Please slow down.',
 });
 
 // Body parser — must be before routes
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  // Webhook signatures are computed over the exact bytes a provider sent.
+  // Re-serializing the parsed object would change key order and whitespace and
+  // break verification, so the original buffer is kept for that one route.
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -111,6 +123,10 @@ app.use('/api/doctor-applications', applicationRoutes);
 
 // Persisted AI operations cross this authenticated identity boundary.
 app.use('/api/ai', aiRoutes);
+app.use('/api/billing', billingRoutes);
+// Virtual Doctor now enters through the authenticated backend rather than the
+// browser calling the AI service directly.
+app.use('/api/virtual-doctor', virtualDoctorRoutes);
 
 // Chatbot routes (with stricter rate limit)
 app.use('/api/chat', chatLimiter, chatbotRoutes);

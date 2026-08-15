@@ -149,6 +149,10 @@ const API = (() => {
         const err = new Error(message);
         err.code = data?.error?.code;
         err.status = response.status;
+        // Entitlement denials carry server-computed metadata (remaining,
+        // resets_at, next_free_at). Surfaced here so quota UI can render an
+        // accurate countdown from authoritative timestamps instead of guessing.
+        err.details = data?.error?.details || null;
         err.retryAfterSeconds = isRateLimited ? retryAfterSeconds(response) : null;
         return err;
     }
@@ -542,6 +546,37 @@ const API = (() => {
         resolve: (id, options) => post(`/admin/contact-messages/${id}/resolve`, {}, options)
     };
 
+    // ================= BILLING / ENTITLEMENTS (JWT required) =================
+    //
+    // Read-only by design. There is deliberately no client-side way to set a
+    // plan or a quota: entitlement is decided by the backend, and this module
+    // only reports what it decided.
+    const billing = {
+        entitlements: (options) => get('/billing/entitlements', null, options),
+        plans: (options) => get('/billing/plans', null, options)
+    };
+
+    // ================= VIRTUAL DOCTOR (JWT required) =================
+    //
+    // Every call goes through the authenticated MedOrbit backend, which checks
+    // entitlement and then talks to the AI service over an internal credential
+    // a browser cannot hold. The old path — the browser calling port 8001
+    // directly with `user_id: null` — is gone, and the AI service now rejects
+    // it outright.
+    const virtualDoctor = {
+        start: (language, options) => post('/virtual-doctor/start', { language }, options),
+        message: (sessionId, message, options) =>
+            post('/virtual-doctor/message', { session_id: sessionId, message }, options),
+        session: (sessionId, options) => get(`/virtual-doctor/session/${sessionId}`, null, options),
+        endSession: (sessionId, options) => post(`/virtual-doctor/session/${sessionId}/end`, {}, options),
+        report: (sessionId, options) => post(`/virtual-doctor/report/${sessionId}`, {}, options),
+        reportDownloadUrl: (reportId) => `${BASE_URL}/virtual-doctor/report/${reportId}/download`,
+        warmup: (kind, language) => {
+            const q = language ? `?language=${encodeURIComponent(language)}` : '';
+            return post(`/virtual-doctor/${kind}/warmup${q}`, {});
+        }
+    };
+
     const adminInvitations = {
         list: (options) => get('/admin/invitations', null, options),
         create: (email, options) => post('/admin/invitations', { email }, options),
@@ -550,7 +585,7 @@ const API = (() => {
 
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
     };

@@ -1524,11 +1524,25 @@ async def start_session(language: Optional[str], user_id: Optional[str]) -> dict
     return {"session_id": session_id, "reply": reply, "phase": "intake", "language": lang}
 
 
-async def handle_message(session_id: str, message: str) -> dict:
+async def handle_message(
+    session_id: str, message: str, owner_user_id: Optional[str] = None
+) -> dict:
     pool = await get_pool()
-    session = await pool.fetchrow(
-        "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1", session_id
-    )
+    # Ownership is part of the lookup, not a check applied to the row after
+    # fetching it: a session belonging to another account is simply not found,
+    # so there is no row to accidentally act on and nothing to leak about
+    # whether the id exists. owner_user_id is optional only so that in-process
+    # test harnesses can drive the engine directly; every HTTP path supplies it.
+    if owner_user_id:
+        session = await pool.fetchrow(
+            "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1 AND user_id = $2",
+            session_id,
+            uuid.UUID(owner_user_id),
+        )
+    else:
+        session = await pool.fetchrow(
+            "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1", session_id
+        )
     if not session:
         raise ValueError("session_not_found")
 
@@ -1736,11 +1750,20 @@ async def handle_message(session_id: str, message: str) -> dict:
     return result
 
 
-async def get_session_state(session_id: str) -> Optional[dict]:
+async def get_session_state(
+    session_id: str, owner_user_id: Optional[str] = None
+) -> Optional[dict]:
     pool = await get_pool()
-    session = await pool.fetchrow(
-        "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1", session_id
-    )
+    if owner_user_id:
+        session = await pool.fetchrow(
+            "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1 AND user_id = $2",
+            session_id,
+            uuid.UUID(owner_user_id),
+        )
+    else:
+        session = await pool.fetchrow(
+            "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1", session_id
+        )
     if not session:
         return None
 

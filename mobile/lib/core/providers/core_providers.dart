@@ -37,7 +37,13 @@ final aiBaseUrlProvider = Provider<String>((ref) {
 });
 
 /// Separate client for the AI service: different port, no `/api` prefix, and
-/// no auth header (the service doesn't authenticate — same as the web app).
+/// no auth header.
+///
+/// Still used by the endpoints the AI service exposes directly (drug checks,
+/// triage, health). The Virtual Doctor no longer uses it: those endpoints now
+/// require an internal service credential a mobile app cannot hold, so they go
+/// through the authenticated backend via [virtualDoctorDioProvider].
+///
 /// Timeouts are far longer than the REST API's because the final `/message`
 /// turn runs LLM reasoning inline.
 final aiDioProvider = Provider<Dio>((ref) {

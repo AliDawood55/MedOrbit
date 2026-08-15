@@ -739,3 +739,92 @@
         height: 44px;
     }
 }
+/* =====================================================================
+   Free-allowance counter and paywall
+   ---------------------------------------------------------------------
+   Sits directly above the composer. Deliberately quiet while the user has
+   headroom — a counter that shouts on message three is noise — and only
+   becomes prominent once the allowance is actually spent.
+   ===================================================================== */
+
+.chat-quota {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    margin: 0 0 8px;
+    font-size: 0.82rem;
+    color: var(--text-mute);
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.chat-quota[hidden] {
+    display: none;
+}
+
+.chat-quota__label {
+    flex: 1 1 auto;
+}
+
+/* Approaching the limit: warmer, still not alarming. */
+.chat-quota--low {
+    color: var(--text-soft);
+    background: color-mix(in srgb, var(--warning) 8%, var(--bg-card));
+    border-color: color-mix(in srgb, var(--warning) 28%, var(--border));
+}
+
+/* Spent. This is the only state that takes real visual weight. */
+.chat-quota--blocked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 14px 16px;
+    color: var(--text);
+    background: var(--bg-card);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-sm);
+}
+
+.chat-quota__heading {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.chat-quota__countdown {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--text-mute);
+}
+
+.chat-quota__countdown strong {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.05rem;
+    color: var(--text);
+}
+
+.chat-quota__upgrade {
+    align-self: flex-start;
+    padding: 8px 16px;
+    font: inherit;
+    font-weight: 600;
+    color: #fff;
+    background: var(--primary);
+    border: none;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background var(--t-fast);
+}
+
+.chat-quota__upgrade:hover {
+    background: var(--primary-dark);
+}
+
+.chat-quota--low .chat-quota__upgrade {
+    padding: 4px 12px;
+    font-size: 0.8rem;
+}
