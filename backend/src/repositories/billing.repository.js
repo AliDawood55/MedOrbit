@@ -522,23 +522,28 @@ class BillingRepository {
      * its state change. The uniqueness is a database constraint, so it holds
      * across processes and restarts.
      */
-    async recordProviderEvent({ provider, providerEventId, eventType, eventCreatedAt, payloadDigest }, client = db) {
+    async recordProviderEvent({ provider, providerEventId, eventType, eventCreatedAt, payloadDigest, userId = null }, client = db) {
         const result = await client.query(
             `INSERT INTO medorbit.billing_events
-                 (provider, provider_event_id, event_type, event_created_at, payload_digest)
-             VALUES ($1, $2, $3, $4, $5)
+                 (provider, provider_event_id, event_type, event_created_at, payload_digest, user_id)
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (provider, provider_event_id) DO NOTHING
              RETURNING *`,
-            [provider, providerEventId, eventType, eventCreatedAt || null, payloadDigest || null]
+            [provider, providerEventId, eventType, eventCreatedAt || null, payloadDigest || null, userId]
         );
         return result.rows[0] || null;
     }
 
     async markEventProcessed(eventId, { status, error = null, subscriptionId = null }, client = db) {
         const result = await client.query(
+            // $2 is cast explicitly at every use. Without it PostgreSQL
+            // deduces varchar from the assignment and text from the
+            // comparison, and refuses the statement as an ambiguous
+            // parameter — which is invisible until a provider exists and
+            // this line first runs.
             `UPDATE medorbit.billing_events
-                SET processing_status = $2,
-                    processed_at      = CASE WHEN $2 = 'processed' THEN NOW() ELSE processed_at END,
+                SET processing_status = $2::varchar,
+                    processed_at      = CASE WHEN $2::varchar = 'processed' THEN NOW() ELSE processed_at END,
                     attempts          = attempts + 1,
                     last_error        = $3,
                     subscription_id   = COALESCE($4, subscription_id)
@@ -547,6 +552,419 @@ class BillingRepository {
             [eventId, status, error, subscriptionId]
         );
         return result.rows[0] || null;
+    }
+
+    // -----------------------------------------------------------------
+    // Subscription reconciliation
+    // -----------------------------------------------------------------
+
+    /**
+     * Retire subscriptions whose time has simply run out.
+     *
+     * Entitlement is decided by comparing timestamps, so a lapsed row already
+     * grants nothing before this runs. What this fixes is the status column,
+     * which would otherwise keep saying "active" — a lie that is harmless
+     * right up until somebody reconciles the billing tables against it.
+     *
+     * Lazy, on read, in the same style as expireStaleGrants above, because
+     * MedOrbit has no scheduler. Rows are only ever moved to a terminal
+     * state; nothing is deleted, so history survives a downgrade intact.
+     */
+    async expireLapsedSubscriptions(client, userId) {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions
+                SET status = CASE
+                                -- The subscriber asked to stop and the paid
+                                -- period is over: that is a completed
+                                -- cancellation, not a failure.
+                                WHEN cancel_at_period_end THEN 'canceled'
+                                ELSE 'expired'
+                             END,
+                    ended_at             = COALESCE(ended_at, NOW()),
+                    grace_period_ends_at = NULL,
+                    pending_plan_id      = NULL,
+                    updated_at           = NOW()
+              WHERE user_id = $1
+                AND (
+                      (status = 'active'
+                       AND current_period_end IS NOT NULL
+                       AND current_period_end <= NOW())
+                   OR (status = 'past_due'
+                       -- A null deadline is "no grace", not "grace forever";
+                       -- such a row grants nothing already and is left alone
+                       -- rather than being retired on a guess.
+                       AND grace_period_ends_at IS NOT NULL
+                       AND grace_period_ends_at <= NOW())
+                   OR (status = 'incomplete'
+                       -- A checkout that never completed must not hold the
+                       -- one-live-subscription slot forever, or a failed
+                       -- first payment would lock the account out of ever
+                       -- trying again.
+                       AND created_at <= NOW() - INTERVAL '1 day')
+                )
+              RETURNING id, status`,
+            [userId]
+        );
+        return result.rows;
+    }
+
+    // -----------------------------------------------------------------
+    // Checkout sessions
+    // -----------------------------------------------------------------
+
+    /**
+     * Record a checkout attempt before the browser leaves for the provider.
+     *
+     * Persisted first, deliberately. If the row does not exist when the
+     * provider's event arrives there is nothing to attribute it to, and the
+     * alternative — trusting the returning browser to say which plan it
+     * bought — is exactly the tampering this design exists to prevent.
+     */
+    async createCheckoutSession({
+        userId, planId, provider, providerSessionId, returnPath = null, ttlMinutes = 60,
+    }, client = db) {
+        const result = await client.query(
+            `INSERT INTO medorbit.billing_checkout_sessions
+                 (user_id, plan_id, provider, provider_session_id, return_path, expires_at)
+             VALUES ($1, $2, $3, $4, $5, NOW() + make_interval(mins => $6::int))
+             RETURNING *`,
+            [userId, planId, provider, providerSessionId, returnPath, ttlMinutes]
+        );
+        return result.rows[0];
+    }
+
+    /**
+     * Look up an attempt as its owner.
+     *
+     * user_id is part of the WHERE clause rather than something checked after
+     * the row comes back: a leaked or guessed checkout token belonging to
+     * somebody else returns nothing at all, so there is no object for a
+     * subsequent ownership check to be forgotten on.
+     */
+    async findOwnedCheckoutSession(provider, providerSessionId, userId, client = db) {
+        const result = await client.query(
+            `SELECT cs.*, p.plan_code, p.name_en, p.name_ar, p.price_cents, p.currency,
+                    p.billing_interval, p.interval_count,
+                    NOW() AS server_now,
+                    (cs.status = 'open' AND cs.expires_at > NOW()) AS is_open
+               FROM medorbit.billing_checkout_sessions cs
+               JOIN medorbit.subscription_plans p ON p.id = cs.plan_id
+              WHERE cs.provider = $1 AND cs.provider_session_id = $2 AND cs.user_id = $3`,
+            [provider, providerSessionId, userId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /** Provider-event lookup. No user scope: the event names the attempt, not a caller. */
+    async findCheckoutSessionByProviderId(provider, providerSessionId, client = db) {
+        const result = await client.query(
+            `SELECT cs.*, p.plan_code
+               FROM medorbit.billing_checkout_sessions cs
+               JOIN medorbit.subscription_plans p ON p.id = cs.plan_id
+              WHERE cs.provider = $1 AND cs.provider_session_id = $2
+              FOR UPDATE OF cs`,
+            [provider, providerSessionId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Resolve an attempt exactly once.
+     *
+     * The `AND status = 'open'` guard is what makes a duplicate delivery a
+     * no-op: the second update matches no rows and returns null, so the
+     * caller can tell "already handled" from "just handled" without keeping
+     * state anywhere but the database.
+     */
+    async resolveCheckoutSession(id, { status, subscriptionId = null }, client = db) {
+        const result = await client.query(
+            `UPDATE medorbit.billing_checkout_sessions
+                SET status          = $2,
+                    completed_at    = NOW(),
+                    subscription_id = $3,
+                    updated_at      = NOW()
+              WHERE id = $1 AND status = 'open'
+              RETURNING *`,
+            [id, status, subscriptionId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /** Retire attempts the user walked away from, so the billing page is not littered with them. */
+    async expireOpenCheckoutSessions(userId, client = db) {
+        const result = await client.query(
+            `UPDATE medorbit.billing_checkout_sessions
+                SET status = 'expired', completed_at = NOW(), updated_at = NOW()
+              WHERE user_id = $1 AND status = 'open' AND expires_at <= NOW()
+              RETURNING id`,
+            [userId]
+        );
+        return result.rowCount;
+    }
+
+    // -----------------------------------------------------------------
+    // Subscription lifecycle
+    // -----------------------------------------------------------------
+
+    /**
+     * The live subscription, locked for the rest of the transaction.
+     *
+     * FOR UPDATE on top of the advisory lock the callers already take. The
+     * advisory lock serialises our own code paths; this also serialises
+     * against anything else that touches the row, which matters because
+     * provider events arrive concurrently with user actions.
+     */
+    async findLiveSubscriptionForUpdate(client, userId) {
+        const result = await client.query(
+            `SELECT s.*, p.plan_code, p.billing_interval, p.interval_count, p.grants_pro,
+                    NOW() AS server_now
+               FROM medorbit.subscriptions s
+               JOIN medorbit.subscription_plans p ON p.id = s.plan_id
+              WHERE s.user_id = $1
+                AND s.status IN ('incomplete', 'active', 'past_due')
+              ORDER BY s.created_at DESC
+              LIMIT 1
+              FOR UPDATE OF s`,
+            [userId]
+        );
+        return result.rows[0] || null;
+    }
+
+    async findSubscriptionByProviderId(provider, providerSubscriptionId, client = db) {
+        const result = await client.query(
+            `SELECT s.*, p.plan_code, p.billing_interval, p.interval_count
+               FROM medorbit.subscriptions s
+               JOIN medorbit.subscription_plans p ON p.id = s.plan_id
+              WHERE s.provider = $1 AND s.provider_subscription_id = $2
+              FOR UPDATE OF s`,
+            [provider, providerSubscriptionId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Create an active subscription with its first paid period.
+     *
+     * The period is computed by PostgreSQL from the plan's own interval, in
+     * calendar units. `+ interval '1 month'` knows that a subscription
+     * starting 31 January renews 28 February; `+ 30 * 86400 seconds` does
+     * not, and `365 * 24h` silently loses a day every leap year. Neither the
+     * client nor Node contributes a single component of these timestamps.
+     */
+    async activateSubscription(client, {
+        userId, planId, provider, providerSubscriptionId,
+    }) {
+        const result = await client.query(
+            `INSERT INTO medorbit.subscriptions
+                 (user_id, plan_id, status, current_period_start, current_period_end,
+                  provider, provider_subscription_id)
+             SELECT $1, p.id, 'active', NOW(),
+                    NOW() + CASE p.billing_interval
+                              WHEN 'month' THEN make_interval(months => p.interval_count)
+                              WHEN 'year'  THEN make_interval(years  => p.interval_count)
+                            END,
+                    $3, $4
+               FROM medorbit.subscription_plans p
+              WHERE p.id = $2 AND p.grants_pro = true AND p.billing_interval <> 'none'
+             RETURNING *`,
+            [userId, planId, provider, providerSubscriptionId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Advance a paid period by one interval.
+     *
+     * Anchored to the previous period_end rather than to NOW(), so a renewal
+     * processed a few minutes late does not quietly shorten the year the
+     * subscriber paid for, and the billing date stays stable across renewals.
+     *
+     * A scheduled Monthly<->Annual change lands here too: this is the moment
+     * where changing plan costs nobody anything, which is precisely why the
+     * change was deferred to it.
+     */
+    async renewSubscription(client, subscriptionId) {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions s
+                SET plan_id              = COALESCE(s.pending_plan_id, s.plan_id),
+                    pending_plan_id      = NULL,
+                    status               = 'active',
+                    grace_period_ends_at = NULL,
+                    current_period_start = s.current_period_end,
+                    current_period_end   = s.current_period_end + CASE np.billing_interval
+                                              WHEN 'month' THEN make_interval(months => np.interval_count)
+                                              WHEN 'year'  THEN make_interval(years  => np.interval_count)
+                                           END,
+                    updated_at           = NOW()
+               FROM medorbit.subscription_plans np
+              WHERE s.id = $1
+                AND np.id = COALESCE(s.pending_plan_id, s.plan_id)
+                AND s.status IN ('active', 'past_due')
+                AND s.current_period_end IS NOT NULL
+             RETURNING s.*`,
+            [subscriptionId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * A renewal payment failed on a subscription that was already paid for.
+     *
+     * Restricted to status='active' on purpose. A failed FIRST payment leaves
+     * an 'incomplete' row, and this query will not match it — so there is no
+     * code path by which never having paid earns a grace period. That is a
+     * business rule, and it is enforced here in the WHERE clause rather than
+     * in a caller that could forget it.
+     */
+    async markPastDue(client, subscriptionId, graceDays) {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions
+                SET status               = 'past_due',
+                    grace_period_ends_at = NOW() + make_interval(days => $2::int),
+                    updated_at           = NOW()
+              WHERE id = $1 AND status = 'active'
+             RETURNING *`,
+            [subscriptionId, graceDays]
+        );
+        return result.rows[0] || null;
+    }
+
+    /** The retried payment went through. Grace is cleared, not merely ignored. */
+    async recoverPayment(client, subscriptionId) {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions
+                SET status = 'active', grace_period_ends_at = NULL, updated_at = NOW()
+              WHERE id = $1 AND status = 'past_due'
+             RETURNING *`,
+            [subscriptionId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Switch auto-renew off (or back on) without touching paid access.
+     *
+     * cancel_at_period_end is a flag on a still-active row, so the subscriber
+     * keeps everything they paid for until current_period_end. Cancelling is
+     * not a refund, and this is where that distinction is kept honest.
+     */
+    async setCancelAtPeriodEnd(client, subscriptionId, cancelAtPeriodEnd) {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions
+                SET cancel_at_period_end = $2::boolean,
+                    canceled_at          = CASE WHEN $2::boolean THEN NOW() ELSE NULL END,
+                    -- Resuming keeps any scheduled plan change; cancelling
+                    -- drops it, because the check constraint forbids holding
+                    -- both and a subscription that is ending has nothing to
+                    -- change plan to.
+                    pending_plan_id      = CASE WHEN $2::boolean THEN NULL ELSE pending_plan_id END,
+                    updated_at           = NOW()
+              WHERE id = $1 AND status IN ('active', 'past_due')
+             RETURNING *`,
+            [subscriptionId, cancelAtPeriodEnd]
+        );
+        return result.rows[0] || null;
+    }
+
+    /** Schedule a Monthly<->Annual change for the next renewal. */
+    async setPendingPlan(client, subscriptionId, pendingPlanId) {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions
+                SET pending_plan_id = $2, updated_at = NOW()
+              WHERE id = $1 AND status IN ('active', 'past_due') AND cancel_at_period_end = false
+             RETURNING *`,
+            [subscriptionId, pendingPlanId]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * End a subscription.
+     *
+     * The row is updated, never deleted. Entitlement stops; the record of
+     * what the user had and when stays, because a deleted subscription makes
+     * a billing dispute unanswerable. Nothing the subscriber produced while
+     * subscribed is touched by this — see the entitlement service, which
+     * reads state rather than owning content.
+     */
+    async terminateSubscription(client, subscriptionId, status = 'canceled') {
+        const result = await client.query(
+            `UPDATE medorbit.subscriptions
+                SET status               = $2,
+                    ended_at             = NOW(),
+                    grace_period_ends_at = NULL,
+                    pending_plan_id      = NULL,
+                    updated_at           = NOW()
+              WHERE id = $1 AND status IN ('incomplete', 'active', 'past_due')
+             RETURNING *`,
+            [subscriptionId, status]
+        );
+        return result.rows[0] || null;
+    }
+
+    /**
+     * Everything the billing page renders, in one query.
+     *
+     * Includes the pending plan so the UI can say "changes to Annual on 3
+     * March" rather than making the user infer it.
+     */
+    async findSubscriptionDetail(userId, client = db) {
+        const result = await client.query(
+            `SELECT s.id, s.status, s.cancel_at_period_end, s.current_period_start,
+                    s.current_period_end, s.grace_period_ends_at, s.canceled_at, s.ended_at,
+                    p.plan_code, p.name_en, p.name_ar, p.price_cents, p.currency,
+                    p.billing_interval, p.interval_count,
+                    pp.plan_code AS pending_plan_code,
+                    pp.name_en   AS pending_name_en,
+                    pp.name_ar   AS pending_name_ar,
+                    pp.price_cents AS pending_price_cents,
+                    pp.billing_interval AS pending_billing_interval,
+                    NOW() AS server_now
+               FROM medorbit.subscriptions s
+               JOIN medorbit.subscription_plans p  ON p.id = s.plan_id
+          LEFT JOIN medorbit.subscription_plans pp ON pp.id = s.pending_plan_id
+              WHERE s.user_id = $1
+              ORDER BY
+                    CASE WHEN s.status IN ('incomplete','active','past_due') THEN 0 ELSE 1 END,
+                    s.created_at DESC
+              LIMIT 1`,
+            [userId]
+        );
+        return result.rows[0] || null;
+    }
+
+    // -----------------------------------------------------------------
+    // Billing history
+    // -----------------------------------------------------------------
+
+    /**
+     * The user's own billing timeline.
+     *
+     * Selects named columns, never the payload. redacted_payload and
+     * payload_digest stay server-side: a provider payload is the one place
+     * personal and cardholder-adjacent data could leak into a UI, and the
+     * user gains nothing from seeing it that the event type does not already
+     * tell them.
+     */
+    async listBillingHistory(userId, limit = 50, client = db) {
+        const result = await client.query(
+            `SELECT e.provider_event_id, e.event_type, e.received_at, e.processing_status
+               FROM medorbit.billing_events e
+              WHERE e.user_id = $1
+                AND e.processing_status = 'processed'
+              ORDER BY e.received_at DESC
+              LIMIT $2`,
+            [userId, Math.min(Math.max(Number(limit) || 50, 1), 200)]
+        );
+        return result.rows;
+    }
+
+    /** Attribute a recorded event to the account it concerns. */
+    async attachEventOwner(eventId, userId, client = db) {
+        await client.query(
+            `UPDATE medorbit.billing_events SET user_id = $2 WHERE id = $1 AND user_id IS NULL`,
+            [eventId, userId]
+        );
     }
 }
 

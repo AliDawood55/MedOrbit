@@ -221,8 +221,29 @@ const ChatQuota = (() => {
         document.addEventListener('click', (event) => {
             const trigger = event.target.closest('[data-action="upgrade"]');
             if (!trigger) return;
-            window.location.href = 'billing.html';
+            // Open pricing over the conversation rather than navigating away
+            // from it. A successful checkout returns to this page, where the
+            // refresh below unlocks the composer — the conversation is still
+            // there, because nothing about upgrading touches chat history.
+            if (typeof BillingUI !== 'undefined') {
+                BillingUI.openPricing({ returnPath: 'index.html' });
+            } else {
+                window.location.href = 'billing.html';
+            }
         });
+
+        // Re-ask the server when the tab becomes visible again. This is what
+        // makes the composer usable straight after returning from checkout,
+        // and it also picks up a subscription that lapsed while the tab sat
+        // in the background. The answer is always the server's; nothing here
+        // infers that a payment succeeded.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') refresh();
+        });
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) refresh();
+        });
+
         refresh();
     }
 

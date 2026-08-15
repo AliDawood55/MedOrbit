@@ -428,6 +428,13 @@ async function finalizeVoiceSession(userId, vdSessionId, status = 'completed') {
 async function getEntitlementSnapshot(userId) {
     const client = await db.getClient();
     try {
+        // Retire any subscription whose period or grace window has elapsed
+        // before reading entitlement from it. Entitlement would be correct
+        // either way — a lapsed row grants nothing because the comparison is
+        // against timestamps, not against the status column — but this keeps
+        // the status the client renders from telling the truth about itself.
+        await billingRepository.expireLapsedSubscriptions(client, userId);
+
         const entitlement = await resolveEntitlement(userId, client);
         const { isPro, serverNow, subscription } = entitlement;
 

@@ -253,6 +253,19 @@ services:
       # Raised here so the quota tests measure the quota rather than tripping
       # the burst limiter first.
       BILLING_FAIR_USE_CHAT_PER_MINUTE: 500
+      # Sandbox billing. Scoped to this test-profile service and nowhere
+      # else: the runtime `backend` service carries none of these, and a
+      # process with NODE_ENV=production refuses to boot if it ever does
+      # (assertProviderConfigSafe in backend/src/config/billing.js).
+      #
+      # Both variables are required to enable the sandbox, so neither one
+      # arriving by accident is enough to turn on simulated payments.
+      BILLING_PROVIDER: mock
+      BILLING_MOCK_ENABLED: "true"
+      # Read from the environment when present. The fallback exists so the
+      # suite runs on a clean checkout; it can only ever be used by a mock
+      # provider that cannot exist in production.
+      BILLING_MOCK_WEBHOOK_SECRET: ${BILLING_MOCK_WEBHOOK_SECRET:-medorbit_sandbox_only_secret_not_for_production}
       KAFKA_ENABLED: "false"
     depends_on:
       postgres:

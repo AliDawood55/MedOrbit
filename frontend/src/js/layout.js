@@ -167,6 +167,10 @@ const Layout = (() => {
                     '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
                     (!isAdmin ? '<a href="contact.html" class="user-menu-item" data-i18n="nav.contactUs"></a>' : '') +
                     '<a href="profile.html" class="user-menu-item" data-i18n="nav.account"></a>' +
+                    // Unconditional, and deliberately so: a subscription
+                    // belongs to a user, not to a role. A patient, doctor,
+                    // admin and super_admin all subscribe on identical terms.
+                    '<a href="billing.html" class="user-menu-item" data-i18n="nav.billing"></a>' +
                     '<button type="button" class="user-menu-item" id="logoutBtn" data-i18n="auth.logout"></button>' +
                 '</div>' +
             '</div>';

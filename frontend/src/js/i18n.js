@@ -45,6 +45,7 @@ const I18n = (() => {
             'nav.reportSummary': 'تلخيص التقارير',
             'nav.voiceConsult': 'الطبيب الافتراضي الصوتي',
             'nav.account': 'حسابي',
+            'nav.billing': 'الاشتراك والفوترة',
             'nav.dashboard': 'لوحة التحكم',
             'nav.bookAppointment': 'حجز موعد',
             'nav.myAppointments': 'مواعيدي',
@@ -473,6 +474,19 @@ const I18n = (() => {
             'reports.prescriptionsRecordsUnavailable': 'الوصفات الطبية والسجلات الطبية غير متاحة بعد على المنصة، لذلك لا يمكن تضمينها في هذا الملخص.',
             'reports.statTotal': 'الإجمالي',
 
+            // Billing & subscriptions. Prices are never listed here — they
+            // come from /api/billing/plans so the UI cannot disagree with
+            // what checkout actually charges.
+            'billing.pageTitle': 'الاشتراك والفوترة',
+            'billing.pageSubtitle': 'خطتك الحالية واستخدامك وسجل الفوترة',
+            'billing.usageTitle': 'استخدامك الحالي',
+            'billing.historyTitle': 'سجل الفوترة',
+            'billing.sandboxTitle': 'بيئة تطوير تجريبية',
+            'billing.sandboxBody': 'لن تتم معالجة أي دفعة حقيقية ولا يتم جمع أي بيانات بطاقة.',
+            'billing.sandboxCheckoutTagline': 'إتمام الاشتراك',
+            'billing.sandboxFooter': 'بيئة تطوير MedOrbit — لا تُستخدم أموال حقيقية.',
+            'billing.upgrade': 'الترقية إلى Pro',
+
             // Feedback (no backend yet — honest "not connected" message on submit)
             'feedback.title': 'شاركنا رأيك',
             'feedback.subtitle': 'رأيك يساعدنا على تحسين المنصة لجميع المستخدمين',
@@ -815,6 +829,7 @@ const I18n = (() => {
             'nav.reportSummary': 'Report Summarizer',
             'nav.voiceConsult': 'Virtual Doctor Voice',
             'nav.account': 'Account',
+            'nav.billing': 'Subscription & billing',
             'nav.dashboard': 'Dashboard',
             'nav.bookAppointment': 'Book Appointment',
             'nav.myAppointments': 'My Appointments',
@@ -1242,6 +1257,19 @@ const I18n = (() => {
             'reports.otherData': 'Other Data',
             'reports.prescriptionsRecordsUnavailable': "Prescriptions and medical records aren't available on the platform yet, so they can't be included in this summary.",
             'reports.statTotal': 'Total',
+
+            // Billing & subscriptions. Prices are never listed here — they
+            // come from /api/billing/plans so the UI cannot disagree with
+            // what checkout actually charges.
+            'billing.pageTitle': 'Subscription & billing',
+            'billing.pageSubtitle': 'Your current plan, usage and billing history',
+            'billing.usageTitle': 'Your usage',
+            'billing.historyTitle': 'Billing history',
+            'billing.sandboxTitle': 'Development sandbox',
+            'billing.sandboxBody': 'No real payment will be processed and no card details are collected.',
+            'billing.sandboxCheckoutTagline': 'Complete your subscription',
+            'billing.sandboxFooter': 'MedOrbit development environment — no real money is used.',
+            'billing.upgrade': 'Upgrade to Pro',
 
             // Feedback (no backend yet — honest "not connected" message on submit)
             'feedback.title': 'Share Your Feedback',

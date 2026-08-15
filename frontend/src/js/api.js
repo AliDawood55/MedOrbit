@@ -553,7 +553,34 @@ const API = (() => {
     // only reports what it decided.
     const billing = {
         entitlements: (options) => get('/billing/entitlements', null, options),
-        plans: (options) => get('/billing/plans', null, options)
+        plans: (options) => get('/billing/plans', null, options),
+        config: (options) => get('/billing/config', null, options),
+        subscription: (options) => get('/billing/subscription', null, options),
+        history: (options) => get('/billing/history', null, options),
+
+        // Starts an upgrade. Sends a plan_code and where to come back to —
+        // never a price, an amount or a status. The backend resolves what the
+        // plan costs from its own catalogue, so there is nothing here worth
+        // tampering with.
+        checkout: (planCode, returnPath, options) =>
+            post('/billing/checkout', { plan_code: planCode, return_path: returnPath || null }, options),
+
+        // No subscription id is sent. The backend acts on the caller's own
+        // subscription, resolved from their token, which is why one account
+        // cannot cancel another's.
+        cancel: (options) => post('/billing/subscription/cancel', {}, options),
+        resume: (options) => post('/billing/subscription/resume', {}, options),
+        changePlan: (planCode, options) => post('/billing/subscription/plan', { plan_code: planCode }, options),
+
+        // Sandbox only. These paths do not exist in a production process, so
+        // calling them there is an ordinary 404 rather than a disabled
+        // feature — nothing about the UI can turn them back on.
+        sandbox: {
+            checkout: (token, options) => get(`/billing/sandbox/checkout/${encodeURIComponent(token)}`, null, options),
+            complete: (token, outcome, options) =>
+                post(`/billing/sandbox/checkout/${encodeURIComponent(token)}/complete`, { outcome }, options),
+            simulate: (kind, options) => post('/billing/sandbox/simulate', { kind }, options)
+        }
     };
 
     // ================= VIRTUAL DOCTOR (JWT required) =================

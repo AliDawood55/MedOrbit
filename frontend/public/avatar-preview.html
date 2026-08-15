@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/ai-tools.css">
     <link rel="stylesheet" href="../src/css/avatar-preview.css">
+    <link rel="stylesheet" href="../src/css/billing.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -185,6 +186,7 @@
     <script src="../src/js/theme.js"></script>
     <script src="../src/js/toast.js"></script>
     <script src="../src/js/layout.js"></script>
+    <script src="../src/js/billing-ui.js"></script>
     <script src="../src/js/virtual-doctor-stt.js"></script>
     <script src="../src/js/virtual-doctor-tts.js"></script>
     <script src="../src/js/virtual-doctor-session.js"></script>
@@ -381,7 +383,13 @@
         }
 
         document.addEventListener('click', (event) => {
-            if (event.target.closest('[data-action="upgrade"]')) {
+            if (!event.target.closest('[data-action="upgrade"]')) return;
+            // Open the pricing dialog in place, and come back HERE after a
+            // successful checkout rather than stranding the user on the
+            // billing page when what they wanted was a consultation.
+            if (typeof BillingUI !== 'undefined') {
+                BillingUI.openPricing({ returnPath: 'avatar-preview.html' });
+            } else {
                 window.location.href = 'billing.html';
             }
         });
