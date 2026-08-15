@@ -17,6 +17,9 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/home.css">
     <link rel="stylesheet" href="../src/css/feedback-dashboard.css">
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
 
@@ -218,27 +221,51 @@
             FeedbackDashboard.init();
 
             // Logged-in visitors get a dashboard shortcut instead of the
-            // chat-app link and the "create an account" pitch.
-            if (API.isAuthenticated()) {
+            // chat-app link and the "create an account" pitch. Re-applied on
+            // auth:changed so a session the gate finds to be stale (a token the
+            // server rejects) drops back to the guest presentation instead of
+            // promising a dashboard that would only bounce them.
+            function applySessionState() {
+                const loggedIn = API.isAuthenticated();
+
                 const heroBtn = document.getElementById('heroPrimaryBtn');
-                if (heroBtn) heroBtn.href = 'dashboard.html';
-                document.getElementById('heroPrimaryIcon')?.classList.replace('fa-comments', 'fa-gauge-high');
-                const heroLabel = document.getElementById('heroPrimaryLabel');
-                if (heroLabel) {
-                    heroLabel.setAttribute('data-i18n', 'home.goToDashboard');
-                    if (typeof I18n !== 'undefined') I18n.apply();
+                if (heroBtn) heroBtn.href = loggedIn ? 'dashboard.html' : 'index.html';
+
+                const heroIcon = document.getElementById('heroPrimaryIcon');
+                if (heroIcon) {
+                    heroIcon.classList.toggle('fa-gauge-high', loggedIn);
+                    heroIcon.classList.toggle('fa-comments', !loggedIn);
                 }
 
-                document.getElementById('ctaRegisterBtn')?.classList.add('hidden');
-                document.getElementById('ctaDashboardBtn')?.classList.remove('hidden');
+                const heroLabel = document.getElementById('heroPrimaryLabel');
+                if (heroLabel) {
+                    heroLabel.setAttribute('data-i18n', loggedIn ? 'home.goToDashboard' : 'home.startChat');
+                }
+
+                document.getElementById('ctaRegisterBtn')?.classList.toggle('hidden', loggedIn);
+                document.getElementById('ctaDashboardBtn')?.classList.toggle('hidden', !loggedIn);
+
+                if (typeof I18n !== 'undefined') I18n.apply();
             }
 
+            applySessionState();
+            window.addEventListener('auth:changed', applySessionState);
+
+            // The destination is chosen in JS, so there is no href for the
+            // gate's delegated click handler to intercept — AuthGate.navigate()
+            // is the programmatic equivalent. For a guest it stores the intended
+            // search (page + query) and opens the auth modal instead of
+            // navigating; after signing in they land on the results they asked
+            // for. For a signed-in visitor it navigates exactly as before.
             document.getElementById('heroSearchForm')?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const q = document.getElementById('heroSearchInput')?.value.trim();
                 const type = document.getElementById('heroSearchType')?.value;
                 const target = type === 'clinics' ? 'find-clinics.html' : 'find-doctors.html';
-                window.location.href = target + (q ? '?search=' + encodeURIComponent(q) : '');
+                AuthGate.navigate(
+                    target + (q ? '?search=' + encodeURIComponent(q) : ''),
+                    e.submitter || document.getElementById('heroSearchInput')
+                );
             });
         });
     </script>

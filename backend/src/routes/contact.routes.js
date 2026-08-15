@@ -1,7 +1,7 @@
 const express = require('express');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
-const { authenticate, authenticateOptional, authorizeAdmin } = require('../middleware/auth');
+const { authenticate, authorizeAdmin } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 const contact = require('../services/contact.service');
 
@@ -20,7 +20,7 @@ const contactLimiter = rateLimit({
     },
 });
 
-contactRoutes.post('/', contactLimiter, authenticateOptional, async (req, res, next) => {
+contactRoutes.post('/', contactLimiter, authenticate, async (req, res, next) => {
     try {
         if ('user_id' in req.body || 'userId' in req.body || 'status' in req.body) {
             return error(res, 'Client ownership and workflow fields are not accepted', 400, 'VALIDATION_ERROR');

@@ -134,7 +134,7 @@ const BookAppointment = (() => {
         document.getElementById('wizardBody').classList.add('hidden');
 
         try {
-            const res = await API.doctors.get(id, { auth: false });
+            const res = await API.doctors.get(id);
             setDoctor(res.data.doctor, res.data.clinics || []);
             document.getElementById('wizardLoading').classList.add('hidden');
             document.getElementById('wizardBody').classList.remove('hidden');
@@ -236,7 +236,7 @@ const BookAppointment = (() => {
         searchAbort = new AbortController();
 
         try {
-            const res = await API.doctors.list({ search: query, limit: 8 }, { auth: false, signal: searchAbort.signal });
+            const res = await API.doctors.list({ search: query, limit: 8 }, { signal: searchAbort.signal });
             renderPickList(res?.data?.doctors || []);
         } catch (err) {
             if (err.name === 'AbortError') return;

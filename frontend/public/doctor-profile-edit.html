@@ -6,6 +6,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../src/css/main.css"><link rel="stylesheet" href="../src/css/components.css"><link rel="stylesheet" href="../src/css/layout.css"><link rel="stylesheet" href="../src/css/experience.css"><link rel="stylesheet" href="../src/css/schedule.css">
+    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
+         below is an external file and an external file can 404, be blocked or
+         time out, and a gate that never loads hides nothing. These lines
+         cannot go missing on their own. They hide protected markup from the
+         first paint; the gate clears the attribute once it has verified the
+         session, and the watchdog leaves for Home if the gate never arrives. -->
+    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
 </head><body class="site-page" data-theme="light">
 <header class="app-header"><a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><h1>MedOrbit</h1><p data-i18n="brand.tagline"></p></div></a><nav class="site-nav" id="navLinks"></nav><div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle" aria-label="Theme"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle" aria-label="Language"><span id="langLabel">EN</span></button></div></header>
 <main class="page-container experience-page"><div class="experience-heading"><div><h1 id="editDoctorTitle">Edit Professional Profile</h1><p id="editDoctorSubtitle">Keep your public profile clear, current, and trustworthy.</p></div><div class="heading-actions"><a class="btn btn-secondary" href="my-schedule.html"><i class="fas fa-calendar-days"></i><span id="manageScheduleLabel">My Schedule</span></a><a class="btn btn-secondary" id="viewPublicProfile" href="doctor.html"><i class="fas fa-arrow-up-right-from-square"></i><span id="viewProfileLabel">View public profile</span></a></div></div>

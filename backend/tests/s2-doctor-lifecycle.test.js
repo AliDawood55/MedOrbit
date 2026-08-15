@@ -192,8 +192,13 @@ async function residualCounts() {
         await pool.query(`INSERT INTO medorbit.doctor_availability(id,doctor_id,clinic_id,specific_date,start_time,end_time,slot_duration,is_active) VALUES($1,$2,$3,$4,'10:00','10:30',30,true)`,[availabilityId,existingDoctor.doctorId,ids.clinic,date]);
         const doctorToken = access(existingDoctor);
         check('approved doctor central capability works', (await request('GET','/doctors/me/patients',doctorToken)).status === 200);
-        check('approved doctor appears publicly', (await request('GET',`/doctors/${existingDoctor.doctorId}`,null)).status === 200);
-        check('approved availability is bookable', (await request('GET',`/appointments/available-slots?doctor_id=${existingDoctor.doctorId}&clinic_id=${ids.clinic}&date=${date}`,null)).body.data.length === 1);
+        // The doctor directory and booking slots are no longer anonymous — the
+        // guest policy makes them account-only — so visibility is asserted for a
+        // signed-in reader, and the absence of a session is asserted separately.
+        check('approved doctor is not visible without an account', (await request('GET',`/doctors/${existingDoctor.doctorId}`,null)).status === 401);
+        check('approved doctor appears to signed-in users', (await request('GET',`/doctors/${existingDoctor.doctorId}`,doctorToken)).status === 200);
+        const bookableSlots = await request('GET',`/appointments/available-slots?doctor_id=${existingDoctor.doctorId}&clinic_id=${ids.clinic}&date=${date}`,doctorToken);
+        check('approved availability is bookable', bookableSlots.body?.data?.length === 1, `${bookableSlots.status} ${JSON.stringify(bookableSlots.body).slice(0,200)}`);
         await pool.query(`INSERT INTO medorbit.user_sessions(user_id,refresh_token_hash,expires_at) VALUES($1,$2,NOW()+INTERVAL '1 day')`,[existingDoctor.id,crypto.createHash('sha256').update(`${marker}-doctor-session`).digest('hex')]);
         const suspended = await request('POST',`/admin/doctor-applications/doctors/${existingDoctor.doctorId}/suspend`,access(admin),{reason:'S2 test'});
         check('admin suspends and notifies approved doctor transactionally', suspended.status === 200 && Number((await pool.query("SELECT count(*) FROM medorbit.notifications WHERE user_id=$1 AND reference_id=$2 AND notification_type='DOCTOR_SUSPENDED'",[existingDoctor.id,existingDoctor.doctorId])).rows[0].count) === 1, JSON.stringify(suspended.body));
@@ -204,9 +209,9 @@ async function residualCounts() {
         check('suspended doctor blocked by central capability', (await request('GET','/doctors/me/patients',suspendedToken)).status === 403);
         check('suspended doctor cannot create prescription', (await request('POST','/prescriptions',suspendedToken,{})).status === 403);
         check('suspended doctor cannot manage availability', (await request('POST',`/doctors/${existingDoctor.doctorId}/availability`,suspendedToken,{specific_date:date,start_time:'11:00',end_time:'11:30'})).status === 403);
-        check('suspended doctor hidden from public detail', (await request('GET',`/doctors/${existingDoctor.doctorId}`,null)).status === 404);
-        const slotsSuspended=await request('GET',`/appointments/available-slots?doctor_id=${existingDoctor.doctorId}&clinic_id=${ids.clinic}&date=${date}`,null);
-        check('suspended doctor has no public bookable slots', slotsSuspended.status === 200 && slotsSuspended.body.data.length === 0);
+        check('suspended doctor hidden from the directory', (await request('GET',`/doctors/${existingDoctor.doctorId}`,access(otherPatient))).status === 404);
+        const slotsSuspended=await request('GET',`/appointments/available-slots?doctor_id=${existingDoctor.doctorId}&clinic_id=${ids.clinic}&date=${date}`,access(otherPatient));
+        check('suspended doctor has no bookable slots', slotsSuspended.status === 200 && slotsSuspended.body?.data?.length === 0, `${slotsSuspended.status} ${JSON.stringify(slotsSuspended.body).slice(0,160)}`);
         const booking=await request('POST','/appointments',access(otherPatient),{doctor_id:existingDoctor.doctorId,clinic_id:ids.clinic,scheduled_date:date,start_time:'10:00',end_time:'10:30',duration_minutes:30,appointment_type:'in_person'}); if(booking.status===201)ids.bookingId=booking.body.data.id;
         check('suspended doctor cannot be booked', booking.status === 404 || booking.status === 409 || booking.status === 403, JSON.stringify(booking.body));
         check('suspension retains patient persona', Number((await pool.query('SELECT count(*) FROM medorbit.patients WHERE user_id=$1',[existingDoctor.id])).rows[0].count) === 1);
@@ -215,11 +220,11 @@ async function residualCounts() {
         const reactivatedVersion=(await pool.query('SELECT authorization_version FROM medorbit.users WHERE id=$1',[existingDoctor.id])).rows[0].authorization_version;
         check('pre-reactivation token remains invalid', (await request('GET','/doctors/me/patients',suspendedToken)).status === 401);
         check('fresh doctor token restores capability', (await request('GET','/doctors/me/patients',access(existingDoctor,reactivatedVersion))).status === 200);
-        check('reactivated doctor visible/bookable', (await request('GET',`/doctors/${existingDoctor.doctorId}`,null)).status === 200 && (await request('GET',`/appointments/available-slots?doctor_id=${existingDoctor.doctorId}&clinic_id=${ids.clinic}&date=${date}`,null)).body.data.length === 1);
+        check('reactivated doctor visible/bookable', (await request('GET',`/doctors/${existingDoctor.doctorId}`,access(otherPatient))).status === 200 && (await request('GET',`/appointments/available-slots?doctor_id=${existingDoctor.doctorId}&clinic_id=${ids.clinic}&date=${date}`,access(otherPatient))).body?.data?.length === 1);
 
         check('legacy-style doctor default is approved', (await pool.query('SELECT approval_status FROM medorbit.doctors WHERE id=$1',[unrelatedDoctor.doctorId])).rows[0].approval_status === 'approved');
         check('legacy role/profile retained and no fake application exists', (await pool.query('SELECT role FROM medorbit.users WHERE id=$1',[unrelatedDoctor.id])).rows[0].role === 'doctor' && Number((await pool.query('SELECT count(*) FROM medorbit.user_profiles WHERE user_id=$1',[unrelatedDoctor.id])).rows[0].count) === 1 && Number((await pool.query('SELECT count(*) FROM medorbit.doctor_applications WHERE user_id=$1',[unrelatedDoctor.id])).rows[0].count) === 0);
-        check('legacy approved doctor remains public', (await request('GET',`/doctors/${unrelatedDoctor.doctorId}`,null)).status === 200);
+        check('legacy approved doctor remains visible to signed-in users', (await request('GET',`/doctors/${unrelatedDoctor.doctorId}`,access(otherPatient))).status === 200);
     } catch (err) {
         failed++; console.error(err);
     } finally {

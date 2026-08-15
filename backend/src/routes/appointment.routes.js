@@ -21,7 +21,7 @@ function appointmentDto(row) {
 // Server-generated bookable slots. The array shape remains compatible with
 // existing web/mobile clients, but each row is now one exact slot after
 // weekly rules, date overrides, blocks, past time, and bookings are removed.
-router.get('/available-slots', async (req, res, next) => {
+router.get('/available-slots', authenticate, async (req, res, next) => {
     try {
         const { doctor_id, clinic_id, date } = req.query;
         if (!doctor_id || !date) {

@@ -2,7 +2,7 @@
 const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
-const { authenticate, authenticateOptional, authorize } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const { getRankedDoctors } = require('../services/recommendation.service');
 const {
   resolveBilingualUserContent,
@@ -583,7 +583,7 @@ router.delete('/me/availability/:slotId', authenticate, authorize('doctor'), asy
 });
 
 // GET /api/doctors - List all doctors with filters
-router.get('/', authenticateOptional, async (req, res, next) => {
+router.get('/', authenticate, async (req, res, next) => {
   try {
     const { specialty, region, minRating, minFee, maxFee, search, page = 1, limit = 10 } = req.query;
     const pageNumber=Math.max(Number.parseInt(page,10)||1,1),limitNumber=Math.min(Math.max(Number.parseInt(limit,10)||10,1),50);
@@ -690,7 +690,7 @@ router.get('/', authenticateOptional, async (req, res, next) => {
 });
 
 // GET /api/doctors/:id - Get doctor details
-router.get('/:id', authenticateOptional, async (req, res, next) => {
+router.get('/:id', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -792,7 +792,7 @@ router.get('/:id', authenticateOptional, async (req, res, next) => {
 });
 
 // GET /api/doctors/:id/availability - Get available slots
-router.get('/:id/availability', async (req, res, next) => {
+router.get('/:id/availability', authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
     const { date } = req.query; // optional: specific date
@@ -905,7 +905,7 @@ router.put('/:id', authenticate, authorize('doctor'), async (req, res, next) => 
 });
 
 // GET /api/doctors/:id/clinics - Clinics this doctor is assigned to
-router.get('/:id/clinics', async (req, res, next) => {
+router.get('/:id/clinics', authenticate, async (req, res, next) => {
   try {
     const result = await db.query(
       `SELECT
@@ -927,7 +927,7 @@ router.get('/:id/clinics', async (req, res, next) => {
 // GET /api/doctors/:id/posts - Public read of a doctor's PUBLISHED posts
 // only (doctor.html's Posts tab). Drafts never leave the doctor's own
 // GET /me/posts above.
-router.get('/:id/posts', async (req, res, next) => {
+router.get('/:id/posts', authenticate, async (req, res, next) => {
   try {
     const result = await db.query(
       `SELECT p.id,p.title_ar,p.title_en,p.category,p.body,p.published_at,p.created_at,

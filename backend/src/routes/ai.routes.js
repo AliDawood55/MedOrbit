@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 
-const { authenticateOptional } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { findAuthorizedMedicalRecord } = require('../services/clinicalAuthorization.service');
 const { internalIdentityHeaders } = require('../services/aiBoundary.service');
 const { error } = require('../utils/response');
@@ -22,7 +22,7 @@ async function forward(url, options) {
     return { status: response.status, payload };
 }
 
-router.post('/triage', authenticateOptional, async (req, res, next) => {
+router.post('/triage', authenticate, async (req, res, next) => {
     try {
         const headers = { 'Content-Type': 'application/json' };
         if (req.user) Object.assign(headers, internalIdentityHeaders({ userId: req.user.sub }));
@@ -41,7 +41,7 @@ router.post('/triage', authenticateOptional, async (req, res, next) => {
     }
 });
 
-router.post('/summarize', authenticateOptional, upload.single('file'), async (req, res, next) => {
+router.post('/summarize', authenticate, upload.single('file'), async (req, res, next) => {
     try {
         const requestedRecordId = req.body.record_id || null;
         if (requestedRecordId && !req.user) {

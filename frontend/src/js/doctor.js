@@ -313,8 +313,8 @@ const DoctorProfile = (() => {
         try {
             const [profileResponse, availabilityResponse, postsResponse] = await Promise.all([
                 API.doctors.get(id),
-                API.doctors.availability(id, null, { auth: false }).catch(() => null),
-                API.care.doctorPosts(id, { auth: false }).catch(() => null)
+                API.doctors.availability(id, null).catch(() => null),
+                API.care.doctorPosts(id).catch(() => null)
             ]);
             const payload = profileResponse.data;
             currentDoctor = payload.doctor;

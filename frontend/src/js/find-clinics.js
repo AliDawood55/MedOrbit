@@ -98,7 +98,7 @@ const FindClinics = (() => {
         };
 
         try {
-            const res = await API.clinics.list(query, { auth: false, signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
+            const res = await API.clinics.list(query, { signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
             const { clinics, pagination } = res.data;
 
             if (!clinics || clinics.length === 0) {
@@ -166,7 +166,7 @@ const FindClinics = (() => {
                 lat, lng,
                 radius: NEARBY_RADIUS_KM,
                 type: currentType || undefined
-            }, { auth: false, signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
+            }, { signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
 
             const clinics = res.data.clinics || [];
 

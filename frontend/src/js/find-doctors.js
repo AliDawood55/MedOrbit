@@ -86,7 +86,7 @@ const FindDoctors = (() => {
     }
 
     async function loadSpecialties() {
-        const response = await API.get('/specialties', null, { auth: false });
+        const response = await API.get('/specialties');
         const rows = Array.isArray(response.data) ? response.data : [];
         specialties = rows
             .filter(s => s?.id && s?.name_en)

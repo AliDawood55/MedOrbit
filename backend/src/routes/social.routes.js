@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/database');
-const { authenticate, authenticateOptional, authorizeAdmin } = require('../middleware/auth');
+const { authenticate, authorizeAdmin } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 const { findEligiblePost, findFollowableDoctor } = require('../services/socialPolicy.service');
 const { recordUserEvent } = require('../services/userEvent.service');
@@ -15,7 +15,7 @@ const adminSocialRoutes = express.Router();
 const mutationLimiter = rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false });
 const commentLimiter = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false });
 
-feedRoutes.get('/posts', authenticateOptional, async (req,res,next) => {
+feedRoutes.get('/posts', authenticate, async (req,res,next) => {
     try {
         const limit = Math.min(Math.max(Number.parseInt(req.query.limit,10) || 10,1),30);
         const ranked=await getRankedFeed({userId:req.user?.sub||null,limit,cursor:req.query.cursor||null});
@@ -23,7 +23,7 @@ feedRoutes.get('/posts', authenticateOptional, async (req,res,next) => {
     } catch (err) { if(err.code==='INVALID_CURSOR') return error(res,'Invalid cursor',400,'INVALID_CURSOR'); return next(err); }
 });
 
-feedRoutes.get('/posts/:id/comments', async (req,res,next) => {
+feedRoutes.get('/posts/:id/comments', authenticate, async (req,res,next) => {
     try {
         if (!await findEligiblePost(req.params.id)) return error(res,'Post not found',404,'NOT_FOUND');
         const result = await db.query(

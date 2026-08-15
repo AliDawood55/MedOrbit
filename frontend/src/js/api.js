@@ -74,16 +74,23 @@ const API = (() => {
     }
 
     /**
-     * Guard for pages that require a logged-in user.
-     * Redirects to login.html (with a return path) and returns false if not authenticated.
+     * Per-page guard, kept as defense-in-depth behind the global gate.
+     * Returns false when there is no session, which is what every caller uses
+     * to abort its own boot.
+     *
+     * When auth-gate.js is present it owns the redirect decision (Home + auth
+     * modal, intended destination preserved), so this must not navigate too —
+     * two competing redirects for one failure is how loops start. The standalone
+     * login.html redirect is retained for any page loaded without the gate.
      */
     function requireAuth(redirectTo) {
-        if (!isAuthenticated()) {
-            const target = redirectTo || (window.location.pathname.split('/').pop() + window.location.search);
-            window.location.href = 'login.html?redirect=' + encodeURIComponent(target);
-            return false;
-        }
-        return true;
+        if (isAuthenticated()) return true;
+
+        if (typeof AuthGate !== 'undefined') return false;
+
+        const target = redirectTo || (window.location.pathname.split('/').pop() + window.location.search);
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(target);
+        return false;
     }
 
     // ================= TTL CACHE (GET only) =================
