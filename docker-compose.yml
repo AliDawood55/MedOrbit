@@ -248,6 +248,11 @@ services:
       MEDORBIT_TEST_ISOLATION: docker
       PORT: 3001
       AI_SERVICE_URL: http://ai-service-test:8001
+      # The per-minute fair-use limiter and the 20-per-24h free quota are
+      # different mechanisms that happen to share a number in production.
+      # Raised here so the quota tests measure the quota rather than tripping
+      # the burst limiter first.
+      BILLING_FAIR_USE_CHAT_PER_MINUTE: 500
       KAFKA_ENABLED: "false"
     depends_on:
       postgres:

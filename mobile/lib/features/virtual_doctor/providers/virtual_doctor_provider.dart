@@ -139,7 +139,13 @@ class VirtualDoctorState {
   }
 }
 
-final virtualDoctorApiProvider = Provider<VirtualDoctorApi>((ref) => VirtualDoctorApi(ref.watch(aiDioProvider)));
+/// Built on the AUTHENTICATED api client, not the AI-service one.
+///
+/// The Virtual Doctor endpoints now live behind the MedOrbit backend, which
+/// authenticates the user, checks entitlement, and only then talks to the AI
+/// service over an internal credential. Using [aiDioProvider] here would send
+/// unauthenticated requests straight at the AI service, which now rejects them.
+final virtualDoctorApiProvider = Provider<VirtualDoctorApi>((ref) => VirtualDoctorApi(ref.watch(dioProvider)));
 
 class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
   VirtualDoctorController(this._api, this._recorder, this._tts, this._health)
@@ -306,7 +312,11 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     }
 
     try {
-      final transcription = await _api.transcribe(filePath: path, language: state.language);
+      final transcription = await _api.transcribe(
+        filePath: path,
+        language: state.language,
+        sessionId: _sessionId ?? '',
+      );
       unawaited(File(path).delete().catchError((_) => File(path!)));
 
       if (transcription.text.isEmpty) {
@@ -389,6 +399,7 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     final played = await _tts.speak(
       text,
       language: state.language,
+      sessionId: _sessionId ?? '',
       onSentence: (sentence) => _set(state.copyWith(subtitle: sentence)),
     );
     _set(state.copyWith(ttsUnavailable: !played));

@@ -45,3 +45,29 @@ def resolve_internal_identity(
         raise HTTPException(status_code=403, detail="Invalid internal identity context")
 
     return internal_user_id, internal_record_id
+
+
+def require_internal_identity(
+    payload_user_id: Optional[str],
+    internal_token: Optional[str],
+    internal_user_id: Optional[str],
+) -> str:
+    """Same checks as resolve_internal_identity, but identity is mandatory.
+
+    resolve_internal_identity() permits an anonymous call — it returns
+    (None, None) when no internal context is present — which suits endpoints
+    that degrade gracefully for logged-out users. The Virtual Doctor cannot:
+    an unattributed consultation is one that belongs to no account, enforces
+    no entitlement, and is readable by anyone holding its id. That was the
+    actual state of the feature before this boundary existed.
+
+    So here, absent identity is a hard 403. The only way to reach a Virtual
+    Doctor endpoint is through the MedOrbit backend, which authenticates the
+    user, checks entitlement, and then presents this credential.
+    """
+    resolved, _ = resolve_internal_identity(
+        payload_user_id, None, internal_token, internal_user_id, None
+    )
+    if not resolved:
+        raise HTTPException(status_code=403, detail="Internal identity context is required")
+    return resolved

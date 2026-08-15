@@ -28,6 +28,7 @@
     "test:doctor-scheduling": "node tests/doctor-self-service-scheduling.test.js",
     "test:analytics": "node tests/analytics.test.js",
     "test:auth-gate": "node tests/global-auth-gate.test.js",
+    "test:billing": "node tests/billing-entitlements.test.js",
     "worker:outbox": "node scripts/outbox-worker.js",
     "worker:events": "node scripts/event-consumer.js",
     "worker:recommendations": "node scripts/recommendation-consumer.js",

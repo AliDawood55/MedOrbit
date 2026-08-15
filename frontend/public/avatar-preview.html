@@ -309,7 +309,85 @@
             logLine('ERROR [' + detail.code + '] ' + (detail.detail || ''));
         }
 
+        /**
+         * Cooldown / upgrade panel for the Voice Doctor.
+         *
+         * Counts down toward an absolute UTC instant the backend returned. The
+         * countdown is cosmetic — the backend re-checks eligibility on every
+         * /start, so a tampered clock or an edited DOM buys nothing.
+         */
+        let voicePaywallTimer = null;
+
+        function formatRemaining(ms) {
+            const total = Math.max(Math.floor(ms / 1000), 0);
+            const h = String(Math.floor(total / 3600)).padStart(2, '0');
+            const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+            const sec = String(total % 60).padStart(2, '0');
+            return h + ':' + m + ':' + sec;
+        }
+
+        function showVoicePaywall({ code, nextFreeAt, upgradeAvailable }) {
+            let panel = document.getElementById('voicePaywall');
+            if (!panel) {
+                panel = document.createElement('div');
+                panel.id = 'voicePaywall';
+                panel.className = 'voice-paywall';
+                const anchor = els.btnStartConsult && els.btnStartConsult.parentElement;
+                (anchor || document.body).appendChild(panel);
+            }
+
+            const isAr = (typeof I18n !== 'undefined' && I18n.getLang && I18n.getLang() === 'ar');
+            const heading = code === 'VOICE_COOLDOWN'
+                ? (isAr ? 'استشارتك المجانية القادمة ستكون متاحة خلال:'
+                        : 'Your next free consultation will be available in:')
+                : (isAr ? 'هذه الميزة تتطلب اشتراك Pro.' : 'This feature requires MedOrbit Pro.');
+
+            panel.hidden = false;
+            panel.innerHTML =
+                '<div class="voice-paywall__heading">' + heading + '</div>'
+                + (nextFreeAt ? '<div class="voice-paywall__countdown" id="voicePaywallCountdown">—</div>' : '')
+                + (upgradeAvailable
+                    ? '<button type="button" class="voice-paywall__upgrade" data-action="upgrade">'
+                      + (isAr ? 'الترقية إلى Pro' : 'Upgrade to Pro') + '</button>'
+                    : '');
+
+            if (voicePaywallTimer) clearInterval(voicePaywallTimer);
+            if (nextFreeAt) {
+                const target = new Date(nextFreeAt).getTime();
+                const tick = () => {
+                    const remaining = target - Date.now();
+                    const node = document.getElementById('voicePaywallCountdown');
+                    if (!node) return;
+                    if (remaining <= 0) {
+                        clearInterval(voicePaywallTimer);
+                        voicePaywallTimer = null;
+                        panel.hidden = true;
+                        return;
+                    }
+                    node.textContent = formatRemaining(remaining);
+                };
+                tick();
+                voicePaywallTimer = setInterval(tick, 1000);
+            }
+        }
+
+        function hideVoicePaywall() {
+            const panel = document.getElementById('voicePaywall');
+            if (panel) panel.hidden = true;
+            if (voicePaywallTimer) {
+                clearInterval(voicePaywallTimer);
+                voicePaywallTimer = null;
+            }
+        }
+
+        document.addEventListener('click', (event) => {
+            if (event.target.closest('[data-action="upgrade"]')) {
+                window.location.href = 'billing.html';
+            }
+        });
+
         function clearError() {
+            hideVoicePaywall();
             els.micError.hidden = true;
             els.btnRetryMic.hidden = true;
         }
@@ -582,6 +660,23 @@
                     renderSummary(result);
                     offerReport();
                     logLine('Consultation complete — urgency=' + result.urgencyLevel);
+                },
+                // Entitlement states are product states, not faults. The
+                // server decides eligibility and supplies the instant the next
+                // free consultation unlocks; this only renders it.
+                onPaywall: ({ code, nextFreeAt, upgradeAvailable }) => {
+                    sessionActive = false;
+                    VirtualDoctorSTT.stop();
+                    hideSubtitle();
+                    setMicStatus('');
+                    showVoicePaywall({ code, nextFreeAt, upgradeAvailable });
+                    logLine('Consultation blocked [' + code + ']'
+                        + (nextFreeAt ? ' until ' + nextFreeAt : ''));
+                },
+                // A refresh or a dropped connection rejoins the SAME
+                // consultation rather than spending another free session.
+                onResumed: ({ sessionId }) => {
+                    logLine('Resumed existing consultation ' + sessionId);
                 },
                 onError: (detail) => {
                     showError({ ...detail, code: 'engine', showHelp: false });

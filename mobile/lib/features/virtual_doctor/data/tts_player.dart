@@ -69,6 +69,9 @@ class TtsPlayer {
   Future<bool> speak(
     String text, {
     required String language,
+    // Scopes synthesis to a consultation the caller owns. The backend refuses
+    // without it, which keeps TTS from being a free standalone service.
+    required String sessionId,
     void Function(String sentence)? onSentence,
   }) async {
     await stop();
@@ -79,14 +82,14 @@ class TtsPlayer {
 
     _speaking = true;
     try {
-      Future<File?>? pending = _fetchClip(sentences.first, language);
+      Future<File?>? pending = _fetchClip(sentences.first, language, sessionId);
 
       for (var i = 0; i < sentences.length; i++) {
         final file = await pending;
         if (myGeneration != _generation) return true; // superseded
 
         // Prefetch the next chunk while this one plays.
-        pending = (i + 1 < sentences.length) ? _fetchClip(sentences[i + 1], language) : null;
+        pending = (i + 1 < sentences.length) ? _fetchClip(sentences[i + 1], language, sessionId) : null;
 
         if (file == null) return false;
 
@@ -102,9 +105,9 @@ class TtsPlayer {
     }
   }
 
-  Future<File?> _fetchClip(String sentence, String language) async {
+  Future<File?> _fetchClip(String sentence, String language, String sessionId) async {
     try {
-      final bytes = await _api.speak(text: sentence, language: language);
+      final bytes = await _api.speak(text: sentence, language: language, sessionId: sessionId);
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/vd_tts_${DateTime.now().microsecondsSinceEpoch}.wav');
       await file.writeAsBytes(bytes, flush: true);
