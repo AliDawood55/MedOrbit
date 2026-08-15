@@ -39,8 +39,9 @@ const VirtualDoctorTTS = (() => {
 
     /** The consultation this turn belongs to. */
     function activeSessionId() {
-        if (typeof cfg.getSessionId === 'function') return cfg.getSessionId();
-        if (typeof VirtualDoctorSession !== 'undefined') return VirtualDoctorSession.getSessionId();
+        if (typeof VirtualDoctorSession !== 'undefined' && typeof VirtualDoctorSession.getSessionId === 'function') {
+            return VirtualDoctorSession.getSessionId();
+        }
         return null;
     }
 

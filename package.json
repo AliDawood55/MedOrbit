@@ -24,6 +24,7 @@
     "test:user-content-ui": "node frontend/tests/user-content-unification-ui.test.js",
     "test:doctor-scheduling-ui": "node frontend/tests/doctor-scheduling-ui.test.js",
     "test:auth-gate-ui": "node frontend/tests/auth-gate-ui.test.js",
+    "test:virtual-doctor-tts-ui": "node frontend/tests/virtual-doctor-tts-ui.test.js",
     "test:auth-gate:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth-gate && npm run test:auth-gate-ui",
     "test:billing:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test ai-service-test && docker compose --profile test exec -T backend-test npm run test:billing",
     "test:admin-rate-notifications:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:admin-rate-notifications && npm run test:admin-notifications-ui",
