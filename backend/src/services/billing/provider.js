@@ -1,4 +1,4 @@
-const { ERROR_CODES } = require('../../config/billing');
+const { ERROR_CODES, MOCK_PROVIDER_NAME, readProviderConfig, assertProviderConfigSafe } = require('../../config/billing');
 
 /**
  * BillingProvider — the seam a payment provider will eventually plug into.
@@ -8,12 +8,18 @@ const { ERROR_CODES } = require('../../config/billing');
  * by configuration; EntitlementService, the routes and the repositories stay
  * untouched, because none of them know or care who processes the money.
  *
- * There is deliberately NO working implementation here, and no mock that
- * pretends to be one. A stub that returned a plausible-looking checkout URL
- * would be worse than nothing: it would let a "working" upgrade flow be
- * demonstrated, reviewed and merged while activating Pro on nothing but the
- * frontend's say-so. Until a real provider is integrated, every operation
- * below fails loudly.
+ * The default implementation here does nothing but fail. That is on purpose:
+ * a stub that returned a plausible-looking checkout URL would let a "working"
+ * upgrade flow be demonstrated, reviewed and merged while activating Pro on
+ * nothing but the frontend's say-so. With no provider configured, every
+ * operation below fails loudly.
+ *
+ * A sandbox implementation exists in mock.provider.js for local development.
+ * It is reachable only when BILLING_PROVIDER=mock AND BILLING_MOCK_ENABLED=true
+ * AND NODE_ENV is not production — three conditions, one of which the operator
+ * cannot set by accident. It never becomes the default and never activates
+ * itself; see assertProviderConfigSafe, which makes a production process
+ * carrying either variable refuse to boot.
  *
  * PCI note: none of these operations accept a card number, a CVV, or any
  * cardholder data. createCheckout returns a URL the user is redirected to,
@@ -89,15 +95,49 @@ function registerProvider(provider) {
 }
 
 /**
+ * Startup guard.
+ *
+ * Runs the instant this module is required, which is during application
+ * boot, so a production process configured for sandbox billing dies here
+ * with a clear message instead of coming up and serving a button that
+ * grants Pro for nothing. Deliberately not wrapped in a try/catch by the
+ * caller: this failure must be fatal.
+ */
+assertProviderConfigSafe();
+
+/**
+ * Load the sandbox provider on first use.
+ *
+ * Lazy because mock.provider.js imports BillingProviderError from this
+ * module; requiring it at the top would make the cycle resolve with that
+ * export still undefined. By the time any request reaches getProvider both
+ * modules are fully initialised.
+ */
+function loadMockProvider() {
+    if (registry.has(MOCK_PROVIDER_NAME)) return registry.get(MOCK_PROVIDER_NAME);
+    // eslint-disable-next-line global-require
+    const { mockProvider } = require('./mock.provider');
+    registerProvider(mockProvider);
+    return mockProvider;
+}
+
+/**
  * The provider selected by configuration.
  *
- * Falls back to the unconfigured provider rather than throwing at import time,
- * so the rest of the application boots normally with billing simply
- * unavailable — the state Phase 1 ships in.
+ * The sandbox is reachable only through readProviderConfig().mockEnabled,
+ * which requires two explicit variables and is false under NODE_ENV=production
+ * — so even if the startup guard were somehow bypassed, BILLING_PROVIDER=mock
+ * alone still resolves to the unconfigured provider and every billing
+ * operation fails closed.
  */
 function getProvider() {
-    const configured = process.env.BILLING_PROVIDER;
-    if (configured && registry.has(configured)) return registry.get(configured);
+    const config = readProviderConfig();
+
+    if (config.mockRequested) {
+        return config.mockEnabled ? loadMockProvider() : unconfiguredProvider;
+    }
+
+    if (config.name && registry.has(config.name)) return registry.get(config.name);
     return unconfiguredProvider;
 }
 

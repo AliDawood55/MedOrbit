@@ -1107,9 +1107,17 @@ async function main() {
         const underpay = await request('POST', '/billing/checkout', faker.token, {
             plan_code: 'pro_monthly', price_cents: 1, amount: 1, currency: 'USD', discount: 100,
         });
-        check('checkout never activates Pro on the client\'s say-so',
-            underpay.status === 503 && underpay.body?.error?.code === 'ENTITLEMENT_UNAVAILABLE',
-            `${underpay.status}/${underpay.body?.error?.code}`);
+        // Accepts either answer, because both are correct and which one
+        // applies is an operator's configuration choice: 503 when no
+        // provider is configured, or 200 with a checkout URL when one is.
+        // What must never happen is the third possibility — that starting
+        // a checkout with a tampered price attached grants anything, which
+        // is what the two assertions below actually prove.
+        const startedOrRefused = underpay.status === 200
+            ? typeof underpay.body?.data?.checkout_url === 'string'
+            : underpay.status === 503 && underpay.body?.error?.code === 'ENTITLEMENT_UNAVAILABLE';
+        check('checkout either refuses or hands off, and never decides anything itself',
+            startedOrRefused, `${underpay.status}/${underpay.body?.error?.code}`);
 
         const stillFree = await request('GET', '/billing/entitlements', faker.token);
         check('the account is still on the free plan after all of that',

@@ -64,6 +64,12 @@ const AuthGate = (() => {
         'admin-social.html',
         'analytics.html',
         'avatar-preview.html',
+        'billing.html',
+        // The sandbox checkout stands in for a provider-hosted page, but it
+        // is served from our own origin and reads a checkout attempt scoped
+        // to the caller — so it is protected like any other page. A signed-out
+        // browser has nothing to see there.
+        'billing-sandbox.html',
         'book-appointment.html',
         'clinic.html',
         'contact.html',

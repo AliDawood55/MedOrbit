@@ -135,6 +135,18 @@ const ERROR_CODES = {
     SUBSCRIPTION_REQUIRED: 'SUBSCRIPTION_REQUIRED',
     SUBSCRIPTION_INACTIVE: 'SUBSCRIPTION_INACTIVE',
     ENTITLEMENT_UNAVAILABLE: 'ENTITLEMENT_UNAVAILABLE',
+    /** No checkout attempt matches this token for this user. */
+    CHECKOUT_NOT_FOUND: 'CHECKOUT_NOT_FOUND',
+    /** The attempt exists but has already been resolved or has expired. */
+    CHECKOUT_NOT_OPEN: 'CHECKOUT_NOT_OPEN',
+    /** The caller has no live subscription to act on. */
+    SUBSCRIPTION_NOT_FOUND: 'SUBSCRIPTION_NOT_FOUND',
+    /** The caller already holds a live subscription; buying a second is refused. */
+    SUBSCRIPTION_ALREADY_LIVE: 'SUBSCRIPTION_ALREADY_LIVE',
+    /** The requested plan change is not one this phase supports. */
+    PLAN_CHANGE_INVALID: 'PLAN_CHANGE_INVALID',
+    /** A sandbox-only route was reached without sandbox billing enabled. */
+    SANDBOX_DISABLED: 'SANDBOX_DISABLED',
 };
 
 /**
@@ -170,12 +182,96 @@ function isProGrantingStatus(subscription, now = new Date()) {
     return false;
 }
 
+
+/**
+ * Canonical billing event types.
+ *
+ * Provider-independent by design. A real provider's own event names are
+ * translated into these by its adapter and never reach the subscription
+ * state machine, so swapping providers cannot require editing business
+ * logic — which is the whole reason the mock provider is worth building
+ * against the same vocabulary a real one will use.
+ */
+const BILLING_EVENTS = Object.freeze({
+    CHECKOUT_COMPLETED: 'checkout.completed',
+    SUBSCRIPTION_ACTIVATED: 'subscription.activated',
+    SUBSCRIPTION_RENEWED: 'subscription.renewed',
+    SUBSCRIPTION_UPDATED: 'subscription.updated',
+    SUBSCRIPTION_CANCEL_AT_PERIOD_END: 'subscription.cancel_at_period_end',
+    SUBSCRIPTION_CANCELED: 'subscription.canceled',
+    PAYMENT_FAILED: 'payment.failed',
+    PAYMENT_RECOVERED: 'payment.recovered',
+});
+
+const MOCK_PROVIDER_NAME = 'mock';
+
+/**
+ * Resolve which provider is configured, and whether the sandbox may run.
+ *
+ * Enabling the mock takes TWO deliberate variables, not one. A single
+ * mistyped or inherited BILLING_PROVIDER cannot by itself turn on a
+ * checkout that grants Pro for free — the operator has to have said so
+ * twice.
+ */
+function readProviderConfig(env = process.env) {
+    const name = String(env.BILLING_PROVIDER || '').trim().toLowerCase() || null;
+    const nodeEnv = String(env.NODE_ENV || 'development').trim().toLowerCase();
+    const isProduction = nodeEnv === 'production';
+    const mockRequested = name === MOCK_PROVIDER_NAME;
+    const mockFlagSet = String(env.BILLING_MOCK_ENABLED || '').trim().toLowerCase() === 'true';
+
+    return {
+        name,
+        nodeEnv,
+        isProduction,
+        mockRequested,
+        mockFlagSet,
+        // The only expression in the codebase that may authorise a simulated
+        // payment. Read it; never re-derive it from the raw variables.
+        mockEnabled: mockRequested && mockFlagSet && !isProduction,
+    };
+}
+
+/**
+ * Refuse to boot a production process that has sandbox billing configured.
+ *
+ * Failing startup is the right severity, and quietly disabling the mock
+ * would be the wrong one. A deployment that believes it is taking payments
+ * while a simulate-success button is reachable is a far worse outcome than
+ * a container that will not start and says exactly why. Both variables are
+ * checked, so neither one alone can survive into production unnoticed.
+ *
+ * @throws {Error} when NODE_ENV=production and any mock billing variable is set.
+ */
+function assertProviderConfigSafe(env = process.env) {
+    const config = readProviderConfig(env);
+    if (!config.isProduction) return config;
+
+    if (config.mockRequested) {
+        throw new Error(
+            'BILLING_PROVIDER=mock is refused when NODE_ENV=production. ' +
+            'The mock provider grants Pro without payment and must never be reachable in production.'
+        );
+    }
+    if (config.mockFlagSet) {
+        throw new Error(
+            'BILLING_MOCK_ENABLED=true is refused when NODE_ENV=production. ' +
+            'Remove it from the production environment.'
+        );
+    }
+    return config;
+}
+
 module.exports = {
     FEATURES,
     PLAN_CODES,
     PRO_GRANTING_STATUSES,
     LIVE_STATUSES,
     ERROR_CODES,
+    BILLING_EVENTS,
+    MOCK_PROVIDER_NAME,
     policy,
     isProGrantingStatus,
+    readProviderConfig,
+    assertProviderConfigSafe,
 };

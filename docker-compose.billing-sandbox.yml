@@ -1,0 +1,77 @@
+# MedOrbit — local billing sandbox overlay (DEVELOPMENT ONLY).
+#
+# USAGE
+#   $env:BILLING_MOCK_WEBHOOK_SECRET = "<a long random local string>"
+#   docker compose -f docker-compose.yml -f docker-compose.billing-sandbox.yml up -d --build backend
+#
+#   ...and to put the normal production-like backend back:
+#   docker compose up -d backend
+#
+# Name BOTH files on every compose command while the sandbox is running, or
+# add --no-deps. A plain `docker compose up -d frontend` pulls in its
+# depends_on: backend from the base file alone and quietly swaps the sandbox
+# back out for the production-like process, which is confusing precisely
+# because it looks like nothing happened.
+#
+# WHAT THIS IS FOR
+# ----------------
+# Phase 2 billing is a simulated provider: real lifecycle, real signed events,
+# real state machine, no money and no card data anywhere. Exercising it from a
+# browser needs a backend process with the sandbox switched on, and the base
+# stack's `backend` service deliberately cannot be that process — it runs
+# NODE_ENV=production (so pino-pretty, a devDependency absent from its image,
+# is never loaded), and a production process refuses to enable mock billing at
+# all. That refusal is a feature and is not weakened here.
+#
+# WHY AN OVERLAY AND NOT A NEW SERVICE
+# ------------------------------------
+# A second backend service would have to restate the build, env_file, ports,
+# depends_on and healthcheck of the first, and would then fight it for host
+# port 3001 — which the browser reaches directly (frontend/src/js/api.js
+# derives http://<host>:3001, and frontend/nginx.conf's CSP connect-src only
+# permits that port). One backend on 3001 is the only arrangement the browser
+# can use, so this file swaps the one that is already there instead of adding
+# a rival. Same pattern as docker-compose.gpu.yml: opt-in, never loaded unless
+# named with an explicit -f.
+#
+# WHY THE SANDBOX CANNOT ESCAPE FROM HERE
+# ---------------------------------------
+# Three independent things must all hold before a simulated payment is
+# possible, and this file is the only place all three are true at once:
+#   1. NODE_ENV must not be production — backend/src/config/billing.js throws
+#      at startup otherwise, before the HTTP server binds.
+#   2. BILLING_PROVIDER=mock AND BILLING_MOCK_ENABLED=true. Either alone does
+#      nothing, so no single stray variable turns on simulated payments.
+#   3. The /api/billing/sandbox/* routes are only mounted when the above are
+#      satisfied; in any other process they are absent, not merely guarded.
+# Nothing in this file is read by `docker compose up` on its own, and nothing
+# in it belongs in a deployed environment.
+
+services:
+  backend:
+    # A distinct tag on purpose. Without it the sandbox build would overwrite
+    # the `medorbit-backend` image the production-like stack runs, quietly
+    # leaving devDependencies in the image everything else uses.
+    image: medorbit-backend-sandbox
+    container_name: medorbit-backend-sandbox
+    build:
+      # The only difference from backend/Dockerfile is `npm ci` without
+      # --omit=dev, which is exactly what NODE_ENV=development needs: pino
+      # configures a pino-pretty transport for any non-production process and
+      # would fail to boot if the module were missing.
+      dockerfile: backend/Dockerfile.test
+    environment:
+      # The switch that makes mock billing legal at all. Also restores
+      # development error/logging behaviour, which is what a developer
+      # driving this by hand wants anyway.
+      NODE_ENV: development
+      # Both required, deliberately.
+      BILLING_PROVIDER: mock
+      BILLING_MOCK_ENABLED: "true"
+      # Not defaulted, and not written down anywhere in the repository: the
+      # sandbox signs its simulated events with this and verifies them on the
+      # way back in, so it is a signing key even though the payments are fake.
+      # Generate one locally, e.g.
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      # and put it in .env (see .env.example) or export it before launching.
+      BILLING_MOCK_WEBHOOK_SECRET: ${BILLING_MOCK_WEBHOOK_SECRET:?set BILLING_MOCK_WEBHOOK_SECRET (>=16 chars) in .env or your shell before starting the billing sandbox}
