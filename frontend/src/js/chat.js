@@ -4,6 +4,17 @@ const Chat = (() => {
     let activeController = null;
     let conversationId = null;
 
+    /**
+     * Identifier for one logical user message.
+     *
+     * crypto.randomUUID is available in every browser this app supports; the
+     * fallback exists only so a non-secure-context dev server still works.
+     */
+    function newRequestId() {
+        if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+        return 'cmid-' + Date.now() + '-' + Math.random().toString(16).slice(2, 10);
+    }
+
     // Cache last places for follow-up commands (show_route)
     let lastPlaces = [];
 
@@ -154,7 +165,12 @@ const Chat = (() => {
 
         try {
 
-            const payload = { message: text };
+            // Stable identity for this logical message, generated once and
+            // reused if the request has to be retried. It is what lets the
+            // backend recognise a retry after a network timeout as the same
+            // message rather than a second one — so a dropped response cannot
+            // cost the user two of their free messages.
+            const payload = { message: text, client_message_id: newRequestId() };
 
             if (conversationId) {
                 payload.conversationId = conversationId;
@@ -187,6 +203,10 @@ const Chat = (() => {
 
             appendBotMessage(data);
 
+            // Server-computed quota state. The composer renders exactly this
+            // and never derives a count of its own.
+            if (data?.quota) ChatQuota.apply(data.quota);
+
             // If we sent without coords, tell the user why results (if any)
             // aren't distance-ranked — never fail silently.
             if (!payload.latitude) {
@@ -199,6 +219,13 @@ const Chat = (() => {
 
             // Don't show error if request was intentionally aborted
             if (err.name === 'AbortError') return;
+
+            // An exhausted free allowance is a product state, not a fault.
+            // History stays readable; only the composer is paywalled.
+            if (err.code === 'FREE_QUOTA_EXHAUSTED') {
+                ChatQuota.lock(err.details || {});
+                return;
+            }
 
             handleError(err);
 

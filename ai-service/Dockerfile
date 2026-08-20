@@ -31,6 +31,13 @@ FROM python:3.12-slim
 #     shape Arabic text if report_generator.py's embedded Cairo font is ever
 #     unavailable. Debian has no standalone "fonts-noto-naskh-arabic" package;
 #     the Arabic weights ship inside this core metapackage.
+#   swi-prolog-core — the Prolog runtime and libswipl behind pyswip, for the
+#     Virtual Doctor's symbolic reasoning layer
+#     (virtual_doctor/reasoning_engine). Verified against this exact base image
+#     (Debian 13 trixie, SWI-Prolog 9.2.9): -core is 2 packages / 4.5MB and is
+#     sufficient for pyswip to import, consult a rule file and run a query.
+#     NOT swi-prolog-nox, which pulls 19 packages for the clib/http/ssl add-on
+#     libraries none of these rules use, and NOT swi-prolog-full.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-ara \
@@ -38,6 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     fonts-noto-core \
+    swi-prolog-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

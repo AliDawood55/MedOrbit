@@ -16,15 +16,15 @@ const {
 
 const medicalRepository = require("../repositories/medical.repository");
 const prescriptionService = require("../services/prescription.service");
+const { hasActiveCareRelationship } = require('../services/careRelationship.service');
+const { boundedText } = require('../utils/profileFields');
 
 
 // Every handler below resolves the caller's own medorbit.patients.id from
 // req.user.sub (the JWT subject, a users.id) server-side — never from a
 // client-supplied id — same pattern already used correctly in
-// appointment.routes.js's POST /. This is what makes these "my X" routes
-// safe to add alongside the existing, unscoped GET /medical-records and
-// GET /prescriptions/:id (which remain as-is, used by doctor-facing flows
-// elsewhere; patients should never call those directly).
+// appointment.routes.js's POST /. The legacy generic clinical routes now use
+// the same server-resolved ownership model rather than trusting resource IDs.
 async function resolvePatientId(userId) {
     const result = await db.query(
         `SELECT id FROM medorbit.patients WHERE user_id=$1`,
@@ -228,12 +228,120 @@ router.get(
 // verifyDoctorPatientRelationship (there's no dedicated relationship
 // table either direction).
 async function verifyPatientDoctorRelationship(patientId, doctorId) {
-    const result = await db.query(
-        `SELECT 1 FROM medorbit.appointments WHERE patient_id=$1 AND doctor_id=$2 LIMIT 1`,
-        [patientId, doctorId]
-    );
-    return result.rows.length > 0;
+    return hasActiveCareRelationship(doctorId, patientId);
 }
+
+// =======================================
+// Privacy-safe social patient profile
+// =======================================
+
+router.get(
+    "/me/profile",
+    authenticate,
+    authorize("patient"),
+    async (req, res, next) => {
+        try {
+            const result = await db.query(
+                `SELECT up.public_profile_id AS id,up.first_name_ar,up.last_name_ar,
+                        up.first_name_en,up.last_name_en,up.profile_image_url AS avatar_url,
+                        up.social_bio AS bio,up.city,up.allow_doctor_messages,
+                        u.preferred_language,u.created_at AS member_since
+                 FROM medorbit.users u
+                 JOIN medorbit.user_profiles up ON up.user_id=u.id
+                 JOIN medorbit.patients p ON p.user_id=u.id
+                 WHERE u.id=$1 AND u.role='patient' AND u.is_active=true
+                   AND u.deleted_at IS NULL`,
+                [req.user.sub]
+            );
+            if (!result.rows[0]) {
+                return error(res, "Patient profile not found", 404, "NOT_FOUND");
+            }
+            return success(res, result.rows[0], "Patient social profile retrieved");
+        } catch (err) {
+            return next(err);
+        }
+    }
+);
+
+router.put(
+    "/me/profile",
+    authenticate,
+    authorize("patient"),
+    async (req, res, next) => {
+        try {
+            const bio = boundedText(req.body, ['bio', 'social_bio'], 'Bio', 500);
+            const city = boundedText(req.body, ['city'], 'City', 80);
+            const privacyProvided = Object.prototype.hasOwnProperty.call(req.body, 'allowDoctorMessages')
+                || Object.prototype.hasOwnProperty.call(req.body, 'allow_doctor_messages');
+            const privacy = req.body.allowDoctorMessages ?? req.body.allow_doctor_messages;
+            if (privacyProvided && typeof privacy !== 'boolean') {
+                return error(res, 'Privacy preference must be boolean', 400, 'VALIDATION_ERROR');
+            }
+
+            const result = await db.query(
+                `UPDATE medorbit.user_profiles up
+                 SET social_bio=CASE WHEN $1 THEN $2 ELSE social_bio END,
+                     city=CASE WHEN $3 THEN $4 ELSE city END,
+                     allow_doctor_messages=CASE WHEN $5 THEN $6 ELSE allow_doctor_messages END,
+                     updated_at=NOW()
+                 FROM medorbit.users u,medorbit.patients p
+                 WHERE up.user_id=$7 AND u.id=up.user_id AND p.user_id=u.id
+                   AND u.role='patient' AND u.is_active=true AND u.deleted_at IS NULL
+                 RETURNING up.public_profile_id AS id,up.first_name_ar,up.last_name_ar,
+                           up.first_name_en,up.last_name_en,
+                           up.profile_image_url AS avatar_url,up.social_bio AS bio,
+                           up.city,up.allow_doctor_messages,u.preferred_language,
+                           u.created_at AS member_since`,
+                [bio.provided, bio.value, city.provided, city.value,
+                    privacyProvided, privacy, req.user.sub]
+            );
+            if (!result.rows[0]) {
+                return error(res, "Patient profile not found", 404, "NOT_FOUND");
+            }
+            return success(res, result.rows[0], "Patient social profile updated");
+        } catch (err) {
+            return next(err);
+        }
+    }
+);
+
+// Approved doctors may discover only patients who opted in. The public profile
+// UUID is intentionally separate from the clinical patients.id.
+router.get(
+    "/discover",
+    authenticate,
+    authorize("doctor"),
+    async (req, res, next) => {
+        try {
+            const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+            if (search.length > 80) {
+                return error(res, 'Search is too long', 400, 'VALIDATION_ERROR');
+            }
+            const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 30);
+            const result = await db.query(
+                `SELECT up.public_profile_id AS id,up.first_name_ar,up.last_name_ar,
+                        up.first_name_en,up.last_name_en,
+                        up.profile_image_url AS avatar_url,up.social_bio AS bio,up.city
+                 FROM medorbit.users u
+                 JOIN medorbit.user_profiles up ON up.user_id=u.id
+                 JOIN medorbit.patients p ON p.user_id=u.id
+                 WHERE u.role='patient' AND u.is_active=true AND u.email_verified=true
+                   AND u.deleted_at IS NULL AND up.allow_doctor_messages=true
+                   AND ($1='' OR up.first_name_ar ILIKE '%'||$1||'%'
+                        OR up.last_name_ar ILIKE '%'||$1||'%'
+                        OR up.first_name_en ILIKE '%'||$1||'%'
+                        OR up.last_name_en ILIKE '%'||$1||'%'
+                        OR up.city ILIKE '%'||$1||'%')
+                 ORDER BY up.first_name_en,up.last_name_en,up.public_profile_id
+                 LIMIT $2`,
+                [search, limit]
+            );
+            return success(res, { items: result.rows, limit }, "Discoverable patient profiles retrieved");
+        } catch (err) {
+            return next(err);
+        }
+    }
+);
 
 
 // =======================================
@@ -263,6 +371,7 @@ router.get(
                      pr.phone, pr.profile_image_url,
                      s.name_ar AS specialty_ar, s.name_en AS specialty_en,
                      d.consultation_fee, d.average_rating,
+                     r.started_at AS relationship_started_at, r.source AS relationship_source,
                      MAX(a.scheduled_date) FILTER (WHERE a.scheduled_date >= CURRENT_DATE AND a.status NOT IN ('cancelled', 'no_show')) AS next_appointment_date,
                      MAX(a.scheduled_date) FILTER (WHERE a.scheduled_date < CURRENT_DATE OR a.status = 'completed') AS last_appointment_date,
                      COUNT(*) FILTER (WHERE a.scheduled_date >= CURRENT_DATE AND a.status NOT IN ('cancelled', 'no_show')) > 0 AS has_upcoming
@@ -270,10 +379,14 @@ router.get(
                  JOIN medorbit.users u ON u.id = d.user_id
                  LEFT JOIN medorbit.user_profiles pr ON pr.user_id = u.id
                  LEFT JOIN medorbit.specialties s ON s.id = d.specialty_id
-                 JOIN medorbit.appointments a ON a.doctor_id = d.id
-                 WHERE a.patient_id = $1
+                 JOIN medorbit.doctor_patient_relationships r
+                   ON r.doctor_id=d.id AND r.patient_id=$1 AND r.status='active'
+                 LEFT JOIN medorbit.appointments a ON a.doctor_id=d.id AND a.patient_id=$1
+                 WHERE u.is_active=true AND u.deleted_at IS NULL
+                   AND d.approval_status='approved'
                  GROUP BY d.id, u.email, pr.first_name_ar, pr.last_name_ar, pr.first_name_en, pr.last_name_en,
-                          pr.phone, pr.profile_image_url, s.name_ar, s.name_en, d.consultation_fee, d.average_rating
+                          pr.phone, pr.profile_image_url, s.name_ar, s.name_en, d.consultation_fee, d.average_rating,
+                          r.started_at, r.source
                  ORDER BY COALESCE(MAX(a.scheduled_date), '-infinity') DESC`,
                 [patientId]
             );

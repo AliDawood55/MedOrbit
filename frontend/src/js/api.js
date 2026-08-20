@@ -74,16 +74,23 @@ const API = (() => {
     }
 
     /**
-     * Guard for pages that require a logged-in user.
-     * Redirects to login.html (with a return path) and returns false if not authenticated.
+     * Per-page guard, kept as defense-in-depth behind the global gate.
+     * Returns false when there is no session, which is what every caller uses
+     * to abort its own boot.
+     *
+     * When auth-gate.js is present it owns the redirect decision (Home + auth
+     * modal, intended destination preserved), so this must not navigate too —
+     * two competing redirects for one failure is how loops start. The standalone
+     * login.html redirect is retained for any page loaded without the gate.
      */
     function requireAuth(redirectTo) {
-        if (!isAuthenticated()) {
-            const target = redirectTo || (window.location.pathname.split('/').pop() + window.location.search);
-            window.location.href = 'login.html?redirect=' + encodeURIComponent(target);
-            return false;
-        }
-        return true;
+        if (isAuthenticated()) return true;
+
+        if (typeof AuthGate !== 'undefined') return false;
+
+        const target = redirectTo || (window.location.pathname.split('/').pop() + window.location.search);
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(target);
+        return false;
     }
 
     // ================= TTL CACHE (GET only) =================
@@ -119,6 +126,36 @@ const API = (() => {
     }
 
     // ================= CORE REQUEST =================
+
+    function retryAfterSeconds(response) {
+        const value = response.headers.get('Retry-After');
+        if (!value) return null;
+
+        const seconds = Number(value);
+        if (Number.isFinite(seconds)) return Math.max(0, Math.ceil(seconds));
+
+        const retryAt = Date.parse(value);
+        return Number.isNaN(retryAt) ? null : Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+    }
+
+    function responseError(response, data, fallback) {
+        const isRateLimited = response.status === 429;
+        const isArabic = typeof I18n !== 'undefined' && I18n.getLang?.() === 'ar';
+        const message = isRateLimited
+            ? (isArabic
+                ? 'تم إرسال طلبات كثيرة خلال وقت قصير. حاول مرة أخرى بعد قليل.'
+                : 'Too many requests. Please try again shortly.')
+            : (data?.error?.message || fallback);
+        const err = new Error(message);
+        err.code = data?.error?.code;
+        err.status = response.status;
+        // Entitlement denials carry server-computed metadata (remaining,
+        // resets_at, next_free_at). Surfaced here so quota UI can render an
+        // accurate countdown from authoritative timestamps instead of guessing.
+        err.details = data?.error?.details || null;
+        err.retryAfterSeconds = isRateLimited ? retryAfterSeconds(response) : null;
+        return err;
+    }
 
     async function request(path, options = {}) {
 
@@ -176,10 +213,7 @@ const API = (() => {
         }
 
         if (!response.ok) {
-            const err = new Error(data?.error?.message || 'Request failed');
-            err.code = data?.error?.code;
-            err.status = response.status;
-            throw err;
+            throw responseError(response, data, 'Request failed');
         }
 
         if (method === 'GET' && cacheTTL) {
@@ -223,10 +257,7 @@ const API = (() => {
         }
 
         if (!response.ok) {
-            const err = new Error(data?.error?.message || 'Upload failed');
-            err.code = data?.error?.code;
-            err.status = response.status;
-            throw err;
+            throw responseError(response, data, 'Upload failed');
         }
 
         return data;
@@ -333,7 +364,19 @@ const API = (() => {
     const doctors = {
         list: (query, options) => get('/doctors', query, options),
         get: (id, options) => get(`/doctors/${id}`, null, options),
-        availability: (id, query, options) => get(`/doctors/${id}/availability`, query, options)
+        availability: (id, query, options) => get(`/doctors/${id}/availability`, query, options),
+        myProfile: (options) => get('/doctors/me/profile', null, options),
+        updateMyProfile: (body, options) => put('/doctors/me/profile', body, options),
+        mySchedule: (options) => get('/doctors/me/schedule', null, options),
+        addAvailability: (body, options) => post('/doctors/me/availability', body, options),
+        updateAvailability: (id, body, options) => put(`/doctors/me/availability/${id}`, body, options),
+        deleteAvailability: (id, options) => del(`/doctors/me/availability/${id}`, options)
+    };
+
+    const patientProfiles = {
+        me: (options) => get('/patients/me/profile', null, options),
+        updateMe: (body, options) => put('/patients/me/profile', body, options),
+        discover: (query, options) => get('/patients/discover', query, options)
     };
 
     // ================= CLINICS (public read) =================
@@ -361,6 +404,8 @@ const API = (() => {
         get: (id, options) => get(`/appointments/${id}`, null, options),
         create: (body, options) => post('/appointments', body, options),
         cancel: (id, body, options) => put(`/appointments/${id}/cancel`, body, options),
+        confirm: (id, options) => put(`/appointments/${id}/confirm`, {}, options),
+        complete: (id, options) => put(`/appointments/${id}/complete`, {}, options),
         availableSlots: (query, options) => get('/appointments/available-slots', query, options)
     };
 
@@ -368,24 +413,42 @@ const API = (() => {
 
     const notifications = {
         list: (options) => get('/notifications', null, options),
+        unreadCount: (options) => get('/notifications/unread-count', null, options),
         markRead: (id, options) => put(`/notifications/${id}/read`, null, options),
         markAllRead: (options) => patch('/notifications/read-all', null, options),
         remove: (id, options) => del(`/notifications/${id}`, options)
     };
 
-    // ================= ANALYTICS (JWT required, admin only) =================
-    // GET /api/dashboard/stats is live; analytics.js adapts the current aggregate payload.
-    // Expected response shape once it lands — analytics.js reads exactly
-    // this and shows an "awaiting backend data" state per-chart for
-    // whichever section is missing/empty:
+    // Human text messaging is separate from `conversations` (AI chatbot).
+    const messaging = {
+        list: (query, options) => get('/messages/conversations', query, options),
+        start: (counterpartId, options) => post('/messages/conversations', { counterpartId }, options),
+        history: (id, query, options) => get(`/messages/conversations/${id}/messages`, query, options),
+        send: (id, body, clientMessageId, options) => post(`/messages/conversations/${id}/messages`, { body, client_message_id: clientMessageId }, options),
+        markRead: (id, messageId, options) => post(`/messages/conversations/${id}/read`, messageId ? { message_id: messageId } : {}, options),
+        accept: (id, options) => post(`/messages/conversations/${id}/accept`, {}, options),
+        decline: (id, options) => post(`/messages/conversations/${id}/decline`, {}, options)
+    };
+
+    // ================= ANALYTICS (JWT required, admin/super_admin only) =================
+    // GET /api/dashboard/stats — real response shape (backend/src/services/report.service.js):
     //   {
-    //     appointmentsOverTime:  { labels: string[], counts: number[] },
-    //     usersByRole:           { labels: string[], counts: number[] },
-    //     topSpecialties:        { labels: string[], counts: number[] },
-    //     conversationsPerWeek:  { labels: string[], counts: number[] },
-    //     triageLevels:          { labels: string[], emergency: number[], urgent: number[], routine: number[] },
-    //     clinicTypes:           { labels: string[], counts: number[] }
+    //     users: { total, patients, doctors },
+    //     appointments: { total, completed, cancelled, scheduled },
+    //     medical_records: { total }, prescriptions: { total }, ratings: { average },
+    //     analytics: {
+    //       usersByRole:          { data: { labels: string[], counts: number[] } } | { error: true }
+    //       appointmentsOverTime: { data: { labels: string[] (week-start ISO dates), counts: number[] } } | { error: true }
+    //       topSpecialties:       { data: { items: { nameAr, nameEn, count }[] } } | { error: true }
+    //       conversationsPerWeek: { data: { labels: string[] (week-start ISO dates), counts: number[] } } | { error: true }
+    //       triageLevels:         { data: { labels: string[], counts: number[] } } | { error: true }
+    //       clinicTypes:          { data: { labels: string[], counts: number[] } } | { error: true }
+    //     }
     //   }
+    // Each analytics.* section is independent: one query failing server-side
+    // only marks that one section { error: true } instead of failing the
+    // whole request — analytics.js renders a per-card "unavailable" state for
+    // just that section.
     const analytics = {
         dashboardStats: (options) => get('/dashboard/stats', null, options)
     };
@@ -425,8 +488,38 @@ const API = (() => {
         prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
     };
 
+    const social = {
+        feed: (query, options) => get('/feed/posts', query, options),
+        comments: (postId, options) => get(`/feed/posts/${postId}/comments`, null, options),
+        addComment: (postId, body, options) => post(`/feed/posts/${postId}/comments`, body, options),
+        like: (postId, options) => post(`/feed/posts/${postId}/like`, {}, options),
+        unlike: (postId, options) => del(`/feed/posts/${postId}/like`, options),
+        view: (postId, options) => post(`/feed/posts/${postId}/view`, {}, options),
+        follow: (doctorId, options) => post(`/doctors/${doctorId}/follow`, {}, options),
+        unfollow: (doctorId, options) => del(`/doctors/${doctorId}/follow`, options),
+        doctorView: (doctorId, options) => post(`/doctors/${doctorId}/view`, {}, options),
+        specialtySearch: (specialtyId, options) => post(`/recommendations/specialties/${specialtyId}/search`, {}, options),
+        moderationPosts: (query, options) => get('/admin/social/posts', query, options),
+        moderatePost: (id, action, options) => post(`/admin/social/posts/${id}/moderate`, { action }, options),
+        moderationComments: (query, options) => get('/admin/social/comments', query, options),
+        moderateComment: (id, action, options) => post(`/admin/social/comments/${id}/moderate`, { action }, options)
+    };
+
     function getOrigin() {
         return API_ORIGIN;
+    }
+
+    /**
+     * Resolves backend-owned media paths (for example `/uploads/avatars/...`)
+     * against the API origin. Public profile responses intentionally contain
+     * relative paths, while the static frontend is served from a different
+     * origin in production. Absolute/data/blob URLs are already complete.
+     */
+    function assetUrl(value) {
+        const source = String(value || '').trim();
+        if (!source) return '';
+        if (/^(?:https?:|data:|blob:)/i.test(source)) return source;
+        return API_ORIGIN + '/' + source.replace(/^\/+/, '');
     }
 
     function getAiOrigin() {
@@ -445,11 +538,83 @@ const API = (() => {
         stats: (options) => get('/feedback/stats', null, options)
     };
 
+    const contact = {
+        submit: (body, options) => post('/contact', body, options),
+        adminList: (query, options) => get('/admin/contact-messages', query, options),
+        adminGet: (id, options) => get(`/admin/contact-messages/${id}`, null, options),
+        markRead: (id, options) => post(`/admin/contact-messages/${id}/read`, {}, options),
+        resolve: (id, options) => post(`/admin/contact-messages/${id}/resolve`, {}, options)
+    };
+
+    // ================= BILLING / ENTITLEMENTS (JWT required) =================
+    //
+    // Read-only by design. There is deliberately no client-side way to set a
+    // plan or a quota: entitlement is decided by the backend, and this module
+    // only reports what it decided.
+    const billing = {
+        entitlements: (options) => get('/billing/entitlements', null, options),
+        plans: (options) => get('/billing/plans', null, options),
+        config: (options) => get('/billing/config', null, options),
+        subscription: (options) => get('/billing/subscription', null, options),
+        history: (options) => get('/billing/history', null, options),
+
+        // Starts an upgrade. Sends a plan_code and where to come back to —
+        // never a price, an amount or a status. The backend resolves what the
+        // plan costs from its own catalogue, so there is nothing here worth
+        // tampering with.
+        checkout: (planCode, returnPath, options) =>
+            post('/billing/checkout', { plan_code: planCode, return_path: returnPath || null }, options),
+
+        // No subscription id is sent. The backend acts on the caller's own
+        // subscription, resolved from their token, which is why one account
+        // cannot cancel another's.
+        cancel: (options) => post('/billing/subscription/cancel', {}, options),
+        resume: (options) => post('/billing/subscription/resume', {}, options),
+        changePlan: (planCode, options) => post('/billing/subscription/plan', { plan_code: planCode }, options),
+
+        // Sandbox only. These paths do not exist in a production process, so
+        // calling them there is an ordinary 404 rather than a disabled
+        // feature — nothing about the UI can turn them back on.
+        sandbox: {
+            checkout: (token, options) => get(`/billing/sandbox/checkout/${encodeURIComponent(token)}`, null, options),
+            complete: (token, outcome, options) =>
+                post(`/billing/sandbox/checkout/${encodeURIComponent(token)}/complete`, { outcome }, options),
+            simulate: (kind, options) => post('/billing/sandbox/simulate', { kind }, options)
+        }
+    };
+
+    // ================= VIRTUAL DOCTOR (JWT required) =================
+    //
+    // Every call goes through the authenticated MedOrbit backend, which checks
+    // entitlement and then talks to the AI service over an internal credential
+    // a browser cannot hold. The old path — the browser calling port 8001
+    // directly with `user_id: null` — is gone, and the AI service now rejects
+    // it outright.
+    const virtualDoctor = {
+        start: (language, options) => post('/virtual-doctor/start', { language }, options),
+        message: (sessionId, message, options) =>
+            post('/virtual-doctor/message', { session_id: sessionId, message }, options),
+        session: (sessionId, options) => get(`/virtual-doctor/session/${sessionId}`, null, options),
+        endSession: (sessionId, options) => post(`/virtual-doctor/session/${sessionId}/end`, {}, options),
+        report: (sessionId, options) => post(`/virtual-doctor/report/${sessionId}`, {}, options),
+        reportDownloadUrl: (reportId) => `${BASE_URL}/virtual-doctor/report/${reportId}/download`,
+        warmup: (kind, language) => {
+            const q = language ? `?language=${encodeURIComponent(language)}` : '';
+            return post(`/virtual-doctor/${kind}/warmup${q}`, {});
+        }
+    };
+
+    const adminInvitations = {
+        list: (options) => get('/admin/invitations', null, options),
+        create: (email, options) => post('/admin/invitations', { email }, options),
+        revoke: (id, options) => del(`/admin/invitations/${id}`, options)
+    };
+
     return {
-        request, get, post, put, del, patch,
-        sendChatMessage, makeCancellable, conversations, doctors, clinics, users, appointments, notifications, analytics, care, feedback,
+        request, get, post, put, del, patch, uploadFile,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
-        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, resolveServiceOrigin, clearCache
+        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
 
 })();

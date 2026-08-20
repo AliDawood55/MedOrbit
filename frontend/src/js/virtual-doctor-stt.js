@@ -8,7 +8,7 @@
  *   capturing -> (silence 1.0s)  -> uploading -> transcript -> listening
  *
  * Posts each detected utterance to the AI service:
- *   POST http://<host>:8001/virtual-doctor/transcribe
+ *   POST <backend>/api/virtual-doctor/transcribe
  *
  * Two details that matter for short answers like "yes" or "نعم":
  *
@@ -27,7 +27,30 @@
  */
 const VirtualDoctorSTT = (() => {
 
-    const AI_BASE = API.getAiOrigin();
+
+    /**
+     * Authenticated call into the MedOrbit backend's Virtual Doctor gateway.
+     *
+     * These endpoints used to be called on the AI service directly, with no
+     * credential at all. They now require both an access token and ownership
+     * of an active consultation, so the model cannot be driven by anyone who
+     * merely has an account, let alone by an anonymous caller.
+     */
+    function vdBase() {
+        return API.getOrigin() + '/api/virtual-doctor';
+    }
+
+    function authHeaders(extra) {
+        const token = API.getAccessToken();
+        return Object.assign({}, extra || {}, token ? { Authorization: 'Bearer ' + token } : {});
+    }
+
+    /** The consultation this turn belongs to. */
+    function activeSessionId() {
+        if (typeof cfg.getSessionId === 'function') return cfg.getSessionId();
+        if (typeof VirtualDoctorSession !== 'undefined') return VirtualDoctorSession.getSessionId();
+        return null;
+    }
 
     // ---- Tunables. Adjust SILENCE_MS first when tuning turn-taking feel. ----
     const TUNING = {
@@ -326,6 +349,10 @@ const VirtualDoctorSTT = (() => {
         const ext = (blob.type || '').includes('mp4') ? 'mp4' : 'webm';
         form.append('audio', blob, `utterance.${ext}`);
         if (cfg.language) form.append('language', cfg.language);
+        // Scopes the turn to a consultation the caller owns. Without it the
+        // backend refuses, which is what keeps transcription from being usable
+        // as a free standalone service.
+        form.append('session_id', activeSessionId() || '');
 
         const sentAt = performance.now();
         // Without a deadline the UI can sit on "transcribing" forever: the
@@ -336,14 +363,17 @@ const VirtualDoctorSTT = (() => {
         const controller = new AbortController();
         const abortTimer = setTimeout(() => controller.abort(), TUNING.UPLOAD_TIMEOUT_MS);
         try {
-            const res = await fetch(AI_BASE + '/virtual-doctor/transcribe', {
-                method: 'POST', body: form, signal: controller.signal
+            const res = await fetch(vdBase() + '/transcribe', {
+                method: 'POST', headers: authHeaders(), body: form, signal: controller.signal
             });
             if (!res.ok) {
                 let detail = `HTTP ${res.status}`;
                 try {
                     const body = await res.json();
-                    if (body && body.detail) detail = body.detail;
+                    // The gateway uses the project error envelope; the AI
+                    // service used FastAPI's `detail`. Accept either.
+                    if (body?.error?.message) detail = body.error.message;
+                    else if (body && body.detail) detail = body.detail;
                 } catch (_) { /* non-JSON body */ }
                 emitError({
                     code: 'server',
@@ -354,7 +384,7 @@ const VirtualDoctorSTT = (() => {
                 return;
             }
 
-            const data = await res.json();
+            const data = unwrap(await res.json());
             const roundTripMs = Math.round(performance.now() - sentAt);
             const text = (data.text || '').trim();
 
@@ -510,10 +540,15 @@ const VirtualDoctorSTT = (() => {
         setGateMode(open ? 'open' : 'closed');
     }
 
+    /** Unwrap the backend's {success, data} envelope. */
+    function unwrap(payload) {
+        return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload;
+    }
+
     async function fetchStatus() {
         try {
-            const res = await fetch(AI_BASE + '/virtual-doctor/transcribe/status');
-            return res.ok ? await res.json() : null;
+            const res = await fetch(vdBase() + '/transcribe/status', { headers: authHeaders() });
+            return res.ok ? unwrap(await res.json()) : null;
         } catch (_) {
             return null;
         }
@@ -527,8 +562,8 @@ const VirtualDoctorSTT = (() => {
         // sizes on CPU, so warming the wrong one leaves a full cold load on
         // the patient's first answer — long enough to look like a freeze.
         const qs = cfg.language ? `?language=${encodeURIComponent(cfg.language)}` : '';
-        return fetch(AI_BASE + '/virtual-doctor/transcribe/warmup' + qs, { method: 'POST' })
-            .then((res) => (res.ok ? res.json() : null))
+        return fetch(vdBase() + '/transcribe/warmup' + qs, { method: 'POST', headers: authHeaders() })
+            .then((res) => (res.ok ? res.json().then(unwrap) : null))
             .catch(() => null);
     }
 

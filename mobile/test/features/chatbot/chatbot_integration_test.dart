@@ -1,0 +1,2 @@
+import 'package:flutter_test/flutter_test.dart'; import 'package:mobile/features/chatbot/models/chatbot_models.dart'; import 'package:mobile/features/chatbot/providers/chatbot_provider.dart';
+void main() { test('chatbot state retains backend clinics alongside places for map integration', () { const clinic = ChatPlaceResult(id: 'clinic-1', nameEn: 'Clinic'); final state = const ChatbotState().copyWith(clinics: const [clinic]); expect(state.clinics.single.id, 'clinic-1'); expect(state.places, isEmpty); }); }

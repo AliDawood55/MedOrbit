@@ -5,7 +5,6 @@
  */
 const ReportSummary = (() => {
 
-    const AI_BASE = API.getAiOrigin();
     const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
     const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
 
@@ -102,26 +101,14 @@ const ReportSummary = (() => {
         setLoading(true);
         showLoading();
 
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
         try {
-            const res = await fetch(AI_BASE + '/summarize', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.detail || 'Request failed');
-            }
+            const data = await API.uploadFile('/ai/summarize', 'file', selectedFile);
 
             showResult(data);
 
         } catch (err) {
             console.error('ReportSummary: request failed', err);
-            showError(err?.message);
+            showError();
         } finally {
             setLoading(false);
         }
@@ -142,16 +129,11 @@ const ReportSummary = (() => {
         result.classList.remove('hidden');
     }
 
-    function showError(detail) {
+    function showError() {
         const result = document.getElementById('resultSection');
         if (!result) return;
 
-        // Server-side validation errors (bad file/no extractable text) have a
-        // specific `detail` message worth showing as-is; anything else
-        // (network failure, service down) gets the generic friendly message.
-        const message = (detail && typeof detail === 'string' && detail.length < 300)
-            ? detail
-            : t('aitools.serverError');
+        const message = t('aitools.serverError');
 
         result.innerHTML =
             '<div class="tool-error">' +

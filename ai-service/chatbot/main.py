@@ -11,7 +11,7 @@ New endpoints added:
 """
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, Form, File, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
@@ -42,6 +42,7 @@ from chatbot.medical.symptom_engine import SymptomSpecialtyEngine
 from chatbot.medical.drug_interaction_matcher import DrugInteractionMatcher
 from chatbot.medical.document_extractor import DocumentExtractor
 from chatbot.medical.report_summarizer_llm import ReportSummarizerLLM
+from identity_boundary import resolve_internal_identity
 
 # === Virtual Doctor (new, additive, isolated module) ===
 from virtual_doctor.router import router as virtual_doctor_router
@@ -114,6 +115,7 @@ class ChatRequest(BaseModel):
     record: Optional[Dict[str, Any]] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    conversation_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -201,16 +203,24 @@ async def health():
 # T-047: TRIAGE ENDPOINT
 # =========================================================
 @app.post("/triage", response_model=TriageResponse)
-async def triage(req: TriageRequest):
+async def triage(
+    req: TriageRequest,
+    x_medorbit_internal_token: Optional[str] = Header(None),
+    x_medorbit_user_id: Optional[str] = Header(None),
+):
     """
     Symptom triage: maps symptoms → specialty using rule-based engine.
     Persists session to symptom_triage_sessions table.
     """
     try:
+        resolved_user_id, _ = resolve_internal_identity(
+            req.user_id, None, x_medorbit_internal_token, x_medorbit_user_id, None
+        )
+
         # 1) Run the mapping engine
         result = await symptom_engine.match(
             symptoms=req.symptoms,
-            user_id=uuid.UUID(req.user_id) if req.user_id else None,
+            user_id=uuid.UUID(resolved_user_id) if resolved_user_id else None,
         )
 
         # 2) Persist to DB
@@ -225,7 +235,7 @@ async def triage(req: TriageRequest):
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING id
             """,
-            uuid.UUID(req.user_id) if req.user_id else None,
+            uuid.UUID(resolved_user_id) if resolved_user_id else None,
             req.session_id or str(uuid.uuid4()),
             json.dumps({"symptoms": req.symptoms, "matched_keywords": result["matched_keywords"]}),
             result["triage_level"],
@@ -261,7 +271,7 @@ async def triage(req: TriageRequest):
 
     except Exception as e:
         logger.error("Triage error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Triage failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Triage failed")
 
 
 # =========================================================
@@ -349,9 +359,12 @@ async def prescription_check(req: PrescriptionCheckRequest):
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize(
     file: Optional[UploadFile] = File(None),
-    text: Optional[str] = None,
-    user_id: Optional[str] = None,
-    record_id: Optional[str] = None,
+    text: Optional[str] = Form(None),
+    user_id: Optional[str] = Form(None),
+    record_id: Optional[str] = Form(None),
+    x_medorbit_internal_token: Optional[str] = Header(None),
+    x_medorbit_user_id: Optional[str] = Header(None),
+    x_medorbit_record_id: Optional[str] = Header(None),
 ):
     """
     Medical report summarization pipeline.
@@ -361,6 +374,14 @@ async def summarize(
     Saves to report_summarizations table.
     """
     try:
+        resolved_user_id, resolved_record_id = resolve_internal_identity(
+            user_id,
+            record_id,
+            x_medorbit_internal_token,
+            x_medorbit_user_id,
+            x_medorbit_record_id,
+        )
+
         extracted_text = ""
         source_file_name = None
         source_file_type = None
@@ -399,8 +420,8 @@ async def summarize(
         # Run LLM summarization + persist
         summary_result = await llm_summarizer.summarize_and_save(
             extracted_text=extracted_text,
-            user_id=user_id,
-            record_id=record_id,
+            user_id=resolved_user_id,
+            record_id=resolved_record_id,
             source_file_name=source_file_name,
             source_file_type=source_file_type,
         )
@@ -421,7 +442,7 @@ async def summarize(
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error("Summarize error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Summarization failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Summarization failed")
 
 
 # =========================================================
@@ -526,7 +547,7 @@ async def chat(req: ChatRequest):
             )
 
         message = req.message
-        logger.info("=== NEW MESSAGE === | %s", message[:100])
+        logger.info("=== NEW MESSAGE === | chars=%d", len(message))
 
         # Step 1: Extract conversation context
         conv_context = None
@@ -588,17 +609,25 @@ async def chat(req: ChatRequest):
             entities["longitude"] = req.longitude
 
         # Step 5: Slot Filling
+        # NOTE: conversation_id is optional on ChatRequest. When the caller
+        # doesn't supply one, we fall back to a per-request UUID rather than
+        # hash(message) -- this avoids cross-user state collisions on
+        # identical message text, but (unlike a real conversation_id) it
+        # does NOT provide multi-turn continuity across requests. True
+        # continuity requires the backend/frontend to send a stable
+        # conversation_id, which is a separate follow-up.
         slot_info = None
+        slot_conversation_id = req.conversation_id or str(uuid.uuid4())
         if intent_result["intent"] != "unknown" and not intent_result.get("is_fallback"):
             slot_filler.update_state(
-                str(hash(message)),
+                slot_conversation_id,
                 intent_result["intent"],
                 entities,
             )
-            slot_state = slot_filler.get_state_summary(str(hash(message)))
+            slot_state = slot_filler.get_state_summary(slot_conversation_id)
             if slot_state.get("active") and not slot_state.get("completed"):
                 next_question = slot_filler.get_next_question(
-                    str(hash(message)),
+                    slot_conversation_id,
                     "ar" if any("\u0600" <= c <= "\u06FF" for c in message) else "en",
                 )
                 slot_info = {"state": slot_state, "next_question": next_question}

@@ -5,7 +5,6 @@
  */
 const SymptomChecker = (() => {
 
-    const AI_BASE = API.getAiOrigin();
 
     // Matches real seeded symptom_specialty_mappings keywords so these
     // quick-add chips reliably produce a good triage result.
@@ -87,17 +86,7 @@ const SymptomChecker = (() => {
         showLoading();
 
         try {
-            const res = await fetch(AI_BASE + '/triage', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ symptoms })
-            });
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.detail || 'Request failed');
-            }
+            const data = await API.post('/ai/triage', { symptoms });
 
             showResult(data);
 
@@ -148,8 +137,6 @@ const SymptomChecker = (() => {
 
         const specialtyDisplay = (ar ? data.recommended_specialty_name_ar : data.recommended_specialty_name_en)
             || data.recommended_specialty_name_en || data.recommended_specialty_name_ar || '';
-        const confidencePct = Math.max(0, Math.min(100, Math.round((data.confidence_score || 0) * 100)));
-
         let html = '';
 
         html += '<div class="triage-banner ' + level + '">' +
@@ -167,10 +154,6 @@ const SymptomChecker = (() => {
                 '<span class="triage-detail-value">' + escapeHtml(specialtyDisplay) + '</span>' +
             '</div>';
         }
-        html += '<div class="triage-detail-row">' +
-            '<span class="triage-detail-label">' + escapeHtml(t('symptomChecker.confidence')) + '</span>' +
-            '<div class="confidence-bar"><div class="confidence-bar-fill" style="width:' + confidencePct + '%;"></div></div>' +
-        '</div>';
         if (data.recommendations) {
             html += '<div style="margin-top:16px;">' +
                 '<div class="triage-detail-label" style="margin-bottom:8px;">' + escapeHtml(t('symptomChecker.recommendations')) + '</div>' +

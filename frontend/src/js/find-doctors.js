@@ -6,12 +6,10 @@ const FindDoctors = (() => {
 
     const PAGE_SIZE = 12;
 
-    // No dedicated /specialties endpoint exists — these are the seeded
-    // medorbit.specialties rows (stable reference data), used to build the
-    // filter dropdown. The English name is sent as the ?specialty= value
-    // regardless of UI language (the backend matches it ILIKE against both
-    // name_en and name_ar, so this always matches correctly).
-    const SPECIALTIES = [
+    // Fallback labels keep discovery usable if reference-data loading fails.
+    // The live /specialties response replaces these entries with authoritative
+    // UUID-backed options before a recommendation signal can be emitted.
+    let specialties = [
         { en: 'Anesthesiology', ar: 'التخدير' },
         { en: 'Cardiology', ar: 'طب القلب' },
         { en: 'Dentistry', ar: 'طب الأسنان' },
@@ -82,9 +80,24 @@ const FindDoctors = (() => {
 
         select.innerHTML =
             '<option value="">' + escapeHtml(t('doctors.specialtyAll')) + '</option>' +
-            SPECIALTIES.map(s => `<option value="${escapeHtml(s.en)}">${escapeHtml(ar ? s.ar : s.en)}</option>`).join('');
+            specialties.map(s => `<option value="${escapeHtml(s.en)}" data-specialty-id="${escapeHtml(s.id || '')}">${escapeHtml(ar ? s.ar : s.en)}</option>`).join('');
 
         select.value = selected;
+    }
+
+    async function loadSpecialties() {
+        const response = await API.get('/specialties');
+        const rows = Array.isArray(response.data) ? response.data : [];
+        specialties = rows
+            .filter(s => s?.id && s?.name_en)
+            .map(s => ({ id: s.id, en: s.name_en, ar: s.name_ar || s.name_en }));
+    }
+
+    function recordSpecialtySearch(select) {
+        const specialtyId = select?.selectedOptions?.[0]?.dataset?.specialtyId;
+        if (specialtyId && API.isAuthenticated()) {
+            API.social.specialtySearch(specialtyId).catch(() => {});
+        }
     }
 
     // ================= DATA =================
@@ -112,7 +125,7 @@ const FindDoctors = (() => {
         };
 
         try {
-            const res = await API.doctors.list(query, { auth: false, signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
+            const res = await API.doctors.list(query, { auth: true, signal: activeController.signal, cacheTTL: API.isAuthenticated() ? undefined : LIST_CACHE_TTL });
             const { doctors, pagination: pageInfo } = res.data;
 
             if (!doctors || doctors.length === 0) {
@@ -165,12 +178,20 @@ const FindDoctors = (() => {
         const acceptingBadge = d.is_accepting_patients === false
             ? '<span class="badge badge-danger">' + escapeHtml(t('doctors.notAccepting')) + '</span>'
             : (d.is_accepting_patients ? '<span class="badge badge-success">' + escapeHtml(t('doctors.accepting')) + '</span>' : '');
+        const reasons = {
+            FOLLOWED_DOCTOR: ar ? 'لأنك تتابع هذا الطبيب' : 'Because you follow this doctor',
+            INTEREST_SPECIALTY: ar ? 'بناءً على اهتمامك بهذا التخصص' : 'Based on your specialty interest',
+            TRENDING: ar ? 'طبيب شائع' : 'Popular doctor',
+            RECENT: ar ? 'اكتشاف الأطباء' : 'Doctor discovery'
+        };
+        const reasonBadge = d.reason_code && reasons[d.reason_code]
+            ? '<span class="badge badge-info">' + escapeHtml(reasons[d.reason_code]) + '</span>' : '';
 
         return (
             '<div class="entity-card">' +
                 '<div class="entity-card-body">' +
                     '<div class="entity-avatar">' +
-                        (d.profile_image_url ? '<img src="' + escapeHtml(d.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
+                        (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
                     '</div>' +
                     '<div class="entity-card-info">' +
                         '<div class="entity-card-title" title="' + name + '">' + name + '</div>' +
@@ -180,7 +201,7 @@ const FindDoctors = (() => {
                             (d.years_of_experience != null ? '<span><i class="fas fa-briefcase"></i>' + escapeHtml(String(d.years_of_experience)) + ' ' + escapeHtml(t('doctors.yearsExp')) + '</span>' : '') +
                             (d.consultation_fee != null ? '<span><i class="fas fa-shekel-sign"></i>' + escapeHtml(String(d.consultation_fee)) + '</span>' : '') +
                         '</div>' +
-                        (acceptingBadge ? '<div class="entity-card-badges">' + acceptingBadge + '</div>' : '') +
+                        ((acceptingBadge || reasonBadge) ? '<div class="entity-card-badges">' + acceptingBadge + reasonBadge + '</div>' : '') +
                     '</div>' +
                 '</div>' +
                 '<div class="entity-card-footer">' +
@@ -225,7 +246,12 @@ const FindDoctors = (() => {
 
     // ================= INIT =================
 
-    function init() {
+    async function init() {
+        try {
+            await loadSpecialties();
+        } catch (error) {
+            console.warn('FindDoctors: specialties unavailable', error);
+        }
         renderSpecialtyOptions();
 
         const params = new URLSearchParams(window.location.search);
@@ -238,7 +264,10 @@ const FindDoctors = (() => {
         const initialSpecialty = params.get('specialty');
         if (initialSpecialty) {
             const select = document.getElementById('specialtyFilter');
-            if (select) select.value = initialSpecialty;
+            if (select) {
+                select.value = initialSpecialty;
+                recordSpecialtySearch(select);
+            }
         }
 
         loadDoctors(1);
@@ -248,7 +277,10 @@ const FindDoctors = (() => {
             searchDebounceTimer = setTimeout(() => loadDoctors(1), 400);
         });
 
-        document.getElementById('specialtyFilter')?.addEventListener('change', () => loadDoctors(1));
+        document.getElementById('specialtyFilter')?.addEventListener('change', (event) => {
+            recordSpecialtySearch(event.currentTarget);
+            loadDoctors(1);
+        });
 
         document.getElementById('filterToggleBtn')?.addEventListener('click', () => {
             document.getElementById('filterCollapsible')?.classList.toggle('open');

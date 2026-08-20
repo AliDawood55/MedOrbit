@@ -47,6 +47,7 @@ import requests
 
 from chatbot.utils.text_normalizer import normalize_text
 from db import get_pool
+from .config import env_float, env_int
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.retrieval")
 
@@ -63,17 +64,25 @@ OLLAMA_EMBED_LEGACY_URL = OLLAMA_EMBED_URL.replace("/api/embed", "/api/embedding
 # vectors from different models are not comparable.
 EMBED_MODEL = os.environ.get("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
-RAG_TOP_K = int(os.environ.get("RAG_TOP_K", "3"))
+# minimum=1: reaches SQL as LIMIT; 0 or negative returns nothing or errors.
+RAG_TOP_K = env_int("RAG_TOP_K", 3, minimum=1)
 
 # Empirically chosen, unchanged from the original reasoning.py implementation:
 # nomic-embed-text packs embeddings into a narrow cone, so similarity has a high
 # floor. Measured over the ingested corpus across all five complaints in both
 # languages: relevant chunks 0.647-0.781, nonsense 0.450-0.558, corpus mean
 # 0.557. 0.60 sits in the empty gap between the two bands.
-RAG_MIN_SCORE = float(os.environ.get("RAG_MIN_SCORE", "0.60"))
+# Bounded to cosine's codomain [-1, 1]: this is compared against
+# cosine_similarity() output, so a threshold outside that range turns the
+# filter into a constant (accept everything / reject everything).
+RAG_MIN_SCORE = env_float("RAG_MIN_SCORE", 0.60, minimum=-1.0, maximum=1.0)
 
-RAG_MAX_CHUNK_CHARS = int(os.environ.get("RAG_MAX_CHUNK_CHARS", "1200"))
-RAG_EMBED_TIMEOUT = float(os.environ.get("RAG_EMBED_TIMEOUT", "20"))
+# minimum=1: used as `chunk_text[:RAG_MAX_CHUNK_CHARS]` — a negative would
+# silently keep the tail of each passage instead of the head.
+RAG_MAX_CHUNK_CHARS = env_int("RAG_MAX_CHUNK_CHARS", 1200, minimum=1)
+# exclusive_min=0: passed to requests(timeout=), which rejects <= 0.
+RAG_EMBED_TIMEOUT = env_float("RAG_EMBED_TIMEOUT", 20.0, minimum=0.0,
+                              exclusive_min=True)
 
 # How long Ollama should keep the embedding model resident between calls.
 #
@@ -111,9 +120,11 @@ EMBED_ON_CPU = os.environ.get("VD_EMBED_ON_CPU", "1") not in ("0", "false", "Fal
 EMBED_OPTIONS: Optional[Dict[str, Any]] = {"num_gpu": 0} if EMBED_ON_CPU else None
 
 # --- Cache configuration (env-tunable) --------------------------------------
-RESULT_CACHE_SIZE = int(os.environ.get("VD_RAG_CACHE_SIZE", "256"))
-RESULT_CACHE_TTL = float(os.environ.get("VD_RAG_CACHE_TTL", "900"))
-EMBED_CACHE_SIZE = int(os.environ.get("RAG_EMBED_CACHE_SIZE", "128"))
+# minimum=0 on all three: zero is meaningful here (a disabled cache), and
+# the code already passes a literal ttl of 0 for the embedding cache.
+RESULT_CACHE_SIZE = env_int("VD_RAG_CACHE_SIZE", 256, minimum=0)
+RESULT_CACHE_TTL = env_float("VD_RAG_CACHE_TTL", 900.0, minimum=0.0)
+EMBED_CACHE_SIZE = env_int("RAG_EMBED_CACHE_SIZE", 128, minimum=0)
 
 # English seed phrases per canonical complaint. The corpus is an English
 # textbook and nomic-embed-text is a weak cross-lingual matcher: measured, a raw

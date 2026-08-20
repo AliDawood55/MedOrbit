@@ -47,6 +47,7 @@ Two things about this are deliberate and measured (see _RETRIEVAL_NOTES):
     for Arabic consultations, because the corpus is an English textbook.
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -57,7 +58,7 @@ import requests
 
 from chatbot.medical.symptom_engine import SymptomSpecialtyEngine
 
-from . import memory, retrieval
+from . import memory, reasoning_engine, retrieval
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.reasoning")
 
@@ -83,15 +84,22 @@ EMBED_MODEL = retrieval.EMBED_MODEL
 
 # emergency > urgent > routine — used to decide which of the two urgency
 # opinions (rule engine vs LLM) wins. Higher number always wins.
-_URGENCY_RANK = {"emergency": 3, "urgent": 2, "routine": 1}
+#
+# DERIVED, not restated (Phase 3). The values are byte-identical to the literal
+# that used to live here; the change is that there is now exactly one urgency
+# ranking in the service, in reasoning_engine.vocabulary, and every other
+# module reads it. Two independently-maintained rank tables in a safety path is
+# a latent bug waiting for someone to edit one of them.
+_URGENCY_RANK = dict(reasoning_engine.vocabulary.URGENCY_RANK)
 _VALID_URGENCY = set(_URGENCY_RANK)
 
 _symptom_engine = SymptomSpecialtyEngine()
 
 # Seed phrases fed to the rule engine's substring matcher, in the exact
-# wording used by symptom_specialty_mappings (db/07_triage_tables.sql), so
-# the DB-backed lookup fires even when the patient's free-text answers are
-# terse (e.g. a one-word severity answer).
+# wording stored in the DB's symptom_specialty_mappings table (schema kept
+# locally, not tracked in git — see backend/migrations for what is tracked),
+# so the DB-backed lookup fires even when the patient's free-text answers
+# are terse (e.g. a one-word severity answer).
 #
 # Same table retrieval.py uses to anchor its queries in English — aliased
 # rather than copied so the two can never drift apart.
@@ -372,7 +380,7 @@ Reminder: "condition" and "recommended_next_step" must be written entirely in {l
 """
 
 
-def _call_llm_once(
+async def _call_llm_once(
     chief_complaint: str,
     profile: Dict[str, Any],
     lang: str,
@@ -409,7 +417,8 @@ def _call_llm_once(
     temperature = 0.2 if strict else 0.4
 
     try:
-        response = requests.post(
+        response = await asyncio.to_thread(
+            requests.post,
             OLLAMA_CHAT_URL,
             json={
                 "model": MODEL_NAME,
@@ -431,12 +440,12 @@ def _call_llm_once(
         return None
 
 
-def _call_llm(
+async def _call_llm(
     chief_complaint: str, profile: Dict[str, Any], lang: str, context_block: str = "",
     history_block: str = "",
 ) -> dict:
-    parsed = _call_llm_once(chief_complaint, profile, lang, strict=False,
-                            context_block=context_block, history_block=history_block)
+    parsed = await _call_llm_once(chief_complaint, profile, lang, strict=False,
+                                  context_block=context_block, history_block=history_block)
     normalized = _normalize_llm_output(parsed, lang)
     if _output_language_ok(normalized, lang):
         return normalized
@@ -444,7 +453,7 @@ def _call_llm(
     logger.warning(
         "Reasoning LLM output failed language check (lang=%s) — retrying with a stricter prompt", lang
     )
-    parsed_retry = _call_llm_once(
+    parsed_retry = await _call_llm_once(
         chief_complaint, profile, lang, strict=True, context_block=context_block
     )
     normalized_retry = _normalize_llm_output(parsed_retry, lang)
@@ -475,8 +484,16 @@ async def run_reasoning(
     section in the prompt.
     """
     symptom_list = _build_symptom_list(chief_complaint, profile)
-    rule_result = await _symptom_engine.match(symptoms=symptom_list or [chief_complaint])
 
+    # The rule-engine match and the RAG retrieval are independent — the rule
+    # engine works off the symptom list, retrieval off the chief complaint and
+    # profile, and neither reads the other's result. Only combined afterward,
+    # so run them concurrently rather than paying two round trips back to
+    # back. Retrieval already never raises (fails soft to [] — see below), so
+    # this is not wrapped in return_exceptions=True: if the rule engine raises,
+    # the exception still propagates to the caller exactly as it did when this
+    # was sequential.
+    #
     # RAG: ground the LLM in the textbook before asking it for a differential.
     # Returns [] on any failure, in which case _call_llm behaves exactly as it
     # did before this feature existed.
@@ -490,12 +507,15 @@ async def run_reasoning(
     # radiates to the left arm" (everything known by the end), and the
     # profile-wide query already contains and exceeds what any per-turn query
     # covered. See retrieval.retrieve_for_profile / build_profile_query.
-    context_chunks = await _retrieve_medical_context(chief_complaint, profile)
+    rule_result, context_chunks = await asyncio.gather(
+        _symptom_engine.match(symptoms=symptom_list or [chief_complaint]),
+        _retrieve_medical_context(chief_complaint, profile),
+    )
     context_block = _format_medical_context(context_chunks)
 
     history_block = memory.format_history(history, lang) if history else ""
 
-    llm_result = _call_llm(chief_complaint, profile, lang, context_block, history_block)
+    llm_result = await _call_llm(chief_complaint, profile, lang, context_block, history_block)
 
     final_urgency = _more_urgent(rule_result["triage_level"], llm_result["urgency"])
 
@@ -526,9 +546,14 @@ async def run_reasoning(
     }
 
     if lang == "ar":
+        # Simplified formal Arabic (Virtual Doctor Formal Arabic Voice
+        # Quality batch), superseding an earlier dialect version
+        # ("حسب اللي حكيتلي إياه، الأفضل تراجع ..."). Wording only — the
+        # specialty, the urgency level and the next step are the exact same
+        # values, and the urgency label table is unchanged.
         reply = (
-            f"بناءً على ما أخبرتني به، أقترح مراجعة تخصص {rule_result['recommended_specialty_name_ar']}. "
-            f"درجة الأولوية: {_URGENCY_LABEL_AR[final_urgency]}. {llm_result['recommended_next_step']}"
+            f"بحسب المعلومات التي ذكرتها، يُفضّل مراجعة {rule_result['recommended_specialty_name_ar']} قريبًا. "
+            f"الأولوية: {_URGENCY_LABEL_AR[final_urgency]}. {llm_result['recommended_next_step']}"
         )
     else:
         reply = (

@@ -166,6 +166,51 @@ body.site-page [id] {
     flex-shrink: 0;
 }
 
+.notification-bell {
+    position: relative;
+    color: var(--text-soft);
+    text-decoration: none;
+}
+
+.icon-btn .notification-badge,
+.drawer-notification-link .notification-badge {
+    position: absolute;
+    inset-block-start: -4px;
+    inset-inline-end: -5px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg-elevated);
+    border-radius: var(--r-full);
+    background: var(--danger);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    box-sizing: border-box;
+}
+
+.notification-badge.hidden {
+    display: none;
+}
+
+.drawer-notification-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawer-notification-link .notification-badge {
+    inset-block-start: 50%;
+    inset-inline-end: 10px;
+    transform: translateY(-50%);
+    border-color: var(--bg-elevated);
+}
+
 .user-chip {
     position: relative;
     display: flex;

@@ -2,17 +2,20 @@
  * MedOrbit v2 - Home Feedback Dashboard
  * Wires the bottom section of home.html to GET /api/feedback/stats:
  * two Chart.js doughnut charts (rating distribution, category averages), a
- * KPI strip, and a continuous marquee of users who left feedback. Polls
- * every 5s so newly submitted feedback (from feedback.html) shows up live
- * without a page reload.
+ * KPI strip, and a continuous marquee of users who left feedback. Refreshes
+ * on a bounded cadence so updates appear without creating background storms.
  */
 const FeedbackDashboard = (() => {
 
-    const POLL_MS = 5000;
+    const POLL_MS = 60_000;
 
     const charts = {};
     let pollTimer = null;
+    let loadRequest = null;
+    let lastLoadedAt = 0;
+    let lastData = null;
     let lastUserKey = null;
+    let initialized = false;
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -259,7 +262,7 @@ const FeedbackDashboard = (() => {
     function marqueeItemHtml(user) {
         const name = escapeHtml(displayName(user));
         const avatar = user.avatarUrl
-            ? '<img class="feedback-marquee-avatar" src="' + escapeHtml(API.getOrigin() + user.avatarUrl) + '" alt="">'
+            ? '<img class="feedback-marquee-avatar" src="' + escapeHtml(API.assetUrl(user.avatarUrl)) + '" alt="">'
             : '<span class="feedback-marquee-avatar-placeholder"></span>';
 
         return (
@@ -274,9 +277,23 @@ const FeedbackDashboard = (() => {
         const wrap = document.getElementById('feedbackMarquee');
         const track = document.getElementById('feedbackMarqueeTrack');
         const empty = document.getElementById('feedbackDashEmpty');
+        const section = wrap?.closest('.feedback-dash-users');
         if (!wrap || !track) return;
 
-        const list = Array.isArray(users) ? users : [];
+        // GET /api/feedback/stats returns the aggregates to everyone but sends
+        // `users` (real people's names and avatars) only to a signed-in caller.
+        // An absent array therefore means "not shown to guests", which is not
+        // the same as an empty one — hide the whole section rather than tell a
+        // visitor there is no feedback yet when there is.
+        if (!Array.isArray(users)) {
+            section?.classList.add('hidden');
+            track.innerHTML = '';
+            lastUserKey = '';
+            return;
+        }
+        section?.classList.remove('hidden');
+
+        const list = users;
 
         if (!list.length) {
             wrap.classList.add('hidden');
@@ -303,18 +320,46 @@ const FeedbackDashboard = (() => {
 
     // ================= LOAD =================
 
-    async function loadStats() {
-        try {
-            const res = await API.feedback.stats();
-            const data = res?.data || null;
+    function renderData(data) {
+        renderKpis(data);
+        renderRatingChart(data?.ratingDistribution);
+        renderCategoryChart(data?.categoryAverages);
+        renderMarquee(data?.users);
+    }
 
-            renderKpis(data);
-            renderRatingChart(data?.ratingDistribution);
-            renderCategoryChart(data?.categoryAverages);
-            renderMarquee(data?.users);
-        } catch (err) {
-            console.error('FeedbackDashboard: failed to load GET /api/feedback/stats', err);
-        }
+    function stopPolling() {
+        if (pollTimer) window.clearTimeout(pollTimer);
+        pollTimer = null;
+    }
+
+    function schedulePoll(delay = POLL_MS) {
+        stopPolling();
+        if (document.hidden) return;
+        pollTimer = window.setTimeout(loadStats, delay);
+    }
+
+    async function loadStats() {
+        if (loadRequest) return loadRequest;
+
+        loadRequest = (async () => {
+            let nextDelay = POLL_MS;
+            try {
+                const res = await API.feedback.stats();
+                lastData = res?.data || null;
+                renderData(lastData);
+            } catch (err) {
+                if (err.status === 429 && err.retryAfterSeconds) {
+                    nextDelay = Math.max(nextDelay, err.retryAfterSeconds * 1000);
+                }
+                console.error('FeedbackDashboard: failed to load GET /api/feedback/stats', err);
+            } finally {
+                lastLoadedAt = Date.now();
+                loadRequest = null;
+                schedulePoll(nextDelay);
+            }
+        })();
+
+        return loadRequest;
     }
 
     function rerenderStatic() {
@@ -322,23 +367,30 @@ const FeedbackDashboard = (() => {
         destroy('ratings');
         destroy('categories');
         lastUserKey = null;
-        loadStats();
+        if (lastData) renderData(lastData);
     }
 
     // ================= INIT =================
 
     function init() {
+        if (initialized) return;
+        initialized = true;
         if (!document.getElementById('feedbackDashKpis')) return;
 
         loadStats();
 
-        pollTimer = window.setInterval(loadStats, POLL_MS);
-
         document.getElementById('themeToggle')?.addEventListener('click', rerenderStatic);
         window.addEventListener('languageChanged', rerenderStatic);
-        window.addEventListener('beforeunload', () => {
-            if (pollTimer) window.clearInterval(pollTimer);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopPolling();
+                return;
+            }
+            const elapsed = Date.now() - lastLoadedAt;
+            if (!lastLoadedAt || elapsed >= POLL_MS) loadStats();
+            else schedulePoll(POLL_MS - elapsed);
         });
+        window.addEventListener('beforeunload', stopPolling);
     }
 
     return { init };

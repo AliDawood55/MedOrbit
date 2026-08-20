@@ -1,6 +1,11 @@
-# Root .dockerignore — applies to any build using the repo root as its
-# context. Today that's only ai-service (its Dockerfile needs root
-# requirements.txt), but kept generic.
+# Root .dockerignore — the single ignore file for every image build in this
+# repo (ai-service, backend, backend test, frontend), all of which now use
+# the repository root as their build context.
+#
+# NOTE: unlike .gitignore, Docker root-anchors a bare pattern (no "**/") to
+# the build context root — it does NOT match at every depth. Any rule below
+# meant to apply inside subdirectories (backend/, frontend/, ai-service/,
+# mobile/, ...) must be written with a "**/" prefix.
 
 .git
 .github
@@ -10,10 +15,17 @@ node_modules
 **/node_modules
 **/__pycache__
 **/*.pyc
+**/npm-debug.log
 
-# Not needed for the ai-service image, and can be large/sensitive
-backend
-frontend
+# Dockerfiles are read directly by the build engine, not via COPY/ADD, so
+# they never need to be present inside the built image.
+Dockerfile
+**/Dockerfile
+Dockerfile.*
+**/Dockerfile.*
+.dockerignore
+
+# Not needed inside any image, and can be large/sensitive
 db
 database
 docs
@@ -26,13 +38,17 @@ ai-service/data
 ai-service/tests
 
 **/uploads
-*.backup
-*.dump
-*.sql.bak
+**/*.backup
+**/*.dump
+**/*.sql.bak
 
 .env
+.env.*
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 
-*.md
-.aider*
+**/*.md
+**/.aider*
 tempData

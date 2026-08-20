@@ -1,368 +1,347 @@
-/**
- * MedOrbit v2 - Doctor Profile
- * GET /api/doctors/:id (profile + clinics + reviews) and
- * GET /api/doctors/:id/availability (weekly schedule).
- */
+/** MedOrbit Doctor Profile 2.0 — public, privacy-safe professional profile. */
 const DoctorProfile = (() => {
-
     const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    let currentDoctor = null;
+    let currentPosts = [];
 
-    function isAr() {
-        return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
+    const isAr = () => (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
+    const t = (key) => typeof I18n !== 'undefined' ? I18n.t(key) : key;
+
+    function escapeHtml(value) {
+        if (value == null) return '';
+        return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    function t(key) {
-        return typeof I18n !== 'undefined' ? I18n.t(key) : key;
+    function assetUrl(value) {
+        return API.assetUrl(value);
     }
 
-    function escapeHtml(s) {
-        if (s == null) return '';
-        return String(s)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+    function localized(record, arKey, enKey) {
+        return ((isAr() ? record?.[arKey] : record?.[enKey])
+            || record?.[arKey] || record?.[enKey] || '').trim();
     }
 
-    function getIdFromUrl() {
-        return new URLSearchParams(window.location.search).get('id');
+    function displayName(doctor) {
+        return `${localized(doctor, 'first_name_ar', 'first_name_en')} ${localized(doctor, 'last_name_ar', 'last_name_en')}`.trim();
     }
 
-    function name(d, arKey, enKey) {
-        const ar = isAr();
-        return ((ar ? d[arKey] : d[enKey]) || d[arKey] || d[enKey] || '').trim();
+    function compactEmpty(ownerText, visitorText, href) {
+        return '<div class="profile-compact-empty"><i class="fas fa-circle-info" aria-hidden="true"></i><span>'
+            + escapeHtml(currentDoctor?.is_owner ? ownerText : visitorText) + '</span>'
+            + (currentDoctor?.is_owner && href
+                ? '<a class="text-link" href="' + href + '">' + escapeHtml(isAr() ? 'إضافة معلومات' : 'Add information') + '</a>'
+                : '') + '</div>';
     }
 
-    function doctorName(d) {
-        const full = (name(d, 'first_name_ar', 'first_name_en') + ' ' + name(d, 'last_name_ar', 'last_name_en')).trim();
-        return full || d.email || '';
+    function tagList(values) {
+        if (!Array.isArray(values) || !values.length) return '';
+        return '<div class="profile-chip-list">' + values.map((value) =>
+            '<span class="profile-chip">' + escapeHtml(value) + '</span>'
+        ).join('') + '</div>';
     }
-
-    function formatTime(t) {
-        return t ? String(t).slice(0, 5) : '';
-    }
-
-    // ================= LOAD =================
-
-    async function load() {
-        const id = getIdFromUrl();
-        const content = document.getElementById('doctorContent');
-        if (!content) return;
-
-        if (!id) {
-            content.innerHTML = renderNotFound();
-            return;
-        }
-
-        content.innerHTML = renderSkeleton();
-
-        try {
-            const [profileRes, availabilityRes, postsRes] = await Promise.all([
-                API.doctors.get(id, { auth: false }),
-                API.doctors.availability(id, null, { auth: false }).catch(() => null),
-                API.care.doctorPosts(id, { auth: false }).catch(() => null)
-            ]);
-
-            const { doctor, clinics, reviews } = profileRes.data;
-            const slots = availabilityRes?.data?.slots || profileRes.data.availability || [];
-            const posts = Array.isArray(postsRes?.data) ? postsRes.data : [];
-
-            content.innerHTML = renderProfile(doctor, clinics || [], slots, reviews || [], posts);
-            wireProfileTabs(content, posts);
-            renderMiniMap(clinics || []);
-
-        } catch (err) {
-            console.error('DoctorProfile: failed to load', err);
-            if (err?.status === 404) {
-                content.innerHTML = renderNotFound();
-            } else {
-                content.innerHTML = renderError();
-                document.getElementById('retryBtn')?.addEventListener('click', load);
-            }
-        }
-    }
-
-    // ================= RENDER: STATES =================
 
     function renderSkeleton() {
-        return (
-            '<div class="profile-header">' +
-                '<div class="skeleton" style="width:96px;height:96px;border-radius:18px;flex-shrink:0;"></div>' +
-                '<div style="flex:1;">' +
-                    '<div class="skeleton" style="height:22px;width:40%;margin-bottom:10px;"></div>' +
-                    '<div class="skeleton" style="height:14px;width:25%;"></div>' +
-                '</div>' +
-            '</div>'
-        );
+        return '<section class="doctor-hero skeleton-card" aria-busy="true">'
+            + '<div class="skeleton doctor-avatar-skeleton"></div>'
+            + '<div class="doctor-hero-copy"><div class="skeleton skeleton-line-lg"></div>'
+            + '<div class="skeleton skeleton-line-md"></div><div class="skeleton skeleton-line-sm"></div></div></section>';
     }
 
-    function renderNotFound() {
-        return '<div class="empty-state">' +
-            '<div class="empty-state-icon"><i class="fas fa-user-doctor"></i></div>' +
-            '<h3>' + escapeHtml(t('doctor.notFound')) + '</h3>' +
-        '</div>';
+    function renderState(icon, title, retry = false) {
+        return '<div class="empty-state profile-state"><div class="empty-state-icon"><i class="fas ' + icon + '"></i></div>'
+            + '<h2>' + escapeHtml(title) + '</h2>'
+            + (retry ? '<button type="button" class="btn btn-secondary" id="retryBtn">' + escapeHtml(t('common.retry')) + '</button>' : '')
+            + '</div>';
     }
 
-    function renderError() {
-        return '<div class="error-state">' +
-            '<i class="fas fa-triangle-exclamation"></i>' +
-            '<p>' + escapeHtml(t('doctors.error')) + '</p>' +
-            '<button type="button" class="btn btn-secondary btn-sm" id="retryBtn">' + escapeHtml(t('common.retry')) + '</button>' +
-        '</div>';
+    function heroActions(doctor) {
+        if (doctor.is_owner) {
+            return '<a class="btn btn-primary" href="doctor-profile-edit.html"><i class="fas fa-pen"></i>'
+                + escapeHtml(isAr() ? 'تعديل الملف المهني' : 'Edit professional profile') + '</a>';
+        }
+        const user = API.getUser();
+        const canMessage = ['patient', 'doctor'].includes(user?.role);
+        const showMessage = !API.isAuthenticated() || canMessage;
+        const redirect = encodeURIComponent('doctor.html?id=' + doctor.id);
+        const messageHref = canMessage
+            ? 'direct-messages.html?counterpart=' + encodeURIComponent(doctor.id)
+            : 'login.html?redirect=' + redirect;
+        const bookingAction = doctor.is_accepting_patients
+            ? '<a class="btn btn-secondary" href="book-appointment.html?doctorId=' + encodeURIComponent(doctor.id) + '"><i class="fas fa-calendar-plus"></i>'
+                + escapeHtml(t('doctor.bookAppointment')) + '</a>'
+            : '<span class="btn btn-secondary disabled" aria-disabled="true"><i class="fas fa-calendar-xmark"></i>'
+                + escapeHtml(isAr() ? 'لا يستقبل مواعيد جديدة حالياً' : 'Not currently accepting new appointments') + '</span>';
+        return (showMessage ? '<a class="btn btn-primary" id="doctorMessageBtn" href="' + messageHref + '"><i class="fas fa-message"></i>'
+            + escapeHtml(isAr() ? 'مراسلة' : 'Message') + '</a>' : '')
+            + bookingAction
+            + '<button type="button" class="btn btn-ghost" id="doctorFollowBtn"><i class="fas '
+            + (doctor.is_following ? 'fa-user-check' : 'fa-user-plus') + '"></i><span>'
+            + escapeHtml(doctor.is_following ? (isAr() ? 'متابَع' : 'Following') : (isAr() ? 'متابعة' : 'Follow'))
+            + '</span></button>';
     }
 
-    // ================= RENDER: PROFILE =================
+    function renderHero(doctor) {
+        const fullName = displayName(doctor) || (isAr() ? 'طبيب MedOrbit' : 'MedOrbit Doctor');
+        const specialty = localized(doctor, 'specialty_ar', 'specialty_en');
+        const rating = Number(doctor.average_rating || 0).toFixed(1);
+        const initials = fullName.charAt(0).toUpperCase();
+        const meta = [
+            doctor.city ? '<span><i class="fas fa-location-dot"></i>' + escapeHtml(doctor.city) + '</span>' : '',
+            doctor.years_of_experience != null ? '<span><i class="fas fa-briefcase"></i>' + escapeHtml(doctor.years_of_experience) + ' ' + escapeHtml(t('doctors.yearsExp')) + '</span>' : '',
+            '<span><i class="fas fa-star"></i>' + escapeHtml(rating) + ' · ' + escapeHtml(doctor.total_ratings || 0) + ' ' + escapeHtml(isAr() ? 'تقييم' : 'ratings') + '</span>',
+            '<span><i class="fas fa-users"></i><strong id="doctorFollowerCount">' + escapeHtml(doctor.follower_count || 0) + '</strong> ' + escapeHtml(isAr() ? 'متابع' : 'followers') + '</span>'
+        ].filter(Boolean).join('');
 
-    function renderProfile(doctor, clinics, slots, reviews, posts) {
-        const ar = isAr();
-        const fullName = escapeHtml(doctorName(doctor));
-        const specialty = escapeHtml(name(doctor, 'specialty_ar', 'specialty_en'));
-        const initials = (doctorName(doctor) || '?').trim().charAt(0).toUpperCase();
-        const rating = doctor.average_rating != null ? Number(doctor.average_rating).toFixed(1) : null;
+        return '<section class="doctor-hero">'
+            + '<div class="profile-avatar doctor-profile-avatar">'
+            + (doctor.profile_image_url
+                ? '<img src="' + escapeHtml(assetUrl(doctor.profile_image_url)) + '" alt="">'
+                : '<span>' + escapeHtml(initials) + '</span>') + '</div>'
+            + '<div class="doctor-hero-copy"><div class="doctor-name-row"><h1>' + escapeHtml(fullName) + '</h1>'
+            + (doctor.is_verified ? '<span class="verified-badge"><i class="fas fa-circle-check"></i>' + escapeHtml(isAr() ? 'طبيب معتمد' : 'Verified doctor') + '</span>' : '')
+            + '</div>'
+            + (specialty ? '<p class="doctor-specialty">' + escapeHtml(specialty)
+                + (doctor.sub_specialty ? ' · ' + escapeHtml(doctor.sub_specialty) : '') + '</p>' : '')
+            + (doctor.professional_headline ? '<p class="doctor-headline">' + escapeHtml(doctor.professional_headline) + '</p>' : '')
+            + '<div class="doctor-meta">' + meta + '</div>'
+            + '<span class="availability-pill ' + (doctor.is_accepting_patients ? 'available' : 'unavailable') + '">'
+            + '<i class="fas fa-circle"></i>' + escapeHtml(doctor.is_accepting_patients ? t('doctors.accepting') : t('doctors.notAccepting')) + '</span>'
+            + '</div><div class="doctor-primary-actions">' + heroActions(doctor) + '</div></section>';
+    }
 
-        const acceptingBadge = doctor.is_accepting_patients === false
-            ? '<span class="badge badge-danger">' + escapeHtml(t('doctors.notAccepting')) + '</span>'
-            : (doctor.is_accepting_patients ? '<span class="badge badge-success">' + escapeHtml(t('doctors.accepting')) + '</span>' : '');
+    function renderAbout(doctor) {
+        const bio = doctor.professional_bio || localized(doctor, 'professional_bio_ar', 'professional_bio_en');
+        const editHref = 'doctor-profile-edit.html';
+        const section = (icon, title, content, emptyOwner, emptyVisitor) =>
+            '<section class="profile-detail-card"><h2><i class="fas ' + icon + '"></i>' + escapeHtml(title) + '</h2>'
+            + (content || compactEmpty(emptyOwner, emptyVisitor, editHref)) + '</section>';
+        const list = (values) => Array.isArray(values) && values.length
+            ? '<ul class="profile-clean-list">' + values.map((value) => '<li>' + escapeHtml(value) + '</li>').join('') + '</ul>'
+            : '';
 
-        const bio = name(doctor, 'professional_bio_ar', 'professional_bio_en');
-
-        return (
-            '<div class="profile-header">' +
-                '<div class="profile-avatar">' +
-                    (doctor.profile_image_url ? '<img src="' + escapeHtml(doctor.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
-                '</div>' +
-                '<div class="profile-info">' +
-                    '<h1>' + fullName + '</h1>' +
-                    (specialty ? '<div class="profile-subtitle">' + specialty + '</div>' : '') +
-                    '<div class="profile-meta">' +
-                        (rating ? '<span class="rating"><span class="rating-stars">★</span><span class="rating-value">' + rating + (doctor.total_ratings ? ' (' + doctor.total_ratings + ')' : '') + '</span></span>' : '') +
-                        (doctor.years_of_experience != null ? '<span><i class="fas fa-briefcase"></i>' + escapeHtml(String(doctor.years_of_experience)) + ' ' + escapeHtml(t('doctors.yearsExp')) + '</span>' : '') +
-                        (doctor.consultation_fee != null ? '<span><i class="fas fa-shekel-sign"></i>' + escapeHtml(t('doctor.consultationFee')) + ': ' + escapeHtml(String(doctor.consultation_fee)) + '</span>' : '') +
-                        (doctor.city ? '<span><i class="fas fa-location-dot"></i>' + escapeHtml(doctor.city) + '</span>' : '') +
-                    '</div>' +
-                    (acceptingBadge ? '<div class="profile-badges">' + acceptingBadge + '</div>' : '') +
-                '</div>' +
-                '<div class="profile-actions">' +
-                    '<a class="btn btn-primary btn-sm" href="book-appointment.html?doctorId=' + encodeURIComponent(doctor.id) + '"><i class="fas fa-calendar-plus"></i> ' + escapeHtml(t('doctor.bookAppointment')) + '</a>' +
-                    '<a class="btn btn-secondary btn-sm" href="index.html"><i class="fas fa-comments"></i> ' + escapeHtml(t('home.startChat')) + '</a>' +
-                '</div>' +
-            '</div>' +
-
-            '<div class="profile-layout">' +
-                '<div class="profile-main">' +
-                    renderProfileTabs(bio, slots, reviews, posts) +
-                '</div>' +
-
-                '<aside class="profile-sidebar">' +
-                    '<div class="profile-section">' +
-                        '<h2><i class="fas fa-hospital"></i> ' + escapeHtml(t('doctor.clinics')) + '</h2>' +
-                        (clinics.length
-                            ? clinics.map(renderClinicSubItem).join('')
-                            : '<p>' + escapeHtml(t('clinic.noDoctors')) + '</p>') +
-                    '</div>' +
-                    (hasMappableClinic(clinics) ? '<div class="profile-section"><div id="doctorMiniMap" class="mini-map"></div></div>' : '') +
-                '</aside>' +
-            '</div>'
-        );
+        return '<div class="profile-about-grid">'
+            + section('fa-user-doctor', isAr() ? 'السيرة المهنية' : 'Professional bio',
+                bio ? '<p class="profile-long-copy">' + escapeHtml(bio) + '</p>' : '',
+                isAr() ? 'أضف سيرتك المهنية لبناء الثقة.' : 'Add your professional bio to build trust.',
+                isAr() ? 'لم تُضف سيرة مهنية بعد.' : 'No professional bio listed yet.')
+            + section('fa-stethoscope', isAr() ? 'مجالات الخبرة' : 'Areas of expertise', tagList(doctor.areas_of_expertise),
+                isAr() ? 'أضف مجالات خبرتك.' : 'Add your areas of expertise.',
+                isAr() ? 'لم تُدرج مجالات خبرة بعد.' : 'No expertise areas listed yet.')
+            + section('fa-lightbulb', isAr() ? 'الاهتمامات المهنية' : 'Professional interests', tagList(doctor.professional_interests),
+                isAr() ? 'أضف اهتماماتك المهنية.' : 'Add your professional interests.',
+                isAr() ? 'لم تُدرج اهتمامات مهنية بعد.' : 'No professional interests listed yet.')
+            + section('fa-graduation-cap', isAr() ? 'التعليم' : 'Education', list(doctor.education),
+                isAr() ? 'أضف مؤهلاتك التعليمية.' : 'Add your education.',
+                isAr() ? 'لم تُدرج معلومات تعليمية بعد.' : 'No education listed yet.')
+            + section('fa-certificate', isAr() ? 'الشهادات' : 'Certifications', list(doctor.certifications),
+                isAr() ? 'أضف شهاداتك المهنية.' : 'Add your certifications.',
+                isAr() ? 'لم تُدرج شهادات بعد.' : 'No certifications listed yet.')
+            + section('fa-language', isAr() ? 'اللغات' : 'Languages', tagList(doctor.languages_spoken),
+                isAr() ? 'أضف اللغات التي تتحدثها.' : 'Add the languages you speak.',
+                isAr() ? 'لم تُدرج لغات بعد.' : 'No languages listed yet.')
+            + '</div>';
     }
 
     function renderSchedule(slots) {
-        const byDay = [[], [], [], [], [], [], []];
-        (slots || []).forEach(s => {
-            const day = Number(s.day_of_week);
-            if (day >= 0 && day <= 6) byDay[day].push(s);
-        });
-
-        const todayIndex = new Date().getDay();
-
-        return '<div class="schedule-grid">' +
-            byDay.map((daySlots, i) => {
-                daySlots.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                return (
-                    '<div class="schedule-day' + (i === todayIndex ? ' today' : '') + '">' +
-                        '<div class="schedule-day-name">' + escapeHtml(t('day.' + DAY_KEYS[i])) + '</div>' +
-                        (daySlots.length
-                            ? '<div class="schedule-day-slots">' + daySlots.map(s =>
-                                '<span class="slot">' + formatTime(s.start_time) + '–' + formatTime(s.end_time) + '</span>'
-                              ).join('') + '</div>'
-                            : '<div class="schedule-day-off">' + escapeHtml(t('doctor.closed')) + '</div>') +
-                    '</div>'
-                );
-            }).join('') +
-        '</div>' +
-        (slots.length === 0 ? '<p style="margin-top:12px;">' + escapeHtml(t('doctor.noAvailability')) + '</p>' : '');
-    }
-
-    function renderReview(r) {
-        const text = name(r, 'review_text_ar', 'review_text_en');
-        const author = (name(r, 'patient_first_name_ar', 'patient_first_name_en') || '').trim();
-        const date = r.created_at ? new Date(r.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : '';
-
-        return (
-            '<div class="review-item">' +
-                '<div class="review-header">' +
-                    '<span class="review-author">' + escapeHtml(author || (isAr() ? 'مريض' : 'Patient')) + '</span>' +
-                    '<span class="review-date">' + escapeHtml(date) + '</span>' +
-                '</div>' +
-                (r.rating != null ? '<div class="rating"><span class="rating-stars">★</span><span class="rating-value">' + Number(r.rating).toFixed(1) + '</span></div>' : '') +
-                (text ? '<div class="review-text">' + escapeHtml(text) + '</div>' : '') +
-            '</div>'
+        if (!slots.length) return compactEmpty(
+            isAr() ? 'أضف أوقات التوفر.' : 'Add your availability.',
+            isAr() ? 'لم يحدد الطبيب أوقات التوفر بعد.' : 'Availability has not been listed yet.',
+            null
         );
-    }
-
-    // ================= PROFILE TABS =================
-
-    function renderProfileTabs(bio, slots, reviews, posts) {
-        const tabs = [];
-        if (bio) tabs.push({ id: 'about', icon: 'fa-user', labelKey: 'doctor.about' });
-        tabs.push({ id: 'availability', icon: 'fa-calendar-week', labelKey: 'doctor.availability' });
-        tabs.push({ id: 'reviews', icon: 'fa-star', labelKey: 'doctor.reviews' });
-        tabs.push({ id: 'posts', icon: 'fa-newspaper', labelKey: 'doctor.posts' });
-
-        const defaultTab = tabs[0].id;
-
-        const strip = '<div class="profile-tabs" role="tablist">' +
-            tabs.map((tb) =>
-                '<button type="button" class="profile-tab' + (tb.id === defaultTab ? ' active' : '') + '" data-tab="' + tb.id + '" role="tab">' +
-                    '<i class="fas ' + tb.icon + '"></i> ' + escapeHtml(t(tb.labelKey)) +
-                '</button>'
-            ).join('') +
-        '</div>';
-
-        const panels =
-            (bio ? '<div class="profile-tab-panel' + (defaultTab === 'about' ? ' active' : '') + '" data-panel="about"><p>' + escapeHtml(bio) + '</p></div>' : '') +
-            '<div class="profile-tab-panel' + (defaultTab === 'availability' ? ' active' : '') + '" data-panel="availability">' + renderSchedule(slots) + '</div>' +
-            '<div class="profile-tab-panel' + (defaultTab === 'reviews' ? ' active' : '') + '" data-panel="reviews">' +
-                (reviews.length ? reviews.map(renderReview).join('') : '<p>' + escapeHtml(t('doctor.noReviews')) + '</p>') +
-            '</div>' +
-            '<div class="profile-tab-panel' + (defaultTab === 'posts' ? ' active' : '') + '" data-panel="posts">' + renderPostsTab(posts) + '</div>';
-
-        return strip + '<div class="profile-tab-panels">' + panels + '</div>';
-    }
-
-    function wireProfileTabs(content, posts) {
-        const tabButtons = content.querySelectorAll('.profile-tab');
-        tabButtons.forEach((btn) => {
-            btn.addEventListener('click', () => {
-                tabButtons.forEach((b) => b.classList.remove('active'));
-                btn.classList.add('active');
-                content.querySelectorAll('.profile-tab-panel').forEach((p) => {
-                    p.classList.toggle('active', p.dataset.panel === btn.dataset.tab);
-                });
-            });
+        const days = Array.from({ length: 7 }, () => []);
+        slots.forEach((slot) => {
+            const day = Number(slot.day_of_week);
+            if (day >= 0 && day < 7) days[day].push(slot);
         });
-
-        content.querySelectorAll('[data-post-id]').forEach((card) => {
-            card.addEventListener('click', () => {
-                const post = (posts || []).find((p) => String(p.id) === card.dataset.postId);
-                if (post) openPostDetailModal(post);
-            });
-        });
+        return '<div class="schedule-grid">' + days.map((daySlots, index) =>
+            '<div class="schedule-day' + (index === new Date().getDay() ? ' today' : '') + '"><strong>'
+            + escapeHtml(t('day.' + DAY_KEYS[index])) + '</strong>'
+            + (daySlots.length ? daySlots.map((slot) => '<span class="slot">'
+                + escapeHtml(String(slot.start_time).slice(0, 5)) + '–' + escapeHtml(String(slot.end_time).slice(0, 5)) + '</span>').join('')
+                : '<span class="schedule-day-off">' + escapeHtml(t('doctor.closed')) + '</span>') + '</div>'
+        ).join('') + '</div>';
     }
 
-    // ================= POSTS TAB =================
-    // GET /api/doctors/:id/posts (backend/src/routes/doctor.routes.js) —
-    // public read of this doctor's PUBLISHED posts only.
+    function renderReview(review) {
+        const copy = review.review_text || localized(review, 'review_text_ar', 'review_text_en');
+        const author = localized(review, 'patient_first_name_ar', 'patient_first_name_en') || (isAr() ? 'مريض' : 'Patient');
+        const date = review.created_at ? new Date(review.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : '';
+        return '<article class="review-item"><div class="review-header"><strong>' + escapeHtml(author) + '</strong><span>' + escapeHtml(date) + '</span></div>'
+            + '<div class="rating"><i class="fas fa-star"></i>' + escapeHtml(Number(review.rating || 0).toFixed(1)) + '</div>'
+            + (copy ? '<p class="review-text">' + escapeHtml(copy) + '</p>' : '') + '</article>';
+    }
+
+    function renderReviews(reviews) {
+        return reviews.length ? '<div class="review-list">' + reviews.map(renderReview).join('') + '</div>'
+            : compactEmpty(isAr() ? 'لا توجد تقييمات بعد.' : 'No reviews yet.', isAr() ? 'لا توجد تقييمات بعد.' : 'No reviews yet.');
+    }
 
     function renderPostCard(post) {
-        const title = escapeHtml(name(post, 'title_ar', 'title_en'));
-        const date = post.created_at ? new Date(post.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : '';
-        const preview = post.body && post.body.length > 100 ? post.body.slice(0, 100) + '…' : (post.body || '');
+        const title = post.title || localized(post, 'title_ar', 'title_en');
+        const preview = post.body?.length > 150 ? `${post.body.slice(0, 150)}…` : (post.body || '');
+        return '<button type="button" class="doctor-post-card" data-post-id="' + escapeHtml(post.id) + '"><span class="doctor-post-icon"><i class="fas fa-newspaper"></i></span>'
+            + '<span><strong>' + escapeHtml(title) + '</strong><small>' + escapeHtml(preview) + '</small></span></button>';
+    }
 
-        return (
-            '<div class="records-preview-card" data-post-id="' + escapeHtml(post.id) + '" style="cursor:pointer;">' +
-                '<div class="records-real-icon"><i class="fas fa-newspaper"></i></div>' +
-                '<div class="records-preview-card-lines">' +
-                    '<div>' + title + '</div>' +
-                    '<div style="color:var(--text-mute);font-size:12px;">' + escapeHtml([post.category, date].filter(Boolean).join(' · ')) + '</div>' +
-                    (preview ? '<div style="color:var(--text-faint);font-size:12px;">' + escapeHtml(preview) + '</div>' : '') +
-                '</div>' +
-            '</div>'
+    function renderPosts(posts) {
+        return posts.length ? '<div class="doctor-post-grid">' + posts.map(renderPostCard).join('') + '</div>'
+            : compactEmpty(isAr() ? 'انشر أول منشور صحي.' : 'Publish your first health post.',
+                isAr() ? 'لا توجد منشورات منشورة بعد.' : 'No published posts yet.',
+                currentDoctor?.is_owner ? 'doctor-posts.html' : null);
+    }
+
+    function renderClinics(clinics) {
+        if (!clinics.length) return compactEmpty(
+            isAr() ? 'أضف معلومات العيادة.' : 'Add clinic information.',
+            isAr() ? 'لا توجد عيادات مدرجة بعد.' : 'No clinics listed yet.',
+            null
         );
+        return '<div class="clinic-profile-grid">' + clinics.map((clinic) => {
+            const clinicName = localized(clinic, 'name_ar', 'name_en');
+            const address = localized(clinic, 'address_ar', 'address_en');
+            return '<a class="clinic-profile-card" href="clinic.html?id=' + encodeURIComponent(clinic.id) + '"><i class="fas fa-hospital"></i><span><strong>'
+                + escapeHtml(clinicName) + '</strong><small>' + escapeHtml([address, clinic.city].filter(Boolean).join(' · ')) + '</small></span></a>';
+        }).join('') + '</div>'
+            + (clinics.some((clinic) => clinic.latitude != null && clinic.longitude != null)
+                ? '<div id="doctorMiniMap" class="mini-map profile-map"></div>' : '');
     }
 
-    function renderPostsTab(posts) {
-        if (!posts || !posts.length) {
-            return (
-                '<div class="records-empty-state">' +
-                    '<div class="empty-state-icon"><i class="fas fa-newspaper"></i></div>' +
-                    '<h2>' + escapeHtml(t('doctor.postsEmptyTitle')) + '</h2>' +
-                    '<p>' + escapeHtml(t('doctor.postsEmptyHint')) + '</p>' +
-                '</div>'
-            );
-        }
-
-        return '<div class="records-preview-list">' + posts.map(renderPostCard).join('') + '</div>';
+    function renderProfile(doctor, clinics, slots, reviews, posts) {
+        const tabs = [
+            ['about', 'fa-user', isAr() ? 'نبذة' : 'About'],
+            ['posts', 'fa-newspaper', isAr() ? 'المنشورات' : 'Posts'],
+            ['reviews', 'fa-star', isAr() ? 'التقييمات' : 'Reviews'],
+            ['availability', 'fa-calendar-week', isAr() ? 'التوفر' : 'Availability'],
+            ['clinics', 'fa-hospital', isAr() ? 'العيادات' : 'Clinics']
+        ];
+        return renderHero(doctor)
+            + '<section class="doctor-profile-body"><div class="profile-tabs" role="tablist">'
+            + tabs.map((tab, index) => '<button type="button" class="profile-tab' + (index === 0 ? ' active' : '')
+                + '" data-tab="' + tab[0] + '" role="tab" aria-selected="' + (index === 0) + '"><i class="fas ' + tab[1] + '"></i>' + escapeHtml(tab[2]) + '</button>').join('')
+            + '</div><div class="profile-tab-panels">'
+            + '<div class="profile-tab-panel active" data-panel="about">' + renderAbout(doctor) + '</div>'
+            + '<div class="profile-tab-panel" data-panel="posts">' + renderPosts(posts) + '</div>'
+            + '<div class="profile-tab-panel" data-panel="reviews">' + renderReviews(reviews) + '</div>'
+            + '<div class="profile-tab-panel" data-panel="availability">' + renderSchedule(slots) + '</div>'
+            + '<div class="profile-tab-panel" data-panel="clinics">' + renderClinics(clinics) + '</div>'
+            + '</div></section>';
     }
 
-    /**
-     * Opens a read-only detail view for a single post.
-     */
-    function openPostDetailModal(post) {
-        const backdrop = document.createElement('div');
-        backdrop.className = 'modal-backdrop';
-        backdrop.innerHTML =
-            '<div class="modal-box">' +
-                '<h3>' + escapeHtml(name(post, 'title_ar', 'title_en')) + '</h3>' +
-                '<p style="color:var(--text-faint);font-size:12px;">' +
-                    escapeHtml([post.category, post.created_at ? new Date(post.created_at).toLocaleDateString(isAr() ? 'ar' : 'en-US') : ''].filter(Boolean).join(' · ')) +
-                '</p>' +
-                '<p>' + escapeHtml(post.body || '') + '</p>' +
-                '<div class="modal-actions"><button type="button" class="btn btn-secondary" id="postDetailCloseBtn">' + escapeHtml(t('common.close')) + '</button></div>' +
-            '</div>';
-
-        document.body.appendChild(backdrop);
-        if (typeof Dom !== 'undefined') Dom.lockScroll();
-
-        const close = () => {
-            backdrop.remove();
-            if (typeof Dom !== 'undefined') Dom.unlockScroll();
-        };
-
-        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
-        backdrop.querySelector('#postDetailCloseBtn').addEventListener('click', close);
+    function wireTabs(container) {
+        container.querySelectorAll('.profile-tab').forEach((button) => button.addEventListener('click', () => {
+            container.querySelectorAll('.profile-tab').forEach((item) => {
+                const selected = item === button;
+                item.classList.toggle('active', selected);
+                item.setAttribute('aria-selected', String(selected));
+            });
+            container.querySelectorAll('.profile-tab-panel').forEach((panel) =>
+                panel.classList.toggle('active', panel.dataset.panel === button.dataset.tab));
+        }));
     }
 
-    function renderClinicSubItem(c) {
-        const clinicName = escapeHtml(name(c, 'name_ar', 'name_en'));
-        const address = escapeHtml(name(c, 'address_ar', 'address_en'));
-        return (
-            '<a class="sub-item" href="clinic.html?id=' + encodeURIComponent(c.id) + '" style="text-decoration:none;color:inherit;">' +
-                '<div class="entity-avatar" style="width:38px;height:38px;font-size:13px;"><i class="fas fa-hospital"></i></div>' +
-                '<div class="sub-item-body">' +
-                    '<div class="sub-item-title">' + clinicName + (c.is_primary ? ' <span class="badge badge-primary">' + (isAr() ? 'رئيسية' : 'Primary') + '</span>' : '') + '</div>' +
-                    (address ? '<div class="sub-item-subtitle">' + address + '</div>' : '') +
-                '</div>' +
-            '</a>'
-        );
-    }
-
-    function hasMappableClinic(clinics) {
-        return !!primaryClinicWithCoords(clinics);
-    }
-
-    function primaryClinicWithCoords(clinics) {
-        const withCoords = (clinics || []).filter(c => c.latitude != null && c.longitude != null);
-        if (withCoords.length === 0) return null;
-        return withCoords.find(c => c.is_primary) || withCoords[0];
-    }
-
-    function renderMiniMap(clinics) {
-        const clinic = primaryClinicWithCoords(clinics);
-        if (!clinic || typeof MiniMap === 'undefined') return;
-        MiniMap.render('doctorMiniMap', {
-            lat: clinic.latitude,
-            lng: clinic.longitude,
-            title: name(clinic, 'name_ar', 'name_en')
+    function wireFollow(container, doctor) {
+        const button = container.querySelector('#doctorFollowBtn');
+        if (!button) return;
+        let following = Boolean(doctor.is_following);
+        button.addEventListener('click', async () => {
+            if (!API.isAuthenticated()) {
+                location.href = 'login.html?redirect=' + encodeURIComponent('doctor.html?id=' + doctor.id);
+                return;
+            }
+            button.disabled = true;
+            try {
+                const response = following ? await API.social.unfollow(doctor.id) : await API.social.follow(doctor.id);
+                const next = Boolean(response.data.following);
+                if (next !== following) {
+                    const count = document.getElementById('doctorFollowerCount');
+                    count.textContent = String(Math.max(0, Number(count.textContent) + (next ? 1 : -1)));
+                }
+                following = next;
+                button.querySelector('i').className = 'fas ' + (following ? 'fa-user-check' : 'fa-user-plus');
+                button.querySelector('span').textContent = following
+                    ? (isAr() ? 'متابَع' : 'Following') : (isAr() ? 'متابعة' : 'Follow');
+            } catch (err) {
+                Toast?.error(err.message || (isAr() ? 'تعذر تحديث المتابعة' : 'Unable to update follow'));
+            } finally {
+                button.disabled = false;
+            }
         });
     }
 
-    // ================= INIT =================
+    function openPost(post) {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        const modal = document.createElement('section');
+        modal.className = 'modal-box';
+        const title = document.createElement('h2');
+        title.textContent = post.title || localized(post, 'title_ar', 'title_en');
+        const body = document.createElement('p');
+        body.className = 'profile-long-copy';
+        body.textContent = post.body || '';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'btn btn-secondary';
+        close.textContent = isAr() ? 'إغلاق' : 'Close';
+        const actions = document.createElement('div');
+        actions.className = 'modal-actions';
+        actions.appendChild(close);
+        modal.append(title, body, actions);
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        const remove = () => backdrop.remove();
+        close.addEventListener('click', remove);
+        backdrop.addEventListener('click', (event) => { if (event.target === backdrop) remove(); });
+    }
+
+    function renderMap(clinics) {
+        const clinic = clinics.find((item) => item.is_primary && item.latitude != null && item.longitude != null)
+            || clinics.find((item) => item.latitude != null && item.longitude != null);
+        if (clinic && typeof MiniMap !== 'undefined') {
+            MiniMap.render('doctorMiniMap', { lat: clinic.latitude, lng: clinic.longitude, title: localized(clinic, 'name_ar', 'name_en') });
+        }
+    }
+
+    async function load() {
+        const id = new URLSearchParams(location.search).get('id');
+        const content = document.getElementById('doctorContent');
+        if (!id) {
+            content.innerHTML = renderState('fa-user-doctor', t('doctor.notFound'));
+            return;
+        }
+        content.innerHTML = renderSkeleton();
+        try {
+            const [profileResponse, availabilityResponse, postsResponse] = await Promise.all([
+                API.doctors.get(id),
+                API.doctors.availability(id, null).catch(() => null),
+                API.care.doctorPosts(id).catch(() => null)
+            ]);
+            const payload = profileResponse.data;
+            currentDoctor = payload.doctor;
+            currentPosts = Array.isArray(postsResponse?.data) ? postsResponse.data : [];
+            const clinics = payload.clinics || [];
+            const slots = availabilityResponse?.data?.slots || payload.availability || [];
+            content.innerHTML = renderProfile(currentDoctor, clinics, slots, payload.reviews || [], currentPosts);
+            wireTabs(content);
+            wireFollow(content, currentDoctor);
+            content.querySelectorAll('[data-post-id]').forEach((card) => card.addEventListener('click', () => {
+                const post = currentPosts.find((item) => String(item.id) === card.dataset.postId);
+                if (post) openPost(post);
+            }));
+            renderMap(clinics);
+            if (API.isAuthenticated()) API.social.doctorView(currentDoctor.id).catch(() => {});
+        } catch (err) {
+            content.innerHTML = err?.status === 404
+                ? renderState('fa-user-doctor', t('doctor.notFound'))
+                : renderState('fa-triangle-exclamation', t('doctors.error'), true);
+            document.getElementById('retryBtn')?.addEventListener('click', load);
+        }
+    }
 
     function init() {
         load();
+        window.addEventListener('languageChanged', () => { if (currentDoctor) load(); });
     }
 
     return { init };
-
 })();

@@ -12,6 +12,10 @@ const {
     success,
     error
 } = require("../utils/response");
+const {
+    resolveBilingualUserContent,
+    withCanonicalContent
+} = require("../utils/bilingualUserContent");
 
 
 
@@ -67,12 +71,16 @@ router.post(
             const {
                 appointment_id,
                 rating,
-                review_text_ar,
-                review_text_en,
                 professionalism_rating,
                 treatment_rating,
                 communication_rating
             } = req.body;
+            const reviewText = resolveBilingualUserContent(req.body, {
+                canonicalKey: 'review_text',
+                legacyArKeys: ['review_text_ar', 'reviewTextAr'],
+                legacyEnKeys: ['review_text_en', 'reviewTextEn'],
+                label: 'Review text'
+            });
 
 
 
@@ -134,7 +142,9 @@ router.post(
                 $1,$2,$3,$4,$5,$6,$7,$8,$9
                 )
 
-                RETURNING *
+                RETURNING id, rating, review_text_ar, review_text_en,
+                          professionalism_rating, treatment_rating,
+                          communication_rating, created_at
 
                 `,
 
@@ -144,8 +154,8 @@ router.post(
                         patient_id,
                         doctor_id,
                         rating,
-                        review_text_ar,
-                        review_text_en,
+                        reviewText.ar,
+                        reviewText.en,
                         professionalism_rating,
                         treatment_rating,
                         communication_rating
@@ -184,7 +194,7 @@ router.post(
 
             return success(
                 res,
-                result.rows[0],
+                withCanonicalContent(result.rows[0], 'review_text', 'review_text_ar', 'review_text_en'),
                 "Review submitted",
                 201
             );
@@ -215,6 +225,8 @@ router.post(
 router.get(
     "/doctors/:id/reviews",
 
+    authenticate,
+
     async (req, res, next) => {
 
 
@@ -227,7 +239,14 @@ router.get(
                     `
                 SELECT
 
-                r.*,
+                r.id,
+                r.rating,
+                r.review_text_ar,
+                r.review_text_en,
+                r.professionalism_rating,
+                r.treatment_rating,
+                r.communication_rating,
+                r.created_at,
 
                 p.first_name_en,
                 p.last_name_en,
@@ -266,7 +285,7 @@ router.get(
 
             return success(
                 res,
-                result.rows,
+                result.rows.map((review) => withCanonicalContent(review, 'review_text', 'review_text_ar', 'review_text_en')),
                 "Reviews retrieved"
             );
 
