@@ -8,6 +8,8 @@ const NotificationsPage = (() => {
 
     let notifications = [];
     let unreadOnly = false;
+    let initialized = false;
+    let loadRequest = null;
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -38,13 +40,47 @@ const NotificationsPage = (() => {
         return ar ? `منذ ${diffD} يوم` : `${diffD}d ago`;
     }
 
+    function destinationFor(notification) {
+        if (!notification?.reference_id) return null;
+
+        const role = API.getUser()?.role;
+        const referenceType = String(notification.reference_type || '').toUpperCase();
+        const notificationType = String(notification.notification_type || '').toUpperCase();
+        if (['APPOINTMENT', 'APPOINTMENTS'].includes(referenceType)
+            && (notificationType === 'APPOINTMENT'
+                || notificationType === 'REMINDER'
+                || notificationType.startsWith('APPOINTMENT_'))
+            && ['patient', 'doctor'].includes(role)) {
+            return role === 'doctor' ? 'my-schedule.html#appointments' : 'my-appointments.html';
+        }
+        if (notification.reference_type === 'DIRECT_CONVERSATION'
+            && ['NEW_DIRECT_MESSAGE', 'NEW_MESSAGE_REQUEST', 'MESSAGE_REQUEST_ACCEPTED'].includes(notification.notification_type)
+            && ['patient', 'doctor'].includes(role)) {
+            return 'direct-messages.html?id=' + encodeURIComponent(notification.reference_id);
+        }
+        if (notification.reference_type === 'CONTACT_MESSAGE'
+            && notification.notification_type === 'NEW_CONTACT_MESSAGE'
+            && ['admin', 'super_admin'].includes(role)) {
+            return 'admin-contact-messages.html?message=' + encodeURIComponent(notification.reference_id);
+        }
+        if (notification.reference_type !== 'DOCTOR_APPLICATION') return null;
+        if (notification.notification_type === 'DOCTOR_APPLICATION_SUBMITTED' && ['admin', 'super_admin'].includes(role)) {
+            return 'admin-doctor-applications.html?status=pending&application=' + encodeURIComponent(notification.reference_id);
+        }
+        if (['DOCTOR_APPLICATION_SUBMITTED', 'DOCTOR_APPLICATION_APPROVED', 'DOCTOR_APPLICATION_REJECTED'].includes(notification.notification_type)) {
+            return 'doctor-application.html';
+        }
+        return null;
+    }
+
     function renderItem(n) {
         const title = isAr() ? (n.title_ar || n.title_en) : (n.title_en || n.title_ar);
         const message = isAr() ? (n.message_ar || n.message_en) : (n.message_en || n.message_ar);
         const unread = !n.is_read;
 
+        const destination = destinationFor(n);
         return (
-            '<div class="dashboard-list-item dashboard-notif-item notif-page-item' + (unread ? ' unread' : '') + '" data-id="' + escapeHtml(n.id) + '">' +
+            '<div class="dashboard-list-item dashboard-notif-item notif-page-item' + (unread ? ' unread' : '') + (destination ? ' navigable' : '') + '" data-id="' + escapeHtml(n.id) + '"' + (destination ? ' tabindex="0" role="link"' : '') + '>' +
                 '<span class="' + (unread ? 'notif-dot' : 'notif-dot-spacer') + '"></span>' +
                 '<div class="dashboard-list-main">' +
                     '<div class="dashboard-list-title">' + escapeHtml(title || '') + '</div>' +
@@ -105,16 +141,44 @@ const NotificationsPage = (() => {
                 removeOne(id);
             });
         });
+        list.querySelectorAll('.notif-page-item.navigable').forEach((item) => {
+            const notification = notifications.find((entry) => entry.id === item.dataset.id);
+            const open = () => openNotification(notification);
+            item.addEventListener('click', open);
+            item.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                open();
+            });
+        });
+    }
+
+    async function openNotification(notification) {
+        const destination = destinationFor(notification);
+        if (!destination) return;
+
+        if (!notification.is_read) {
+            try {
+                await API.notifications.markRead(notification.id);
+                notification.is_read = true;
+                window.dispatchEvent(new CustomEvent('notifications:changed'));
+            } catch (err) {
+                console.error('Notifications: failed to mark opened notification read', err);
+            }
+        }
+        window.location.href = destination;
     }
 
     async function markOneRead(id) {
         const item = notifications.find((n) => n.id === id);
-        if (item) item.is_read = true;
-        render();
         try {
             await API.notifications.markRead(id);
+            if (item) item.is_read = true;
+            render();
+            window.dispatchEvent(new CustomEvent('notifications:changed'));
         } catch (err) {
             console.error('Notifications: failed to mark read', err);
+            if (typeof Toast !== 'undefined') Toast.error(t('notifications.markAllError'));
         }
     }
 
@@ -124,6 +188,7 @@ const NotificationsPage = (() => {
         render();
         try {
             await API.notifications.remove(id);
+            window.dispatchEvent(new CustomEvent('notifications:changed'));
         } catch (err) {
             console.error('Notifications: failed to delete', err);
             notifications = prev;
@@ -139,6 +204,7 @@ const NotificationsPage = (() => {
             await API.notifications.markAllRead();
             notifications = notifications.map((n) => ({ ...n, is_read: true }));
             render();
+            window.dispatchEvent(new CustomEvent('notifications:changed'));
         } catch (err) {
             console.error('Notifications: failed to mark all read', err);
             if (typeof Toast !== 'undefined') Toast.error(t('notifications.markAllError'));
@@ -148,6 +214,16 @@ const NotificationsPage = (() => {
     }
 
     async function load() {
+        if (loadRequest) return loadRequest;
+        loadRequest = loadNotifications();
+        try {
+            return await loadRequest;
+        } finally {
+            loadRequest = null;
+        }
+    }
+
+    async function loadNotifications() {
         document.getElementById('notifSkeleton').classList.remove('hidden');
         document.getElementById('notifPageError').classList.add('hidden');
         document.getElementById('notifPageContent').classList.add('hidden');
@@ -166,6 +242,8 @@ const NotificationsPage = (() => {
     }
 
     function init() {
+        if (initialized) return;
+        initialized = true;
         if (!API.requireAuth()) return;
 
         document.getElementById('markAllReadBtn')?.addEventListener('click', markAllRead);

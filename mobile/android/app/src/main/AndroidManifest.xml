@@ -1,8 +1,27 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter auto-injects this into debug/profile builds only (see
+         src/debug/AndroidManifest.xml); release builds need it declared
+         here or every network call fails once the app ships. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Virtual Doctor voice consultation: microphone capture for speech-to-text. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- Nearby healthcare discovery: foreground-only location, never background tracking. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Cleartext is scoped to the development hosts in
+         res/xml/network_security_config.xml rather than allowed globally.
+         Local development runs over plain HTTP on the LAN; production must be
+         HTTPS behind a reverse proxy and is covered by that file's TLS-only
+         base-config. -->
     <application
-        android:label="mobile"
+        android:label="MedOrbit"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"

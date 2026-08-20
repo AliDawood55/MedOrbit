@@ -17,16 +17,20 @@ const MapApp = (() => {
     // ===== CATEGORY ICONS (matches the filter bar + marker-pin CSS classes) =====
     const CATEGORY_ICONS = {
         clinic: 'fa-hospital',
+        dental: 'fa-tooth',
         pharmacy: 'fa-pills',
         hospital: 'fa-hospital-user',
-        doctor: 'fa-user-md'
+        doctor: 'fa-user-md',
+        healthcare: 'fa-notes-medical'
     };
 
     const CATEGORY_LABELS = {
         clinic: { ar: 'عيادة', en: 'Clinic' },
+        dental: { ar: 'عيادة أسنان', en: 'Dental clinic' },
         pharmacy: { ar: 'صيدلية', en: 'Pharmacy' },
         hospital: { ar: 'مستشفى', en: 'Hospital' },
-        doctor: { ar: 'طبيب', en: 'Doctor' }
+        doctor: { ar: 'طبيب', en: 'Doctor' },
+        healthcare: { ar: 'مرفق صحي', en: 'Healthcare facility' }
     };
 
     function isArLang() {
@@ -115,7 +119,7 @@ const MapApp = (() => {
 
     // ================= MARKER ICON + POPUP =================
     function buildMarkerIcon(type) {
-        const cls = CATEGORY_ICONS[type] ? type : 'clinic';
+        const cls = CATEGORY_ICONS[type] ? type : 'healthcare';
         return L.divIcon({
             className: 'custom-marker',
             iconSize: [38, 38],
@@ -127,8 +131,8 @@ const MapApp = (() => {
 
     function buildPopupContent(place) {
         const ar = isArLang();
-        const type = CATEGORY_ICONS[place.type] ? place.type : 'clinic';
-        const label = (CATEGORY_LABELS[type] || CATEGORY_LABELS.clinic)[ar ? 'ar' : 'en'];
+        const type = CATEGORY_ICONS[place.type] ? place.type : 'healthcare';
+        const label = CATEGORY_LABELS[type][ar ? 'ar' : 'en'];
 
         const rows = [];
         if (place.phone) {

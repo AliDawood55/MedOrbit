@@ -1,525 +1,180 @@
-const express = require("express");
+const express = require('express');
 
-const db = require("../config/database");
-
-const {
-    authenticate,
-    authorize
-} = require("../middleware/auth");
-
-const {
-    success,
-    error
-} = require("../utils/response");
-
-const crypto = require("crypto");
-
+const db = require('../config/database');
+const { authenticate, authorize } = require('../middleware/auth');
+const { success, error } = require('../utils/response');
+const { findAssignedAppointment } = require('../services/clinicalAuthorization.service');
+const { ensureActiveCareRelationship } = require('../services/careRelationship.service');
+const { notifyAppointmentTransition } = require('../services/notification.service');
+const scheduling = require('../services/scheduling.service');
 
 const router = express.Router();
 
-
-
-// =====================================================
-// GET AVAILABLE SLOTS
-// GET /api/appointments/available-slots
-// =====================================================
-
-router.get(
-    "/available-slots",
-
-    async (req, res, next) => {
-
-        try {
-
-
-            const {
-                doctor_id,
-                clinic_id,
-                date
-            } = req.query;
-
-
-
-            if (!doctor_id || !clinic_id || !date) {
-
-                return error(
-                    res,
-                    "doctor_id clinic_id and date are required",
-                    400,
-                    "VALIDATION_ERROR"
-                );
-
-            }
-
-
-
-            const day = new Date(date).getDay();
-
-
-
-            const result = await db.query(
-
-                `
-SELECT *
-
-FROM medorbit.doctor_availability
-
-WHERE doctor_id=$1
-
-AND clinic_id=$2
-
-AND is_active=true
-
-AND
-(
-specific_date=$3
-
-OR
-
-(
-specific_date IS NULL
-
-AND day_of_week=$4
-)
-
-)
-
-ORDER BY start_time
-
-`,
-
-                [
-                    doctor_id,
-                    clinic_id,
-                    date,
-                    day
-                ]
-
-
-            );
-
-
-
-            return success(
-                res,
-                result.rows,
-                "Available slots retrieved"
-            );
-
-
-
-        }
-
-        catch (err) {
-
-            next(err);
-
-        }
-
-
-    });
-
-
-
-const {
-    generateMeetingLink
+// Historical meeting_link values remain in PostgreSQL for record integrity,
+// but human calling is no longer an active client capability.
+function appointmentDto(row) {
+    if (!row) return row;
+    const { meeting_link: _historicalMeetingLink, ...safe } = row;
+    return safe;
 }
-    =
-    require("../services/telemedicine.service");
 
-// =====================================================
-// CREATE APPOINTMENT
-// POST /api/appointments
-// =====================================================
-
-
-router.post(
-    "/",
-
-    authenticate,
-
-    async (req, res, next) => {
-
-
-        try {
-
-            const {
-                doctor_id,
-                clinic_id,
-                scheduled_date,
-                start_time,
-                end_time,
-                duration_minutes,
-                appointment_type,
-                reason_for_visit,
-                notes
-            } = req.body;
-
-
-            const patientResult = await db.query(
-                `
-    SELECT id
-    FROM medorbit.patients
-    WHERE user_id=$1
-    `,
-                [
-                    req.user.sub
-                ]
-            );
-
-
-            if (patientResult.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Patient profile not found",
-                    404,
-                    "PATIENT_NOT_FOUND"
-                );
-
-            }
-
-
-            const patient_id = patientResult.rows[0].id;
-
-            let meetingLink = null;
-
-
-            if (appointment_type === "telemedicine") {
-
-                meetingLink =
-                    generateMeetingLink(
-                        crypto.randomUUID()
-                    );
-
-            }
-
-
-
-            const exists = await db.query(
-
-                `
-SELECT id
-
-FROM medorbit.appointments
-
-WHERE doctor_id=$1
-
-AND scheduled_date=$2
-
-AND start_time=$3
-
-AND status NOT IN
-('cancelled')
-
-`,
-
-                [
-                    doctor_id,
-                    scheduled_date,
-                    start_time
-                ]
-
-            );
-
-
-
-            if (exists.rows.length) {
-
-                return error(
-                    res,
-                    "Appointment slot already booked",
-                    400,
-                    "SLOT_BUSY"
-                );
-
-            }
-
-
-
-
-            const result = await db.query(
-
-                `
-INSERT INTO medorbit.appointments
-(
-appointment_number,
-patient_id,
-doctor_id,
-clinic_id,
-scheduled_date,
-start_time,
-end_time,
-duration_minutes,
-appointment_type,
-status,
-meeting_link,
-reason_for_visit,
-notes
-)
-
-VALUES
-(
-'APT-' || floor(random()*1000000)::text,
-$1,
-$2,
-$3,
-$4,
-$5,
-$6,
-$7,
-$8,
-'scheduled',
-$9,
-$10,
-$11
-)
-
-RETURNING *
-
-`,
-                [
-                    patient_id,
-                    doctor_id,
-                    clinic_id,
-                    scheduled_date,
-                    start_time,
-                    end_time,
-                    duration_minutes,
-                    appointment_type,
-                    meetingLink,
-                    reason_for_visit,
-                    notes
-                ]
-
-            );
-
-
-            const appointment = result.rows[0];
-
-
-
-            // history
-
-            await db.query(
-
-                `
-INSERT INTO medorbit.appointment_status_history
-
-(
-appointment_id,
-new_status
-)
-
-VALUES
-
-($1,'scheduled')
-
-`,
-
-                [
-                    appointment.id
-                ]
-
-            );
-
-
-
-            return success(
-                res,
-                appointment,
-                "Appointment booked"
-            );
-
-
-
+// Server-generated bookable slots. The array shape remains compatible with
+// existing web/mobile clients, but each row is now one exact slot after
+// weekly rules, date overrides, blocks, past time, and bookings are removed.
+router.get('/available-slots', authenticate, async (req, res, next) => {
+    try {
+        const { doctor_id, clinic_id, date } = req.query;
+        if (!doctor_id || !date) {
+            return error(res, 'doctor_id and date are required', 400, 'VALIDATION_ERROR');
         }
+        const slots = await scheduling.listBookableSlots({ doctorId: doctor_id, clinicId: clinic_id, date });
+        return success(res, slots, 'Available slots retrieved');
+    } catch (err) {
+        return next(err);
+    }
+});
 
-        catch (err) {
+// Booking is revalidated inside a serialized transaction. Client-supplied
+// duration/end/type must exactly match a currently generated server slot.
+router.post('/', authenticate, async (req, res, next) => {
+    try {
+        const appointment = await scheduling.bookAppointment(req.user.sub, req.body);
+        return success(res, appointmentDto(appointment), 'Appointment booked', 201);
+    } catch (err) {
+        return next(err);
+    }
+});
 
-            next(err);
+// Patient appointment history. Doctor schedule views use
+// GET /api/doctors/me/schedule and receive only appropriate patient identity.
+router.get('/', authenticate, async (req, res, next) => {
+    try {
+        const patient = await db.query(
+            'SELECT id FROM medorbit.patients WHERE user_id=$1',
+            [req.user.sub]
+        );
+        if (!patient.rows[0]) return error(res, 'Patient profile not found', 404, 'NOT_FOUND');
+        const result = await db.query(
+            `SELECT * FROM medorbit.appointments
+             WHERE patient_id=$1
+             ORDER BY scheduled_date DESC,start_time DESC,id DESC`,
+            [patient.rows[0].id]
+        );
+        return success(res, result.rows.map(appointmentDto), 'Appointments retrieved');
+    } catch (err) {
+        return next(err);
+    }
+});
 
-        }
+router.get('/:id', authenticate, async (req, res, next) => {
+    try {
+        const patient = await db.query(
+            'SELECT id FROM medorbit.patients WHERE user_id=$1',
+            [req.user.sub]
+        );
+        if (!patient.rows[0]) return error(res, 'Appointment not found', 404, 'NOT_FOUND');
+        const result = await db.query(
+            'SELECT * FROM medorbit.appointments WHERE id=$1 AND patient_id=$2',
+            [req.params.id, patient.rows[0].id]
+        );
+        if (!result.rows[0]) return error(res, 'Appointment not found', 404, 'NOT_FOUND');
+        return success(res, appointmentDto(result.rows[0]), 'Appointment retrieved');
+    } catch (err) {
+        return next(err);
+    }
+});
 
-
-    });
-
-
-
-
-
-// =====================================================
-// GET MY APPOINTMENTS
-// GET /api/appointments
-// =====================================================
-
-
-router.get(
-    "/",
-
-    authenticate,
-
-    async (req, res, next) => {
-
-
-        try {
-
-            // req.user.sub is the JWT subject (medorbit.users.id), but
-            // appointments.patient_id is a FK to medorbit.patients.id — a
-            // different UUID. Resolve it first, same lookup POST / already
-            // does correctly, or this always returns zero rows.
-            const patientResult = await db.query(
-                `
-    SELECT id
-    FROM medorbit.patients
-    WHERE user_id=$1
-    `,
-                [
-                    req.user.sub
-                ]
+router.put('/:id/cancel', authenticate, async (req, res, next) => {
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
+        const reason = req.body?.reason == null ? null : String(req.body.reason).trim().slice(0, 1000);
+        let result;
+        let transition;
+        if (req.user.role === 'patient') {
+            const patient = await client.query(
+                'SELECT id FROM medorbit.patients WHERE user_id=$1',
+                [req.user.sub]
             );
-
-            if (patientResult.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Patient profile not found",
-                    404,
-                    "NOT_FOUND"
+            if (patient.rows[0]) {
+                result = await client.query(
+                    `UPDATE medorbit.appointments
+                     SET status='cancelled',cancelled_at=NOW(),cancelled_by=$3,
+                         cancellation_reason=$4,updated_at=NOW()
+                     WHERE id=$1 AND patient_id=$2 AND status IN ('scheduled','confirmed')
+                     RETURNING *`,
+                    [req.params.id, patient.rows[0].id, req.user.sub, reason]
                 );
-
+                transition = 'cancelled_by_patient';
             }
-
-            const result = await db.query(
-
-                `
-
-SELECT *
-
-FROM medorbit.appointments
-
-WHERE patient_id=$1
-
-ORDER BY scheduled_date DESC
-
-`,
-
-                [
-                    patientResult.rows[0].id
-                ]
-
-
-            );
-
-
-
-            return success(
-                res,
-                result.rows,
-                "Appointments retrieved"
-            );
-
-
-        }
-
-        catch (err) {
-
-            next(err);
-
-        }
-
-
-    });
-
-
-
-
-
-// =====================================================
-// GET ONE
-// =====================================================
-
-
-router.get(
-    "/:id",
-
-    authenticate,
-
-    async (req, res, next) => {
-
-
-        try {
-
-            // Ownership check: this previously had none at all — any
-            // authenticated user's token worked against any appointment id.
-            // 404 (not 403) on a mismatch — a 403 would confirm the id is
-            // real, which is itself a small information leak.
-            const patientResult = await db.query(
-                `
-    SELECT id
-    FROM medorbit.patients
-    WHERE user_id=$1
-    `,
-                [
-                    req.user.sub
-                ]
-            );
-
-            if (patientResult.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Appointment not found",
-                    404,
-                    "NOT_FOUND"
+        } else if (req.user.role === 'doctor') {
+            const appointment = await findAssignedAppointment(req.params.id, req.user.sub, client);
+            if (appointment) {
+                result = await client.query(
+                    `UPDATE medorbit.appointments
+                     SET status='cancelled',cancelled_at=NOW(),cancelled_by=$3,
+                         cancellation_reason=$4,updated_at=NOW()
+                     WHERE id=$1 AND doctor_id=$2 AND status IN ('scheduled','confirmed')
+                     RETURNING *`,
+                    [req.params.id, appointment.doctor_id, req.user.sub, reason]
                 );
-
+                transition = 'cancelled_by_doctor';
             }
-
-            const result = await db.query(
-
-                `
-
-SELECT *
-
-FROM medorbit.appointments
-
-WHERE id=$1
-AND patient_id=$2
-
-`,
-
-                [
-                    req.params.id,
-                    patientResult.rows[0].id
-                ]
-
-            );
-
-
-
-            if (!result.rows.length) {
-
-                return error(
-                    res,
-                    "Appointment not found",
-                    404,
-                    "NOT_FOUND"
-                );
-
-            }
-
-
-
-            return success(
-                res,
-                result.rows[0],
-                "Appointment retrieved"
-            );
-
-
-
+        } else {
+            await client.query('ROLLBACK');
+            return error(res, 'Only appointment participants may cancel appointments', 403, 'FORBIDDEN');
         }
+        if (!result?.rows[0]) {
+            await client.query('ROLLBACK');
+            return error(res, 'Appointment not found', 404, 'NOT_FOUND');
+        }
+        await client.query(
+            `INSERT INTO medorbit.appointment_status_history
+               (appointment_id,new_status,changed_by)
+             VALUES($1,'cancelled',$2)`,
+            [req.params.id, req.user.sub]
+        );
+        await notifyAppointmentTransition(client, req.params.id, transition);
+        await client.query('COMMIT');
+        return success(res, appointmentDto(result.rows[0]), 'Appointment cancelled');
+    } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        return next(err);
+    } finally {
+        client.release();
+    }
+});
+
+async function updateDoctorAppointmentStatus(req, res, next, targetStatus, allowedStatuses) {
+    const client = await db.getClient();
+    try {
+        await client.query('BEGIN');
+        const appointment = await findAssignedAppointment(req.params.id, req.user.sub, client);
+        if (!appointment) {
+            await client.query('ROLLBACK');
+            return error(res, 'Appointment not found', 404, 'NOT_FOUND');
+        }
+        const result = await client.query(
+            `UPDATE medorbit.appointments
+             SET status=$1,updated_at=NOW()
+             WHERE id=$2 AND doctor_id=$3 AND status=ANY($4::varchar[])
+             RETURNING *`,
+            [targetStatus, req.params.id, appointment.doctor_id, allowedStatuses]
+        );
+        if (!result.rows[0]) {
+            await client.query('ROLLBACK');
+            return error(res, 'Appointment not found', 404, 'NOT_FOUND');
+        }
+        await client.query(
+            `INSERT INTO medorbit.appointment_status_history
+               (appointment_id,new_status,changed_by)
+             VALUES($1,$2,$3)`,
+            [req.params.id, targetStatus, req.user.sub]
+        );
+        if (targetStatus === 'confirmed') {
+            await notifyAppointmentTransition(client, req.params.id, 'confirmed');
+        }
+<<<<<<< HEAD
 
         catch (err) {
 
@@ -875,3 +530,32 @@ router.put(
 
 
 module.exports = router;
+=======
+        await ensureActiveCareRelationship({
+            doctorId: appointment.doctor_id,
+            patientId: appointment.patient_id,
+            source: appointment.appointment_type === 'telemedicine' ? 'telemedicine' : 'appointment',
+            sourceReferenceId: appointment.id,
+            actorUserId: req.user.sub,
+            actorRole: req.user.role,
+        }, client);
+        await client.query('COMMIT');
+        return success(res, appointmentDto(result.rows[0]), `Appointment ${targetStatus}`);
+    } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        return next(err);
+    } finally {
+        client.release();
+    }
+}
+
+router.put('/:id/confirm', authenticate, authorize('doctor'), (req, res, next) => (
+    updateDoctorAppointmentStatus(req, res, next, 'confirmed', ['scheduled', 'confirmed'])
+));
+
+router.put('/:id/complete', authenticate, authorize('doctor'), (req, res, next) => (
+    updateDoctorAppointmentStatus(req, res, next, 'completed', ['confirmed', 'in_progress', 'completed'])
+));
+
+module.exports = router;
+>>>>>>> 867f6dc22d8c775068c62e7cc2258c37a8e89b30

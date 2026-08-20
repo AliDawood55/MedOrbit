@@ -4,19 +4,10 @@
 
 const http = require('http');
 const { Pool } = require('pg');
-const path = require('path');
-
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-
-const API_BASE = 'http://127.0.0.1:3001/api';
+const { apiBase: API_BASE, poolConfig } = require('./helpers/test-environment');
 
 const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: String(process.env.DB_PASSWORD || ''),
-    max: 5,
+    ...poolConfig,
 });
 pool.on('connect', async (client) => {
     await client.query('SET search_path TO medorbit, public');
@@ -77,6 +68,9 @@ async function cleanup(email) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
+        await client.query(`DELETE FROM email_queue WHERE recipient_email=$1`, [email]);
+        await client.query(`DELETE FROM password_reset_tokens WHERE user_id=(SELECT id FROM users WHERE email=$1)`, [email]);
+        await client.query(`DELETE FROM email_verification_tokens WHERE user_id=(SELECT id FROM users WHERE email=$1)`, [email]);
         await client.query(`DELETE FROM saved_places WHERE user_id=(SELECT id FROM users WHERE email=$1)`, [email]);
         await client.query(`DELETE FROM chatbot_conversations WHERE user_id=(SELECT id FROM users WHERE email=$1)`, [email]);
         await client.query(`DELETE FROM user_sessions WHERE user_id=(SELECT id FROM users WHERE email=$1)`, [email]);

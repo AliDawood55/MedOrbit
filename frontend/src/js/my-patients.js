@@ -125,7 +125,7 @@ const MyPatients = (() => {
         return (
             '<div class="care-person-card">' +
                 '<div class="care-person-avatar">' +
-                    (p.profile_image_url ? '<img src="' + escapeHtml(p.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
+                    (p.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(p.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="care-person-info">' +
                     '<div class="care-person-name" title="' + name + '">' + name + '</div>' +
@@ -138,6 +138,9 @@ const MyPatients = (() => {
                     '<div class="care-person-actions">' +
                         '<a class="btn btn-primary btn-sm" href="patient-detail.html?id=' + encodeURIComponent(p.id) + '">' +
                             '<i class="fas fa-arrow-' + (ar ? 'left' : 'right') + '"></i> ' + escapeHtml(t('myPatients.viewDetails')) +
+                        '</a>' +
+                        '<a class="btn btn-secondary btn-sm" href="direct-messages.html?counterpart=' + encodeURIComponent(p.id) + '">' +
+                            '<i class="fas fa-message"></i> ' + (ar ? 'راسل المريض' : 'Message patient') +
                         '</a>' +
                     '</div>' +
                 '</div>' +

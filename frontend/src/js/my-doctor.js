@@ -117,7 +117,7 @@ const MyDoctor = (() => {
         return (
             '<div class="care-person-card">' +
                 '<div class="care-person-avatar">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(d.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
+                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="care-person-info">' +
                     '<div class="care-person-name" title="' + name + '">' + name + '</div>' +
@@ -129,6 +129,9 @@ const MyDoctor = (() => {
                     '<div class="care-person-actions">' +
                         '<a class="btn btn-primary btn-sm" href="doctor.html?id=' + encodeURIComponent(d.id) + '">' +
                             '<i class="fas fa-arrow-' + (ar ? 'left' : 'right') + '"></i> ' + escapeHtml(t('doctors.viewProfile')) +
+                        '</a>' +
+                        '<a class="btn btn-secondary btn-sm" href="direct-messages.html?counterpart=' + encodeURIComponent(d.id) + '">' +
+                            '<i class="fas fa-message"></i> ' + (ar ? 'راسل الطبيب' : 'Message doctor') +
                         '</a>' +
                     '</div>' +
                 '</div>' +
@@ -147,7 +150,7 @@ const MyDoctor = (() => {
         }
         el.innerHTML = '<div class="records-real-list">' + list.map(({ a, d }) => (
             '<div class="records-real-card" style="cursor:default;">' +
-                '<span class="records-real-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-video' : 'fa-hospital') + '"></i></span>' +
+                '<span class="records-real-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-comments' : 'fa-hospital') + '"></i></span>' +
                 '<span class="records-real-card-main">' +
                     '<span class="records-real-title">' + escapeHtml(d ? doctorName(d) : '') + '</span>' +
                     '<span class="records-real-meta">' +

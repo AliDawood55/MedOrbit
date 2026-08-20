@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 const {
     authenticate,
-    authorize
+    authorizeAdmin
 } = require("../middleware/auth");
 
 
@@ -27,7 +27,7 @@ router.get(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -76,7 +76,7 @@ router.post(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -196,7 +196,7 @@ router.get(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -238,6 +238,64 @@ ORDER BY generated_at DESC
 );
 
 // ==========================================
+// GET MY REPORT SUMMARIES
+// GET /api/reports/summaries
+// Patient-scoped (any authenticated role, not admin-only): returns only the
+// current user's own AI report summaries — written through the Node
+// POST /api/ai/summarize identity boundary — ordered newest first. Only safe,
+// truncated fields are returned; the full extracted_text column is never
+// sent to the client.
+// ==========================================
+
+
+router.get(
+
+    "/reports/summaries",
+
+    authenticate,
+
+    async (req, res, next) => {
+
+        try {
+
+            const result =
+                await require("../config/database")
+                    .query(
+
+                        `
+SELECT id, summary_ar, summary_en,
+       LEFT(extracted_text, 500) AS extracted_text_preview,
+       model_used, source_file_type, created_at
+FROM medorbit.report_summarizations
+WHERE user_id=$1
+ORDER BY created_at DESC
+`,
+
+                        [
+                            req.user.sub
+                        ]
+
+                    );
+
+            success(
+                res,
+                result.rows,
+                "Report summaries retrieved"
+            );
+
+        }
+
+        catch (e) {
+
+            next(e);
+
+        }
+
+    }
+
+);
+
+// ==========================================
 // DOWNLOAD REPORT
 // GET /api/reports/:id/download
 // ==========================================
@@ -249,7 +307,7 @@ router.get(
 
     authenticate,
 
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 

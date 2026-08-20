@@ -1,3 +1,5 @@
+import time
+from collections import OrderedDict
 from typing import Dict, List, Optional, Any
 
 
@@ -171,11 +173,42 @@ class SlotFiller:
         }
     }
 
+    # Bounded-storage settings for conversation_states (prevents unbounded
+    # process-lifetime memory growth). See ai-service audit, Phase 0.
+    MAX_CONVERSATION_STATES = 1000
+    CONVERSATION_STATE_TTL_SECONDS = 3600
+
     def __init__(self):
-        self.conversation_states = {}  # conversation_id -> state dict
+        self.conversation_states = OrderedDict()  # conversation_id -> state dict, LRU-ordered
+        self._state_last_access: Dict[str, float] = {}  # conversation_id -> last access timestamp
+
+    def _touch(self, conversation_id: str) -> None:
+        """Record recent access and refresh LRU position for a conversation_id."""
+        self._state_last_access[conversation_id] = time.time()
+        if conversation_id in self.conversation_states:
+            self.conversation_states.move_to_end(conversation_id)
+
+    def _evict_expired(self) -> None:
+        """Remove conversation states that haven't been touched within the TTL."""
+        now = time.time()
+        expired_ids = [
+            cid for cid, last_access in self._state_last_access.items()
+            if now - last_access > self.CONVERSATION_STATE_TTL_SECONDS
+        ]
+        for cid in expired_ids:
+            self.conversation_states.pop(cid, None)
+            self._state_last_access.pop(cid, None)
+
+    def _evict_lru_if_needed(self) -> None:
+        """Evict least-recently-used conversation states beyond MAX_CONVERSATION_STATES."""
+        while len(self.conversation_states) > self.MAX_CONVERSATION_STATES:
+            oldest_id, _ = self.conversation_states.popitem(last=False)
+            self._state_last_access.pop(oldest_id, None)
 
     def initialize_state(self, conversation_id: str, intent: str, entities: Dict) -> Dict:
         """Initialize or reset slot filling state for a conversation."""
+        self._evict_expired()
+
         state = {
             "intent": intent,
             "filled_slots": dict(entities),
@@ -192,6 +225,8 @@ class SlotFiller:
                     state["missing_slots"].append(slot)
 
         self.conversation_states[conversation_id] = state
+        self._touch(conversation_id)
+        self._evict_lru_if_needed()
         return state
 
     def update_state(self, conversation_id: str, intent: str, entities: Dict) -> Dict:
@@ -199,6 +234,8 @@ class SlotFiller:
         Update slot filling state with new entities from a follow-up message.
         Returns updated state with any remaining missing slots.
         """
+        self._evict_expired()
+
         # Get or create state
         if conversation_id not in self.conversation_states:
             return self.initialize_state(conversation_id, intent, entities)
@@ -229,6 +266,8 @@ class SlotFiller:
 
         state["completed"] = len(state["missing_slots"]) == 0
         self.conversation_states[conversation_id] = state
+        self._touch(conversation_id)
+        self._evict_lru_if_needed()
         return state
 
     def get_next_question(self, conversation_id: str, language: str = "ar") -> Optional[Dict]:
@@ -236,6 +275,8 @@ class SlotFiller:
         Get the next follow-up question for missing slots.
         Returns None if all required slots are filled.
         """
+        self._evict_expired()
+
         state = self.conversation_states.get(conversation_id)
         if not state or state["completed"]:
             return None
@@ -250,6 +291,7 @@ class SlotFiller:
                 # Mark as asked
                 state["asked_slots"].add(slot)
                 self.conversation_states[conversation_id] = state
+                self._touch(conversation_id)
 
                 # Get question text
                 descriptions = self.SLOT_DESCRIPTIONS.get(slot, {})
@@ -267,6 +309,8 @@ class SlotFiller:
 
     def get_state_summary(self, conversation_id: str) -> Dict:
         """Get a summary of the current slot filling state."""
+        self._evict_expired()
+
         state = self.conversation_states.get(conversation_id)
         if not state:
             return {
@@ -276,6 +320,8 @@ class SlotFiller:
                 "missing_slots": [],
                 "completed": False
             }
+
+        self._touch(conversation_id)
 
         return {
             "active": True,
@@ -290,6 +336,7 @@ class SlotFiller:
         """Clear slot filling state for a conversation."""
         if conversation_id in self.conversation_states:
             del self.conversation_states[conversation_id]
+        self._state_last_access.pop(conversation_id, None)
 
     def extract_slot_values(self, text: str, language: str = "ar") -> Dict:
         """

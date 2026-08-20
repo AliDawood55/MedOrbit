@@ -74,6 +74,15 @@ button {
     color: inherit;
 }
 
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 3px;
+}
+
+:where(button, input, textarea, select):disabled {
+    cursor: not-allowed;
+}
+
 input, textarea, select {
     font-family: inherit;
     font-size: inherit;
@@ -118,9 +127,11 @@ kbd {
 
     /* Category colors */
     --cat-clinic: #2563EB;
+    --cat-dental: #0D9488;
     --cat-pharmacy: #F59E0B;
     --cat-hospital: #DC2626;
     --cat-doctor: #7C3AED;
+    --cat-healthcare: #64748B;
 
     /* Neutral - Light */
     --bg: #F9FAFB;
@@ -282,6 +293,7 @@ kbd {
     display: grid;
     grid-template-rows: var(--header-h) var(--filter-h) 1fr;
     height: 100vh;
+    height: 100dvh;
     background: var(--bg);
 }
 

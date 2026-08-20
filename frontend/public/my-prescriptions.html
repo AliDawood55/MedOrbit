@@ -18,6 +18,17 @@
     <link rel="stylesheet" href="../src/css/listing.css">
     <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/records.css">
+    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
+         below is an external file and an external file can 404, be blocked or
+         time out, and a gate that never loads hides nothing. These lines
+         cannot go missing on their own. They hide protected markup from the
+         first paint; the gate clears the attribute once it has verified the
+         session, and the watchdog leaves for Home if the gate never arrives. -->
+    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
 
@@ -49,7 +60,7 @@
         </div>
 
         <!-- Filters: visually built, disabled — nothing to filter yet -->
-        <div class="records-filter-bar" id="prescriptionsFilters">
+        <div class="records-filter-bar hidden" id="prescriptionsFilters">
             <div class="search-field">
                 <i class="fas fa-search"></i>
                 <input type="text" id="prescriptionSearchInput" disabled data-i18n-placeholder="prescriptions.searchPlaceholder" placeholder="ابحث باسم الدواء...">
@@ -64,7 +75,6 @@
                 <option value="30" data-i18n="prescriptions.filterLast30">آخر 30 يوماً</option>
                 <option value="365" data-i18n="prescriptions.filterLastYear">آخر سنة</option>
             </select>
-            <span class="records-locked-tag" id="prescriptionsLockedTag"><i class="fas fa-lock"></i> <span data-i18n="records.comingSoonTag">قريباً</span></span>
         </div>
 
         <div class="records-loading hidden" id="prescriptionsLoading">
@@ -85,7 +95,7 @@
         </div>
 
         <!-- Structural preview: skeleton shapes only, never fabricated data -->
-        <div class="records-preview-section" id="prescriptionsPreview">
+        <div class="records-preview-section hidden" id="prescriptionsPreview">
             <div class="records-preview-caption">
                 <i class="fas fa-eye"></i>
                 <span data-i18n="records.previewCaption">معاينة لما ستراه هنا عند توفر هذه الميزة</span>

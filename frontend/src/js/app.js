@@ -87,10 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fitAllBtn')?.addEventListener('click', () => {
         if (typeof MapApp !== 'undefined' && MapApp.fitToMarkers) MapApp.fitToMarkers();
     });
-    document.getElementById('layerBtn')?.addEventListener('click', () => {
-        Toast.info(I18n.getLang() === 'ar' ? 'تبديل الطبقات قريباً' : 'Layer toggle coming soon');
-    });
-
     // 6b. Mobile chat/map view toggle (FAB, only visible on narrow screens)
     document.getElementById('mobileViewToggle')?.addEventListener('click', function () {
         const main = document.querySelector('.app-main');
@@ -100,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
         this.innerHTML = showingMap
             ? '<i class="fas fa-comments"></i>'
             : '<i class="fas fa-map-location-dot"></i>';
+        const viewLabel = I18n.t(showingMap ? 'common.showChat' : 'common.showMap');
+        this.title = viewLabel;
+        this.setAttribute('aria-label', viewLabel);
 
         // Leaflet can't size a map that was display:none when it initialized —
         // nudge it once its container becomes visible again.

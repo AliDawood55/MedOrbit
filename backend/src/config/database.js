@@ -1,8 +1,6 @@
 const { Pool } = require('pg');
 const path = require('path');
-// quiet: true — suppress dotenv's own "injecting env (N)" console line;
-// this call is load-bearing (routes requiring this module resolve before
-// src/config/env.js runs), just not something that needs to log itself.
+
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env'), quiet: true });
 const pool = new Pool({
     host: process.env.DB_HOST,
@@ -17,21 +15,11 @@ const pool = new Pool({
 
 });
 
-// // Set search_path on every new connection
-// pool.on('connect', (client) => {
-//     client.query('SET search_path TO medorbit, public').catch(() => {});
-// });
-
-console.log('✅ Connected to PostgreSQL (medorbit)');
+console.log('Connected to PostgreSQL (medorbit)');
 
 const getClient = async () => {
     return await pool.connect();
 };
-// const getClient = async () => {
-//     const client = await pool.connect();
-//     await client.query('SET search_path TO medorbit, public');
-//     return client;
-// };
 
 module.exports = {
     query: (text, params) => pool.query(text, params),

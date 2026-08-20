@@ -3,14 +3,18 @@
 // another dotenv.config() call here. This file previously had one targeting
 // backend/.env (a path that has never existed), which did nothing useful
 // and printed a raw DB password to the console — removed.
+const http = require('http');
 const app = require("./src/app");
+const { initRealtime } = require('./src/realtime');
 
 const env = require("./src/config/env");
 
 const logger = require("./src/utils/logger");
 
 
-const server = app.listen(
+const server = http.createServer(app);
+initRealtime(server);
+server.listen(
   env.app.port,
   () => {
 

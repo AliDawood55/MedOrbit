@@ -16,8 +16,6 @@
  */
 const VirtualDoctorSession = (() => {
 
-    const AI_BASE = API.getAiOrigin();
-
     // How long the doctor keeps the floor after its reply is on screen. With
     // no TTS this is just a settling beat; when TTS arrives, replace this with
     // "until playback ends" and the rest of the gating already works.
@@ -29,33 +27,27 @@ const VirtualDoctorSession = (() => {
     let busy = false;
     let cfg = {};
     let turnCount = 0;
+    let generation = 0;
 
     function emit(name, payload) {
         const fn = cfg[name];
         return typeof fn === 'function' ? fn(payload) : undefined;
     }
 
-    async function api(path, options) {
-        const res = await fetch(AI_BASE + path, options);
-        if (!res.ok) {
-            let detail = `HTTP ${res.status}`;
-            try {
-                const body = await res.json();
-                if (body && body.detail) detail = body.detail;
-            } catch (_) { /* non-JSON error body */ }
-            const err = new Error(detail);
-            err.status = res.status;
-            throw err;
-        }
-        return res.json();
-    }
-
-    function jsonPost(path, payload) {
-        return api(path, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload || {})
-        });
+    /**
+     * Entitlement denials are not consultation errors.
+     *
+     * A cooldown or an exhausted allowance is a normal product state that the
+     * UI must render as a paywall, so they are separated from genuine faults
+     * here rather than being surfaced as "something went wrong".
+     */
+    function isEntitlementDenial(err) {
+        return err && (
+            err.code === 'VOICE_COOLDOWN' ||
+            err.code === 'FREE_QUOTA_EXHAUSTED' ||
+            err.code === 'SUBSCRIPTION_REQUIRED' ||
+            err.code === 'SUBSCRIPTION_INACTIVE'
+        );
     }
 
     /**
@@ -77,24 +69,57 @@ const VirtualDoctorSession = (() => {
     }
 
     async function start(lang) {
+        const myGeneration = ++generation;
         language = (lang === 'ar' || lang === 'en') ? lang : 'en';
         emit('onState', { state: 'connecting' });
 
-        const res = await jsonPost('/virtual-doctor/start', { language, user_id: null });
+        let res;
+        try {
+            // No user_id is sent. Identity comes from the access token the API
+            // layer attaches, and is resolved server-side — a client-supplied
+            // id would be forgeable and the backend does not read one.
+            const envelope = await API.virtualDoctor.start(language);
+            res = envelope.data;
+        } catch (err) {
+            if (myGeneration !== generation) return null;
+            if (isEntitlementDenial(err)) {
+                // The server decides eligibility and returns the authoritative
+                // instant the next free consultation unlocks. The UI counts
+                // down to that timestamp; it never computes eligibility itself.
+                emit('onState', { state: 'paywalled' });
+                emit('onPaywall', {
+                    code: err.code,
+                    nextFreeAt: err.details?.next_free_at || null,
+                    upgradeAvailable: err.details?.upgrade_available !== false
+                });
+                return null;
+            }
+            throw err;
+        }
+
+        if (myGeneration !== generation) return null;
         sessionId = res.session_id;
         phase = res.phase;
         // The server echoes the session language; pin STT to it rather than
         // letting Whisper auto-detect, which is unreliable on short answers.
         language = res.language || language;
 
+        // A refresh or reconnect returns the SAME consultation rather than
+        // starting a new one, so neither costs the user their free session.
+        if (res.resumed) {
+            emit('onResumed', { sessionId, phase });
+        }
+
         await doctorSpeaks(res.reply);
+        if (myGeneration !== generation) return null;
         emit('onState', { state: 'listening' });
-        return { sessionId, language, reply: res.reply, phase };
+        return { sessionId, language, reply: res.reply, phase, resumed: Boolean(res.resumed) };
     }
 
     /** Feed one transcribed patient utterance into the interview engine. */
     async function submit(text) {
         if (!sessionId || busy || phase === 'complete') return null;
+        const myGeneration = generation;
         busy = true;
         turnCount += 1;
         const startedAt = performance.now();
@@ -103,14 +128,14 @@ const VirtualDoctorSession = (() => {
         emit('onState', { state: 'thinking' });
 
         try {
-            const res = await jsonPost('/virtual-doctor/message', {
-                session_id: sessionId,
-                message: text
-            });
+            const envelope = await API.virtualDoctor.message(sessionId, text);
+            const res = envelope.data;
+            if (myGeneration !== generation) return null;
             phase = res.phase;
             const elapsedMs = Math.round(performance.now() - startedAt);
 
             await doctorSpeaks(res.reply, { elapsedMs, turn: turnCount });
+            if (myGeneration !== generation) return null;
 
             if (phase === 'complete') {
                 emit('onState', { state: 'complete' });
@@ -128,6 +153,16 @@ const VirtualDoctorSession = (() => {
             }
             return res;
         } catch (err) {
+            if (myGeneration !== generation) return null;
+            if (isEntitlementDenial(err)) {
+                emit('onState', { state: 'paywalled' });
+                emit('onPaywall', {
+                    code: err.code,
+                    nextFreeAt: err.details?.next_free_at || null,
+                    upgradeAvailable: err.details?.upgrade_available !== false
+                });
+                return null;
+            }
             console.error('[vd-session] message failed:', err);
             emit('onError', { key: 'session.errEngine', detail: err.message, fatal: false });
             emit('onState', { state: 'listening' });
@@ -146,8 +181,15 @@ const VirtualDoctorSession = (() => {
     async function requestReport() {
         if (!sessionId) return { ok: false, reason: 'no_session' };
         try {
-            const res = await jsonPost(`/virtual-doctor/report/${sessionId}`, {});
-            return { ok: true, reportId: res.report_id, downloadUrl: AI_BASE + res.download_url };
+            const envelope = await API.virtualDoctor.report(sessionId);
+            const res = envelope.data;
+            return {
+                ok: true,
+                reportId: res.report_id,
+                // Served by the backend, which verifies the report belongs to
+                // the caller before streaming a byte of it.
+                downloadUrl: API.virtualDoctor.reportDownloadUrl(res.report_id)
+            };
         } catch (err) {
             if (err.status === 503) {
                 console.warn('[vd-session] PDF unavailable:', err.message);
@@ -161,11 +203,20 @@ const VirtualDoctorSession = (() => {
         cfg = options || {};
     }
 
+    function reset() {
+        generation += 1;
+        sessionId = null;
+        phase = 'idle';
+        busy = false;
+        turnCount = 0;
+    }
+
     return {
         init,
         start,
         submit,
         requestReport,
+        reset,
         getPhase: () => phase,
         getLanguage: () => language,
         getSessionId: () => sessionId,

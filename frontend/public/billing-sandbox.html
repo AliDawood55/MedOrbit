@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – Development Sandbox Checkout</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/billing.css">
+    <!-- Fail-closed shield for this page's shell, as on every protected page. -->
+    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <script src="../src/js/auth-gate.js"></script>
+</head>
+<!--
+  This page stands in for a payment provider's hosted checkout.
+
+  It deliberately does not use the MedOrbit application shell — no navigation,
+  no sidebar — because a real provider's page would not either, and the flow
+  being rehearsed here is "you left the app, you came back". It has no
+  authority over entitlement: the buttons below ask the backend to emit the
+  provider event a real provider would have sent, and the subscription only
+  changes after that event is signed, verified and processed.
+
+  There are no card fields on this page, by design and permanently. Card entry
+  belongs on a provider's PCI DSS validated pages.
+-->
+<body class="site-page" data-theme="light">
+
+    <main class="sandbox-shell">
+        <div class="sandbox-card">
+            <div class="sandbox-brand">
+                <i class="fas fa-heartbeat" aria-hidden="true"></i>
+                <span>MedOrbit Pro</span>
+            </div>
+            <p class="sandbox-tagline" data-i18n="billing.sandboxCheckoutTagline">
+                إتمام الاشتراك
+            </p>
+
+            <div class="billing-sandbox-notice" role="note">
+                <i class="fas fa-flask" aria-hidden="true"></i>
+                <div>
+                    <strong data-i18n="billing.sandboxTitle">بيئة تطوير تجريبية</strong>
+                    <p data-i18n="billing.sandboxBody">
+                        لن تتم معالجة أي دفعة حقيقية ولا يتم جمع أي بيانات بطاقة.
+                    </p>
+                </div>
+            </div>
+
+            <div id="sandboxBody" aria-live="polite">
+                <p class="billing-empty" data-i18n="common.loading">جارٍ التحميل…</p>
+            </div>
+        </div>
+
+        <p class="sandbox-footer" data-i18n="billing.sandboxFooter">
+            بيئة تطوير MedOrbit — لا تُستخدم أموال حقيقية.
+        </p>
+    </main>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../src/utils/dom.js"></script>
+    <script src="../src/utils/store.js"></script>
+
+    <script src="../src/js/api.js"></script>
+    <script src="../src/js/i18n.js"></script>
+    <script src="../src/js/theme.js"></script>
+    <script src="../src/js/toast.js"></script>
+    <script src="../src/js/billing-ui.js"></script>
+    <script src="../src/js/billing-sandbox.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof I18n !== 'undefined') I18n.apply();
+            if (typeof Theme !== 'undefined') Theme.apply();
+            BillingSandbox.init();
+        });
+    </script>
+</body>
+</html>

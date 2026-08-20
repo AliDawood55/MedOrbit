@@ -41,3 +41,14 @@
 .notif-page-item .dashboard-list-actions {
     align-self: center;
 }
+
+.notif-page-item.navigable {
+    cursor: pointer;
+}
+
+.notif-page-item.navigable:hover,
+.notif-page-item.navigable:focus-visible {
+    border-color: var(--primary);
+    background: var(--primary-50);
+    outline: none;
+}

@@ -5,7 +5,8 @@ const router = express.Router();
 const db = require("../config/database");
 
 const {
-    authenticate
+    authenticate,
+    authenticateOptional
 } = require("../middleware/auth");
 
 const {
@@ -73,18 +74,29 @@ router.post(
 // =======================================
 // GET /api/feedback/stats
 // =======================================
-// Public aggregate feed for the home-page feedback dashboard: rating
-// distribution / category averages / recommend split, plus the list of
-// users who left feedback (name + avatar only — no comments, no email)
-// for the users marquee. No auth required, same as the rest of home.html.
+// The one product read that stays reachable without an account: the
+// home-page feedback dashboard on the public landing page needs it.
+//
+// What anonymous callers get is deliberately narrower than what the page
+// used to serve them. The aggregates (rating distribution, category
+// averages, recommend split, total) are non-identifiable and are the whole
+// point of a public social-proof panel, so they stay public. The `users`
+// array is NOT: it is a list of real MedOrbit users' names and avatars, and
+// under the guest policy that is product data about people, not a statistic.
+// It is now returned only to an authenticated caller, and the marquee simply
+// does not render for guests.
 
 router.get(
     "/stats",
+
+    authenticateOptional,
 
     async (req, res, next) => {
 
         try {
 
+            // The users query is skipped outright for guests — no reason to make
+            // the one public product endpoint pay for a join it will not send.
             const [totals, distribution, users] = await Promise.all([
 
                 db.query(
@@ -106,21 +118,23 @@ router.get(
                      GROUP BY overall_rating`
                 ),
 
-                db.query(
-                    `SELECT
-                         u.id,
-                         up.first_name_ar, up.last_name_ar,
-                         up.first_name_en, up.last_name_en,
-                         up.profile_image_url,
-                         MAX(f.created_at) AS last_feedback_at
-                     FROM medorbit.feedback f
-                     JOIN medorbit.users u ON u.id = f.user_id
-                     LEFT JOIN medorbit.user_profiles up ON up.user_id = u.id
-                     GROUP BY u.id, up.first_name_ar, up.last_name_ar,
-                              up.first_name_en, up.last_name_en, up.profile_image_url
-                     ORDER BY last_feedback_at DESC
-                     LIMIT 100`
-                )
+                req.user
+                    ? db.query(
+                        `SELECT
+                             u.id,
+                             up.first_name_ar, up.last_name_ar,
+                             up.first_name_en, up.last_name_en,
+                             up.profile_image_url,
+                             MAX(f.created_at) AS last_feedback_at
+                         FROM medorbit.feedback f
+                         JOIN medorbit.users u ON u.id = f.user_id
+                         LEFT JOIN medorbit.user_profiles up ON up.user_id = u.id
+                         GROUP BY u.id, up.first_name_ar, up.last_name_ar,
+                                  up.first_name_en, up.last_name_en, up.profile_image_url
+                         ORDER BY last_feedback_at DESC
+                         LIMIT 100`
+                    )
+                    : { rows: [] }
 
             ]);
 
@@ -148,14 +162,21 @@ router.get(
                 recommend: {
                     yes: t.recommend_yes || 0,
                     no: t.recommend_no || 0
-                },
-                users: users.rows.map((row) => ({
+                }
+            };
+
+            // Omitted entirely (not sent as an empty array) for guests, so the
+            // frontend can tell "nobody has left feedback" apart from "you are
+            // not signed in" and hide the section instead of claiming there is
+            // no feedback yet.
+            if (req.user) {
+                data.users = users.rows.map((row) => ({
                     id: row.id,
                     nameAr: [row.first_name_ar, row.last_name_ar].filter(Boolean).join(" ") || null,
                     nameEn: [row.first_name_en, row.last_name_en].filter(Boolean).join(" ") || null,
                     avatarUrl: row.profile_image_url || null
-                }))
-            };
+                }));
+            }
 
             return success(res, data, "Feedback statistics");
 

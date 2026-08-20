@@ -1,0 +1,46 @@
+﻿sample_id,group_id,text,label,split,verification_status
+c596a420072d9093ae15,fac_17137b06e93d0efadbaf,منزل الدكتور جميل,clinic,test,probable
+d1823b33eb7660e6427d,fac_17137b06e93d0efadbaf,Dr Jamil,clinic,test,probable
+e3b2c370dfb9fc509c54,fac_da33743da974fbb69d18,منزل الدكتور محمد أحمد صالح,clinic,test,probable
+32f2454bc34e2203a8d7,fac_da33743da974fbb69d18,Dr Mohammad Saleh's house,clinic,test,probable
+5d613d8222e6c61a52fb,fac_8be2c097aeaefbfdc218,منزل الدكتور منير شريف,clinic,test,probable
+2d9258a08761d8cbe557,fac_8be2c097aeaefbfdc218,Muneer Sharif,clinic,test,probable
+1af9f62f3ed3f32b7a56,fac_0859d908eeebec256df4,مركز سبسطية الصحي,clinic,test,probable
+9c443c75c7ff3c863eec,fac_0859d908eeebec256df4,Sabastia Helth Center,clinic,test,probable
+2b4688f2aefbfc348120,fac_ccc5f756c4ae618cdc11,صيدلية الترياق,pharmacy,test,probable
+c7bf1ca3a4af6250a924,fac_6d1af97a24138e63cf54,صيدلية لانا كير,pharmacy,test,probable
+a6e11ed2586ac17edaf9,fac_1d067e807f7e9e9e7dab,صيدليه عبير,pharmacy,test,probable
+b7aeb5483da78c801ace,fac_1d067e807f7e9e9e7dab,Abeer,pharmacy,test,probable
+80c379fd021620913d2c,fac_044a49b8687b324949aa,مستشفى الاتحاد,hospital,test,verified
+b0314fda2de3aa356215,fac_044a49b8687b324949aa,Al-Ittihad Hospital,hospital,test,verified
+e7a4019612312056535c,fac_044a49b8687b324949aa,Al Itihad Hospital,hospital,test,verified
+d906d9540cf173339a82,fac_f70970ac189f5263f5db,النابلسي,pharmacy,test,probable
+eb071f148bcb212617ed,fac_f70970ac189f5263f5db,Al Nabulsi,pharmacy,test,probable
+38cd5a2917ca070f1072,fac_374e4e364caeba7dc23b,عيادة اسنان,dental,test,probable
+35a9e8d82d10a05476b0,fac_374e4e364caeba7dc23b,Dentist,dental,test,probable
+a8deaca8f31b784f714e,fac_33d6b89cd342e6e70cad,الدكتور عبد الحافظ,clinic,test,probable
+1fe6f5e4a5fae7443459,fac_33d6b89cd342e6e70cad,Dr Abd Al Hafiz,clinic,test,probable
+d7efc7fa4800ef38cc7b,fac_cccd775fca93f87ec9e0,عيادة الدكتور محمد حاج حمد,clinic,test,probable
+03718e71d75bad752ea6,fac_cccd775fca93f87ec9e0,Dr Mohammed Hajhamad Clinic,clinic,test,probable
+0d12eb4484b81d1ea6e2,fac_b848f51c7f0ebc0bffb7,د.سليمان نويصر,dental,test,probable
+5255ecac259020aa9ccd,fac_b848f51c7f0ebc0bffb7,Dr.Sulieman nwaiser,dental,test,probable
+8c385cb2e62b3d5beeef,fac_673498ad7d75bdcff59b,مركز علاج لطب الأسنان,clinic,test,probable
+ab1eec9736d6273548ec,fac_673498ad7d75bdcff59b,Elaj Dental Center,clinic,test,probable
+ce2af5c16704d2bb9b3e,fac_18c8e3e51e1e0a68d2fe,صيدلية حسن,pharmacy,test,probable
+226a79ff36c86cc3a297,fac_18c8e3e51e1e0a68d2fe,Hassan Pharmacy,pharmacy,test,probable
+cdacfe92ca6144311f7a,fac_6ca93d7a72bd672a9289,صيدلية حواء,pharmacy,test,probable
+181db5310de0062e41ca,fac_6ca93d7a72bd672a9289,Hawa'a,pharmacy,test,probable
+da196d7f45a56b8b80b9,fac_1a50adca2ad4e977980c,منزل الدكتور عثمان عثمان,clinic,test,probable
+34484db1ff41b0c39d7e,fac_1a50adca2ad4e977980c,Home of Dr. Othman Othman,clinic,test,probable
+ee7da6eaf47d0025426c,fac_ecadd60018d8ca9ee721,صيدلية مكه,pharmacy,test,probable
+02c7330ee32c86bddf16,fac_ecadd60018d8ca9ee721,Mecca Pharmacy,pharmacy,test,probable
+35b6d2354d08ebe06949,fac_1485bcde36299fdcb6cc,صيدلية مكه,pharmacy,test,probable
+694e5846ac9269090acd,fac_1485bcde36299fdcb6cc,Mecca Pharmacy,pharmacy,test,probable
+f9c74700ba509ad54cf1,fac_e43be4a10818ff59ff78,صيدلية عمر,pharmacy,test,probable
+15df42444a8eab80cb13,fac_e43be4a10818ff59ff78,Omar,pharmacy,test,probable
+f9154ec9a4e811727c99,fac_6b3810419a237f1c6ef3,صيدلية الأكاديمية,pharmacy,test,probable
+a13c7f7a6ca78eb289b4,fac_d5a6b1059cdf7fb81963,صيدلية الشخشير,pharmacy,test,probable
+df152cf3945d101d3dd9,fac_63fa0193c98af5f2a641,صيدلية الغدير,pharmacy,test,probable
+92c83d244ab2ea8af050,fac_7c6438af30d1170536bf,صيدلية المعتصم,pharmacy,test,probable
+72bf3df076e9ecf7244d,fac_eb87ceddf1819de1cf8e,عيادة د احسان جيطان,clinic,test,probable
+b7b9bb30aa4102db238b,fac_a8b6c22e105a157ab575,مديرية الصحة المخفية,hospital,test,probable
