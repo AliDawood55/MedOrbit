@@ -3,8 +3,10 @@
   "version": "2.0.0",
   "description": "MedOrbit Smart Healthcare Platform",
   "private": true,
+  "workspaces": [
+    "backend"
+  ],
   "scripts": {
-    "postinstall": "cd backend && npm install",
     "venv": "python -m venv .venv",
     "activate": ".\\.venv\\Scripts\\Activate.ps1",
     "install:python": ".\\.venv\\Scripts\\python.exe -m pip install --upgrade pip && .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt",
@@ -15,12 +17,23 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": ".\\.venv\\Scripts\\python.exe -m http.server 8080 -d frontend",
     "dev:ollama": "ollama serve",
-    "db:migrate": "psql -U postgres -d medorbit -f db/00_extensions.sql && psql -U postgres -d medorbit -f db/01_base_tables.sql && psql -U postgres -d medorbit -f db/02_dependent_tables.sql && psql -U postgres -d medorbit -f db/03_indexes.sql && psql -U postgres -d medorbit -f db/04_triggers_sequences.sql && psql -U postgres -d medorbit -f db/05_views.sql && psql -U postgres -d medorbit -f db/06_seed_data.sql",
-    "db:seed": "psql -U postgres -d medorbit -f db/06_seed_data.sql"
+    "test:db:init": "docker compose --profile test run --rm test-db-init",
+    "test:auth:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth:baseline",
+    "test:s1a:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:s1a",
+    "test:admin-notifications-ui": "node frontend/tests/admin-notifications-ui.test.js",
+    "test:user-content-ui": "node frontend/tests/user-content-unification-ui.test.js",
+    "test:doctor-scheduling-ui": "node frontend/tests/doctor-scheduling-ui.test.js",
+    "test:auth-gate-ui": "node frontend/tests/auth-gate-ui.test.js",
+    "test:virtual-doctor-tts-ui": "node frontend/tests/virtual-doctor-tts-ui.test.js",
+    "test:auth-gate:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth-gate && npm run test:auth-gate-ui",
+    "test:billing:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test ai-service-test && docker compose --profile test exec -T backend-test npm run test:billing",
+    "test:admin-rate-notifications:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:admin-rate-notifications && npm run test:admin-notifications-ui",
+    "db:migrate": "docker compose --profile tools run --rm db-migrate up",
+    "db:migrate:status": "docker compose --profile tools run --rm db-migrate status",
+    "db:migrate:dry-run": "docker compose --profile tools run --rm db-migrate dry-run"
   },
   "devDependencies": {
-    "concurrently": "^9.2.4",
-    "cypress": "^15.19.0"
+    "concurrently": "^9.2.4"
   },
   "dependencies": {
     "json2csv": "^6.0.0-alpha.2",

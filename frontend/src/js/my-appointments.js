@@ -100,6 +100,11 @@ const MyAppointments = (() => {
         return String(start).slice(0, 5) + ' – ' + String(end).slice(0, 5);
     }
 
+    function isOnlineMessageAvailable(a) {
+        return a.appointment_type === 'telemedicine'
+            && ['scheduled','confirmed','in_progress'].includes(a.status);
+    }
+
     // ================= LOAD + ENRICH =================
 
     async function enrich(appts) {
@@ -111,7 +116,7 @@ const MyAppointments = (() => {
         await Promise.all([
             ...doctorIds.map(async (id) => {
                 try {
-                    const res = await API.doctors.get(id, { auth: false });
+                    const res = await API.doctors.get(id);
                     state.doctorCache.set(id, res.data.doctor);
                 } catch {
                     state.doctorCache.set(id, null);
@@ -119,7 +124,7 @@ const MyAppointments = (() => {
             }),
             ...clinicIds.map(async (id) => {
                 try {
-                    const res = await API.clinics.get(id, { auth: false });
+                    const res = await API.clinics.get(id);
                     state.clinicCache.set(id, res.data?.clinic || res.data);
                 } catch {
                     state.clinicCache.set(id, null);
@@ -176,10 +181,12 @@ const MyAppointments = (() => {
         const clinicLabel = clinic ? name(clinic, 'name_ar', 'name_en') : ('#' + String(a.clinic_id || '').slice(0, 8));
         const dateOnly = toDateOnlyStr(a.scheduled_date);
         const canCancel = state.activeTab === 'upcoming' && (a.status === 'scheduled' || a.status === 'confirmed');
+        const canOpenMessage = isOnlineMessageAvailable(a);
+        const counterpartId = a.doctor_id;
 
         return (
             '<div class="appt-card">' +
-                '<div class="appt-card-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-video' : 'fa-hospital') + '"></i></div>' +
+                '<div class="appt-card-icon"><i class="fas ' + (a.appointment_type === 'telemedicine' ? 'fa-comments' : 'fa-hospital') + '"></i></div>' +
                 '<div class="appt-card-body">' +
                     '<div class="appt-card-header">' +
                         '<span class="appt-card-number">' + escapeHtml(a.appointment_number || '') + '</span>' +
@@ -192,11 +199,13 @@ const MyAppointments = (() => {
                         '<span><i class="fas fa-clock"></i>' + escapeHtml(formatTimeRange(a.start_time, a.end_time)) + '</span>' +
                     '</div>' +
                     (a.reason_for_visit ? '<div class="appt-card-reason">' + escapeHtml(a.reason_for_visit) + '</div>' : '') +
-                    (canCancel ? (
+                    ((canCancel || (canOpenMessage && counterpartId)) ? (
                         '<div class="appt-card-actions">' +
+                            ((canOpenMessage && counterpartId) ? '<a class="btn btn-primary btn-sm" href="direct-messages.html?counterpart=' + encodeURIComponent(counterpartId) + '"><i class="fas fa-message"></i> ' + (isAr() ? 'فتح المحادثة الآمنة' : 'Open secure conversation') + '</a>' : '') +
+                            (canCancel ? (
                             '<button type="button" class="btn btn-secondary btn-sm" data-cancel-id="' + escapeHtml(a.id) + '">' +
                                 '<i class="fas fa-xmark"></i> ' + escapeHtml(t('myAppts.cancelBtn')) +
-                            '</button>' +
+                            '</button>') : '') +
                         '</div>'
                     ) : '') +
                 '</div>' +
@@ -318,6 +327,6 @@ const MyAppointments = (() => {
         load();
     }
 
-    return { init };
+    return { init, isOnlineMessageAvailable };
 
 })();

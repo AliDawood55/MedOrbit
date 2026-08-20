@@ -1,0 +1,2 @@
+import 'package:flutter/material.dart'; import '../models/chatbot_models.dart';
+class SuggestionChips extends StatelessWidget { const SuggestionChips({super.key, required this.suggestions, required this.onSelected}); final List<ChatSuggestion> suggestions; final ValueChanged<String> onSelected; @override Widget build(BuildContext context) => Wrap(spacing: 8, runSpacing: 8, children: [for (final item in suggestions.where((item) => item.text.trim().isNotEmpty)) ActionChip(label: Text(item.text), onPressed: () => onSelected(item.text), tooltip: 'Use suggestion')]); }

@@ -14,9 +14,15 @@
     const verifyToken = params.get('verify');
     const resetToken = params.get('reset');
 
+    // The global auth gate also boots on index.html and would otherwise race
+    // this hand-off, bouncing a legitimate reset/verify link to Home before the
+    // dedicated page loads. The flag tells it this document is already on its
+    // way somewhere and it should stand down.
     if (verifyToken) {
+        window.__medorbitNavigatingAway = true;
         window.location.replace('verify-email.html?token=' + encodeURIComponent(verifyToken));
     } else if (resetToken) {
+        window.__medorbitNavigatingAway = true;
         window.location.replace('reset-password.html?token=' + encodeURIComponent(resetToken));
     }
 })();

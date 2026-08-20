@@ -23,6 +23,7 @@ const router = express.Router();
 
 router.get(
     "/",
+    authenticate,
     async (req, res, next) => {
 
         try {
@@ -61,6 +62,7 @@ router.get(
 
 router.get(
     "/:id",
+    authenticate,
     async (req, res, next) => {
 
 

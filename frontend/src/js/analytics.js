@@ -1,15 +1,43 @@
 /**
  * MedOrbit v2 - Analytics
- * Wires analytics.html to the real admin endpoint:
- * GET /api/dashboard/stats.
+ * Wires analytics.html to the real admin endpoint: GET /api/dashboard/stats.
+ * See api.js for the full response contract. Every number rendered here is
+ * either a real aggregate from that response or an honest "unavailable" /
+ * "no data yet" state — never a placeholder or fabricated value.
  */
 const Analytics = (() => {
 
     const charts = {};
-    let statsData = null;
-    // The untouched payload, kept so the summary tiles can be rebuilt in the
-    // other language without a second network call.
+    // The untouched payload from the last successful load, kept so the KPI
+    // tiles and charts can be rebuilt in the other language/theme without a
+    // second network call.
     let rawStats = null;
+
+    const ROLE_LABEL_KEYS = {
+        patient: 'analytics.rolePatient',
+        doctor: 'analytics.roleDoctor',
+        admin: 'analytics.roleAdmin',
+        super_admin: 'analytics.roleSuperAdmin'
+    };
+
+    const CLINIC_TYPE_LABEL_KEYS = {
+        clinic: 'analytics.clinicTypeClinic',
+        hospital: 'analytics.clinicTypeHospital',
+        pharmacy: 'analytics.clinicTypePharmacy',
+        medical_center: 'analytics.clinicTypeMedicalCenter',
+        laboratory: 'analytics.clinicTypeLaboratory',
+        radiology: 'analytics.clinicTypeRadiology',
+        dental: 'analytics.clinicTypeDental',
+        emergency: 'analytics.clinicTypeEmergency',
+        optical: 'analytics.clinicTypeOptical',
+        vaccination_center: 'analytics.clinicTypeVaccinationCenter'
+    };
+
+    const TRIAGE_LABEL_KEYS = {
+        emergency: 'analytics.triageEmergency',
+        urgent: 'analytics.triageUrgent',
+        routine: 'analytics.triageRoutine'
+    };
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -36,87 +64,48 @@ const Analytics = (() => {
         return Array.isArray(counts) && counts.some((n) => toNumber(n) > 0);
     }
 
-    function isLegacyChartPayload(data) {
-        return !!(
-            data &&
-            (
-                data.appointmentsOverTime ||
-                data.usersByRole ||
-                data.topSpecialties ||
-                data.conversationsPerWeek ||
-                data.triageLevels ||
-                data.clinicTypes
-            )
-        );
+    function roleLabel(role) {
+        const key = ROLE_LABEL_KEYS[role];
+        return key ? t(key) : String(role || '');
     }
 
-    function section(labels, counts) {
-        return {
-            labels,
-            counts: counts.map(toNumber)
-        };
+    function clinicTypeLabel(type) {
+        const key = CLINIC_TYPE_LABEL_KEYS[type];
+        return key ? t(key) : String(type || '');
     }
 
-    /**
-     * Map the live GET /api/dashboard/stats payload onto this page's charts.
-     *
-     * The endpoint returns aggregate totals only:
-     *   { users:{total,patients,doctors},
-     *     appointments:{total,completed,cancelled,scheduled},
-     *     medical_records:{total}, prescriptions:{total}, ratings:{average} }
-     *
-     * Exactly ONE of the six charts can be filled honestly from that. The
-     * others need dimensions the endpoint does not have (a time axis, a
-     * per-specialty breakdown, chatbot data, triage levels, facility types),
-     * so they keep their own "awaiting backend data" overlay rather than being
-     * fed unrelated numbers under a title that would misdescribe them.
-     *
-     * The real totals that don't fit any chart are shown truthfully in the
-     * summary tiles instead — see buildSummary().
-     */
-    function normalizeStats(data) {
-        if (!data) return null;
-        // If the backend ever starts returning the richer per-chart shape
-        // documented in api.js, pass it straight through.
-        if (isLegacyChartPayload(data)) return data;
+    function triageLabel(level) {
+        const key = TRIAGE_LABEL_KEYS[level];
+        return key ? t(key) : String(level || '');
+    }
 
-        const users = data.users || {};
+    // Week-start ISO dates (e.g. "2026-05-25") from the backend, formatted as
+    // a short localized date for the chart's x-axis.
+    function formatWeekLabel(iso) {
+        const date = new Date(iso + 'T00:00:00Z');
+        if (Number.isNaN(date.getTime())) return iso;
+        try {
+            return new Intl.DateTimeFormat(isAr() ? 'ar-EG' : 'en-US', {
+                month: 'short', day: 'numeric', timeZone: 'UTC'
+            }).format(date);
+        } catch {
+            return iso;
+        }
+    }
 
-        const patients = toNumber(users.patients);
-        const doctors = toNumber(users.doctors);
-        const totalUsers = toNumber(users.total);
-        // Anything that isn't a patient or a doctor (admins, etc.). Clamped so
-        // a partial payload can never produce a negative slice.
-        const otherUsers = Math.max(totalUsers - patients - doctors, 0);
-
-        return {
-            // --- backed by real data ---
-            usersByRole: section(
-                [
-                    label('مرضى', 'Patients'),
-                    label('أطباء', 'Doctors'),
-                    label('أخرى', 'Other')
-                ],
-                [patients, doctors, otherUsers]
-            ),
-
-            // --- no source in this endpoint: keep the empty state ---
-            appointmentsOverTime: null,   // totals only, no time series
-            topSpecialties: null,         // no per-specialty breakdown
-            conversationsPerWeek: null,   // chatbot usage is not reported here
-            triageLevels: null,           // triage levels are not reported here
-            clinicTypes: null             // facility types are not reported here
-        };
+    // ================= ANALYTICS SECTION ACCESS =================
+    // Each chart's backend section is one of: undefined (older/partial
+    // payload), { error: true } (that one query failed server-side), or
+    // { data: {...} } (real result, possibly with zero counts). This never
+    // throws — every render function below treats "no usable data" and "the
+    // section errored" as distinct, correctly-labelled states rather than
+    // collapsing them into one misleading empty chart.
+    function analyticsSection(key) {
+        return rawStats?.analytics?.[key];
     }
 
     // ================= SUMMARY TILES =================
 
-    /**
-     * The scalar totals the endpoint really does return. These are shown as
-     * plain labelled tiles, which is the only presentation that describes them
-     * accurately — several of them (record counts, average rating) have no
-     * meaningful chart on this page.
-     */
     function buildSummary(data) {
         const users = data.users || {};
         const appointments = data.appointments || {};
@@ -203,8 +192,29 @@ const Analytics = (() => {
         };
     }
 
-    function toggleOverlay(key, show) {
-        document.getElementById('overlay' + key)?.classList.toggle('hidden', !show);
+    // state: null (hide overlay, chart is showing real non-zero data),
+    // 'empty' (section loaded but genuinely has zero data), or
+    // 'unavailable' (section errored server-side, or the payload is missing
+    // it entirely).
+    function toggleOverlay(key, state) {
+        const overlay = document.getElementById('overlay' + key);
+        if (!overlay) return;
+
+        if (!state) {
+            overlay.classList.add('hidden');
+            return;
+        }
+
+        const icon = overlay.querySelector('i');
+        const text = overlay.querySelector('span');
+        if (state === 'unavailable') {
+            if (icon) icon.className = 'fas fa-triangle-exclamation';
+            if (text) text.textContent = t('analytics.sectionUnavailable');
+        } else {
+            if (icon) icon.className = 'fas fa-plug-circle-exclamation';
+            if (text) text.textContent = t('analytics.awaitingData');
+        }
+        overlay.classList.remove('hidden');
     }
 
     function destroy(key) {
@@ -215,13 +225,21 @@ const Analytics = (() => {
     }
 
     // ================= CHART RENDERERS =================
+    // Each renderer resolves its own section from rawStats, decides which of
+    // the three states applies (real data / empty / unavailable), and only
+    // constructs a Chart.js instance for the first case — an errored or
+    // missing section never gets a chart built from placeholder data.
 
-    function renderAppointmentsOverTime(sectionData) {
-        const colors = themeColors();
-        const labels = sectionData?.labels || [];
-        const counts = sectionData?.counts || [];
-
+    function renderAppointmentsOverTime() {
+        const section = analyticsSection('appointmentsOverTime');
         destroy('appointments');
+
+        if (!section || section.error) { toggleOverlay('Appointments', 'unavailable'); return; }
+
+        const labels = (section.data?.labels || []).map(formatWeekLabel);
+        const counts = section.data?.counts || [];
+        const colors = themeColors();
+
         charts.appointments = new Chart(document.getElementById('chartAppointments'), {
             type: 'bar',
             data: {
@@ -229,7 +247,7 @@ const Analytics = (() => {
                 datasets: [{
                     label: t('analytics.appointmentsOverTime'),
                     data: counts,
-                    backgroundColor: [colors.primary, colors.success, colors.danger]
+                    backgroundColor: colors.primary
                 }]
             },
             options: {
@@ -239,20 +257,24 @@ const Analytics = (() => {
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { ...baseScaleOptions(colors), reverse: isAr() },
-                    y: { ...baseScaleOptions(colors), beginAtZero: true }
+                    y: { ...baseScaleOptions(colors), beginAtZero: true, ticks: { ...baseScaleOptions(colors).ticks, precision: 0 } }
                 }
             }
         });
 
-        toggleOverlay('Appointments', !hasCounts(counts));
+        toggleOverlay('Appointments', hasCounts(counts) ? null : 'empty');
     }
 
-    function renderUsersByRole(sectionData) {
-        const colors = themeColors();
-        const labels = sectionData?.labels || [];
-        const counts = sectionData?.counts || [];
-
+    function renderUsersByRole() {
+        const section = analyticsSection('usersByRole');
         destroy('usersByRole');
+
+        if (!section || section.error) { toggleOverlay('UsersByRole', 'unavailable'); return; }
+
+        const labels = (section.data?.labels || []).map(roleLabel);
+        const counts = section.data?.counts || [];
+        const colors = themeColors();
+
         charts.usersByRole = new Chart(document.getElementById('chartUsersByRole'), {
             type: 'doughnut',
             data: {
@@ -267,20 +289,25 @@ const Analytics = (() => {
             }
         });
 
-        toggleOverlay('UsersByRole', !hasCounts(counts));
+        toggleOverlay('UsersByRole', hasCounts(counts) ? null : 'empty');
     }
 
-    function renderTopSpecialties(sectionData) {
-        const colors = themeColors();
-        const labels = sectionData?.labels || [];
-        const counts = sectionData?.counts || [];
-
+    function renderTopSpecialties() {
+        const section = analyticsSection('topSpecialties');
         destroy('topSpecialties');
+
+        if (!section || section.error) { toggleOverlay('TopSpecialties', 'unavailable'); return; }
+
+        const items = section.data?.items || [];
+        const labels = items.map((i) => label(i.nameAr, i.nameEn));
+        const counts = items.map((i) => toNumber(i.count));
+        const colors = themeColors();
+
         charts.topSpecialties = new Chart(document.getElementById('chartTopSpecialties'), {
             type: 'bar',
             data: {
                 labels,
-                datasets: [{ label: t('analytics.topSpecialties'), data: counts, backgroundColor: [colors.primary, colors.info] }]
+                datasets: [{ label: t('analytics.topSpecialties'), data: counts, backgroundColor: colors.primary }]
             },
             options: {
                 indexAxis: 'y',
@@ -289,26 +316,73 @@ const Analytics = (() => {
                 animation: reducedMotion() ? false : { duration: 250 },
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ...baseScaleOptions(colors), beginAtZero: true, reverse: isAr() },
+                    x: { ...baseScaleOptions(colors), beginAtZero: true, reverse: isAr(), ticks: { ...baseScaleOptions(colors).ticks, precision: 0 } },
                     y: { ...baseScaleOptions(colors) }
                 }
             }
         });
 
-        toggleOverlay('TopSpecialties', !hasCounts(counts));
+        toggleOverlay('TopSpecialties', hasCounts(counts) ? null : 'empty');
     }
 
-    function renderConversationsPerWeek(sectionData) {
-        const colors = themeColors();
-        const labels = sectionData?.labels || [];
-        const counts = sectionData?.counts || [];
-
+    function renderConversationsPerWeek() {
+        const section = analyticsSection('conversationsPerWeek');
         destroy('conversations');
+
+        if (!section || section.error) { toggleOverlay('Conversations', 'unavailable'); return; }
+
+        const labels = (section.data?.labels || []).map(formatWeekLabel);
+        const counts = section.data?.counts || [];
+        const colors = themeColors();
+
         charts.conversations = new Chart(document.getElementById('chartConversations'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: t('analytics.conversationsPerWeek'),
+                    data: counts,
+                    borderColor: colors.success,
+                    backgroundColor: colors.success,
+                    tension: 0.3,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: reducedMotion() ? false : { duration: 250 },
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ...baseScaleOptions(colors), reverse: isAr() },
+                    y: { ...baseScaleOptions(colors), beginAtZero: true, ticks: { ...baseScaleOptions(colors).ticks, precision: 0 } }
+                }
+            }
+        });
+
+        toggleOverlay('Conversations', hasCounts(counts) ? null : 'empty');
+    }
+
+    function renderTriageLevels() {
+        const section = analyticsSection('triageLevels');
+        destroy('triage');
+
+        if (!section || section.error) { toggleOverlay('Triage', 'unavailable'); return; }
+
+        const rawLabels = section.data?.labels || [];
+        const labels = rawLabels.map(triageLabel);
+        const counts = section.data?.counts || [];
+        const colors = themeColors();
+        const levelColor = { emergency: colors.danger, urgent: colors.accent, routine: colors.success };
+
+        charts.triage = new Chart(document.getElementById('chartTriage'), {
             type: 'doughnut',
             data: {
                 labels,
-                datasets: [{ data: counts, backgroundColor: [colors.success, colors.border] }]
+                datasets: [{
+                    data: counts,
+                    backgroundColor: rawLabels.map((lvl) => levelColor[lvl] || colors.primary)
+                }]
             },
             options: {
                 responsive: true,
@@ -318,45 +392,19 @@ const Analytics = (() => {
             }
         });
 
-        toggleOverlay('Conversations', !hasCounts(counts));
+        toggleOverlay('Triage', hasCounts(counts) ? null : 'empty');
     }
 
-    function renderTriageLevels(sectionData) {
-        const colors = themeColors();
-        const labels = sectionData?.labels || [];
-
-        destroy('triage');
-        charts.triage = new Chart(document.getElementById('chartTriage'), {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [
-                    { label: t('analytics.triageEmergency'), data: sectionData?.emergency || [], backgroundColor: colors.danger },
-                    { label: t('analytics.triageUrgent'), data: sectionData?.urgent || [], backgroundColor: colors.accent },
-                    { label: t('analytics.triageRoutine'), data: sectionData?.routine || [], backgroundColor: colors.success }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: reducedMotion() ? false : { duration: 250 },
-                plugins: { legend: { position: 'bottom', labels: { color: colors.textMute, font: { size: 11 } } } },
-                scales: {
-                    x: { ...baseScaleOptions(colors), stacked: true, reverse: isAr() },
-                    y: { ...baseScaleOptions(colors), stacked: true, beginAtZero: true }
-                }
-            }
-        });
-
-        toggleOverlay('Triage', labels.length === 0);
-    }
-
-    function renderClinicTypes(sectionData) {
-        const colors = themeColors();
-        const labels = sectionData?.labels || [];
-        const counts = sectionData?.counts || [];
-
+    function renderClinicTypes() {
+        const section = analyticsSection('clinicTypes');
         destroy('clinicTypes');
+
+        if (!section || section.error) { toggleOverlay('ClinicTypes', 'unavailable'); return; }
+
+        const labels = (section.data?.labels || []).map(clinicTypeLabel);
+        const counts = section.data?.counts || [];
+        const colors = themeColors();
+
         charts.clinicTypes = new Chart(document.getElementById('chartClinicTypes'), {
             type: 'pie',
             data: {
@@ -371,20 +419,60 @@ const Analytics = (() => {
             }
         });
 
-        toggleOverlay('ClinicTypes', !hasCounts(counts));
+        toggleOverlay('ClinicTypes', hasCounts(counts) ? null : 'empty');
     }
 
     function renderAll() {
-        // Rebuilt on every render so the tiles follow the language toggle.
-        // Only the aggregate payload has scalars to show; the richer per-chart
-        // shape has none, and a failed load has nothing at all.
-        renderSummary(rawStats && !isLegacyChartPayload(rawStats) ? buildSummary(rawStats) : null);
-        renderAppointmentsOverTime(statsData?.appointmentsOverTime);
-        renderUsersByRole(statsData?.usersByRole);
-        renderTopSpecialties(statsData?.topSpecialties);
-        renderConversationsPerWeek(statsData?.conversationsPerWeek);
-        renderTriageLevels(statsData?.triageLevels);
-        renderClinicTypes(statsData?.clinicTypes);
+        if (!rawStats) return;
+        renderSummary(buildSummary(rawStats));
+        renderAppointmentsOverTime();
+        renderUsersByRole();
+        renderTopSpecialties();
+        renderConversationsPerWeek();
+        renderTriageLevels();
+        renderClinicTypes();
+    }
+
+    // ================= LOAD-ERROR BANNER =================
+    // A failure here means the whole GET /api/dashboard/stats request never
+    // came back (auth expired mid-session, server error, network down) — a
+    // single response with distinct, honest messaging per cause, never the
+    // generic per-chart "awaiting data" text.
+
+    // Kept so a language toggle while the banner is showing can retranslate
+    // its message without needing a fresh failed request to regenerate it.
+    let lastLoadError = undefined;
+
+    function loadErrorMessage(err) {
+        if (!err || err.status == null) return t('analytics.loadErrorNetwork');
+        if (err.status === 401) return t('analytics.loadErrorUnauthorized');
+        if (err.status === 403) return t('analytics.loadErrorForbidden');
+        if (err.status >= 500) return t('analytics.loadErrorServer');
+        return t('common.error');
+    }
+
+    function showLoadError(err) {
+        lastLoadError = err;
+        document.getElementById('analyticsKpis')?.classList.add('hidden');
+        document.getElementById('analyticsGrid')?.classList.add('hidden');
+        const banner = document.getElementById('analyticsLoadError');
+        const msg = document.getElementById('analyticsLoadErrorMessage');
+        if (msg) msg.textContent = loadErrorMessage(err);
+        banner?.classList.remove('hidden');
+    }
+
+    function hideLoadError() {
+        lastLoadError = undefined;
+        document.getElementById('analyticsLoadError')?.classList.add('hidden');
+        document.getElementById('analyticsGrid')?.classList.remove('hidden');
+    }
+
+    function onLanguageChanged() {
+        renderAll();
+        if (lastLoadError !== undefined) {
+            const msg = document.getElementById('analyticsLoadErrorMessage');
+            if (msg) msg.textContent = loadErrorMessage(lastLoadError);
+        }
     }
 
     // ================= LOAD =================
@@ -393,13 +481,13 @@ const Analytics = (() => {
         try {
             const res = await API.analytics.dashboardStats();
             rawStats = res?.data || null;
-            statsData = normalizeStats(rawStats);
+            hideLoadError();
+            renderAll();
         } catch (err) {
             console.error('Analytics: failed to load GET /api/dashboard/stats', err);
             rawStats = null;
-            statsData = null;
+            showLoadError(err);
         }
-        renderAll();
     }
 
     // ================= INIT =================
@@ -410,7 +498,7 @@ const Analytics = (() => {
         let isAdmin = false;
         try {
             const res = await API.users.me();
-            isAdmin = res?.data?.role === 'admin';
+            isAdmin = ['admin', 'super_admin'].includes(res?.data?.role);
         } catch (err) {
             console.error('Analytics: failed to verify role', err);
             isAdmin = false;
@@ -429,7 +517,8 @@ const Analytics = (() => {
         await loadStats();
 
         document.getElementById('themeToggle')?.addEventListener('click', () => renderAll());
-        window.addEventListener('languageChanged', renderAll);
+        document.getElementById('analyticsRetryBtn')?.addEventListener('click', () => loadStats());
+        window.addEventListener('languageChanged', onLanguageChanged);
     }
 
     return { init };

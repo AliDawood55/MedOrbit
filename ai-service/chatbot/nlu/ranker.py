@@ -1,4 +1,28 @@
+import re
 from typing import Dict, List, Optional, Tuple
+
+# Same boundary-safe containment check as IntentClassifier._keyword_in_text
+# (chatbot/intent/classifier.py): a negation word must be a standalone word,
+# not merely a substring embedded inside a longer token — e.g. "لا" must not
+# fire just because it appears inside "السلامة".
+_WORD_BOUNDARY_CHARS = r"A-Za-z0-9؀-ۿ"
+
+
+_negation_pattern_cache: Dict[str, "re.Pattern"] = {}
+
+
+def _contains_word(text: str, word: str) -> bool:
+    if not word:
+        return False
+    pattern = _negation_pattern_cache.get(word)
+    if pattern is None:
+        pattern = re.compile(
+            r"(?<![" + _WORD_BOUNDARY_CHARS + r"])"
+            + re.escape(word)
+            + r"(?![" + _WORD_BOUNDARY_CHARS + r"])"
+        )
+        _negation_pattern_cache[word] = pattern
+    return pattern.search(text) is not None
 
 
 class IntentRanker:
@@ -71,7 +95,9 @@ class IntentRanker:
             calibrated = raw_score
 
             # Apply negation penalty if intent matches negative context
-            has_negation = any(n in text_lower for n in self.NEGATION_WORDS_AR + self.NEGATION_WORDS_EN)
+            has_negation = any(
+                _contains_word(text_lower, n) for n in self.NEGATION_WORDS_AR + self.NEGATION_WORDS_EN
+            )
             if has_negation:
                 calibrated *= 0.5  # Reduce confidence if negation present
 

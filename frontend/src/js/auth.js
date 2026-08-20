@@ -35,7 +35,8 @@
 
     /**
      * Map known backend error codes to friendly bilingual messages.
-     * Falls back to the server's own message (e.g. dynamic password-policy text).
+     * Unknown server responses use a generic message so implementation details
+     * never reach the account screens.
      */
     function authErrorMessage(err) {
         const ar = isAr();
@@ -46,17 +47,34 @@
             RATE_LIMITED: ar ? 'محاولات كثيرة جداً، حاول لاحقاً' : 'Too many attempts, please try again later',
             UNAUTHORIZED: ar ? 'بيانات الدخول غير صحيحة' : 'Invalid credentials'
         };
-        return map[err?.code] || err?.message || (ar ? 'حدث خطأ غير متوقع' : 'Something went wrong');
+        return map[err?.code] || (ar ? 'تعذّر إكمال الطلب. حاول مرة أخرى.' : 'Could not complete the request. Please try again.');
     }
 
     function connectionErrorMessage() {
         return isAr()
-            ? 'تعذر الاتصال بالخادم. تأكد من تشغيل الباكند على المنفذ 3001'
-            : 'Could not reach the server. Make sure the backend is running on port 3001';
+            ? 'تعذّر الاتصال بالخدمة. تحقق من اتصالك ثم حاول مرة أخرى.'
+            : 'Could not reach the service. Check your connection and try again.';
     }
 
     function alertForError(err) {
         showAlert(err?.status ? authErrorMessage(err) : connectionErrorMessage());
+    }
+
+    /**
+     * The destination the visitor was originally trying to reach, validated by
+     * the one shared sanitizer in auth-gate.js. Returns null for anything that
+     * is not a real in-app page, so a crafted ?redirect= can never turn a
+     * successful login into an off-site redirect.
+     */
+    function intendedDestination() {
+        if (typeof AuthGate === 'undefined') return null;
+        return AuthGate.readIntendedDestination();
+    }
+
+    /** Carries the intended destination across an auth-flow page hop. */
+    function authFlowUrl(page) {
+        const next = intendedDestination();
+        return next ? page + '?redirect=' + encodeURIComponent(next) : page;
     }
 
     // ================= LOGIN =================
@@ -78,7 +96,8 @@
             API.setSession(res?.data || {});
             showAlert(isAr() ? 'تم تسجيل الدخول بنجاح!' : 'Logged in successfully!', 'success');
 
-            const redirect = new URLSearchParams(window.location.search).get('redirect');
+            const redirect = intendedDestination();
+            if (typeof AuthGate !== 'undefined') AuthGate.clearIntendedDestination();
             setTimeout(() => {
                 window.location.href = redirect || 'index.html';
             }, 500);
@@ -126,7 +145,10 @@
                 ? 'تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني ثم تسجيل الدخول.'
                 : 'Account created! Please check your email to verify it, then log in.', 'success');
 
-            setTimeout(() => { window.location.href = 'login.html'; }, 2500);
+            // Verification is still required before the account works — the
+            // intended destination just rides along to the login step so the
+            // visitor lands where they were going once they get there.
+            setTimeout(() => { window.location.href = authFlowUrl('login.html'); }, 2500);
         } catch (err) {
             alertForError(err);
         } finally {
@@ -193,7 +215,7 @@
             showAlert(isAr()
                 ? 'تم تغيير كلمة المرور بنجاح! يمكنك تسجيل الدخول الآن.'
                 : 'Password changed successfully! You can log in now.', 'success');
-            setTimeout(() => { window.location.href = 'login.html'; }, 1800);
+            setTimeout(() => { window.location.href = authFlowUrl('login.html'); }, 1800);
         } catch (err) {
             alertForError(err);
         } finally {

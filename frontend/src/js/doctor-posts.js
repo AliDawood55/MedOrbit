@@ -18,6 +18,7 @@ const DoctorPosts = (() => {
 
     let posts = [];
     let editingPostId = null;
+    let editingDisplayedTitle = null;
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -44,6 +45,9 @@ const DoctorPosts = (() => {
     }
 
     function postTitle(p) {
+        if (typeof I18n !== 'undefined' && typeof I18n.localizedContent === 'function') {
+            return I18n.localizedContent(p.title_ar, p.title_en);
+        }
         return (isAr() ? p.title_ar : p.title_en) || p.title_ar || p.title_en || '';
     }
 
@@ -119,7 +123,9 @@ const DoctorPosts = (() => {
                     '<span class="records-real-title">' + escapeHtml(postTitle(p)) + '</span>' +
                     '<span class="records-real-meta">' +
                         '<span class="records-real-badge ' + (p.is_published ? 'active' : '') + '">' + escapeHtml(t(p.is_published ? 'doctorPosts.published' : 'doctorPosts.draftLabel')) + '</span>' +
+                        '<span class="records-real-badge">' + escapeHtml(p.moderation_status || 'pending') + '</span>' +
                         '<span>' + escapeHtml(t(CATEGORY_KEY[p.category] || p.category)) + '</span>' +
+                        '<span><i class="fas fa-heart"></i> ' + escapeHtml(p.like_count || 0) + ' · <i class="fas fa-comment"></i> ' + escapeHtml(p.comment_count || 0) + '</span>' +
                         '<span>' + escapeHtml(fmtDate(p.created_at)) + '</span>' +
                     '</span>' +
                     (bodyPreview ? '<span class="records-real-subtitle">' + escapeHtml(bodyPreview) + '</span>' : '') +
@@ -141,7 +147,7 @@ const DoctorPosts = (() => {
         document.getElementById('postFormResult').classList.add('hidden');
         document.getElementById('postFormCard').classList.remove('hidden');
         document.getElementById('postFormAlert').className = 'alert';
-        document.getElementById('postTitleAr').focus();
+        document.getElementById('postTitle').focus();
     }
 
     function openEditForm(id) {
@@ -150,8 +156,8 @@ const DoctorPosts = (() => {
 
         editingPostId = p.id;
         document.getElementById('postFormTitle').textContent = t('doctorPosts.editPost');
-        document.getElementById('postTitleAr').value = p.title_ar || '';
-        document.getElementById('postTitleEn').value = p.title_en || '';
+        editingDisplayedTitle = postTitle(p);
+        document.getElementById('postTitle').value = editingDisplayedTitle;
         document.getElementById('postCategory').value = p.category || 'health_tip';
         document.getElementById('postBody').value = p.body || '';
         document.getElementById('postBodyCount').textContent = String((p.body || '').length);
@@ -160,7 +166,7 @@ const DoctorPosts = (() => {
         document.getElementById('postFormResult').classList.add('hidden');
         document.getElementById('postFormCard').classList.remove('hidden');
         document.getElementById('postFormAlert').className = 'alert';
-        document.getElementById('postTitleAr').focus();
+        document.getElementById('postTitle').focus();
     }
 
     function hideForm() {
@@ -170,8 +176,8 @@ const DoctorPosts = (() => {
 
     function resetForm() {
         editingPostId = null;
-        document.getElementById('postTitleAr').value = '';
-        document.getElementById('postTitleEn').value = '';
+        editingDisplayedTitle = null;
+        document.getElementById('postTitle').value = '';
         document.getElementById('postCategory').selectedIndex = 0;
         document.getElementById('postBody').value = '';
         document.getElementById('postBodyCount').textContent = '0';
@@ -188,11 +194,10 @@ const DoctorPosts = (() => {
     }
 
     function validate() {
-        const titleAr = document.getElementById('postTitleAr').value.trim();
-        const titleEn = document.getElementById('postTitleEn').value.trim();
+        const title = document.getElementById('postTitle').value.trim();
         const body = document.getElementById('postBody').value.trim();
 
-        if (!titleAr && !titleEn) return t('doctorPosts.errorTitleRequired');
+        if (!title) return t('doctorPosts.errorTitleRequired');
         if (!body) return t('doctorPosts.errorBodyRequired');
         return null;
     }
@@ -211,13 +216,13 @@ const DoctorPosts = (() => {
         const btn = document.getElementById('postFormSubmitBtn');
         btn.classList.add('loading');
 
+        const title = document.getElementById('postTitle').value.trim();
         const body = {
-            titleAr: document.getElementById('postTitleAr').value.trim(),
-            titleEn: document.getElementById('postTitleEn').value.trim(),
             category: document.getElementById('postCategory').value,
             body: document.getElementById('postBody').value.trim(),
             isPublished: document.getElementById('postPublishToggle').checked
         };
+        if (!editingPostId || title !== editingDisplayedTitle) body.title = title;
 
         let ok = true;
         try {

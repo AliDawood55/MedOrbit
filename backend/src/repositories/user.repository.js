@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const { hashRefreshToken } = require('../utils/token');
 
 /**
  * User Repository
@@ -134,9 +135,9 @@ class UserRepository {
 
     async createSession({ userId, refreshToken, ipAddress, userAgent }) {
         await db.query(
-            `INSERT INTO medorbit.user_sessions (user_id, refresh_token, ip_address, user_agent, expires_at)
+            `INSERT INTO medorbit.user_sessions (user_id, refresh_token_hash, ip_address, user_agent, expires_at)
              VALUES ($1, $2, $3, $4, NOW() + INTERVAL '7 days')`,
-            [userId, refreshToken, ipAddress, userAgent]
+            [userId, hashRefreshToken(refreshToken), ipAddress, userAgent]
         );
     }
 
@@ -145,8 +146,8 @@ class UserRepository {
             `SELECT s.*, u.email, u.role 
              FROM medorbit.user_sessions s
              JOIN medorbit.users u ON u.id = s.user_id
-             WHERE s.refresh_token = $1 AND s.expires_at > NOW()`,
-            [refreshToken]
+             WHERE s.refresh_token_hash = $1 AND s.expires_at > NOW()`,
+            [hashRefreshToken(refreshToken)]
         );
         return result.rows[0] || null;
     }

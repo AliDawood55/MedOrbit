@@ -2,7 +2,7 @@
  * MedOrbit v2 - Virtual Doctor speech output (TTS)
  *
  * Speaks each doctor reply aloud via the AI service:
- *   POST http://<host>:8001/virtual-doctor/speak  ->  audio/wav
+ *   POST <backend>/api/virtual-doctor/speak  ->  audio/wav
  *
  * The reply is split into sentences and played in order. That buys three
  * things at once:
@@ -19,7 +19,31 @@
  */
 const VirtualDoctorTTS = (() => {
 
-    const AI_BASE = API.getAiOrigin();
+
+    /**
+     * Authenticated call into the MedOrbit backend's Virtual Doctor gateway.
+     *
+     * These endpoints used to be called on the AI service directly, with no
+     * credential at all. They now require both an access token and ownership
+     * of an active consultation, so the model cannot be driven by anyone who
+     * merely has an account, let alone by an anonymous caller.
+     */
+    function vdBase() {
+        return API.getOrigin() + '/api/virtual-doctor';
+    }
+
+    function authHeaders(extra) {
+        const token = API.getAccessToken();
+        return Object.assign({}, extra || {}, token ? { Authorization: 'Bearer ' + token } : {});
+    }
+
+    /** The consultation this turn belongs to. */
+    function activeSessionId() {
+        if (typeof VirtualDoctorSession !== 'undefined' && typeof VirtualDoctorSession.getSessionId === 'function') {
+            return VirtualDoctorSession.getSessionId();
+        }
+        return null;
+    }
 
     // Backend rejects >800 chars; split well below that.
     const MAX_CHUNK_CHARS = 300;
@@ -106,10 +130,10 @@ const VirtualDoctorTTS = (() => {
         const hit = cache.get(key);
         if (hit) return { url: hit, cached: true };
 
-        const res = await fetch(AI_BASE + '/virtual-doctor/speak', {
+        const res = await fetch(vdBase() + '/speak', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, language: lang }),
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ text, language: lang, session_id: activeSessionId() }),
             signal
         });
         if (!res.ok) {
@@ -260,10 +284,15 @@ const VirtualDoctorTTS = (() => {
         }
     }
 
+    /** Unwrap the backend's {success, data} envelope. */
+    function unwrap(payload) {
+        return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload;
+    }
+
     async function fetchStatus() {
         try {
-            const res = await fetch(AI_BASE + '/virtual-doctor/speak/status');
-            return res.ok ? await res.json() : null;
+            const res = await fetch(vdBase() + '/speak/status', { headers: authHeaders() });
+            return res.ok ? unwrap(await res.json()) : null;
         } catch (_) {
             return null;
         }
@@ -271,8 +300,8 @@ const VirtualDoctorTTS = (() => {
 
     /** Load the voices up front so the greeting is not delayed by a model load. */
     function warmup() {
-        return fetch(AI_BASE + '/virtual-doctor/speak/warmup', { method: 'POST' })
-            .then((res) => (res.ok ? res.json() : null))
+        return fetch(vdBase() + '/speak/warmup', { method: 'POST', headers: authHeaders() })
+            .then((res) => (res.ok ? res.json().then(unwrap) : null))
             .catch(() => null);
     }
 

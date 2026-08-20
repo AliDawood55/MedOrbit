@@ -398,7 +398,7 @@ const MyRecords = (() => {
             render();
         } catch (err) {
             console.error('MyRecords: failed to load patient history', err);
-            setState('error', err?.message || label('تعذر تحميل السجلات', 'Could not load records'));
+            setState('error', label('تعذر تحميل السجلات. حاول مرة أخرى.', 'Could not load records. Please try again.'));
         }
     }
 

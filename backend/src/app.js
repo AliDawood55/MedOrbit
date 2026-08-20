@@ -27,6 +27,18 @@ const reportRoutes = require('./routes/report.routes');
 const adminRoutes = require("./routes/admin.routes");
 const systemSettingsRoutes = require('./routes/system-settings.routes');
 const auditLogRoutes = require('./routes/audit-log.routes');
+const aiRoutes = require('./routes/ai.routes');
+const billingRoutes = require('./routes/billing.routes');
+const virtualDoctorRoutes = require('./routes/virtual-doctor.routes');
+const adminInvitationRoutes = require('./routes/admin-invitation.routes');
+const { applicationRoutes, adminDoctorApplicationRoutes } = require('./routes/doctor-application.routes');
+const careRelationshipRoutes = require('./routes/care-relationship.routes');
+const { feedRoutes, socialDoctorRoutes, adminSocialRoutes } = require('./routes/social.routes');
+const messageRoutes = require('./routes/message.routes');
+const { contactRoutes, adminContactRoutes } = require('./routes/contact.routes');
+const eventHealthRoutes = require('./routes/event-health.routes');
+const { createGeneralApiLimiter, createAiFeatureLimiter } = require('./middleware/rateLimit');
+const { policy: billingPolicy } = require('./config/billing');
 
 
 const app = express();
@@ -44,7 +56,7 @@ app.use(helmet({
 
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "default-src 'none'; base-uri 'none'; object-src 'none'; frame-ancestors 'self'");
-  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(self), fullscreen=(self), payment=()');
+  res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(self), camera=(), fullscreen=(self), payment=()');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   next();
@@ -53,48 +65,33 @@ app.use((req, res, next) => {
 // CORS: configured origins plus same-machine/LAN frontend origins.
 app.use(cors(createCorsOptions()));
 
-// Rate limiting — global
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: { code: 'RATE_LIMITED', message: 'Too many requests. Please try again later.' }
-  }
-});
-app.use('/api/', globalLimiter);
+// General reads retain a bounded limiter without making local signed-in users
+// consume one shared IP bucket.
+app.use('/api', createGeneralApiLimiter());
 
-// Stricter rate limit for login endpoint (per-IP, prevents brute force)
-// NOTE: applied at the route level inside auth.routes.js, not here — kept
-// as-is from the pre-merge file rather than removed during conflict
-// resolution.
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,                   // 10 attempts per IP per 15 min
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: { code: 'RATE_LIMITED', message: 'Too many login attempts. Please try again later.' }
-  }
-});
-
-// Stricter rate limit for AI chatbot endpoint
-const chatLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    error: { code: 'CHAT_RATE_LIMITED', message: 'Too many chat messages. Please slow down.' }
-  }
+// Infrastructure fair-use limiter for the chatbot.
+//
+// Distinct from the free-message quota, which EntitlementService enforces per
+// account per 24 hours. This one protects the AI workers from a burst and
+// applies to Pro subscribers too: "unlimited" describes the product quota, not
+// permission to saturate the service.
+//
+// Keyed per authenticated user rather than per IP so that a clinic or campus
+// behind one address does not share a single bucket. The limit comes from the
+// central billing policy so it is configurable rather than hardcoded here.
+const chatLimiter = createAiFeatureLimiter({
+  max: billingPolicy.fairUse.chatbotMessagesPerMinute,
+  message: 'Too many chat messages. Please slow down.',
 });
 
 // Body parser — must be before routes
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({
+  limit: '1mb',
+  // Webhook signatures are computed over the exact bytes a provider sent.
+  // Re-serializing the parsed object would change key order and whitespace and
+  // break verification, so the original buffer is kept for that one route.
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
@@ -122,6 +119,14 @@ if (process.env.NODE_ENV === 'development') {
 
 // Auth routes (public)
 app.use('/api/auth', authRoutes);
+app.use('/api/doctor-applications', applicationRoutes);
+
+// Persisted AI operations cross this authenticated identity boundary.
+app.use('/api/ai', aiRoutes);
+app.use('/api/billing', billingRoutes);
+// Virtual Doctor now enters through the authenticated backend rather than the
+// browser calling the AI service directly.
+app.use('/api/virtual-doctor', virtualDoctorRoutes);
 
 // Chatbot routes (with stricter rate limit)
 app.use('/api/chat', chatLimiter, chatbotRoutes);
@@ -131,7 +136,7 @@ app.use('/api/chat', chatLimiter, chatbotRoutes);
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
-app.use('/api/specialties', require('./routes/specialty.routes'));
+app.use('/api/specialties', specialtyRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/medical-records", medicalRecordRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
@@ -144,27 +149,23 @@ app.use('/api/users', userRoutes);
 
 // Doctor routes (public read, protected write)
 app.use('/api/doctors', doctorRoutes);
-
-// Clinic routes (public read, protected write)
-app.use('/api/clinics', clinicRoutes);
-
-// Specialties (public read)
-app.use('/api/specialties', specialtyRoutes);
-
-// Appointments
-app.use('/api/appointments', appointmentRoutes);
-
-// Notifications
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin/notifications/templates', notificationTemplateRoutes);
-
-// Chatbot routes (with stricter rate limit)
-app.use('/api/chat', chatLimiter, chatbotRoutes);
+app.use('/api/doctors', socialDoctorRoutes);
+app.use('/api/feed', feedRoutes);
+app.use('/api/recommendations', require('./routes/recommendation.routes'));
 
 // Conversation routes (protected)
 app.use('/api/conversations', conversationRoutes);
+// Human patient-doctor messaging remains isolated from AI chatbot conversations.
+app.use('/api/messages', messageRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/health/events', eventHealthRoutes);
 
 app.use("/api/admin", adminRoutes);
+app.use('/api/admin/invitations', adminInvitationRoutes);
+app.use('/api/admin/doctor-applications', adminDoctorApplicationRoutes);
+app.use('/api/admin/care-relationships', careRelationshipRoutes);
+app.use('/api/admin/social', adminSocialRoutes);
+app.use('/api/admin/contact-messages', adminContactRoutes);
 app.use('/api/admin/system-settings', systemSettingsRoutes);
 app.use('/api/admin/audit-logs', auditLogRoutes);
 

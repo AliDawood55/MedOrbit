@@ -3,7 +3,7 @@ import os
 import re
 import time
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from chatbot.utils.text_normalizer import normalize_text, detect_language
 from chatbot.nlu.pipeline import NLUPipeline
@@ -44,6 +44,83 @@ class IntentClassifier:
         file_path = os.path.join(base_path, "intents.json")
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
+
+    # Characters that count as "inside a word" for boundary purposes: Latin
+    # letters, digits, and Arabic letters. A keyword must not be preceded or
+    # followed by one of these to count as a standalone-word/phrase match —
+    # otherwise a short keyword like "er" fires inside "there", or an Arabic
+    # keyword fires inside an unrelated longer word via an attached prefix
+    # (ال) or suffix.
+    _WORD_BOUNDARY_CHARS = r"A-Za-z0-9؀-ۿ"
+
+    # intents.json stores Arabic keywords in their bare form ("دكتور",
+    # "عيادة", "تأمين"), but Arabic almost always attaches a proclitic
+    # directly onto the noun with no space: the definite article "ال"
+    # ("الدكتور", "العيادة", "التأمين" — "the doctor/clinic/insurance"), or
+    # the preposition "ل" ("for/to") contracted with that same article into
+    # "لل" ("للحامل" — "for the pregnant [woman]"). Without allowing these,
+    # the strict boundary rule above would block those extremely common
+    # real-world forms, which is not the intended effect of closing the
+    # embedded-substring bug — these are grammatical particles, not a
+    # different, unrelated word the way "أ" is in "أطباء". So a keyword also
+    # counts as matched when immediately preceded by one of these.
+    _ARABIC_PROCLITICS = ("ال", "لل")
+
+    # Compiled boundary-safe patterns, keyed by keyword_norm. classify() runs
+    # this check for every keyword of every intent on every call, so
+    # rebuilding and recompiling the pattern string from scratch each time
+    # was measurably slower than the plain substring check it replaced.
+    # Shared at the class level (the keyword set is fixed, defined by
+    # intents.json) so the cache is warm after the first classify() call
+    # across every IntentClassifier instance.
+    _keyword_pattern_cache: Dict[str, Tuple["re.Pattern", ...]] = {}
+
+    @classmethod
+    def _keyword_in_text(cls, keyword_norm: str, text: str) -> bool:
+        """Boundary-safe containment check: True if `keyword_norm` appears in
+        `text` as a standalone word or standalone multi-word phrase (or that
+        same word with a recognized Arabic proclitic directly attached), not
+        merely as a substring embedded inside a longer, unrelated token."""
+        if not keyword_norm:
+            return False
+        patterns = cls._keyword_pattern_cache.get(keyword_norm)
+        if patterns is None:
+            escaped = re.escape(keyword_norm)
+            prefixes = ("",) + cls._ARABIC_PROCLITICS
+            patterns = tuple(
+                re.compile(
+                    r"(?<![" + cls._WORD_BOUNDARY_CHARS + r"])"
+                    + prefix + escaped
+                    + r"(?![" + cls._WORD_BOUNDARY_CHARS + r"])"
+                )
+                for prefix in prefixes
+            )
+            cls._keyword_pattern_cache[keyword_norm] = patterns
+        return any(p.search(text) is not None for p in patterns)
+
+    # Mirrors chatbot/nlu/safety.py's own informational-ER-place exemption
+    # (same policy, same narrow phrasing) — distinguishes "the emergency
+    # department" as a place/service from a personal emergency being
+    # reported. Matches ONLY the department-as-place phrasing "قسم
+    # الطوارئ"/"غرفة الطوارئ" — never bare "طوارئ" alone, which must
+    # always still win Step 9 on its own.
+    _ER_PLACE_PATTERN = re.compile(r"قسم\s+الطوارئ|غرفة\s+الطوارئ", re.IGNORECASE)
+
+    def _is_informational_er_place_query(
+        self, text: str, matched_kw: List[str], matched_pat: List[str]
+    ) -> bool:
+        """True only when the sole reason the "emergency" intent scored is
+        the bare "طوارئ" keyword AND the text specifically names the
+        emergency department as a place, rather than reporting a personal
+        emergency. Any other matched emergency keyword or regex pattern
+        (a real symptom, a self-report, "اسعاف", "حالة طارئة", etc.) means
+        this returns False and Step 9 still forces "emergency" outright.
+        """
+        if matched_pat:
+            return False
+        if matched_kw != ["طوارئ"]:
+            return False
+        return bool(self._ER_PLACE_PATTERN.search(text))
 
     def classify(self, text: str, context: Optional[Dict] = None) -> Dict:
         """
@@ -128,9 +205,10 @@ class IntentClassifier:
             secondary_keywords = keywords_en if lang == "ar" else keywords_ar
             all_keywords = primary_keywords + secondary_keywords
 
+            ngram_text = ' '.join(ngrams)
             for keyword in all_keywords:
                 keyword_norm = normalize_text(keyword)
-                if keyword_norm in match_text or keyword_norm in ' '.join(ngrams):
+                if self._keyword_in_text(keyword_norm, match_text) or self._keyword_in_text(keyword_norm, ngram_text):
                     weight = 1.0 if keyword in primary_keywords else 0.6
                     scores[intent] += weight
                     matched_keywords[intent].append(keyword)
@@ -138,7 +216,7 @@ class IntentClassifier:
             # Also check original normalized for dialect-expanded terms
             for keyword in all_keywords:
                 keyword_norm = normalize_text(keyword)
-                if keyword_norm != keyword and keyword_norm in normalized_text:
+                if keyword_norm != keyword and self._keyword_in_text(keyword_norm, normalized_text):
                     if keyword_norm not in [normalize_text(k) for k in matched_keywords[intent]]:
                         weight = 0.8 if keyword in primary_keywords else 0.5
                         scores[intent] += weight
@@ -182,15 +260,32 @@ class IntentClassifier:
 
         # Step 9: Emergency override (double-check through entity detection)
         if "emergency" in scores and scores["emergency"] >= 1.0:
-            return {
-                "intent": "emergency",
-                "confidence": 1.0,
-                "matched_keywords": matched_keywords.get("emergency", []),
-                "matched_patterns": matched_patterns.get("emergency", []),
-                "is_emergency": True,
-                "_pipeline": pipeline_log,
-                "_processing_ms": round((time.time() - start_time) * 1000, 2)
-            }
+            if self._is_informational_er_place_query(
+                text, matched_keywords.get("emergency", []), matched_patterns.get("emergency", [])
+            ):
+                # Informational/place query naming the ER (see
+                # _is_informational_er_place_query) — let it continue to
+                # normal ranking instead of forcing "emergency". The
+                # emergency intent is removed from contention entirely so
+                # it can't also win Step 10 purely on this same,
+                # now-exempted "طوارئ" match.
+                del scores["emergency"]
+                matched_keywords.pop("emergency", None)
+                matched_patterns.pop("emergency", None)
+                pipeline_log.append({
+                    "step": "emergency_override_exempted",
+                    "reason": "informational_er_place_query"
+                })
+            else:
+                return {
+                    "intent": "emergency",
+                    "confidence": 1.0,
+                    "matched_keywords": matched_keywords.get("emergency", []),
+                    "matched_patterns": matched_patterns.get("emergency", []),
+                    "is_emergency": True,
+                    "_pipeline": pipeline_log,
+                    "_processing_ms": round((time.time() - start_time) * 1000, 2)
+                }
 
         # Step 10: Multi-intent ranking with calibration
         if not scores:

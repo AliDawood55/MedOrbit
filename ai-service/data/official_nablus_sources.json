@@ -1,0 +1,161 @@
+{
+  "dataset_name": "MedOrbit targeted official Nablus facility evidence",
+  "collected_at": "2026-08-09T00:00:00+00:00",
+  "scope_sources": [
+    {
+      "source_name": "Nablus Municipality city profile",
+      "source_url": "https://nablus.org/images/reports/nablus_city_story_en.pdf",
+      "purpose": "city-versus-governorate scope context only; not a facility directory"
+    }
+  ],
+  "geographic_overrides": {
+    "node:6771841957": {
+      "city_scope": "outside_primary_scope",
+      "reason": "OSM name identifies a Kedumim doctors facility; it is not Nablus city or the immediate Nablus urban area."
+    }
+  },
+  "records": [
+    {
+      "canonical_name_ar": "مستشفى النجاح الوطني الجامعي",
+      "canonical_name_en": "An-Najah National University Hospital",
+      "aliases": ["NNUH", "An-Najah Hospital", "مستشفى جامعة النجاح"],
+      "facility_type": "hospital",
+      "ownership": "non_profit",
+      "specialties": ["nephrology", "oncology", "cardiology", "internal_medicine", "radiology", "pediatrics", "orthopedics"],
+      "services": ["cardiac_surgery", "general_surgery", "emergency", "dialysis", "medical_imaging"],
+      "address_en": "Asira Street, next to the Academy of the Holy Quran, Nablus",
+      "website": "https://nnuh.org/en/",
+      "source_url": "https://nnuh.org/en/",
+      "source_type": "official_hospital",
+      "source_name": "An-Najah National University Hospital",
+      "source_record_id": "nnuh-official-home",
+      "match_osm_ids": ["node:4433190689"],
+      "verification_status": "probable",
+      "confidence_score": 0.9,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "مستشفى نابلس التخصصي",
+      "canonical_name_en": "Nablus Specialized Hospital",
+      "aliases": ["NSC", "نابلس التخصصي"],
+      "facility_type": "hospital",
+      "ownership": "private",
+      "website": "https://www.nsc.ps/",
+      "source_url": "https://www.nsc.ps/",
+      "source_type": "official_hospital",
+      "source_name": "Nablus Specialized Hospital",
+      "source_record_id": "nsc-official-home",
+      "match_osm_ids": ["way:433076784"],
+      "verification_status": "probable",
+      "confidence_score": 0.9,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "نابلس التخصصي",
+      "canonical_name_en": "Nablus Specialized Hospital",
+      "facility_type": "hospital",
+      "ownership": "private",
+      "source_url": "https://site.moh.ps/Content/Books/uLmv8JXfPFgBE9VKNBOPaprz1adDKsuIGhQ9NVbiJ6nXrKbCdF9AlV_6C7j3gq5g2DHln7QGjNC1OoyzXK3d4t9MsrmGkHrmHpS9Ngeyt14mu.pdf",
+      "source_type": "government_directory",
+      "source_name": "Palestinian Ministry of Health hospital directory",
+      "source_record_id": "moh-hospitals-nablus-specialized",
+      "match_osm_ids": ["way:433076784"],
+      "verification_status": "probable",
+      "confidence_score": 0.82,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "المستشفى العربي التخصصي",
+      "canonical_name_en": "Specialized Arab Hospital",
+      "aliases": ["The Specialized Arabic Hospital", "المستشفى العربي"],
+      "facility_type": "hospital",
+      "ownership": "private",
+      "source_url": "https://spu.moh.ps/PartnerDetails?id=ed1444a1-1db1-4a83-b780-0756f3aece72",
+      "source_type": "government_directory",
+      "source_name": "Palestinian Ministry of Health Service Purchase Unit",
+      "source_record_id": "ed1444a1-1db1-4a83-b780-0756f3aece72",
+      "match_osm_ids": ["node:5200693023"],
+      "verification_status": "probable",
+      "confidence_score": 0.88,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "مستشفى رفيديا الحكومي",
+      "canonical_name_en": "Rafidia Governmental Hospital",
+      "aliases": ["Rafidia Hospital", "Rafidiah", "مستشفى رفيديا"],
+      "facility_type": "hospital",
+      "ownership": "government",
+      "source_url": "https://site.moh.ps/Content/Books/ZAIqL3o5R3LKomoMVKS5vbU8g8yZv1RbTlWix3rVHITQoZFtD47mJY_Ro7k4ovkgcyS7NvlcLKv6Ggcl3IMsTzVP4Qps1PdaS1fFrgT8SzvVN.pdf",
+      "source_type": "government_directory",
+      "source_name": "Palestinian Ministry of Health Health Annual Report 2024",
+      "source_record_id": "moh-2024-rafidia-nablus",
+      "match_osm_ids": ["node:431920698"],
+      "verification_status": "probable",
+      "confidence_score": 0.88,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "المستشفى الوطني",
+      "canonical_name_en": "Al-Watani Governmental Hospital",
+      "aliases": ["Al Watani Hospital", "Al-Watani Hospital"],
+      "facility_type": "hospital",
+      "ownership": "government",
+      "source_url": "https://site.moh.ps/Content/Books/uLmv8JXfPFgBE9VKNBOPaprz1adDKsuIGhQ9NVbiJ6nXrKbCdF9AlV_6C7j3gq5g2DHln7QGjNC1OoyzXK3d4t9MsrmGkHrmHpS9Ngeyt14mu.pdf",
+      "source_type": "government_directory",
+      "source_name": "Palestinian Ministry of Health hospital directory",
+      "source_record_id": "moh-hospitals-al-watani-nablus",
+      "match_osm_ids": ["node:432184451"],
+      "verification_status": "probable",
+      "confidence_score": 0.82,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "المستشفى الإنجيلي العربي",
+      "canonical_name_en": "Evangelical Mission Hospital (Al Injeli)",
+      "aliases": ["Saint Luke's Hospital", "الإنجيلي العربي"],
+      "facility_type": "hospital",
+      "ownership": "ngo",
+      "source_url": "https://site.moh.ps/Content/Books/uLmv8JXfPFgBE9VKNBOPaprz1adDKsuIGhQ9NVbiJ6nXrKbCdF9AlV_6C7j3gq5g2DHln7QGjNC1OoyzXK3d4t9MsrmGkHrmHpS9Ngeyt14mu.pdf",
+      "source_type": "government_directory",
+      "source_name": "Palestinian Ministry of Health hospital directory",
+      "source_record_id": "moh-hospitals-evangelical-mission-nablus",
+      "match_osm_ids": ["node:4755252221"],
+      "verification_status": "probable",
+      "confidence_score": 0.8,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "مستشفى الاتحاد",
+      "canonical_name_en": "Al-Ittihad Hospital",
+      "aliases": ["Al Itihad Hospital"],
+      "facility_type": "hospital",
+      "ownership": "ngo",
+      "source_url": "https://site.moh.ps/Content/Books/uLmv8JXfPFgBE9VKNBOPaprz1adDKsuIGhQ9NVbiJ6nXrKbCdF9AlV_6C7j3gq5g2DHln7QGjNC1OoyzXK3d4t9MsrmGkHrmHpS9Ngeyt14mu.pdf",
+      "source_type": "government_directory",
+      "source_name": "Palestinian Ministry of Health hospital directory",
+      "source_record_id": "moh-hospitals-al-ittihad-nablus",
+      "match_osm_ids": ["node:432191026"],
+      "verification_status": "probable",
+      "confidence_score": 0.8,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    },
+    {
+      "canonical_name_ar": "جمعية الهلال الأحمر الفلسطيني - فرع نابلس",
+      "canonical_name_en": "Palestine Red Crescent Society - Nablus Branch",
+      "aliases": ["Red Crescent", "الهلال الأحمر"],
+      "facility_type": "medical_center",
+      "ownership": "ngo",
+      "specialties": ["physiotherapy", "orthopedics", "neurology"],
+      "services": ["emergency_medical_services", "physiotherapy", "occupational_therapy", "hearing_tests", "specialized_clinics"],
+      "ambulance_available": true,
+      "source_url": "https://www.palestinercs.org/en/Article/11245/Nablus-branch",
+      "source_type": "official_organization",
+      "source_name": "Palestine Red Crescent Society",
+      "source_record_id": "prcs-nablus-branch",
+      "match_osm_ids": ["node:432174878"],
+      "verification_status": "probable",
+      "confidence_score": 0.88,
+      "last_verified_at": "2026-08-09T00:00:00+00:00"
+    }
+  ]
+}
