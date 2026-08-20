@@ -4,21 +4,13 @@
 
 const crypto = require('crypto');
 const http = require('http');
-const path = require('path');
 const { Pool } = require('pg');
+const { apiBase: API_BASE, poolConfig } = require('./helpers/test-environment');
 
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
-
-const API_BASE = process.env.AUTH_TEST_API_BASE || 'http://127.0.0.1:3001/api';
 const password = 'TestPass@123';
 
 const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: String(process.env.DB_PASSWORD || ''),
-    options: '-c search_path=medorbit,public'
+    ...poolConfig,
 });
 
 function request(pathname, body) {

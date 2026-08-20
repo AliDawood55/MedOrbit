@@ -170,6 +170,10 @@
       "ar": ["الم معدة", "وجع معدة", "الم بطن", "وجع بطن", "مغص"],
       "en": ["stomach pain", "abdominal pain", "upset stomach", "cramps"]
     },
+    "stomach_ache": {
+      "ar": [],
+      "en": ["stomach ache"]
+    },
     "diarrhea": {
       "ar": ["اسهال", "إسهال"],
       "en": ["diarrhea", "loose stools"]
@@ -232,7 +236,7 @@
   },
 
   "medications": {
-    "panadol": {
+    "paracetamol": {
       "ar": ["بانادول", "بنادول"],
       "en": ["panadol", "paracetamol"]
     },

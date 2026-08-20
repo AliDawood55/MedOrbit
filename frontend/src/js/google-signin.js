@@ -6,6 +6,18 @@
  * same API.setSession() path as password login — so everything downstream
  * (auth:changed listeners, redirect-after-login) behaves identically
  * regardless of which method the user signed in with.
+ *
+ * init(containerId) keeps its original behaviour verbatim (alert box + the
+ * page's own ?redirect=). init(containerId, handlers) lets a host — currently
+ * the global auth gate's "sign in to continue" modal — take over what happens
+ * after the credential is exchanged, without a second Google implementation:
+ * the script loading, client-id fetch, GIS initialisation, POST /auth/google
+ * exchange and API.setSession() are all still the ones below.
+ *
+ *   onSuccess()            replaces the default alert + redirect
+ *   onError(message)       replaces the default error alert
+ *   onUnavailable()        replaces hiding the surrounding .oauth-block when
+ *                          Google is not configured or its script fails
  */
 const GoogleSignIn = (() => {
     let initialized = false;
@@ -13,6 +25,7 @@ const GoogleSignIn = (() => {
     let clientIdPromise = null;
     let gisScriptEl = null;
     let currentHl = null;
+    let handlers = {};
 
     // Single source of truth is the backend's GOOGLE_CLIENT_ID (.env) —
     // fetched once from GET /api/config rather than duplicated into a
@@ -42,20 +55,42 @@ const GoogleSignIn = (() => {
         msg.textContent = message;
     }
 
+    // Only ever reached for a destination that AuthGate.sanitizeReturnPath()
+    // has accepted as a real, same-directory MedOrbit page — an attacker-
+    // supplied ?redirect=https://evil.example resolves to null here and falls
+    // back to the default landing page.
+    function safeRedirect() {
+        if (typeof AuthGate === 'undefined') return null;
+        return AuthGate.readIntendedDestination();
+    }
+
     async function handleCredential(response) {
         try {
             const res = await API.post('/auth/google', { idToken: response.credential }, { auth: false });
             API.setSession(res?.data || {});
+
+            if (typeof handlers.onSuccess === 'function') {
+                handlers.onSuccess();
+                return;
+            }
+
             showAlert(isAr() ? 'تم تسجيل الدخول بنجاح!' : 'Logged in successfully!', 'success');
 
-            const redirect = new URLSearchParams(window.location.search).get('redirect');
+            const redirect = safeRedirect();
             setTimeout(() => {
                 window.location.href = redirect || 'index.html';
             }, 400);
         } catch (err) {
-            showAlert(isAr()
-                ? 'تعذر تسجيل الدخول باستخدام جوجل'
-                : 'Could not sign in with Google');
+            const message = err?.status === 429
+                ? (isAr()
+                    ? 'محاولات كثيرة خلال وقت قصير. حاول مرة أخرى بعد قليل.'
+                    : 'Too many attempts. Please try again shortly.')
+                : (isAr()
+                    ? 'تعذر تسجيل الدخول باستخدام جوجل'
+                    : 'Could not sign in with Google');
+
+            if (typeof handlers.onError === 'function') handlers.onError(message);
+            else showAlert(message);
         }
     }
 
@@ -107,10 +142,14 @@ const GoogleSignIn = (() => {
         try {
             await loadGisScript(hl);
         } catch {
+            reportUnavailable();
             return;
         }
 
-        if (typeof google === 'undefined' || !google.accounts?.id) return;
+        if (typeof google === 'undefined' || !google.accounts?.id) {
+            reportUnavailable();
+            return;
+        }
 
         google.accounts.id.initialize({
             client_id: clientId,
@@ -123,12 +162,23 @@ const GoogleSignIn = (() => {
         renderButton(containerId);
     }
 
-    async function init(containerId) {
+    // Not configured / not loadable — hide the whole block (button + divider)
+    // rather than show a broken button, unless the host wants to handle it.
+    function reportUnavailable() {
+        if (typeof handlers.onUnavailable === 'function') {
+            handlers.onUnavailable();
+            return;
+        }
+        document.getElementById(renderedContainerId)?.closest('.oauth-block')?.classList.add('hidden');
+    }
+
+    async function init(containerId, options) {
+        handlers = options || {};
+        renderedContainerId = containerId;
+
         const clientId = await fetchClientId();
         if (!clientId) {
-            // Not configured yet — hide the whole block (button + divider)
-            // rather than show a broken button.
-            document.getElementById(containerId)?.closest('.oauth-block')?.classList.add('hidden');
+            reportUnavailable();
             return;
         }
 

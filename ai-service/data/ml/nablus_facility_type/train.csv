@@ -1,0 +1,252 @@
+﻿sample_id,group_id,text,label,split,verification_status
+0af1b81638de4a79400c,fac_1ea9d327400338c92743,صيدلية العايد,pharmacy,train,probable
+feac7373c741cb28ef37,fac_1ea9d327400338c92743,Al Ayed Pharmacy,pharmacy,train,probable
+ea604c47a2ce731cfe27,fac_d3260ce5472275f437a1,Al-Fara'a Health Clinic,clinic,train,probable
+72b8f55f3d03c407cc6a,fac_a82fd024ecbbe8d7bba7,صيدلية الترياق,pharmacy,train,probable
+d6004dc2e178a7bb976b,fac_a82fd024ecbbe8d7bba7,Al Toryak,pharmacy,train,probable
+4eaf7b4bdc646e5d16d0,fac_13c04997db648e97d52d,عيادة الدكتور علي خليفة,clinic,train,probable
+a336efe71b1ac695624e,fac_13c04997db648e97d52d,Ali Khalifa's Clinic,clinic,train,probable
+6e9486dfd67258d53311,fac_1efeb14d6b5dde5c898f,صيدلية بورين,pharmacy,train,probable
+5fb9d56f56a3fcc37648,fac_1efeb14d6b5dde5c898f,Bourin,pharmacy,train,probable
+d07962fdafa682793447,fac_0295d3f7bce1539f3e05,عيادة طبية,clinic,train,probable
+9c944d5a65c4c7e7d464,fac_0295d3f7bce1539f3e05,Clinic,clinic,train,probable
+d0d4b1e06f54a250199e,fac_9510bffd127bb8144c59,عيادة الدكتور عبد الناصر,clinic,train,probable
+1fb5283cf16f3e894ab0,fac_9510bffd127bb8144c59,Dr Abd Al Nasir,clinic,train,probable
+31d6e04dd7fdac49346c,fac_7ef2bafa76b8fbd27e3b,عيادة الدكتور عاطف الصفدي,clinic,train,probable
+f1752681e6bb96137e7c,fac_7ef2bafa76b8fbd27e3b,Dr.atef clinic,clinic,train,probable
+3c0421a51dd10070f43a,fac_bd75218d795f88f72630,عيادة اسنان -بهاء,dental,train,probable
+b8d94e88f844f116f3c9,fac_bd75218d795f88f72630,Dr. Baha',dental,train,probable
+fde087640733d5154c9c,fac_707e9f160cfb4101ae48,عيادة الدكتور سالم,clinic,train,probable
+3b5a1d6f0569d990420e,fac_707e9f160cfb4101ae48,Doctor Salem Clinic,clinic,train,probable
+c610cd7c8fbd2952b931,fac_8abab6b87a156e89ed87,صيدلية الاسره,pharmacy,train,probable
+4584dc8568dac1ad02a5,fac_8abab6b87a156e89ed87,Family,pharmacy,train,probable
+65926bef4d214efa066f,fac_7cf02ed463e940bf73e4,صيدلية حوارة,pharmacy,train,probable
+4892685ab4ac4d4139f2,fac_7cf02ed463e940bf73e4,Hawwarah,pharmacy,train,probable
+96fb2987597d739d1be3,fac_676876522c876dd1c264,مركز صحي,hospital,train,probable
+20eeba19ae48ccd4a436,fac_676876522c876dd1c264,Health Center,hospital,train,probable
+2fbf342c20a802e477bc,fac_2d8317b933c09bd8edf4,العيادة الصحية,clinic,train,probable
+ee00c42171355f8b3a2f,fac_2d8317b933c09bd8edf4,Health Clinic,clinic,train,probable
+aafaf95f26d900111c2a,fac_c3fbecf7fc1e9c9e389b,مركز ابن سينا ( الاغاثه ),clinic,train,probable
+df599e5d5b3c3a645076,fac_c3fbecf7fc1e9c9e389b,Ibn Sina Center,clinic,train,probable
+48374b2de501e74c296a,fac_745ca03bf37f1cae2b36,عيادة امومة,clinic,train,probable
+853a6c4ad8c593deeb29,fac_745ca03bf37f1cae2b36,Jit Clinic,clinic,train,probable
+01728803e895c7a8cc64,fac_08d38ac142846614fefb,صيدلية عوريف,pharmacy,train,probable
+29f2a5a3ea92566ce7b1,fac_08d38ac142846614fefb,Orif,pharmacy,train,probable
+b4d75bfaf67ca57c1a47,fac_2a9675eaab2a316fa701,صيدلية روان,pharmacy,train,probable
+7d35a502c0b20000ebb1,fac_2a9675eaab2a316fa701,rawan pharmacy,pharmacy,train,probable
+b42f0a90216dc6f2a1b2,fac_1f1aa4fd733ba71885d4,صيدلية روان,pharmacy,train,probable
+7b9253352311bd3b1c96,fac_1f1aa4fd733ba71885d4,Rawan pharmacy,pharmacy,train,probable
+07b1ca36f13d740ab027,fac_472b6f7b8fb1402ac892,الهلال الاحمر,clinic,train,probable
+ca7dc6ed41241c1c43cb,fac_472b6f7b8fb1402ac892,Red Crescent,clinic,train,probable
+a4082c85969b7f4fac7c,fac_861ed13c11f1719dbc1a,عيادة سبسطية,clinic,train,probable
+efce5064010959c2936b,fac_861ed13c11f1719dbc1a,Sabastia Clinic,clinic,train,probable
+b219815badae0bb667bf,fac_65b332f30d0afd02586e,مستوصف قريه سالم,hospital,train,probable
+82090fe2a646d0c44d80,fac_65b332f30d0afd02586e,Salem Emregence Point,hospital,train,probable
+11499b318a6f66250a06,fac_9a06e2e1785981a77ad3,Shaher Mansour,clinic,train,probable
+7635ea42820c996e37eb,fac_abd13ff303894b14c70e,المستودعات المركزية -وزارة الصحة,clinic,train,probable
+6439912b1f0a0bfab9a4,fac_11c25b8655e2723c2c51,صيدلية النصر,pharmacy,train,probable
+ce2db9081a965ec9c78b,fac_6a53e3c12d41f9414c9e,صيدلية جيت,pharmacy,train,probable
+09fea650088d4fffce02,fac_e368911fa5ac4970bae8,صيدلية نور الخافظ,pharmacy,train,probable
+2bcc1d13556707de749d,fac_abae9be75da25144d29e,صيدلية هادي الجديدة,pharmacy,train,probable
+124e76d6833d7a6a75c6,fac_abae9be75da25144d29e,صيدلية هادي,pharmacy,train,probable
+c0c3b748179e4997e015,fac_71c2d3fd8187675afeaa,عيادة ديرشرف,clinic,train,probable
+af6160d6472f59f9c48a,fac_0a15566a16be5234065f,عيادة مخيم الفارعة ( الوكالة),hospital,train,probable
+f8dfb86f951a9e5ea48f,fac_9b71f7b9ecd6f6ddcc26,مختير ابوخلف الطبي,clinic,train,probable
+87a75bea2b1cf766cc2f,fac_9b71f7b9ecd6f6ddcc26,Abu Khalaf Lab,clinic,train,probable
+e11ddb37345824aa5d33,fac_c7b51f9bb0da1ee0e9f9,مختبر احلام,clinic,train,probable
+5f70b99f753cc0fb3ae7,fac_c7b51f9bb0da1ee0e9f9,Ahlam Lab,clinic,train,probable
+0d9065c3af536edb1e34,fac_257a20660c87146038bd,الادهم للاشعه,clinic,train,probable
+d086581b12e8e7fbe5fc,fac_257a20660c87146038bd,Al Adham X-ray,clinic,train,probable
+ec6b78e6294ce8a564d9,fac_3f995e0665dcf0b031a9,مستشفى الأمل للعلاج الطبيعي,hospital,train,probable
+96dc83750e828d8bba19,fac_3f995e0665dcf0b031a9,Al Amal For Physical Therapy,hospital,train,probable
+73da084515a8aecbaa29,fac_f8cf9fbc432b23f65755,صيدلية الامير,pharmacy,train,probable
+8f95621955a22da70fc1,fac_f8cf9fbc432b23f65755,Al Amier,pharmacy,train,probable
+b3a80aec4e9cbb1f6426,fac_f9daf9500c4ac5e6398e,صيدلية الأقصى,pharmacy,train,probable
+1d5c2d7b79796e371119,fac_f9daf9500c4ac5e6398e,Al-Aqsa Pharmacy,pharmacy,train,probable
+d25db4580062c8180799,fac_06be555987e5ed7a205f,مستودع صيدليته العريض,pharmacy,train,probable
+8cc708d88b824e66e809,fac_06be555987e5ed7a205f,Al areed pharmacy warehouse,pharmacy,train,probable
+20fc10da2993387f40ab,fac_f63745559020113ee35c,الضاحية,pharmacy,train,probable
+86653581f535d9d7af08,fac_f63745559020113ee35c,Al Dahia,pharmacy,train,probable
+b7254de85f247013bd06,fac_572defd565c42b6fc35d,صيدلية الفيحاء,pharmacy,train,probable
+69bd9cc3167c84371135,fac_572defd565c42b6fc35d,Al-Faiha' Pharmacy,pharmacy,train,probable
+749101d743a8f4715696,fac_e2c2c4281130d6fcfcb8,صيدلية الحكمة,pharmacy,train,probable
+41df2da3efd2516efade,fac_e2c2c4281130d6fcfcb8,Al Hikmah,pharmacy,train,probable
+03f18a9da8ac99de3d56,fac_84fd1fc856da7ca74a61,صيدلية الاتحاد,pharmacy,train,probable
+1c52e12d76af9a6cf5f6,fac_84fd1fc856da7ca74a61,Al Itihad Pharmacy,pharmacy,train,probable
+261f6bf91d06be9ef6d3,fac_332d87474a30b101ee82,Al Kamal,pharmacy,train,probable
+961f02a7716fc1032aa5,fac_0f78ad37242ecb1c0274,صيدلية دعاء,pharmacy,train,probable
+cca8aef2cef590d5e27a,fac_0f78ad37242ecb1c0274,Al Maha Pharmacy,pharmacy,train,probable
+5b56228cf87b369cbdb7,fac_0f78ad37242ecb1c0274,صيدلية المها,pharmacy,train,probable
+c1cc71f81616cdedc73f,fac_bb1cfba52c7d4cb92c44,صيدلية المخفية,pharmacy,train,probable
+ff6285f38a715974cc17,fac_bb1cfba52c7d4cb92c44,Al Makhfiyah,pharmacy,train,probable
+0545be2cc6f28691e83f,fac_bb1cfba52c7d4cb92c44,صيدلية المخفيه,pharmacy,train,probable
+180816c32497c83f9e06,fac_9f21577288c44c0a3b4b,صيدلية المصري,pharmacy,train,probable
+320710c4fc51a28796d1,fac_9f21577288c44c0a3b4b,Al Masri,pharmacy,train,probable
+0f00f74927bcc5f9f472,fac_973ed4b429bc580a8b4f,صيدلية المستقبل,pharmacy,train,probable
+3ffcd15d81f274bca85e,fac_973ed4b429bc580a8b4f,Al-Mostaqbal Pharmacy,pharmacy,train,probable
+f79699327e03b5bd4bfc,fac_973ed4b429bc580a8b4f,Al Mostkbl,pharmacy,train,probable
+2e35fdde99d9e40e38b2,fac_360162e3be5ed51f6e3b,صيدلية الرحمة,pharmacy,train,probable
+3e14467bef08da4d109d,fac_360162e3be5ed51f6e3b,Al-Rahma Pharmacy,pharmacy,train,probable
+811e2f4d69076c4a4bf8,fac_f6f2b4bd3d7b234107b0,صيدلية السرايا,pharmacy,train,probable
+59a88ab5e54d38bacaef,fac_f6f2b4bd3d7b234107b0,Al Saraya Pharmacy,pharmacy,train,probable
+a65f23f73759b06ea4b8,fac_fde96688aa3ed2919e0e,الشخشير,pharmacy,train,probable
+68f322133a53b469b335,fac_fde96688aa3ed2919e0e,Al Shakhsher,pharmacy,train,probable
+9ea2c827dc909feddc13,fac_80223f8c7bdd7db710de,المستشفى الوطني,hospital,train,verified
+3414f64d76814ba530f5,fac_80223f8c7bdd7db710de,Al-Watani Governmental Hospital,hospital,train,verified
+1a75f3fbb6754439b887,fac_80223f8c7bdd7db710de,Al Watani Hospital,hospital,train,verified
+c10a1c6f454d411a0156,fac_80223f8c7bdd7db710de,Al-Watani Hospital,hospital,train,verified
+a281b2b8a53690e47f35,fac_11a559db27b3c2039f83,صيدلية الزهراء,pharmacy,train,probable
+a7d44644faeb57714933,fac_11a559db27b3c2039f83,Al Zahra',pharmacy,train,probable
+9c5342e8d2d23a492d8b,fac_16b2b44677a27f40ed9a,صيدلية الزيتونة,pharmacy,train,probable
+962053dbb052b095d6a0,fac_16b2b44677a27f40ed9a,Al Zaitona,pharmacy,train,probable
+3d4941cde945f08a21bd,fac_372dbe531743b827b281,مستوصف الرحمه,clinic,train,probable
+4cc71d8415c2dc76eeab,fac_372dbe531743b827b281,Alrahmah patients friends,clinic,train,probable
+969d998935ec95ac851b,fac_b958d4a847246a9e99cd,صيدلية سنا,pharmacy,train,probable
+04b7e135cf7fedbb4791,fac_b958d4a847246a9e99cd,Amanda Pharmacy,pharmacy,train,probable
+504d8657bbc348879ad1,fac_b958d4a847246a9e99cd,صيدلية اماندا,pharmacy,train,probable
+2955601ee9fa4bd14ee9,fac_ac8f6360ee3208933314,مركز إسعاف غرب نابلس,hospital,train,probable
+c7e594ce43a3c50935c1,fac_ac8f6360ee3208933314,Ambulance Center,hospital,train,probable
+c559f6d293485b70e696,fac_8ab4bf5de913b9301f48,مستشفى النجاح الوطني الجامعي,hospital,train,verified
+f22ad8bfff2dee92bab1,fac_8ab4bf5de913b9301f48,An-Najah National University Hospital,hospital,train,verified
+6d961108beb32b9ad123,fac_8ab4bf5de913b9301f48,NNUH,hospital,train,verified
+7266fccaa30ef813d85f,fac_8ab4bf5de913b9301f48,An-Najah Hospital,hospital,train,verified
+06aec9e7b967c3da55cd,fac_8ab4bf5de913b9301f48,مستشفى جامعة النجاح,hospital,train,verified
+69af2cd7b31b5fbc8294,fac_05248d05607f15f32c08,صيدلية النور الجديدة,pharmacy,train,probable
+5c05858daa70ab0c646e,fac_05248d05607f15f32c08,AnNour Aljadeda,pharmacy,train,probable
+53fb0f09e9e385fcda8e,fac_ad084abe50e12fcaa25d,صيدليه عرفات,pharmacy,train,probable
+95d158ba0d3fbe690fc1,fac_ad084abe50e12fcaa25d,Arafat,pharmacy,train,probable
+5441afdadbb81f102906,fac_b04c5b695836f9413d59,صيدلية العرندي,pharmacy,train,probable
+ee39798f6b703c4d4b66,fac_b04c5b695836f9413d59,Asirah,pharmacy,train,probable
+f135ac5b3c66084f58c5,fac_56f60599590b8e23da27,صيدلية الشخشير,pharmacy,train,probable
+79f5b6ab6402eb7945d2,fac_56f60599590b8e23da27,Aslan Pharmacy,pharmacy,train,probable
+c2e26cedae9c1a136ab1,fac_56f60599590b8e23da27,صيدلية أصلان,pharmacy,train,probable
+f3c5d40295120821c9a9,fac_9236ba30ec6459450bcb,صيدلية بيت ايبا,pharmacy,train,probable
+471815ec128e298aed7d,fac_9236ba30ec6459450bcb,Bait Iba,pharmacy,train,probable
+0786e92af4ea7b370303,fac_bbe37dc2635a91e19c90,مركز صحي بلاطة,clinic,train,probable
+3f0f09c39cfcac229451,fac_bbe37dc2635a91e19c90,Balata Health Centre,clinic,train,probable
+733b286fd23628fda851,fac_bf5661da3e7820e17ff3,العيادة المركزية لطب الاسنان,dental,train,probable
+ba2b3adf8f24945072c4,fac_bf5661da3e7820e17ff3,Central Dentist Clinic,dental,train,probable
+2cee7f003d620ba7a2f7,fac_38f817c15d427cbecd5b,عيادة طبية,clinic,train,probable
+55dc649384fc2a4b59ec,fac_38f817c15d427cbecd5b,Clinic,clinic,train,probable
+18cfe7ec23796009e9b6,fac_bf1a441845579b6fb21e,صيدلية الضميدي,pharmacy,train,probable
+737519123a5464d7c397,fac_bf1a441845579b6fb21e,Demaidi Pharm,pharmacy,train,probable
+a4558b28465ee167c0af,fac_e44a7483dd0e9efa77fa,طبيب اسنان,dental,train,probable
+70cd1fc007c40bf9aeaf,fac_e44a7483dd0e9efa77fa,Dentist,dental,train,probable
+dc0ca197ae097d4388b9,fac_469c686b511e946f08f1,عيادة الدكتورة ولاء سعد الدين,clinic,train,probable
+a4c8f981cc26bb21df16,fac_469c686b511e946f08f1,Derma clinic,clinic,train,probable
+16be85eb05a58a0fd1e5,fac_aeaa5e82c633b93a1d71,مركز ديما للإخصاب,clinic,train,probable
+e2ecfdda13fdba8bffe3,fac_aeaa5e82c633b93a1d71,Dima IVF Center,clinic,train,probable
+c11169b835afbf213e6b,fac_ac435cda949f13bdc3b3,فاروق عزت الزربا,clinic,train,probable
+eecff1ff5b9c6c3af277,fac_ac435cda949f13bdc3b3,Dr Farouq Izzat Al-Zurba,clinic,train,probable
+48ee2d6334f78e95a023,fac_4f7837b0e5b003e6d9ff,منزل الدكتور هيثم عيسى,clinic,train,probable
+8752be55c02dd1a5d8e6,fac_4f7837b0e5b003e6d9ff,Dr.Haitham Isa,clinic,train,probable
+f72acdacdb5ad7c41efd,fac_38f679533b3908f2cced,الدكتور هاني النابلسي,clinic,train,probable
+e26ae5734f640e1e4017,fac_38f679533b3908f2cced,Dr. Hani Nabulsi,clinic,train,probable
+104aa8f6e5d70f0bc330,fac_3d4517a6487b79736384,عيادة هاشم,clinic,train,probable
+107ec0d2ddd71c643380,fac_3d4517a6487b79736384,Dr Hasim,clinic,train,probable
+bf564c9b7e1bf971abb5,fac_82cd0571467e737fc13a,عياده د. مهدي قاعور,dental,train,probable
+1cd9e02f88f1b3dfae10,fac_82cd0571467e737fc13a,Dr.Mahdi qaoor,dental,train,probable
+32434d571f8b7553907f,fac_82cd0571467e737fc13a,عياده د. معدي قاعور,dental,train,probable
+71da57d99b4961803e3b,fac_aadf877ed2f5b0723911,عيادة الدكتور محمد الشوبكي,clinic,train,probable
+511fd8e1abf6e0c41f50,fac_aadf877ed2f5b0723911,Dr. Mohammed Al-Shobaki clinic,clinic,train,probable
+8d3fcc98a3c3bc340c97,fac_6d05e3b395f00771a9b8,Dr. Najeh Numoor,clinic,train,probable
+7cd2890002b4cdcd1664,fac_bb170c8f986581131061,الدكتور ناجي العرندي,clinic,train,probable
+36fd0200b34169703f1b,fac_bb170c8f986581131061,Dr. Naji Arandi,clinic,train,probable
+79a6bef60eb34d6866d9,fac_2ed8da67ee5a4395c6cb,Dr-Othman Othman,clinic,train,probable
+6ed6621e11bb261a493a,fac_41e87f6757c28251dd5c,عيادة الدكتور عثمان عثمان,clinic,train,probable
+cad206f8e02eb320daa5,fac_41e87f6757c28251dd5c,Dr-Othman Othman,clinic,train,probable
+92bed7b6a700fb96a2e8,fac_0026966593ac8adda83d,الدكتور صلاح,clinic,train,probable
+23e7e67be7309d78a06b,fac_0026966593ac8adda83d,Dr. Salah,clinic,train,probable
+76b343f604e69e1e38c1,fac_bb98168bb4c5163e59d8,عيادة الدكتور سامح الحنبلي,dental,train,probable
+2be3922c35849275a3f5,fac_bb98168bb4c5163e59d8,Dr.Sameh Hanbali Clinic,dental,train,probable
+cd95eaa555918dc1c1ea,fac_73f4e9917122a812ad2e,المستشفى الإنجيلي العربي,hospital,train,verified
+a2b9cf82321b2ea3799b,fac_73f4e9917122a812ad2e,Evangelical Mission Hospital (Al Injeli),hospital,train,verified
+e99b987c62c82c7cac0c,fac_73f4e9917122a812ad2e,Saint Luke's Hospital,hospital,train,verified
+8bc01eb92323ceee280b,fac_73f4e9917122a812ad2e,الإنجيلي العربي,hospital,train,verified
+00b05aba5f393da535a4,fac_73f4e9917122a812ad2e,الانجيلي العربي,hospital,train,verified
+4de2043e7cfc241087c5,fac_73f4e9917122a812ad2e,المستشفى الانجيلي العربي,hospital,train,verified
+713e9ce7d143e8b60535,fac_73f4e9917122a812ad2e,saint Luke's hospital,hospital,train,verified
+8601ba3f19d5ed1c8628,fac_990c4caf089c61867330,صيدليه فادي,pharmacy,train,probable
+d862527a9c88448e563f,fac_990c4caf089c61867330,Fadi,pharmacy,train,probable
+da0409140ab63c30b4ea,fac_bc052c953c4cb10e708e,صيدلية فواز,pharmacy,train,probable
+33588e5dfe420a824e42,fac_bc052c953c4cb10e708e,Fawaz Pharmacy,pharmacy,train,probable
+e95251525952980bb37d,fac_0ac672510985eb700ae7,عيادة المستقبل,clinic,train,probable
+9677fbbcddc4762f36a6,fac_0ac672510985eb700ae7,Future Clinic,clinic,train,probable
+4bf456f35350bc6db2dd,fac_9f9cdaa56dbbd40f7933,صيدلية غازي,pharmacy,train,probable
+9d45af67e4880aa1ee13,fac_9f9cdaa56dbbd40f7933,Ghazi Pharmacy,pharmacy,train,probable
+5ede1463a9cb9a96559b,fac_0be7a5bcced701ac0e3c,غراند سنتر,clinic,train,probable
+ca5cb6b7b78ee1503359,fac_0be7a5bcced701ac0e3c,grand center,clinic,train,probable
+514a27f5a5b554d19fd1,fac_765e03b44dc158e88445,عيادة الدكتور حمزة للأطفال,clinic,train,probable
+025984cc4f1ef096e950,fac_765e03b44dc158e88445,Hamza Kids Clinic,clinic,train,probable
+c466b9dd3a367ad05b19,fac_cd69b69ac47af5744b90,عيادة ابراهيم جبر للاسنان,clinic,train,probable
+780e440bdf1b946a4bf3,fac_cd69b69ac47af5744b90,Ibrahim jabir dentist,clinic,train,probable
+33a65f23f883599aa871,fac_eb69de445f5666f69e83,بيت المسنين الهلال الأحمر,hospital,train,probable
+32d10082586a49efcfeb,fac_eb69de445f5666f69e83,jeriatric house red crescent,hospital,train,probable
+3dcf5fe5788f1b6808e0,fac_c477fa244296f798e07d,منزل وعيادة الدكتور مرزوق محمد الصالحي,clinic,train,probable
+83a0d39638e1beb1677a,fac_c477fa244296f798e07d,Marzoq Mohammad Al Sahili,clinic,train,probable
+25c40406fab7658cbc34,fac_906a4aa43c74b3e85927,مركز طبي,clinic,train,probable
+29b496cea31468fda220,fac_906a4aa43c74b3e85927,Medical Center,clinic,train,probable
+11514c266b1ea950ef5a,fac_76422eddb492c600db53,مختبر طبي,clinic,train,probable
+86cd3d90809cdada896f,fac_76422eddb492c600db53,Medical Lab,clinic,train,probable
+65f4485181c24e270be5,fac_ccabc208d78a935fc0fa,وزارة الصحة - بلاطة البلد,pharmacy,train,probable
+59fc536c269c55a4a8fd,fac_ccabc208d78a935fc0fa,Ministry of Health - Tile Country,pharmacy,train,probable
+5bf1bd3db405ab0ced87,fac_458525932e05b7932c1b,صيدلية نابلس,pharmacy,train,probable
+cf3fac3993993f74ba33,fac_458525932e05b7932c1b,Nablus,pharmacy,train,probable
+e893725dbba157992e62,fac_a959bddd3540ddfecd6a,نابلس التخصصي,hospital,train,verified
+0275952abdfc3f44f994,fac_a959bddd3540ddfecd6a,Nablus Specialized Hospital,hospital,train,verified
+4bac3ceb1d81c6301c4e,fac_a959bddd3540ddfecd6a,مستشفى نابلس التخصصي,hospital,train,verified
+aca118555a951abd22ba,fac_a959bddd3540ddfecd6a,NSC,hospital,train,verified
+28918431dd39637d5726,fac_46af38b08467321ccf48,الخليل الجديدة,pharmacy,train,probable
+4a1245342ba435bd0708,fac_46af38b08467321ccf48,New Hebron,pharmacy,train,probable
+0ca131272df09b0470a0,fac_3805c5f202cb0d3abfde,صيدلية نورة,pharmacy,train,probable
+067bd7fb34eb5d376608,fac_3805c5f202cb0d3abfde,Noora pharmacy,pharmacy,train,probable
+7f8505cbb0fd41593f1d,fac_58596deb0599a4a3d351,عياده نويصر للأسنان,clinic,train,probable
+f5b45f37eb4cc95bda89,fac_58596deb0599a4a3d351,Nwaiser dental clinic,clinic,train,probable
+1953e79e21c62992ed48,fac_45b0224113fd717bcde4,صيدلية اسامة,pharmacy,train,probable
+b01f5dc6f4cbd0219107,fac_45b0224113fd717bcde4,Osama Pharmacy,pharmacy,train,probable
+f735b4ab0a3efbedaeea,fac_160adbab2ddfd0efc52c,جمعية الهلال الأحمر الفلسطيني - فرع نابلس,medical_center,train,verified
+b808371804812ce6b8ea,fac_160adbab2ddfd0efc52c,Palestine Red Crescent Society - Nablus Branch,medical_center,train,verified
+fe788b3ec52ec7461ba3,fac_160adbab2ddfd0efc52c,Red Crescent,medical_center,train,verified
+ac72b39945d506159cc7,fac_160adbab2ddfd0efc52c,الهلال الأحمر,medical_center,train,verified
+092434440d6f3c24fa09,fac_160adbab2ddfd0efc52c,الهلال الاحمر,medical_center,train,verified
+e28eaa143eef298f1813,fac_d6c522a7c8a502922dcf,صيدلية الوليد,pharmacy,train,probable
+3f6ee54526572b2445a2,fac_d6c522a7c8a502922dcf,Pharmacy,pharmacy,train,probable
+d32ca36f1138d958904e,fac_d6c522a7c8a502922dcf,صيدلية,pharmacy,train,probable
+8bb317b507327c5b5ada,fac_3cf1cae4b0338c8334b7,صيدلية راس العين,pharmacy,train,probable
+eb90855a69f0d15784d6,fac_3cf1cae4b0338c8334b7,Ras Alain,pharmacy,train,probable
+3cfe0bd76fa20f33ddf6,fac_077743c6556979370345,صيدلية صبري,pharmacy,train,probable
+cffd6c5a290586133a27,fac_077743c6556979370345,Sabri Pharmacy,pharmacy,train,probable
+39a87978c8b2a255e4e2,fac_eda362fae3bfcba3da85,صيدلية سامر,pharmacy,train,probable
+20abf093c58e493d0133,fac_eda362fae3bfcba3da85,Samir,pharmacy,train,probable
+52c3eadb6859cdee3341,fac_a821ccc16e10d7e7ed95,عيادة د. محمد شحادة و د. براءة دسوقي,dental,train,probable
+bc21cf336e0cd92bbb3f,fac_a821ccc16e10d7e7ed95,Sh7adehClinic,dental,train,probable
+ed29477d0752788867a7,fac_8721fccf804bfe3c3123,د.فائق عياده شام,dental,train,probable
+1fd93f7838aeb207ce18,fac_8721fccf804bfe3c3123,Shame clinic,dental,train,probable
+26831356ec9217b7e76c,fac_9f5a284aecbdaa24032c,المستشفى العربي التخصصي,hospital,train,verified
+0de54bc91db22a399bc8,fac_9f5a284aecbdaa24032c,Specialized Arab Hospital,hospital,train,verified
+c958115f05e1e3303e45,fac_9f5a284aecbdaa24032c,The Specialized Arabic Hospital,hospital,train,verified
+83a489998cfc97b6efe8,fac_9f5a284aecbdaa24032c,المستشفى العربي,hospital,train,verified
+e55430c9f88f660b5b95,fac_9f5a284aecbdaa24032c,المستفى العربي التخصصي,hospital,train,verified
+6821bc8f9d73285e87e3,fac_9f5a284aecbdaa24032c,Specialized arab hospital,hospital,train,verified
+58ef01b8f847a53a43ce,fac_93834d273c9df6673aa9,صيدلية تبارك,pharmacy,train,probable
+f2a9b468cce26361b933,fac_93834d273c9df6673aa9,Tabark Pharmacy,pharmacy,train,probable
+2999837d70f63efc6b29,fac_43ff3ac127efa41fdf45,الدكتور شجيع ياسين - Dr. Shaji'e Yasin,clinic,train,probable
+39f5058af0f9c555b7a2,fac_5f6b96bcbb62388dea9d,سمير القادري,pharmacy,train,probable
+9ad3ddf1586ec9d64fdc,fac_5f6b96bcbb62388dea9d,صيدلية قادري,pharmacy,train,probable
+c3d12602581e13adb744,fac_1b0b48a5ed324b8edfb8,صيدلية الجامعه,pharmacy,train,probable
+04ef5129e4655672f69f,fac_357ffebb76a913d40b52,صيدلية الحنبلي,pharmacy,train,probable
+18d7c0b617d024036cb2,fac_e61f1373dd5fad201578,صيدلية الكندي,pharmacy,train,probable
+3599945fb28899976e7f,fac_80147b98bfc88afd7c6f,صيدلية انعام,pharmacy,train,probable
+3c2decfd0ce05f0e5f43,fac_b05c2d1385f24048f669,صيدلية خورشيد,pharmacy,train,probable
+08bfc327a70c02cd9f61,fac_5647b9b4d90bfbe1495f,صيدلية دار الدواء,pharmacy,train,probable
+701e08e4784ba6d03bff,fac_29397fd7d0e61092c47e,صيدلية سناء,pharmacy,train,probable
+e2a754df2eed8da5f367,fac_4f03cbe628ce06579517,صيدلية شرف,pharmacy,train,probable
+2a7e788692e54513a10c,fac_de7a97c231db9c4a71a2,صيدلية عصيرة الشمالية,pharmacy,train,probable
+21fc79640eb160df7f88,fac_0dc819de3d19397eb896,عيادة الدكتور محمد رامز الخياط,clinic,train,probable
+68eb21854e1964aa63d7,fac_539ef1e1d9b7434c5cac,عيادة العقاد لطب وجراحة العيون,clinic,train,probable
+c0cadbbb18abffbbfc94,fac_ef7628ea8288de116aa9,مجمع الحكيم الطبي,clinic,train,probable
+99d5a9d8c6c36cae7ffd,fac_bb1eccf1a11813faad66,مركز الهلال الأحمر,hospital,train,probable
+0dadc56856c1256d3ff4,fac_8b6b5f2541ddb5b59d4f,مستودع المستقبل,pharmacy,train,probable
+1d7eb2a4a6e869f15cbb,fac_a487ecddafbafd2002c8,مستوصف التضامن الخيري,medical_center,train,probable
+f9926e267bce3b9384fd,fac_a487ecddafbafd2002c8,مجمع نابلس الطبي الخيري,medical_center,train,probable
+a5fd87c47ae65abc0e9b,fac_2462c30a9932e6329718,منزل الدكتور حازم ابوالحلاوة,clinic,train,probable

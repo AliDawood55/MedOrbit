@@ -5,7 +5,13 @@
 const ClinicProfile = (() => {
 
     const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const TYPE_ICONS = { clinic: 'fa-hospital', pharmacy: 'fa-pills', hospital: 'fa-hospital-user' };
+    const FACILITY_TYPES = Object.freeze({
+        clinic: { labelKey: 'filter.clinic', icon: 'fa-hospital' },
+        dental: { labelKey: 'filter.dental', icon: 'fa-tooth' },
+        hospital: { labelKey: 'filter.hospital', icon: 'fa-hospital-user' },
+        pharmacy: { labelKey: 'filter.pharmacy', icon: 'fa-pills' }
+    });
+    const GENERIC_FACILITY = Object.freeze({ labelKey: 'filter.healthcare', icon: 'fa-notes-medical' });
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -24,13 +30,24 @@ const ClinicProfile = (() => {
             .replace(/"/g, '&quot;');
     }
 
+    function optionalText(value) {
+        if (value == null) return '';
+        const text = String(value).trim();
+        return /^(?:n\/?a|undefined|null)$/i.test(text) ? '' : text;
+    }
+
+    function typePresentation(type) {
+        const key = optionalText(type).toLowerCase();
+        return FACILITY_TYPES[key] || GENERIC_FACILITY;
+    }
+
     function getIdFromUrl() {
         return new URLSearchParams(window.location.search).get('id');
     }
 
     function name(o, arKey, enKey) {
         const ar = isAr();
-        return ((ar ? o[arKey] : o[enKey]) || o[arKey] || o[enKey] || '').trim();
+        return optionalText(ar ? o[arKey] : o[enKey]) || optionalText(o[arKey]) || optionalText(o[enKey]);
     }
 
     function doctorName(d) {
@@ -57,7 +74,7 @@ const ClinicProfile = (() => {
         content.innerHTML = renderSkeleton();
 
         try {
-            const res = await API.clinics.get(id, { auth: false });
+            const res = await API.clinics.get(id);
             const { clinic, doctors } = res.data;
 
             content.innerHTML = renderProfile(clinic, doctors || []);
@@ -109,8 +126,15 @@ const ClinicProfile = (() => {
         const ar = isAr();
         const clinicName = escapeHtml(name(clinic, 'name_ar', 'name_en'));
         const address = escapeHtml(name(clinic, 'address_ar', 'address_en'));
-        const typeIcon = TYPE_ICONS[clinic.type] || 'fa-hospital';
-        const typeLabel = clinic.type ? escapeHtml(t('filter.' + clinic.type) !== 'filter.' + clinic.type ? t('filter.' + clinic.type) : clinic.type) : '';
+        const type = typePresentation(clinic.type);
+        const typeIcon = type.icon;
+        const typeLabel = escapeHtml(t(type.labelKey));
+        const logoUrl = escapeHtml(optionalText(clinic.logo_url));
+        const phone = escapeHtml(optionalText(clinic.phone));
+        const email = escapeHtml(optionalText(clinic.email));
+        const website = escapeHtml(optionalText(clinic.website));
+        const services = Array.isArray(clinic.services) ? clinic.services.map(optionalText).filter(Boolean) : [];
+        const insurance = Array.isArray(clinic.insurance_accepted) ? clinic.insurance_accepted.map(optionalText).filter(Boolean) : [];
         const verifiedBadge = clinic.verification_status === 'verified'
             ? '<span class="badge badge-success"><i class="fas fa-circle-check"></i> ' + escapeHtml(t('clinic.verified')) + '</span>'
             : '';
@@ -123,22 +147,22 @@ const ClinicProfile = (() => {
         return (
             '<div class="profile-header">' +
                 '<div class="profile-avatar">' +
-                    (clinic.logo_url ? '<img src="' + escapeHtml(clinic.logo_url) + '" alt="">' : '<i class="fas ' + typeIcon + '"></i>') +
+                    (logoUrl ? '<img src="' + logoUrl + '" alt="">' : '<i class="fas ' + typeIcon + '"></i>') +
                 '</div>' +
                 '<div class="profile-info">' +
                     '<h1>' + clinicName + '</h1>' +
                     (typeLabel ? '<div class="profile-subtitle">' + typeLabel + '</div>' : '') +
                     '<div class="profile-meta">' +
                         (address ? '<span><i class="fas fa-location-dot"></i>' + address + '</span>' : '') +
-                        (clinic.phone ? '<span><i class="fas fa-phone"></i>' + escapeHtml(clinic.phone) + '</span>' : '') +
-                        (clinic.email ? '<span><i class="fas fa-envelope"></i>' + escapeHtml(clinic.email) + '</span>' : '') +
-                        (clinic.website ? '<span><i class="fas fa-globe"></i><a href="' + escapeHtml(clinic.website) + '" target="_blank" rel="noopener">' + escapeHtml(clinic.website) + '</a></span>' : '') +
+                        (phone ? '<span><i class="fas fa-phone"></i>' + phone + '</span>' : '') +
+                        (email ? '<span><i class="fas fa-envelope"></i>' + email + '</span>' : '') +
+                        (website ? '<span><i class="fas fa-globe"></i><a href="' + website + '" target="_blank" rel="noopener">' + website + '</a></span>' : '') +
                     '</div>' +
                     (verifiedBadge ? '<div class="profile-badges">' + verifiedBadge + '</div>' : '') +
                 '</div>' +
                 '<div class="profile-actions">' +
                     (directionsUrl ? '<a class="btn btn-primary btn-sm" href="' + directionsUrl + '" target="_blank" rel="noopener"><i class="fas fa-route"></i> ' + escapeHtml(t('clinic.getDirections')) + '</a>' : '') +
-                    (clinic.phone ? '<a class="btn btn-secondary btn-sm" href="tel:' + escapeHtml(clinic.phone) + '"><i class="fas fa-phone"></i> ' + (ar ? 'اتصال' : 'Call') + '</a>' : '') +
+                    (phone ? '<a class="btn btn-secondary btn-sm" href="tel:' + phone + '"><i class="fas fa-phone"></i> ' + (ar ? 'اتصال' : 'Call') + '</a>' : '') +
                 '</div>' +
             '</div>' +
 
@@ -149,17 +173,17 @@ const ClinicProfile = (() => {
                         renderHours(clinic.operating_hours) +
                     '</div>' +
 
-                    (clinic.services && clinic.services.length ? (
+                    (services.length ? (
                         '<div class="profile-section">' +
                             '<h2><i class="fas fa-notes-medical"></i> ' + escapeHtml(t('clinic.services')) + '</h2>' +
-                            '<div class="chip-list">' + clinic.services.map(s => '<span class="chip">' + escapeHtml(s) + '</span>').join('') + '</div>' +
+                            '<div class="chip-list">' + services.map(s => '<span class="chip">' + escapeHtml(s) + '</span>').join('') + '</div>' +
                         '</div>'
                     ) : '') +
 
-                    (clinic.insurance_accepted && clinic.insurance_accepted.length ? (
+                    (insurance.length ? (
                         '<div class="profile-section">' +
                             '<h2><i class="fas fa-shield-heart"></i> ' + escapeHtml(t('clinic.insurance')) + '</h2>' +
-                            '<div class="chip-list">' + clinic.insurance_accepted.map(s => '<span class="chip">' + escapeHtml(s) + '</span>').join('') + '</div>' +
+                            '<div class="chip-list">' + insurance.map(s => '<span class="chip">' + escapeHtml(s) + '</span>').join('') + '</div>' +
                         '</div>'
                     ) : '') +
                 '</div>' +
@@ -210,7 +234,7 @@ const ClinicProfile = (() => {
         return (
             '<a class="sub-item" href="doctor.html?id=' + encodeURIComponent(d.id) + '" style="text-decoration:none;color:inherit;">' +
                 '<div class="entity-avatar" style="width:38px;height:38px;font-size:13px;">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(d.profile_image_url) + '" alt="">' : escapeHtml(initials)) +
+                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="sub-item-body">' +
                     '<div class="sub-item-title">' + dName + '</div>' +

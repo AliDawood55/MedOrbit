@@ -1,4 +1,0 @@
-﻿# Piper voices are downloaded on first use (~60MB each)
-*.onnx
-*.onnx.json
-!.gitignore

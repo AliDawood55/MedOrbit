@@ -92,8 +92,9 @@ const MyPrescriptions = (() => {
         show(document.getElementById('prescriptionsLoading'), state === 'loading');
         show(document.getElementById('prescriptionsError'), state === 'error');
         show(document.getElementById('prescriptionsData'), state === 'data');
-        show(document.getElementById('prescriptionsPreview'), state === 'empty');
+        show(document.getElementById('prescriptionsPreview'), false);
         show(document.getElementById('prescriptionsEmpty'), state === 'empty');
+        show(document.getElementById('prescriptionsFilters'), state === 'data');
         setFiltersEnabled(state === 'data');
 
         if (message) {
@@ -247,7 +248,6 @@ const MyPrescriptions = (() => {
             if (result?.blocked) {
                 prescriptions = [];
                 setState('empty');
-                Motion.staggerIn(document.querySelector('.records-preview-list'), '.records-preview-card');
                 return;
             }
 
@@ -256,7 +256,7 @@ const MyPrescriptions = (() => {
             render();
         } catch (err) {
             console.error('MyPrescriptions: failed to load prescriptions', err);
-            setState('error', err?.message || label('تعذر تحميل الوصفات', 'Could not load prescriptions'));
+            setState('error', label('تعذر تحميل الوصفات. حاول مرة أخرى.', 'Could not load prescriptions. Please try again.'));
         }
     }
 

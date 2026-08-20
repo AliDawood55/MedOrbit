@@ -109,7 +109,7 @@ const MyReports = (() => {
 
         await Promise.all(ids.map(async (id) => {
             try {
-                const res = await API.doctors.get(id, { auth: false });
+                const res = await API.doctors.get(id);
                 doctorCache.set(id, res.data.doctor);
             } catch {
                 doctorCache.set(id, null);

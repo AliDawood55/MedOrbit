@@ -1,6 +1,7 @@
 import json
 import os
-from typing import Dict, List, Optional
+import re
+from typing import Dict, List, Optional, Tuple
 
 
 class SynonymEngine:
@@ -14,6 +15,7 @@ class SynonymEngine:
         self.arabic_synonyms = self._load_json("arabic_synonyms.json")
         self.medical_synonyms = self._load_json("medical_synonyms.json")
         self._build_reverse_lookup()
+        self._build_resolve_text_lookup()
 
     def _load_json(self, filename: str) -> Dict:
         """Load a JSON dictionary from the data directory."""
@@ -41,6 +43,29 @@ class SynonymEngine:
                 normalized = self._normalize_key(variant)
                 # Medical takes priority if conflict
                 self.synonym_to_canonical[normalized] = canonical
+
+    def _build_resolve_text_lookup(self) -> None:
+        """
+        Precompute the phrase/word replacement tables used by resolve_text().
+
+        synonym_to_canonical is fixed once loaded, so rebuilding and
+        re-sorting these on every resolve_text() call was wasted work
+        repeated on every request. Stored as tuples so callers can't mutate
+        the cached lookup.
+        """
+        multi_word = [
+            (phrase, canonical)
+            for phrase, canonical in self.synonym_to_canonical.items()
+            if ' ' in phrase
+        ]
+        multi_word.sort(key=lambda item: len(item[0]), reverse=True)
+        self._multi_word_phrases: Tuple[Tuple[str, str], ...] = tuple(multi_word)
+
+        self._single_word_lookup: Tuple[Tuple[str, "re.Pattern[str]", str], ...] = tuple(
+            (word, re.compile(r'\b' + word + r'\b'), canonical)
+            for word, canonical in self.synonym_to_canonical.items()
+            if ' ' not in word
+        )
 
     def _normalize_key(self, text: str) -> str:
         """Normalize synonym key for lookup."""
@@ -71,24 +96,15 @@ class SynonymEngine:
 
         result = text.lower()
 
-        # First try multi-word synonyms (sorted by length descending)
-        multi_word = [(phrase, canon) for phrase, canon in self.synonym_to_canonical.items()
-                      if ' ' in phrase]
-        multi_word.sort(key=lambda x: len(x[0]), reverse=True)
-
-        for phrase, canonical in multi_word:
+        # First try multi-word synonyms (precomputed, sorted by length descending)
+        for phrase, canonical in self._multi_word_phrases:
             if phrase in result:
                 result = result.replace(phrase, canonical)
 
-        # Then single-word synonyms
-        single_word = [(word, canon) for word, canon in self.synonym_to_canonical.items()
-                       if ' ' not in word]
-        for word, canonical in single_word:
+        # Then single-word synonyms (word boundary check for English)
+        for word, pattern, canonical in self._single_word_lookup:
             if word in result:
-                # Word boundary check for English
-                pattern = r'\b' + word + r'\b'
-                import re
-                result = re.sub(pattern, canonical, result)
+                result = pattern.sub(canonical, result)
 
         return result
 

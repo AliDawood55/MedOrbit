@@ -11,21 +11,12 @@
 // new-user creation, session issuance — is authService.googleLogin()'s
 // own code, run for real against the real database.
 
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
-
 const { Pool } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
+const { poolConfig } = require('./helpers/test-environment');
 
 const pool = new Pool({
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: String(process.env.DB_PASSWORD || ''),
-    max: 5,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 2000,
+    ...poolConfig,
 });
 pool.on('connect', async (client) => {
     await client.query('SET search_path TO medorbit, public');

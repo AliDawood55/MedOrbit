@@ -1,19 +1,9 @@
-// src/config/env.js
-// Loads environment from root .env — called once at startup.
-// All other modules read process.env after this is loaded.
 
 const path = require('path');
 const dotenv = require('dotenv');
-
-// Resolve root .env: server.js -> src/ -> config/ -> ../../../ = project root
 const rootEnvPath = path.resolve(__dirname, '../../.env');
-// quiet: true — suppress dotenv's own "injecting env (N)" console line; by
-// the time this runs, src/config/database.js has usually already loaded
-// everything anyway (see its own comment), so this call would otherwise log
-// a redundant/misleading "(0)".
-dotenv.config({ path: rootEnvPath, quiet: true });
 
-// Also set in process.env for any direct readers
+dotenv.config({ path: rootEnvPath, quiet: true });
 process.env.DOTENV_LOADED = '1';
 
 const env = {
@@ -34,6 +24,9 @@ const env = {
 
     jwt: {
         secret: process.env.JWT_SECRET,
+        algorithm: "HS256",
+        issuer: process.env.JWT_ISSUER || "medorbit-api",
+        audience: process.env.JWT_AUDIENCE || "medorbit-clients",
 
         accessExpiresIn:
             process.env.JWT_ACCESS_EXPIRES_IN || "15m",
@@ -56,7 +49,32 @@ const env = {
     cors: {
         origin:
             process.env.CORS_ORIGIN || "*",
-    }
+    },
+
+    scheduling: {
+        // Preserve the existing 21-day web/mobile booking horizon while
+        // enforcing it server-side. Operators may raise it, up to one year.
+        bookingHorizonDays: Math.min(
+            Math.max(Number(process.env.BOOKING_HORIZON_DAYS) || 21, 1),
+            365
+        ),
+        // Existing appointments use local DATE + TIME columns. This timezone
+        // defines "today" without converting or shifting stored clock times.
+        timeZone: process.env.SCHEDULING_TIMEZONE || 'Africa/Cairo',
+    },
+
+    kafka: {
+        enabled: String(process.env.KAFKA_ENABLED || 'false').toLowerCase() === 'true',
+        brokers: String(process.env.KAFKA_BROKERS || 'kafka:9092').split(',').map((v) => v.trim()).filter(Boolean),
+        clientId: process.env.KAFKA_CLIENT_ID || 'medorbit',
+        outboxTopic: process.env.KAFKA_OUTBOX_TOPIC || 'medorbit.domain-events.v1',
+        consumerGroup: process.env.KAFKA_CONSUMER_GROUP || 'medorbit-event-observer-v1',
+        recommendationConsumerGroup: process.env.KAFKA_RECOMMENDATION_CONSUMER_GROUP || 'recommendation-profile-v1',
+        batchSize: Math.min(Math.max(Number(process.env.OUTBOX_BATCH_SIZE) || 50, 1), 500),
+        pollIntervalMs: Math.max(Number(process.env.OUTBOX_POLL_INTERVAL_MS) || 1000, 250),
+        lockTimeoutMs: Math.max(Number(process.env.OUTBOX_LOCK_TIMEOUT_MS) || 60000, 5000),
+        maxAttempts: Math.min(Math.max(Number(process.env.OUTBOX_MAX_ATTEMPTS) || 8, 1), 100),
+    },
 };
 
 module.exports = env;

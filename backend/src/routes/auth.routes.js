@@ -49,34 +49,48 @@ const resendVerificationLimiter = createAuthLimiter({
     message: 'Too many verification email requests. Please try again later.'
 });
 
-// Register
+const sessionLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    message: 'Too many session requests. Please try again later.'
+});
+
+const forgotPasswordLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many password reset requests. Please try again later.'
+});
+
+const resetPasswordLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Too many password reset attempts. Please try again later.'
+});
+
+const changePasswordLimiter = createAuthLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: 'Too many password change attempts. Please try again later.'
+});
+
 router.post("/register", registerLimiter, authController.register);
 
-// Login (with per-IP rate limit)
 router.post("/login", loginLimiter, authController.login);
 
-// Google Sign-In (with per-IP rate limit — same abuse surface as /login)
 router.post("/google", loginLimiter, authController.google);
 
-// Refresh token
-router.post("/refresh", authController.refresh);
+router.post("/refresh", sessionLimiter, authController.refresh);
 
-// Logout
-router.post("/logout", authController.logout);
+router.post("/logout", sessionLimiter, authController.logout);
 
-// Change password (authenticated)
-router.post("/change-password", authenticate, authController.changePassword);
+router.post("/change-password", authenticate, changePasswordLimiter, authController.changePassword);
 
-// Forgot password
-router.post("/forgot-password", authController.forgotPassword);
+router.post("/forgot-password", forgotPasswordLimiter, authController.forgotPassword);
 
-// Reset password
-router.post("/reset-password", authController.resetPassword);
+router.post("/reset-password", resetPasswordLimiter, authController.resetPassword);
 
-// Verify email
 router.post("/verify-email", verifyEmailLimiter, authController.verifyEmail);
 
-// Resend verification
 router.post("/resend-verification", resendVerificationLimiter, authController.resendVerification);
 
 module.exports = router;

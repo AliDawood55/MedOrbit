@@ -358,20 +358,6 @@
     font-weight: 700;
 }
 
-.confidence-bar {
-    width: 100px;
-    height: 6px;
-    background: var(--bg-soft);
-    border-radius: var(--r-full);
-    overflow: hidden;
-}
-
-.confidence-bar-fill {
-    height: 100%;
-    background: var(--primary-gradient);
-    border-radius: var(--r-full);
-}
-
 /* === Drug Interaction Severity Groups === */
 .severity-group {
     margin-bottom: 20px;

@@ -75,7 +75,7 @@ const Profile = (() => {
         const el = document.getElementById('avatarDisplay');
         if (!el) return;
         if (profile.avatar_url) {
-            el.innerHTML = '<img src="' + escapeHtml(API.getOrigin() + profile.avatar_url) + '" alt="">';
+            el.innerHTML = '<img src="' + escapeHtml(API.assetUrl(profile.avatar_url)) + '" alt="">';
         } else {
             const initial = (displayName() || profile.email || '?').trim().charAt(0).toUpperCase();
             el.textContent = initial || '?';
@@ -86,7 +86,10 @@ const Profile = (() => {
         renderAvatar();
 
         const avatarEditBtn = document.getElementById('avatarEditBtn');
-        if (avatarEditBtn) avatarEditBtn.title = t('profile.changePhoto');
+        if (avatarEditBtn) {
+            avatarEditBtn.title = t('profile.changePhoto');
+            avatarEditBtn.setAttribute('aria-label', t('profile.changePhoto'));
+        }
 
         document.getElementById('profileName').textContent = displayName();
         document.getElementById('profileEmail').textContent = profile.email || '';
@@ -187,7 +190,7 @@ const Profile = (() => {
             showAlert('formAlert', t('profile.saveSuccess'), 'success');
         } catch (err) {
             console.error('Profile: save failed', err);
-            showAlert('formAlert', err?.message || t('profile.saveError'));
+            showAlert('formAlert', t('profile.saveError'));
         } finally {
             setLoading('saveProfileBtn', false);
         }
@@ -290,7 +293,7 @@ const Profile = (() => {
             }, 2000);
         } catch (err) {
             console.error('Profile: password change failed', err);
-            showAlert('passwordAlert', err?.message || t('profile.saveError'));
+            showAlert('passwordAlert', t('profile.saveError'));
         } finally {
             setLoading('changePasswordBtn', false);
         }

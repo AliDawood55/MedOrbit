@@ -19,6 +19,17 @@
     <link rel="stylesheet" href="../src/css/listing.css">
     <link rel="stylesheet" href="../src/css/ai-tools.css">
     <link rel="stylesheet" href="../src/css/profile.css">
+    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
+         below is an external file and an external file can 404, be blocked or
+         time out, and a gate that never loads hides nothing. These lines
+         cannot go missing on their own. They hide protected markup from the
+         first paint; the gate clears the attribute once it has verified the
+         session, and the watchdog leaves for Home if the gate never arrives. -->
+    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
 
@@ -66,7 +77,7 @@
             <div class="card profile-header-card">
                 <div class="profile-avatar-wrap">
                     <div class="profile-avatar" id="avatarDisplay"></div>
-                    <button type="button" class="profile-avatar-edit" id="avatarEditBtn" title="Change photo">
+                    <button type="button" class="profile-avatar-edit" id="avatarEditBtn" data-i18n-title="profile.changePhoto" title="تغيير الصورة">
                         <i class="fas fa-camera"></i>
                     </button>
                     <input type="file" id="avatarInput" accept=".jpg,.jpeg,.png" style="display:none;">

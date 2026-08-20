@@ -1,0 +1,2 @@
+import 'package:flutter_test/flutter_test.dart'; import 'package:mobile/features/virtual_doctor/providers/virtual_doctor_provider.dart';
+void main() { test('state exposes transient recovery and differential fields', () { final state = const VirtualDoctorState().copyWith(recoveredSession: true, differential: const [{'name': 'x'}], recordingRemainingSeconds: 5); expect(state.recoveredSession, isTrue); expect(state.differential, hasLength(1)); expect(state.recordingRemainingSeconds, 5); }); }

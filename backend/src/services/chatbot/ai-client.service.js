@@ -20,6 +20,13 @@ class AIClientService {
                 body.message = 'hello';
             }
 
+            // ai-service's ChatRequest expects snake_case conversation_id;
+            // backend's internal convention is camelCase conversationId.
+            if (body.conversationId !== undefined) {
+                body.conversation_id = body.conversationId;
+                delete body.conversationId;
+            }
+
             const response = await axios.post(
                 `${AI_SERVICE_URL}/chat`,
                 body,

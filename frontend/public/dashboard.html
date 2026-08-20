@@ -19,6 +19,17 @@
     <link rel="stylesheet" href="../src/css/forms.css">
     <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/dashboard.css">
+    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
+         below is an external file and an external file can 404, be blocked or
+         time out, and a gate that never loads hides nothing. These lines
+         cannot go missing on their own. They hide protected markup from the
+         first paint; the gate clears the attribute once it has verified the
+         session, and the watchdog leaves for Home if the gate never arrives. -->
+    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
 
@@ -110,7 +121,7 @@
                     <section class="card dashboard-card" id="apptCard">
                         <div class="card-header">
                             <h2 data-i18n="dashboard.upcomingAppointments">المواعيد القادمة</h2>
-                            <a href="my-appointments.html" class="btn btn-secondary btn-sm">
+                            <a href="my-appointments.html" class="btn btn-secondary btn-sm" id="dashboardAppointmentsLink">
                                 <span data-i18n="dashboard.viewAll">عرض الكل</span>
                             </a>
                         </div>
@@ -124,7 +135,7 @@
                                 <div class="empty-state-icon"><i class="fas fa-calendar-days"></i></div>
                                 <h3 data-i18n="dashboard.apptEmptyTitle"></h3>
                                 <p data-i18n="dashboard.apptEmptyHint"></p>
-                                <a href="book-appointment.html" class="btn btn-primary btn-sm" style="margin-top:14px;">
+                                <a href="book-appointment.html" class="btn btn-primary btn-sm" id="dashboardBookAppointment" style="margin-top:14px;">
                                     <span data-i18n="myAppts.bookNew">حجز موعد جديد</span>
                                 </a>
                             </div>

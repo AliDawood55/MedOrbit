@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Replaces a blanket android:usesCleartextTraffic true setting, which allowed plain
+  HTTP to any host in every build type, including release.
+
+  Everything defaults to TLS only. The exception below is scoped to the
+  development hosts AppConfig already probes, so flutter run and
+  flutter run release keep working against the LAN backend on a physical
+  device while no other origin can be reached over cleartext.
+
+  Production builds are expected to supply an HTTPS origin using Dart define
+  values MEDORBIT_API_URL and MEDORBIT_AI_URL and are covered by
+  base-config below. Do not add a public hostname to the domain-config list,
+  because that would silently downgrade real patient traffic to plaintext.
+
+  STAGING (temporary): the Azure staging VM currently serves plain HTTP
+  (no TLS yet — see docs/AZURE_STAGING_DEPLOYMENT.md). To test a real device
+  against it, uncomment the staging domain-config block below and replace
+  the placeholder with the VM's actual public IP, LOCALLY ONLY. Revert this
+  edit (re-comment or `git checkout` this file) before committing or
+  building a release — do not ship the exception.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Dev laptop WiFi LAN IP, used by a physical test device. -->
+        <domain includeSubdomains="false">192.168.0.105</domain>
+
+        <!-- Android emulator alias for the host machine loopback. -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+
+        <!-- Local development hosts. -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+
+    <!--
+    STAGING (temporary) — uncomment and replace the placeholder IP to test
+    against the Azure staging VM. Revert before committing/releasing.
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">STAGING_VM_PUBLIC_IP</domain>
+    </domain-config>
+    -->
+</network-security-config>
