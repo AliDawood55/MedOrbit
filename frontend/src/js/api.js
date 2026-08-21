@@ -468,11 +468,14 @@ const API = (() => {
         createPost: (body, options) => post('/doctors/me/posts', body, options),
         updatePost: (postId, body, options) => put(`/doctors/me/posts/${postId}`, body, options),
         deletePost: (postId, options) => del(`/doctors/me/posts/${postId}`, options),
-        // Doctor's patient list + one patient's file, incl. session notes
+        // Doctor's patient list + one patient's file, incl. medical records
         // (my-patients.html, patient-detail.html)
         myPatients: (query, options) => get('/doctors/me/patients', query, options),
         patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
-        addPatientNote: (patientId, body, options) => post(`/doctors/me/patients/${patientId}/notes`, body, options),
+        // Canonical medical-record creation (backend/src/routes/medicalRecord.routes.js)
+        // — requires appointment_id; patient_id/doctor_id are derived server-side
+        // from that appointment, never taken from the request body.
+        createMedicalRecord: (body, options) => post('/medical-records', body, options),
         // Patient's view of their own doctor(s) + notes a doctor explicitly
         // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),

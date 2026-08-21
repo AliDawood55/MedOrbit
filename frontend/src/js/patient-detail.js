@@ -1,12 +1,19 @@
 /**
  * MedOrbit v2 - Patient Detail (one patient's file, as seen by their doctor)
  *
- * GET/POST /doctors/me/patients/:patientId(/notes) (backend/src/routes/
- * doctor.routes.js) — the doctor id is resolved server-side from the JWT,
- * and every request is gated on a real doctor<->patient relationship check
- * (an appointment must exist between them) that runs before any patient
- * data is queried. A patient id with no such relationship 404s, same as one
- * that doesn't exist at all, so a doctor probing random ids learns nothing.
+ * GET /doctors/me/patients/:patientId (backend/src/routes/doctor.routes.js)
+ * — the doctor id is resolved server-side from the JWT, and every request
+ * is gated on a real doctor<->patient relationship check (an appointment
+ * must exist between them) that runs before any patient data is queried.
+ * A patient id with no such relationship 404s, same as one that doesn't
+ * exist at all, so a doctor probing random ids learns nothing.
+ *
+ * Medical-record authoring on this page submits through the canonical
+ * POST /api/medical-records (backend/src/routes/medicalRecord.routes.js)
+ * rather than doctor.routes.js's notes endpoint, so every field the form
+ * collects is one the backend actually persists (including appointment_id,
+ * symptoms, treatment_plan, prognosis, doctor_notes — none of which the
+ * notes endpoint accepted).
  */
 const PatientDetail = (() => {
 
@@ -26,6 +33,7 @@ const PatientDetail = (() => {
     };
 
     let notes = [];
+    let appointments = [];
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -177,25 +185,58 @@ const PatientDetail = (() => {
         }).join('') + '</div>';
     }
 
-    // ================= ADD NOTE FORM =================
+    // ================= ADD MEDICAL RECORD FORM =================
+    // Submits through the canonical POST /api/medical-records contract
+    // (API.care.createMedicalRecord) rather than the older freeform
+    // /doctors/me/patients/:patientId/notes endpoint, so every field this
+    // form collects is one the backend actually persists — see the field
+    // mapping this was implemented from. appointment_id is required because
+    // the backend resolves patient_id/doctor_id from that appointment and
+    // 404s without a valid one; the select is populated only from this
+    // doctor's real appointments with this patient (never free text).
 
-    function validateNote() {
+    function renderAppointmentOptions(list) {
+        const select = document.getElementById('noteAppointment');
+        const btn = document.getElementById('noteSubmitBtn');
+        if (!select) return;
+        if (!list.length) {
+            select.innerHTML = '<option value="">' + escapeHtml(t('patientDetail.noAppointmentForRecord')) + '</option>';
+            select.disabled = true;
+            if (btn) btn.disabled = true;
+            return;
+        }
+        select.disabled = false;
+        if (btn) btn.disabled = false;
+        select.innerHTML = list.map((a) => (
+            '<option value="' + escapeHtml(a.id) + '">' +
+                escapeHtml(fmtDate(a.scheduled_date)) +
+                (a.reason_for_visit ? ' — ' + escapeHtml(a.reason_for_visit) : '') +
+            '</option>'
+        )).join('');
+    }
+
+    function validateRecord() {
+        const appointmentId = document.getElementById('noteAppointment').value;
+        if (!appointmentId) return t('patientDetail.errorAppointmentRequired');
         const complaint = document.getElementById('noteChiefComplaint').value.trim();
         const clinical = document.getElementById('noteClinicalNotes').value.trim();
         if (!complaint && !clinical) return t('patientDetail.errorNoteRequired');
         return null;
     }
 
-    function clearNoteForm() {
+    function clearRecordForm() {
         document.getElementById('noteRecordType').value = 'consultation';
         document.getElementById('noteDiagnosis').value = '';
         document.getElementById('noteChiefComplaint').value = '';
+        document.getElementById('noteSymptoms').value = '';
+        document.getElementById('noteTreatmentPlan').value = '';
+        document.getElementById('notePrognosis').value = '';
         document.getElementById('noteClinicalNotes').value = '';
+        document.getElementById('noteDoctorNotes').value = '';
         document.getElementById('noteDraftToggle').checked = false;
-        document.getElementById('noteShareToggle').checked = false;
     }
 
-    function showNoteResult(ok) {
+    function showRecordResult(ok) {
         const icon = document.getElementById('noteFormResultIcon');
         icon.className = 'feedback-result-icon ' + (ok ? 'success' : 'error');
         icon.innerHTML = '<i class="fas ' + (ok ? 'fa-circle-check' : 'fa-triangle-exclamation') + '"></i>';
@@ -204,11 +245,11 @@ const PatientDetail = (() => {
         document.getElementById('noteFormResult').classList.remove('hidden');
     }
 
-    async function submitNote(patientId) {
+    async function submitRecord() {
         const alertBox = document.getElementById('noteFormAlert');
         alertBox.className = 'alert';
 
-        const err = validateNote();
+        const err = validateRecord();
         if (err) {
             alertBox.classList.add('error');
             alertBox.textContent = err;
@@ -217,28 +258,39 @@ const PatientDetail = (() => {
 
         const btn = document.getElementById('noteSubmitBtn');
         btn.classList.add('loading');
+        btn.disabled = true;
+
+        const symptoms = document.getElementById('noteSymptoms').value
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
 
         const body = {
+            appointment_id: document.getElementById('noteAppointment').value,
             record_type: document.getElementById('noteRecordType').value,
             diagnosis: document.getElementById('noteDiagnosis').value.trim(),
             chief_complaint: document.getElementById('noteChiefComplaint').value.trim(),
+            symptoms,
+            treatment_plan: document.getElementById('noteTreatmentPlan').value.trim(),
+            prognosis: document.getElementById('notePrognosis').value.trim(),
             clinical_notes: document.getElementById('noteClinicalNotes').value.trim(),
-            is_draft: document.getElementById('noteDraftToggle').checked,
-            visible_to_patient: document.getElementById('noteShareToggle').checked
+            doctor_notes: document.getElementById('noteDoctorNotes').value.trim(),
+            is_draft: document.getElementById('noteDraftToggle').checked
         };
 
         try {
-            const res = await API.care.addPatientNote(patientId, body);
+            const res = await API.care.createMedicalRecord(body);
             notes = [res.data, ...notes];
             renderNotes(notes);
-            clearNoteForm();
-            showNoteResult(true);
+            clearRecordForm();
+            showRecordResult(true);
         } catch (err2) {
-            console.error('PatientDetail: failed to save note', err2);
-            showNoteResult(false);
+            console.error('PatientDetail: failed to save medical record', err2);
+            showRecordResult(false);
         }
 
         btn.classList.remove('loading');
+        btn.disabled = false;
     }
 
     // ================= LOAD =================
@@ -248,8 +300,10 @@ const PatientDetail = (() => {
             const res = await API.care.patientDetail(patientId);
             const data = res?.data || {};
             notes = Array.isArray(data.notes) ? data.notes : [];
+            appointments = Array.isArray(data.appointments) ? data.appointments : [];
             renderHeader(data.patient || {});
-            renderAppointments(Array.isArray(data.appointments) ? data.appointments : []);
+            renderAppointments(appointments);
+            renderAppointmentOptions(appointments);
             renderNotes(notes);
             renderPrescriptions(Array.isArray(data.prescriptions) ? data.prescriptions : []);
         } catch (err) {
@@ -293,7 +347,7 @@ const PatientDetail = (() => {
         document.getElementById('patientDetailContent').classList.remove('hidden');
         loadPatient(patientId);
 
-        document.getElementById('noteSubmitBtn').addEventListener('click', () => submitNote(patientId));
+        document.getElementById('noteSubmitBtn').addEventListener('click', submitRecord);
         document.getElementById('noteFormResultCloseBtn').addEventListener('click', () => {
             document.getElementById('noteFormResult').classList.add('hidden');
         });

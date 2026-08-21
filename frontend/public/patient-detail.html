@@ -102,17 +102,24 @@
                 <div id="appointmentHistoryList"></div>
             </div>
 
-            <!-- Session notes timeline + real add-note form -->
+            <!-- Medical records timeline + real record-authoring form -->
             <div class="care-section">
-                <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">ملاحظات الجلسات</span></div>
+                <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">السجلات الطبية</span></div>
 
                 <div class="note-timeline" id="notesTimeline" style="margin-bottom:20px;"></div>
 
-                <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة ملاحظة جلسة</div>
+                <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة سجل طبي</div>
                 <div class="alert" id="noteFormAlert"></div>
 
                 <div class="care-note-form">
                     <div class="form-row">
+                        <div class="form-group">
+                            <label for="noteAppointment" data-i18n="patientDetail.appointment">الموعد</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar-check"></i>
+                                <select id="noteAppointment"></select>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label for="noteRecordType" data-i18n="patientDetail.recordType">نوع السجل</label>
                             <div class="input-wrapper">
@@ -124,12 +131,13 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="noteDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-stethoscope"></i>
-                                <input type="text" id="noteDiagnosis">
-                            </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-stethoscope"></i>
+                            <input type="text" id="noteDiagnosis">
                         </div>
                     </div>
 
@@ -139,8 +147,28 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="noteSymptoms" data-i18n="patientDetail.symptoms">الأعراض (مفصولة بفواصل)</label>
+                        <input type="text" id="noteSymptoms">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteTreatmentPlan" data-i18n="patientDetail.treatmentPlan">خطة العلاج</label>
+                        <textarea class="feedback-textarea" id="noteTreatmentPlan" style="min-height:60px;"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notePrognosis" data-i18n="patientDetail.prognosis">التوقعات</label>
+                        <textarea class="feedback-textarea" id="notePrognosis" style="min-height:60px;"></textarea>
+                    </div>
+
+                    <div class="form-group">
                         <label for="noteClinicalNotes" data-i18n="patientDetail.clinicalNotes">ملاحظات إكلينيكية</label>
                         <textarea class="feedback-textarea" id="noteClinicalNotes"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteDoctorNotes" data-i18n="patientDetail.doctorNotes">ملاحظات داخلية (لا تظهر للمريض)</label>
+                        <textarea class="feedback-textarea" id="noteDoctorNotes"></textarea>
                     </div>
 
                     <label class="care-toggle-row">
@@ -148,14 +176,9 @@
                         <span data-i18n="patientDetail.saveDraft">حفظ كمسودة (غير مرئية للمريض)</span>
                     </label>
 
-                    <label class="care-toggle-row">
-                        <input type="checkbox" id="noteShareToggle">
-                        <span data-i18n="patientDetail.shareWithPatient">مشاركة هذه الملاحظة مع المريض في صفحة "طبيبي"</span>
-                    </label>
-
                     <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
                         <button type="button" class="btn btn-primary" id="noteSubmitBtn">
-                            <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ الملاحظة</span>
+                            <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ السجل</span>
                             <span class="spinner spinner-sm btn-spinner"></span>
                         </button>
                     </div>
