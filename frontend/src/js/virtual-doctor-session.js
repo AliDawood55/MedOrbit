@@ -58,6 +58,22 @@ const VirtualDoctorSession = (() => {
      * actually finishes or is interrupted. Without TTS it falls back to a
      * fixed beat, so this module stays usable with speech switched off.
      */
+    /**
+     * A start() (or a mid-flight message()) can lose the race against an
+     * explicit end/reset: the server has already created or holds an active
+     * session, but local state was cleared before the response landed, so
+     * nothing else will ever ask the server to close it. Best-effort finalize
+     * it here instead of leaving it orphaned until stale-grant expiry.
+     */
+    async function finalizeOrphanedSession(id) {
+        if (!id) return;
+        try {
+            await API.virtualDoctor.endSession(id);
+        } catch (err) {
+            console.error('[vd-session] orphaned-session cleanup failed:', err);
+        }
+    }
+
     async function doctorSpeaks(reply, meta) {
         emit('onState', { state: 'doctorSpeaking' });
         const handled = emit('onDoctorTurn', { text: reply, phase, meta: meta || {} });
@@ -97,7 +113,19 @@ const VirtualDoctorSession = (() => {
             throw err;
         }
 
-        if (myGeneration !== generation) return null;
+        if (myGeneration !== generation) {
+            // The user ended/reset while this start() was in flight, but the
+            // server went ahead and created a real session — it needs an
+            // explicit end too, or it stays active with no local id to close
+            // it. This is the ONLY orphan-cleanup site: sessionId has not
+            // been assigned yet, so nothing else could have already ended
+            // this session. Once sessionId is assigned below, end() owns
+            // finalization — a later generation mismatch (e.g. after
+            // doctorSpeaks) just returns, since an explicit end() already
+            // sent the one /end this session needs.
+            await finalizeOrphanedSession(res.session_id);
+            return null;
+        }
         sessionId = res.session_id;
         phase = res.phase;
         // The server echoes the session language; pin STT to it rather than
@@ -211,12 +239,49 @@ const VirtualDoctorSession = (() => {
         turnCount = 0;
     }
 
+    /**
+     * User-requested end of an in-progress consultation.
+     *
+     * A session that already reached phase 'complete' was finalized
+     * server-side by the message/report lifecycle already — resetting the UI
+     * on top of that must NOT re-finalize it as abandoned. So the server end
+     * call only fires for a session that is still active.
+     *
+     * Local state (including sessionId) is cleared synchronously via reset()
+     * before the network call, for two reasons: the caller's mic/audio
+     * cleanup never waits on the network, and a second end() call — from a
+     * double click, since the button disappears with the UI it clears, this
+     * only guards stray re-entry — finds no sessionId and skips straight to
+     * a no-op rather than firing a second request.
+     */
+    async function end() {
+        const id = sessionId;
+        const hadActiveSession = Boolean(id) && phase !== 'complete';
+        reset();
+
+        if (!hadActiveSession) {
+            return { ended: false, reason: id ? 'already_complete' : 'no_session' };
+        }
+
+        try {
+            await API.virtualDoctor.endSession(id);
+            return { ended: true };
+        } catch (err) {
+            // The local session is already gone; the server grant is left for
+            // its own stale-grant expiry to clean up (see
+            // entitlement.service.js), so this is not a stuck state.
+            console.error('[vd-session] end failed:', err);
+            return { ended: false, reason: 'error', detail: err.message };
+        }
+    }
+
     return {
         init,
         start,
         submit,
         requestReport,
         reset,
+        end,
         getPhase: () => phase,
         getLanguage: () => language,
         getSessionId: () => sessionId,
