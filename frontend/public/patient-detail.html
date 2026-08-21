@@ -185,10 +185,61 @@
                 </div>
             </div>
 
-            <!-- Prescriptions -->
+            <!-- Prescriptions + real prescription-authoring form -->
             <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></div>
-                <div id="prescriptionsList"></div>
+                <div id="prescriptionsList" style="margin-bottom:20px;"></div>
+
+                <div class="care-form-title" data-i18n="patientDetail.addPrescription">إنشاء وصفة طبية</div>
+                <div class="alert" id="rxFormAlert"></div>
+
+                <div class="care-note-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="rxAppointment" data-i18n="patientDetail.appointment">الموعد</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar-check"></i>
+                                <select id="rxAppointment"></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="rxValidUntil" data-i18n="patientDetail.rxValidUntil">صالحة حتى</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar"></i>
+                                <input type="date" id="rxValidUntil">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rxDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-stethoscope"></i>
+                            <input type="text" id="rxDiagnosis">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rxInstructions" data-i18n="patientDetail.rxInstructions">تعليمات للمريض</label>
+                        <textarea class="feedback-textarea" id="rxInstructions" style="min-height:60px;"></textarea>
+                    </div>
+
+                    <div class="care-form-title" data-i18n="patientDetail.medications" style="margin-top:8px;">الأدوية</div>
+                    <div id="rxItemsContainer"></div>
+
+                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                        <button type="button" class="btn btn-ghost btn-sm" id="rxAddItemBtn">
+                            <i class="fas fa-plus"></i> <span data-i18n="patientDetail.addMedication">إضافة دواء</span>
+                        </button>
+                    </div>
+
+                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                        <button type="button" class="btn btn-primary" id="rxSubmitBtn">
+                            <span class="btn-label" data-i18n="patientDetail.savePrescription">حفظ الوصفة</span>
+                            <span class="spinner spinner-sm btn-spinner"></span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Real result for the note form: success or honest failure -->
@@ -197,6 +248,16 @@
                 <h2 id="noteFormResultTitle"></h2>
                 <p id="noteFormResultHint"></p>
                 <button type="button" class="btn btn-secondary btn-sm" id="noteFormResultCloseBtn">
+                    <span data-i18n="common.close">إغلاق</span>
+                </button>
+            </div>
+
+            <!-- Real result for the prescription form: success or honest failure -->
+            <div class="feedback-result hidden" id="rxFormResult">
+                <div class="feedback-result-icon" id="rxFormResultIcon"><i class="fas fa-circle-check"></i></div>
+                <h2 id="rxFormResultTitle"></h2>
+                <p id="rxFormResultHint"></p>
+                <button type="button" class="btn btn-secondary btn-sm" id="rxFormResultCloseBtn">
                     <span data-i18n="common.close">إغلاق</span>
                 </button>
             </div>

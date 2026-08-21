@@ -34,6 +34,9 @@ const PatientDetail = (() => {
 
     let notes = [];
     let appointments = [];
+    let prescriptions = [];
+    let currentPatientId = null;
+    let rxItemSeq = 0;
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -293,6 +296,210 @@ const PatientDetail = (() => {
         btn.disabled = false;
     }
 
+    // ================= CREATE PRESCRIPTION FORM =================
+    // Submits through POST /api/prescriptions (backend/src/routes/prescription.routes.js).
+    // Unlike medical-record creation, this contract requires patient_id
+    // explicitly — sourced from the server-returned patient object (never
+    // a URL/editable field) — plus appointment_id from this doctor's real
+    // appointments with this patient. The backend re-verifies both before
+    // writing anything, so this is a UX guard, not the authorization
+    // boundary. Item fields mirror medorbit.prescription_items' NOT NULL
+    // columns exactly (medication_name_ar/en, dosage, frequency, quantity);
+    // duration/instructions are nullable there, so they stay optional here.
+
+    function renderRxAppointmentOptions(list) {
+        const select = document.getElementById('rxAppointment');
+        const submitBtn = document.getElementById('rxSubmitBtn');
+        const addBtn = document.getElementById('rxAddItemBtn');
+        if (!select) return;
+        if (!list.length) {
+            select.innerHTML = '<option value="">' + escapeHtml(t('patientDetail.noAppointmentForRx')) + '</option>';
+            select.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+            if (addBtn) addBtn.disabled = true;
+            return;
+        }
+        select.disabled = false;
+        if (submitBtn) submitBtn.disabled = false;
+        if (addBtn) addBtn.disabled = false;
+        select.innerHTML = list.map((a) => (
+            '<option value="' + escapeHtml(a.id) + '">' +
+                escapeHtml(fmtDate(a.scheduled_date)) +
+                (a.start_time ? ' · ' + escapeHtml(String(a.start_time).slice(0, 5)) : '') +
+                (a.reason_for_visit ? ' — ' + escapeHtml(a.reason_for_visit) : '') +
+            '</option>'
+        )).join('');
+    }
+
+    function createRxItemRow() {
+        rxItemSeq += 1;
+        const row = Dom.el('div', { className: 'rx-item-card', dataset: { rxItem: String(rxItemSeq) } }, [
+            Dom.el('button', {
+                type: 'button',
+                className: 'btn btn-ghost btn-sm btn-icon rx-item-remove',
+                'aria-label': t('patientDetail.removeMedication'),
+                onClick: () => removeRxItemRow(row)
+            }, [Dom.el('i', { className: 'fas fa-xmark' })]),
+            Dom.el('div', { className: 'form-row' }, [
+                Dom.el('div', { className: 'form-group' }, [
+                    Dom.el('label', { text: t('patientDetail.medicationNameAr') }),
+                    Dom.el('input', { type: 'text', className: 'rx-item-name-ar' })
+                ]),
+                Dom.el('div', { className: 'form-group' }, [
+                    Dom.el('label', { text: t('patientDetail.medicationNameEn') }),
+                    Dom.el('input', { type: 'text', className: 'rx-item-name-en' })
+                ])
+            ]),
+            Dom.el('div', { className: 'form-row' }, [
+                Dom.el('div', { className: 'form-group' }, [
+                    Dom.el('label', { text: t('patientDetail.dosage') }),
+                    Dom.el('input', { type: 'text', className: 'rx-item-dosage' })
+                ]),
+                Dom.el('div', { className: 'form-group' }, [
+                    Dom.el('label', { text: t('patientDetail.frequency') }),
+                    Dom.el('input', { type: 'text', className: 'rx-item-frequency' })
+                ])
+            ]),
+            Dom.el('div', { className: 'form-row' }, [
+                Dom.el('div', { className: 'form-group' }, [
+                    Dom.el('label', { text: t('patientDetail.duration') }),
+                    Dom.el('input', { type: 'text', className: 'rx-item-duration' })
+                ]),
+                Dom.el('div', { className: 'form-group' }, [
+                    Dom.el('label', { text: t('patientDetail.quantity') }),
+                    Dom.el('input', { type: 'number', className: 'rx-item-quantity', min: '1', step: '1' })
+                ])
+            ]),
+            Dom.el('div', { className: 'form-group' }, [
+                Dom.el('label', { text: t('patientDetail.itemInstructions') }),
+                Dom.el('textarea', { className: 'feedback-textarea rx-item-instructions', style: 'min-height:48px;' })
+            ])
+        ]);
+        return row;
+    }
+
+    function updateRxRemoveButtons() {
+        const container = document.getElementById('rxItemsContainer');
+        const rows = Dom.$$('.rx-item-card', container);
+        rows.forEach((row) => {
+            const btn = Dom.$('.rx-item-remove', row);
+            if (btn) btn.style.display = rows.length > 1 ? '' : 'none';
+        });
+    }
+
+    function addRxItemRow() {
+        const container = document.getElementById('rxItemsContainer');
+        container.appendChild(createRxItemRow());
+        updateRxRemoveButtons();
+    }
+
+    function removeRxItemRow(row) {
+        const container = document.getElementById('rxItemsContainer');
+        if (Dom.$$('.rx-item-card', container).length <= 1) return;
+        row.remove();
+        updateRxRemoveButtons();
+    }
+
+    function resetRxItems() {
+        const container = document.getElementById('rxItemsContainer');
+        container.innerHTML = '';
+        addRxItemRow();
+    }
+
+    function collectRxItems() {
+        const container = document.getElementById('rxItemsContainer');
+        const rows = Dom.$$('.rx-item-card', container);
+        const items = [];
+        for (const row of rows) {
+            const nameAr = Dom.$('.rx-item-name-ar', row).value.trim();
+            const nameEn = Dom.$('.rx-item-name-en', row).value.trim();
+            const dosage = Dom.$('.rx-item-dosage', row).value.trim();
+            const frequency = Dom.$('.rx-item-frequency', row).value.trim();
+            const duration = Dom.$('.rx-item-duration', row).value.trim();
+            const quantityRaw = Dom.$('.rx-item-quantity', row).value;
+            const instructions = Dom.$('.rx-item-instructions', row).value.trim();
+            const quantity = quantityRaw === '' ? NaN : Number(quantityRaw);
+
+            if (!nameAr || !nameEn || !dosage || !frequency || !Number.isInteger(quantity) || quantity < 1) {
+                return { error: t('patientDetail.errorRxItemRequired') };
+            }
+
+            items.push({
+                medication_name_ar: nameAr,
+                medication_name_en: nameEn,
+                dosage,
+                frequency,
+                duration: duration || null,
+                quantity,
+                instructions: instructions || null
+            });
+        }
+        return { items };
+    }
+
+    function validateRx() {
+        const appointmentId = document.getElementById('rxAppointment').value;
+        if (!appointmentId) return { error: t('patientDetail.errorRxAppointmentRequired') };
+        const { items, error: itemsError } = collectRxItems();
+        if (itemsError) return { error: itemsError };
+        return { appointmentId, items };
+    }
+
+    function clearRxForm() {
+        document.getElementById('rxValidUntil').value = '';
+        document.getElementById('rxDiagnosis').value = '';
+        document.getElementById('rxInstructions').value = '';
+        resetRxItems();
+    }
+
+    function showRxResult(ok) {
+        const icon = document.getElementById('rxFormResultIcon');
+        icon.className = 'feedback-result-icon ' + (ok ? 'success' : 'error');
+        icon.innerHTML = '<i class="fas ' + (ok ? 'fa-circle-check' : 'fa-triangle-exclamation') + '"></i>';
+        document.getElementById('rxFormResultTitle').textContent = t(ok ? 'patientDetail.rxSavedTitle' : 'patientDetail.rxErrorTitle');
+        document.getElementById('rxFormResultHint').textContent = t(ok ? 'patientDetail.rxSavedHint' : 'patientDetail.rxErrorHint');
+        document.getElementById('rxFormResult').classList.remove('hidden');
+    }
+
+    async function submitRx() {
+        const alertBox = document.getElementById('rxFormAlert');
+        alertBox.className = 'alert';
+
+        const { error: validationError, appointmentId, items } = validateRx();
+        if (validationError) {
+            alertBox.classList.add('error');
+            alertBox.textContent = validationError;
+            return;
+        }
+
+        const btn = document.getElementById('rxSubmitBtn');
+        btn.classList.add('loading');
+        btn.disabled = true;
+
+        const body = {
+            patient_id: currentPatientId,
+            appointment_id: appointmentId,
+            valid_until: document.getElementById('rxValidUntil').value || null,
+            diagnosis: document.getElementById('rxDiagnosis').value.trim() || null,
+            instructions: document.getElementById('rxInstructions').value.trim() || null,
+            items
+        };
+
+        try {
+            const res = await API.care.createPrescription(body);
+            prescriptions = [res.data, ...prescriptions];
+            renderPrescriptions(prescriptions);
+            clearRxForm();
+            showRxResult(true);
+        } catch (err2) {
+            console.error('PatientDetail: failed to save prescription', err2);
+            showRxResult(false);
+        }
+
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
+
     // ================= LOAD =================
 
     async function loadPatient(patientId) {
@@ -301,11 +508,14 @@ const PatientDetail = (() => {
             const data = res?.data || {};
             notes = Array.isArray(data.notes) ? data.notes : [];
             appointments = Array.isArray(data.appointments) ? data.appointments : [];
+            prescriptions = Array.isArray(data.prescriptions) ? data.prescriptions : [];
+            currentPatientId = data.patient?.id || null;
             renderHeader(data.patient || {});
             renderAppointments(appointments);
             renderAppointmentOptions(appointments);
+            renderRxAppointmentOptions(appointments);
             renderNotes(notes);
-            renderPrescriptions(Array.isArray(data.prescriptions) ? data.prescriptions : []);
+            renderPrescriptions(prescriptions);
         } catch (err) {
             if (err?.status === 404) {
                 document.getElementById('patientDetailContent').classList.add('hidden');
@@ -345,11 +555,18 @@ const PatientDetail = (() => {
         }
 
         document.getElementById('patientDetailContent').classList.remove('hidden');
+        resetRxItems();
         loadPatient(patientId);
 
         document.getElementById('noteSubmitBtn').addEventListener('click', submitRecord);
         document.getElementById('noteFormResultCloseBtn').addEventListener('click', () => {
             document.getElementById('noteFormResult').classList.add('hidden');
+        });
+
+        document.getElementById('rxAddItemBtn').addEventListener('click', addRxItemRow);
+        document.getElementById('rxSubmitBtn').addEventListener('click', submitRx);
+        document.getElementById('rxFormResultCloseBtn').addEventListener('click', () => {
+            document.getElementById('rxFormResult').classList.add('hidden');
         });
     }
 

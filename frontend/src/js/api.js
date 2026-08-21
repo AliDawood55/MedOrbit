@@ -476,6 +476,11 @@ const API = (() => {
         // — requires appointment_id; patient_id/doctor_id are derived server-side
         // from that appointment, never taken from the request body.
         createMedicalRecord: (body, options) => post('/medical-records', body, options),
+        // Canonical prescription creation (backend/src/routes/prescription.routes.js)
+        // — requires appointment_id + patient_id + at least one item; the
+        // backend re-verifies the appointment belongs to this doctor/patient
+        // pair and the care relationship is active before writing anything.
+        createPrescription: (body, options) => post('/prescriptions', body, options),
         // Patient's view of their own doctor(s) + notes a doctor explicitly
         // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),
