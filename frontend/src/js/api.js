@@ -476,6 +476,18 @@ const API = (() => {
         // — requires appointment_id; patient_id/doctor_id are derived server-side
         // from that appointment, never taken from the request body.
         createMedicalRecord: (body, options) => post('/medical-records', body, options),
+        // Canonical medical-record read/update/delete (same file). GET returns
+        // the full row for a doctor (not the patient-facing DTO) and is the
+        // required source of truth before an edit — the patient-detail
+        // timeline's notes list omits fields like vitals. PUT is full-field:
+        // it always overwrites diagnosis/treatment_plan/clinical_notes/
+        // doctor_notes/vitals/is_draft from the body, so omitted fields would
+        // be persisted as NULL — never send this without first loading the
+        // canonical record. DELETE is a hard delete; both PUT and DELETE are
+        // scoped server-side to records owned by the calling doctor.
+        getMedicalRecord: (id, options) => get(`/medical-records/${id}`, null, options),
+        updateMedicalRecord: (id, body, options) => put(`/medical-records/${id}`, body, options),
+        deleteMedicalRecord: (id, options) => del(`/medical-records/${id}`, options),
         // Canonical prescription creation (backend/src/routes/prescription.routes.js)
         // — requires appointment_id + patient_id + at least one item; the
         // backend re-verifies the appointment belongs to this doctor/patient
