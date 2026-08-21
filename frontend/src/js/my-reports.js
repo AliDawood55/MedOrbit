@@ -1,10 +1,10 @@
 /**
  * MedOrbit v2 - My Reports
- * A personal summary built ONLY from endpoints that already work:
+ * A personal summary built from endpoints that already work:
  *   GET /users/me, GET /appointments, GET /conversations,
  *   GET /users/me/saved-places
- * Prescriptions/medical-records have no API at all (see BACKEND_NEEDED.md,
- * item 5) and are shown as explicitly unavailable, never fabricated.
+ * Prescriptions/medical-records have their own dedicated pages
+ * (my-prescriptions.html / my-records.html) and are out of scope here.
  * Printing is plain browser window.print() against the print stylesheet
  * in reports.css — no PDF library.
  */

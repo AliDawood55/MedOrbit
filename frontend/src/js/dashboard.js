@@ -3,7 +3,7 @@
  * Built only from endpoints that actually exist and actually work:
  * GET /users/me, GET /conversations, GET /appointments, GET /notifications,
  * and GET /doctors/me/schedule for the doctor's own appointment preview.
- * Prescriptions/medical-records have no submission API — see
+ * Prescriptions/medical-records have their own dedicated pages — see
  * my-prescriptions.html / my-records.html. Every other page in
  * frontend/public is reachable from here via QUICK_GROUPS below.
  */
