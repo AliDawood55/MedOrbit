@@ -37,9 +37,13 @@ const FindDoctors = (() => {
         { en: 'Urology', ar: 'جراحة المسالك البولية' }
     ];
 
+    const RECOMMENDED_LIMIT = 6;
+
     let currentPage = 1;
     let searchDebounceTimer = null;
     let activeController = null;
+    let recommendedController = null;
+    let recommendedDoctors; // undefined = not loaded yet, null = errored, array = loaded (cached across language changes)
     const LIST_CACHE_TTL = 60000; // 1 min — doctor list/filters rarely change that fast
 
     function isAr() {
@@ -143,15 +147,72 @@ const FindDoctors = (() => {
         }
     }
 
+    // ================= RECOMMENDED DOCTORS =================
+    // Independent surface from the ordinary catalogue below: separate
+    // request, separate loading/success/empty/error state, and a failure
+    // here must never break ordinary search/filter/pagination.
+
+    function renderRecommendedContent() {
+        const content = document.getElementById('recommendedDoctorsContent');
+        const section = document.getElementById('recommendedDoctorsSection');
+        if (!content || !section) return;
+
+        if (!recommendedDoctors || recommendedDoctors.length === 0) {
+            section.hidden = true;
+            return;
+        }
+
+        section.hidden = false;
+        content.innerHTML = '<div class="entity-grid">' + recommendedDoctors.map(renderDoctorCard).join('') + '</div>';
+    }
+
+    function renderRecommendedError() {
+        const content = document.getElementById('recommendedDoctorsContent');
+        const section = document.getElementById('recommendedDoctorsSection');
+        if (!content || !section) return;
+        section.hidden = false;
+        content.innerHTML = '<div class="error-state">' +
+            '<i class="fas fa-triangle-exclamation"></i>' +
+            '<p>' + escapeHtml(t('doctors.recommendedUnavailable')) + '</p>' +
+            '<button type="button" class="btn btn-secondary btn-sm" id="recommendedRetryBtn">' + escapeHtml(t('common.retry')) + '</button>' +
+            '</div>';
+    }
+
+    async function loadRecommendedDoctors() {
+        const section = document.getElementById('recommendedDoctorsSection');
+        const content = document.getElementById('recommendedDoctorsContent');
+        if (!section || !content) return;
+
+        if (recommendedController) recommendedController.abort();
+        recommendedController = API.makeCancellable();
+
+        section.hidden = false;
+        content.innerHTML = renderSkeleton(RECOMMENDED_LIMIT);
+
+        try {
+            const res = await API.recommendations.doctors(RECOMMENDED_LIMIT, { signal: recommendedController.signal });
+            recommendedDoctors = Array.isArray(res.data?.doctors) ? res.data.doctors : [];
+            renderRecommendedContent();
+        } catch (err) {
+            if (err.name === 'AbortError') return; // superseded by a newer request
+            console.error('FindDoctors: failed to load recommended doctors', err);
+            recommendedDoctors = null;
+            renderRecommendedError();
+        }
+    }
+
     // ================= RENDER =================
 
-    function renderSkeleton() {
-        const card = '<div class="entity-card"><div class="entity-card-body">' +
+    function skeletonCard() {
+        return '<div class="entity-card"><div class="entity-card-body">' +
             '<div class="skeleton" style="width:52px;height:52px;border-radius:50%;flex-shrink:0;"></div>' +
             '<div style="flex:1;"><div class="skeleton" style="height:16px;width:70%;margin-bottom:8px;"></div>' +
             '<div class="skeleton" style="height:12px;width:50%;"></div></div>' +
             '</div></div>';
-        return '<div class="entity-grid">' + card.repeat(6) + '</div>';
+    }
+
+    function renderSkeleton(count = 6) {
+        return '<div class="entity-grid">' + skeletonCard().repeat(count) + '</div>';
     }
 
     function renderEmpty() {
@@ -169,6 +230,13 @@ const FindDoctors = (() => {
             '</div>';
     }
 
+    const REASON_KEYS = {
+        FOLLOWED_DOCTOR: 'doctors.reasonFollowed',
+        INTEREST_SPECIALTY: 'doctors.reasonSpecialty',
+        TRENDING: 'doctors.reasonTrending',
+        RECENT: 'doctors.reasonRecent'
+    };
+
     function renderDoctorCard(d) {
         const ar = isAr();
         const name = escapeHtml(doctorName(d));
@@ -178,14 +246,9 @@ const FindDoctors = (() => {
         const acceptingBadge = d.is_accepting_patients === false
             ? '<span class="badge badge-danger">' + escapeHtml(t('doctors.notAccepting')) + '</span>'
             : (d.is_accepting_patients ? '<span class="badge badge-success">' + escapeHtml(t('doctors.accepting')) + '</span>' : '');
-        const reasons = {
-            FOLLOWED_DOCTOR: ar ? 'لأنك تتابع هذا الطبيب' : 'Because you follow this doctor',
-            INTEREST_SPECIALTY: ar ? 'بناءً على اهتمامك بهذا التخصص' : 'Based on your specialty interest',
-            TRENDING: ar ? 'طبيب شائع' : 'Popular doctor',
-            RECENT: ar ? 'اكتشاف الأطباء' : 'Doctor discovery'
-        };
-        const reasonBadge = d.reason_code && reasons[d.reason_code]
-            ? '<span class="badge badge-info">' + escapeHtml(reasons[d.reason_code]) + '</span>' : '';
+        const reasonKey = d.reason_code && REASON_KEYS[d.reason_code];
+        const reasonBadge = reasonKey
+            ? '<span class="badge badge-info">' + escapeHtml(t(reasonKey)) + '</span>' : '';
 
         return (
             '<div class="entity-card">' +
@@ -271,6 +334,7 @@ const FindDoctors = (() => {
         }
 
         loadDoctors(1);
+        if (API.isAuthenticated()) loadRecommendedDoctors();
 
         document.getElementById('searchInput')?.addEventListener('input', () => {
             clearTimeout(searchDebounceTimer);
@@ -290,9 +354,16 @@ const FindDoctors = (() => {
             if (e.target.closest('#retryBtn')) loadDoctors(currentPage);
         });
 
+        document.getElementById('recommendedDoctorsContent')?.addEventListener('click', (e) => {
+            if (e.target.closest('#recommendedRetryBtn')) loadRecommendedDoctors();
+        });
+
         window.addEventListener('languageChanged', () => {
             renderSpecialtyOptions();
             loadDoctors(currentPage);
+            // Cached data has both AR/EN fields — re-render, don't refetch.
+            if (Array.isArray(recommendedDoctors)) renderRecommendedContent();
+            else if (recommendedDoctors === null) renderRecommendedError();
         });
     }
 
