@@ -87,7 +87,8 @@ const Dashboard = (() => {
                 { href: 'admin-doctor-applications.html', icon: 'fa-user-check', titleKey: 'Doctor Applications', descKey: 'Review pending doctor applications', adminOnly: true },
                 { href: 'admin-contact-messages.html', icon: 'fa-envelope-open-text', titleKey: 'Contact Messages', descKey: 'Review support messages', adminOnly: true },
                 { href: 'admin-social.html', icon: 'fa-shield-halved', titleKey: 'Social Moderation', descKey: 'Moderate posts and comments', adminOnly: true },
-                { href: 'admin-invitations.html', icon: 'fa-user-plus', titleKey: 'Admin Invitations', descKey: 'Invite and manage administrators', superAdminOnly: true }
+                { href: 'admin-invitations.html', icon: 'fa-user-plus', titleKey: 'Admin Invitations', descKey: 'Invite and manage administrators', superAdminOnly: true },
+                { href: 'admin-users.html', icon: 'fa-users-gear', titleKey: 'nav.userManagement', descKey: 'adminUsers.dashDesc', adminOnly: true }
             ]
         }
     ];

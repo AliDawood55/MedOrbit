@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="theme-color" content="#2563EB">
+    <title>MedOrbit – Admin User Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../src/css/main.css">
+    <link rel="stylesheet" href="../src/css/components.css">
+    <link rel="stylesheet" href="../src/css/layout.css">
+    <link rel="stylesheet" href="../src/css/experience.css">
+    <link rel="stylesheet" href="../src/css/doctor-applications.css">
+    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
+         below is an external file and an external file can 404, be blocked or
+         time out, and a gate that never loads hides nothing. These lines
+         cannot go missing on their own. They hide protected markup from the
+         first paint; the gate clears the attribute once it has verified the
+         session, and the watchdog leaves for Home if the gate never arrives. -->
+    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <!-- Global authentication gate: must load in <head>, before any
+         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+    <script src="../src/js/auth-gate.js"></script>
+</head>
+<body class="site-page" data-theme="light">
+<header class="app-header"><a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><h1>MedOrbit</h1><p data-i18n="brand.tagline"></p></div></a><nav class="site-nav" id="navLinks"></nav><div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle" aria-label="Theme"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle" aria-label="Language"><span id="langLabel">EN</span></button></div></header>
+<main class="page-container application-shell">
+    <div class="application-hero"><div><h1 id="adminUsersTitle">User Management</h1><p id="adminUsersSubtitle">Manage platform accounts</p></div><button class="btn btn-ghost btn-sm" id="refreshUsers" type="button"><i class="fas fa-rotate"></i></button></div>
+    <section class="experience-card">
+        <div class="form-grid">
+            <div class="form-field full"><label for="userSearchInput" id="userSearchLabel">Search users</label><input id="userSearchInput" type="text" maxlength="120" autocomplete="off"></div>
+            <div class="form-field"><label for="userRoleFilter" id="userRoleFilterLabel">Role</label>
+                <select id="userRoleFilter">
+                    <option value="" id="roleOptAll">All roles</option>
+                    <option value="patient" id="roleOptPatient">Patient</option>
+                    <option value="doctor" id="roleOptDoctor">Doctor</option>
+                    <option value="admin" id="roleOptAdmin">Admin</option>
+                    <option value="super_admin" id="roleOptSuperAdmin">Super Admin</option>
+                </select>
+            </div>
+            <div class="form-field"><label for="userStatusFilter" id="userStatusFilterLabel">Status</label>
+                <select id="userStatusFilter">
+                    <option value="" id="statusOptAll">All statuses</option>
+                    <option value="true" id="statusOptActive">Active</option>
+                    <option value="false" id="statusOptInactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+    </section>
+    <section class="experience-card" style="margin-top:18px">
+        <div id="usersFeedback" class="page-feedback hidden"></div>
+        <div class="application-history" id="usersList"><div class="profile-compact-empty">Loading…</div></div>
+    </section>
+</main>
+<footer class="site-footer" id="siteFooter"></footer><div class="toast-container" id="toastContainer"></div>
+<script src="../src/utils/store.js"></script><script src="../src/js/api.js"></script><script src="../src/js/i18n.js"></script><script src="../src/js/theme.js"></script><script src="../src/js/toast.js"></script><script src="../src/js/layout.js"></script><script src="../src/js/admin-users.js"></script><script>document.addEventListener('DOMContentLoaded',()=>{Layout.init();AdminUsers.init();});</script>
+</body>
+</html>
