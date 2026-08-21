@@ -38,18 +38,6 @@ const SymptomChecker = (() => {
             .replace(/"/g, '&quot;');
     }
 
-    function showAlert(message) {
-        const box = document.getElementById('formAlert');
-        if (!box) return;
-        box.className = 'alert error';
-        box.textContent = message;
-    }
-
-    function clearAlert() {
-        const box = document.getElementById('formAlert');
-        if (box) box.className = 'alert';
-    }
-
     function setLoading(loading) {
         document.getElementById('submitBtn')?.classList.toggle('loading', loading);
     }
@@ -74,11 +62,11 @@ const SymptomChecker = (() => {
     // ================= SUBMIT =================
 
     async function submit() {
-        clearAlert();
+        FormAlert.clear();
         const symptoms = chipInput.getItems();
 
         if (symptoms.length === 0) {
-            showAlert(t('symptomChecker.errorMinSymptoms'));
+            FormAlert.error(t('symptomChecker.errorMinSymptoms'));
             return;
         }
 
@@ -184,7 +172,7 @@ const SymptomChecker = (() => {
 
     function reset() {
         chipInput.clear();
-        clearAlert();
+        FormAlert.clear();
         const result = document.getElementById('resultSection');
         if (result) {
             result.innerHTML = '';
