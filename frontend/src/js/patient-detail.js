@@ -158,9 +158,206 @@ const PatientDetail = (() => {
                         (n.diagnosis ? '<strong>' + escapeHtml(t('patientDetail.diagnosis')) + ':</strong> ' + escapeHtml(n.diagnosis) + '<br>' : '') +
                         (n.clinical_notes ? escapeHtml(n.clinical_notes) : '') +
                     '</div>' +
+                    '<div class="care-person-actions" style="margin-top:10px;">' +
+                        '<button type="button" class="btn btn-secondary btn-sm" data-edit-record-id="' + escapeHtml(n.id) + '"><i class="fas fa-pen"></i> ' + escapeHtml(t('patientDetail.editRecord')) + '</button>' +
+                        '<button type="button" class="btn btn-secondary btn-sm" data-delete-record-id="' + escapeHtml(n.id) + '"><i class="fas fa-trash"></i> ' + escapeHtml(t('patientDetail.deleteRecord')) + '</button>' +
+                    '</div>' +
                 '</div>' +
             '</div>'
         )).join('');
+
+        el.querySelectorAll('[data-edit-record-id]').forEach((btn) => {
+            btn.addEventListener('click', () => openEditRecordModal(btn.dataset.editRecordId));
+        });
+        el.querySelectorAll('[data-delete-record-id]').forEach((btn) => {
+            btn.addEventListener('click', () => openDeleteRecordModal(btn.dataset.deleteRecordId));
+        });
+    }
+
+    // ================= EDIT / DELETE MEDICAL RECORD =================
+    // Both mutate through PUT/DELETE /api/medical-records/:id (backend/src/
+    // routes/medicalRecord.routes.js), which the backend scopes to records
+    // owned by the calling doctor (doctor_id match) — every record in this
+    // timeline already satisfies that, since GET /doctors/me/patients/:id
+    // filters its notes query by doctor_id AND patient_id too.
+    //
+    // PUT there is full-field, not partial: it always overwrites diagnosis,
+    // treatment_plan, clinical_notes, doctor_notes, vitals and is_draft from
+    // the request body, so an omitted field would be persisted as NULL. The
+    // notes list backing this timeline doesn't carry every one of those
+    // fields (vitals is missing), so edit always loads the canonical record
+    // via GET /api/medical-records/:id first and round-trips its vitals
+    // unchanged rather than risk wiping it.
+    //
+    // record_type/chief_complaint/symptoms/prognosis are NOT columns the PUT
+    // query touches, so they stay read-only here (visible on the card, not
+    // editable in this form).
+
+    function openEditRecordModal(id) {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML =
+            '<div class="modal-box" style="max-width:560px;">' +
+                '<h3>' + escapeHtml(t('patientDetail.editRecordTitle')) + '</h3>' +
+                '<div class="alert" id="editRecordModalAlert"></div>' +
+                '<div id="editRecordLoading" style="padding:24px 0;text-align:center;"><span class="spinner spinner-sm"></span></div>' +
+                '<div id="editRecordForm" class="hidden">' +
+                    '<div class="form-group">' +
+                        '<label for="editRecordDiagnosis">' + escapeHtml(t('patientDetail.diagnosis')) + '</label>' +
+                        '<div class="input-wrapper">' +
+                            '<i class="fas fa-stethoscope"></i>' +
+                            '<input type="text" id="editRecordDiagnosis">' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label for="editRecordTreatmentPlan">' + escapeHtml(t('patientDetail.treatmentPlan')) + '</label>' +
+                        '<textarea class="feedback-textarea" id="editRecordTreatmentPlan" style="min-height:60px;"></textarea>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label for="editRecordClinicalNotes">' + escapeHtml(t('patientDetail.clinicalNotes')) + '</label>' +
+                        '<textarea class="feedback-textarea" id="editRecordClinicalNotes"></textarea>' +
+                    '</div>' +
+                    '<div class="form-group">' +
+                        '<label for="editRecordDoctorNotes">' + escapeHtml(t('patientDetail.doctorNotes')) + '</label>' +
+                        '<textarea class="feedback-textarea" id="editRecordDoctorNotes"></textarea>' +
+                    '</div>' +
+                    '<label class="care-toggle-row">' +
+                        '<input type="checkbox" id="editRecordDraftToggle">' +
+                        '<span>' + escapeHtml(t('patientDetail.saveDraft')) + '</span>' +
+                    '</label>' +
+                '</div>' +
+                '<div class="modal-actions">' +
+                    '<button type="button" class="btn btn-secondary" id="editRecordDismissBtn">' + escapeHtml(t('patientDetail.cancelEdit')) + '</button>' +
+                    '<button type="button" class="btn btn-primary hidden" id="editRecordSaveBtn">' +
+                        '<span class="btn-label">' + escapeHtml(t('patientDetail.saveChanges')) + '</span>' +
+                        '<span class="spinner spinner-sm btn-spinner"></span>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(backdrop);
+        if (typeof Dom !== 'undefined') Dom.lockScroll();
+
+        const close = () => {
+            backdrop.remove();
+            if (typeof Dom !== 'undefined') Dom.unlockScroll();
+        };
+
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+        document.getElementById('editRecordDismissBtn').addEventListener('click', close);
+
+        API.care.getMedicalRecord(id).then((res) => {
+            const canonical = res?.data;
+            if (!canonical) throw new Error('empty medical record response');
+
+            document.getElementById('editRecordDiagnosis').value = canonical.diagnosis || '';
+            document.getElementById('editRecordTreatmentPlan').value = canonical.treatment_plan || '';
+            document.getElementById('editRecordClinicalNotes').value = canonical.clinical_notes || '';
+            document.getElementById('editRecordDoctorNotes').value = canonical.doctor_notes || '';
+            document.getElementById('editRecordDraftToggle').checked = !!canonical.is_draft;
+
+            document.getElementById('editRecordLoading').classList.add('hidden');
+            document.getElementById('editRecordForm').classList.remove('hidden');
+            const saveBtn = document.getElementById('editRecordSaveBtn');
+            saveBtn.classList.remove('hidden');
+            saveBtn.addEventListener('click', () => submitEditRecord(id, canonical, close));
+        }).catch((err) => {
+            console.error('PatientDetail: failed to load medical record for edit', err);
+            document.getElementById('editRecordLoading').classList.add('hidden');
+            const alertBox = document.getElementById('editRecordModalAlert');
+            alertBox.className = 'alert';
+            alertBox.classList.add('error');
+            alertBox.textContent = t('patientDetail.editLoadError');
+        });
+    }
+
+    async function submitEditRecord(id, canonical, closeFn) {
+        const btn = document.getElementById('editRecordSaveBtn');
+        const alertBox = document.getElementById('editRecordModalAlert');
+        alertBox.className = 'alert';
+        btn.classList.add('loading');
+        btn.disabled = true;
+
+        const body = {
+            diagnosis: document.getElementById('editRecordDiagnosis').value.trim(),
+            treatment_plan: document.getElementById('editRecordTreatmentPlan').value.trim(),
+            clinical_notes: document.getElementById('editRecordClinicalNotes').value.trim(),
+            doctor_notes: document.getElementById('editRecordDoctorNotes').value.trim(),
+            vitals: canonical.vitals,
+            is_draft: document.getElementById('editRecordDraftToggle').checked
+        };
+
+        try {
+            const res = await API.care.updateMedicalRecord(id, body);
+            const updated = res?.data;
+            if (updated) {
+                notes = notes.map((n) => (String(n.id) === String(id) ? { ...n, ...updated } : n));
+                renderNotes(notes);
+            }
+            if (typeof Toast !== 'undefined') Toast.success(t('patientDetail.editSuccess'));
+            closeFn();
+        } catch (err) {
+            console.error('PatientDetail: failed to update medical record', err);
+            alertBox.classList.add('error');
+            alertBox.textContent = t('patientDetail.editError');
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    }
+
+    function openDeleteRecordModal(id) {
+        const record = notes.find((n) => String(n.id) === String(id));
+        const context = record ? (record.diagnosis || record.record_number || '') : '';
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML =
+            '<div class="modal-box">' +
+                '<h3>' + escapeHtml(t('patientDetail.deleteModalTitle')) + '</h3>' +
+                '<p>' + escapeHtml(t('patientDetail.deleteModalHint')) + (context ? ' — ' + escapeHtml(context) : '') + '</p>' +
+                '<div class="alert" id="deleteRecordModalAlert"></div>' +
+                '<div class="modal-actions">' +
+                    '<button type="button" class="btn btn-secondary" id="deleteRecordDismissBtn">' + escapeHtml(t('patientDetail.deleteDismiss')) + '</button>' +
+                    '<button type="button" class="btn btn-primary" id="deleteRecordConfirmBtn">' +
+                        '<span class="btn-label">' + escapeHtml(t('patientDetail.deleteConfirmBtn')) + '</span>' +
+                        '<span class="spinner spinner-sm btn-spinner"></span>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(backdrop);
+        if (typeof Dom !== 'undefined') Dom.lockScroll();
+
+        const close = () => {
+            backdrop.remove();
+            if (typeof Dom !== 'undefined') Dom.unlockScroll();
+        };
+
+        backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
+        document.getElementById('deleteRecordDismissBtn').addEventListener('click', close);
+        document.getElementById('deleteRecordConfirmBtn').addEventListener('click', () => confirmDeleteRecord(id, close));
+    }
+
+    async function confirmDeleteRecord(id, closeFn) {
+        const btn = document.getElementById('deleteRecordConfirmBtn');
+        const alertBox = document.getElementById('deleteRecordModalAlert');
+        alertBox.className = 'alert';
+        btn.classList.add('loading');
+        btn.disabled = true;
+
+        try {
+            await API.care.deleteMedicalRecord(id);
+            notes = notes.filter((n) => String(n.id) !== String(id));
+            renderNotes(notes);
+            if (typeof Toast !== 'undefined') Toast.success(t('patientDetail.deleteSuccess'));
+            closeFn();
+        } catch (err) {
+            console.error('PatientDetail: failed to delete medical record', err);
+            alertBox.classList.add('error');
+            alertBox.textContent = t('patientDetail.deleteError');
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
     }
 
     function renderPrescriptions(list) {
