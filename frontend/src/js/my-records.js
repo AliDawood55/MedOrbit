@@ -135,17 +135,15 @@ const MyRecords = (() => {
     }
 
     function normalizeEntry(raw) {
-        return { ...raw };
+        // Prescription entries in this timeline carry the doctor's internal
+        // notes from the backend; the patient-facing UI must not retain them.
+        const { doctor_notes, ...rest } = raw || {};
+        return rest;
     }
 
     function normalizeTimeline(payload) {
-        const source =
-            payload?.data?.timeline ||
-            payload?.timeline ||
-            [];
-        return (Array.isArray(source) ? source : [])
-            .map(normalizeEntry)
-            .filter((e) => e.id && e.entry_type);
+        const source = Array.isArray(payload?.data?.timeline) ? payload.data.timeline : [];
+        return source.map(normalizeEntry).filter((e) => e.id && e.entry_type);
     }
 
     async function fetchRecords() {
