@@ -632,9 +632,15 @@ const API = (() => {
         revoke: (id, options) => del(`/admin/invitations/${id}`, options)
     };
 
+    const adminUsers = {
+        list: (query, options) => get('/admin/users', query, options),
+        deactivate: (id, options) => put(`/admin/users/${id}/deactivate`, {}, options),
+        reactivate: (id, options) => put(`/admin/users/${id}/reactivate`, {}, options)
+    };
+
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, billing, virtualDoctor,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
