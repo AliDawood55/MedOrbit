@@ -203,6 +203,13 @@ const I18n = (() => {
             'doctors.notAccepting': 'لا يستقبل حالياً',
             'doctors.empty': 'لم يتم العثور على أطباء مطابقين',
             'doctors.error': 'تعذر تحميل قائمة الأطباء',
+            'doctors.recommendedTitle': 'أطباء مقترحون لك',
+            'doctors.recommendedSubtitle': 'بناءً على نشاطك واهتماماتك',
+            'doctors.recommendedUnavailable': 'تعذر تحميل الاقتراحات المخصصة حالياً',
+            'doctors.reasonFollowed': 'لأنك تتابع هذا الطبيب',
+            'doctors.reasonSpecialty': 'بناءً على اهتمامك بهذا التخصص',
+            'doctors.reasonTrending': 'طبيب شائع',
+            'doctors.reasonRecent': 'اكتشاف الأطباء',
 
             // Doctor profile
             'doctor.notFound': 'الطبيب غير موجود',
@@ -1057,6 +1064,13 @@ const I18n = (() => {
             'doctors.notAccepting': 'Not currently accepting',
             'doctors.empty': 'No matching doctors found',
             'doctors.error': 'Could not load the doctors list',
+            'doctors.recommendedTitle': 'Recommended Doctors',
+            'doctors.recommendedSubtitle': 'Based on your activity and interests',
+            'doctors.recommendedUnavailable': 'Personalized suggestions are unavailable right now',
+            'doctors.reasonFollowed': 'Because you follow this doctor',
+            'doctors.reasonSpecialty': 'Based on your specialty interest',
+            'doctors.reasonTrending': 'Popular doctor',
+            'doctors.reasonRecent': 'Doctor discovery',
 
             // Doctor profile
             'doctor.notFound': 'Doctor not found',

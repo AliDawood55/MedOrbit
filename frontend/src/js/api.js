@@ -510,6 +510,12 @@ const API = (() => {
         prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
     };
 
+    // Personalized/ranked doctor suggestions (backend-authoritative ranking,
+    // reason_code only) — backend/src/routes/recommendation.routes.js.
+    const recommendations = {
+        doctors: (limit, options) => get('/recommendations/doctors', { limit }, options)
+    };
+
     const social = {
         feed: (query, options) => get('/feed/posts', query, options),
         comments: (postId, options) => get(`/feed/posts/${postId}/comments`, null, options),
@@ -640,7 +646,7 @@ const API = (() => {
 
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
