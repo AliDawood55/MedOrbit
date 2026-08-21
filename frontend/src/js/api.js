@@ -477,9 +477,11 @@ const API = (() => {
         // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),
         sharedNotes: (doctorId, options) => get(`/patients/me/doctors/${doctorId}/notes`, null, options),
-        // Patient's own medical records / prescriptions — the safe,
-        // ownership-scoped equivalents of the generic GET /medical-records
-        // and GET /prescriptions/:id, which have no ownership filtering at all.
+        // Patient's own medical records / prescriptions. The generic
+        // GET /medical-records(/:id) and GET /prescriptions/:id are also
+        // ownership-scoped now (requireRecordRead / requirePrescriptionRead
+        // in the backend), but these /patients/me/* routes stay the
+        // preferred call here since they return the patient-facing DTO shape.
         myMedicalRecords: (query, options) => get('/patients/me/medical-records', query, options),
         medicalRecordDetail: (id, options) => get(`/patients/me/medical-records/${id}`, null, options),
         // Combined timeline (appointments + records + prescriptions) — my-records.html

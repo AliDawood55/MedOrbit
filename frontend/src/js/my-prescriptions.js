@@ -73,8 +73,9 @@ const MyPrescriptions = (() => {
     }
 
     // GET /patients/me/prescriptions — ownership-scoped (backend/src/routes/
-    // patient.routes.js), unlike the generic /api/prescriptions/:id, which
-    // has no ownership filtering at all and must never be called from here.
+    // patient.routes.js) and returns the patient's full list in one call.
+    // The generic /api/prescriptions/:id is ownership-scoped too, but it's
+    // single-record and would need one request per prescription here.
     async function fetchPrescriptions() {
         const res = await API.care.myPrescriptions();
         return normalizeList(res);

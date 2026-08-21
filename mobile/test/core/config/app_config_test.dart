@@ -80,6 +80,49 @@ void main() {
       expect(candidates.any((c) => c.contains('localhost')), isFalse);
       expect(candidates.any((c) => c.contains('10.0.2.2')), isFalse);
     });
+
+    test('a debug build without an override still probes the LAN/emulator/localhost trio', () {
+      final candidates = AppConfig.candidatesFor('', debug: true);
+
+      expect(candidates, [
+        AppConfig.devLanBaseUrl,
+        AppConfig.emulatorBaseUrl,
+        AppConfig.localhostBaseUrl,
+      ]);
+    });
+
+    test('a non-debug build without an override throws instead of defaulting to the LAN IP', () {
+      expect(() => AppConfig.candidatesFor('', debug: false), throwsStateError);
+    });
+
+    test('a non-debug build with an explicit override still resolves normally', () {
+      final candidates = AppConfig.candidatesFor('https://api.medorbit.example', debug: false);
+
+      expect(candidates, ['https://api.medorbit.example/api']);
+    });
+  });
+
+  group('resolveBaseUrl', () {
+    test('debug build without an override falls back to the LAN IP', () {
+      expect(
+        AppConfig.resolveBaseUrl(debug: true, apiUrlOverride: ''),
+        AppConfig.devLanBaseUrl,
+      );
+    });
+
+    test('non-debug build without an override throws instead of defaulting to the LAN IP', () {
+      expect(
+        () => AppConfig.resolveBaseUrl(debug: false, apiUrlOverride: ''),
+        throwsStateError,
+      );
+    });
+
+    test('non-debug build with an explicit override resolves normally', () {
+      expect(
+        AppConfig.resolveBaseUrl(debug: false, apiUrlOverride: 'https://api.medorbit.example'),
+        'https://api.medorbit.example/api',
+      );
+    });
   });
 
   group('timeout budgets', () {
