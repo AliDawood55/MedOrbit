@@ -3,9 +3,9 @@
  *
  * Fetches via GET /patients/me/records (backend/src/routes/patient.routes.js)
  * — a single ownership-scoped timeline that interleaves the patient's own
- * appointments, medical records (diagnoses) and prescriptions. Never call
- * the generic /api/medical-records or /api/prescriptions/:id from here —
- * those have no ownership filtering at all.
+ * appointments, medical records (diagnoses) and prescriptions. The generic
+ * /api/medical-records and /api/prescriptions/:id are ownership-scoped too,
+ * but call this combined timeline instead of stitching them together here.
  */
 const MyRecords = (() => {
 

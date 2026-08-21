@@ -307,6 +307,7 @@ class _FakeTts extends TtsPlayer {
   Future<bool> speak(
     String text, {
     required String language,
+    required String sessionId,
     void Function(String sentence)? onSentence,
   }) async {
     speakCalls++;

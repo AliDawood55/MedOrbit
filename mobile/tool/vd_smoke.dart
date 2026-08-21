@@ -96,13 +96,15 @@ Future<void> main(List<String> args) async {
     });
   }
 
-  await step('POST /virtual-doctor/speak (TTS bytes)', () async {
-    final bytes = await api.speak(text: 'Hello, this is a test.', language: 'en');
-    stdout.writeln('  wav bytes : ${bytes.length}');
-    final isRiff = bytes.length > 4 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46;
-    stdout.writeln('  RIFF/WAV header : $isRiff');
-    if (!isRiff) throw StateError('response is not a WAV file');
-  });
+  if (sessionId != null) {
+    await step('POST /virtual-doctor/speak (TTS bytes)', () async {
+      final bytes = await api.speak(text: 'Hello, this is a test.', language: 'en', sessionId: sessionId!);
+      stdout.writeln('  wav bytes : ${bytes.length}');
+      final isRiff = bytes.length > 4 && bytes[0] == 0x52 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x46;
+      stdout.writeln('  RIFF/WAV header : $isRiff');
+      if (!isRiff) throw StateError('response is not a WAV file');
+    });
+  }
 
   stdout.writeln(failures == 0 ? 'ALL STEPS PASSED' : '$failures STEP(S) FAILED');
   exit(failures == 0 ? 0 : 1);
