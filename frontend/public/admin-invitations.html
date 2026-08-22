@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/experience.css">
     <link rel="stylesheet" href="../src/css/doctor-applications.css">
+    <link rel="stylesheet" href="../src/css/admin-invitations.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -26,7 +27,7 @@
          protected markup is parsed (see frontend/src/js/auth-gate.js). -->
     <script src="../src/js/auth-gate.js"></script>
 </head>
-<body class="site-page" data-theme="light">
+<body class="site-page admin-invitations-page" data-theme="light">
 <header class="app-header"><a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><h1>MedOrbit</h1><p data-i18n="brand.tagline"></p></div></a><nav class="site-nav" id="navLinks"></nav><div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle" aria-label="Theme"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle" aria-label="Language"><span id="langLabel">EN</span></button></div></header>
 <main class="page-container application-shell">
     <div class="experience-heading"><div><h1 id="invitationTitle">Admin Invitations</h1><p id="invitationSubtitle">Invite verified accounts and manage pending invitations.</p></div></div>
@@ -38,7 +39,7 @@
         <div class="page-feedback hidden" id="invitationFeedback"></div>
         <div class="application-note hidden" id="manualInvitation"><strong id="manualInvitationTitle">Manual delivery link</strong><p id="manualInvitationHint"></p><a id="manualInvitationLink" href="#" target="_blank" rel="noopener"></a></div>
     </section>
-    <section class="experience-card" style="margin-top:18px"><div class="application-hero"><h2 id="invitationListTitle">Invitation history</h2><button class="btn btn-ghost btn-sm" id="refreshInvitations" type="button"><i class="fas fa-rotate"></i></button></div><div class="application-history" id="invitationList"><div class="profile-compact-empty">Loading…</div></div></section>
+    <section class="experience-card admin-invitations-list-card"><div class="application-hero"><h2 id="invitationListTitle">Invitation history</h2><button class="btn btn-ghost btn-sm" id="refreshInvitations" type="button" aria-label="Refresh invitations"><i class="fas fa-rotate"></i></button></div><div class="application-history" id="invitationList"><div class="profile-compact-empty">Loading…</div></div></section>
 </main>
 <footer class="site-footer" id="siteFooter"></footer><div class="toast-container" id="toastContainer"></div>
 <script src="../src/utils/store.js"></script><script src="../src/js/api.js"></script><script src="../src/js/i18n.js"></script><script src="../src/js/theme.js"></script><script src="../src/js/toast.js"></script><script src="../src/js/layout.js"></script><script src="../src/js/admin-invitations.js"></script><script>document.addEventListener('DOMContentLoaded',()=>{Layout.init();AdminInvitations.init();});</script>
