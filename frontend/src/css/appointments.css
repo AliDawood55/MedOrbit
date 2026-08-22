@@ -525,3 +525,320 @@
         flex: 1;
     }
 }
+
+/* ===========================================
+   My Appointments — page modernization (C1)
+   Scoped to .my-appointments-page: this page shares
+   .page-header / .loading-state / appt-tab / appt-card
+   with book-appointment.html's load set, so all new
+   rules stay scoped to avoid touching the wizard.
+   =========================================== */
+
+.my-appointments-page .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.my-appointments-page .page-header p {
+    margin-top: 4px;
+}
+
+.my-appointments-page .page-header .btn {
+    min-height: 44px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+    .my-appointments-page .page-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.my-appointments-page .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--text-mute);
+}
+
+/* === Tabs === */
+.my-appointments-page .appt-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.my-appointments-page .appt-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.my-appointments-page .appt-tab {
+    min-height: 44px;
+    white-space: nowrap;
+    border-radius: var(--r-sm, 4px) var(--r-sm, 4px) 0 0;
+}
+
+.my-appointments-page .appt-tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+}
+
+/* === Cards === */
+.my-appointments-page .appt-card-header {
+    gap: 10px 14px;
+}
+
+.my-appointments-page .appt-card-number {
+    word-break: break-word;
+}
+
+.my-appointments-page .appt-card-meta span {
+    min-width: 0;
+}
+
+.my-appointments-page .appt-card-reason {
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.my-appointments-page .appt-card-actions {
+    flex-wrap: wrap;
+}
+
+.my-appointments-page .appt-card-actions .btn {
+    min-height: 44px;
+}
+
+.my-appointments-page .appt-card-actions .btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+    .my-appointments-page .appt-card-actions .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+@media (min-width: 1024px) {
+    .my-appointments-page #apptContent {
+        max-width: 880px;
+        margin-inline: auto;
+    }
+}
+
+/* ===========================================
+   Book Appointment — wizard modernization (C2)
+   Scoped to .book-appointment-page: appointments.css
+   is shared with my-appointments.html (C1, committed),
+   so all new rules stay scoped to avoid regressing it.
+   =========================================== */
+
+.book-appointment-page {
+    max-width: 780px;
+}
+
+/* === Page header === */
+.book-appointment-page .page-header {
+    margin-bottom: 24px;
+}
+
+.book-appointment-page .page-header p {
+    color: var(--text-mute);
+    font-size: 14px;
+    margin-top: 6px;
+    line-height: 1.5;
+}
+
+/* === Wizard progress indicator === */
+.book-appointment-page .wizard-steps {
+    gap: 6px;
+    margin-bottom: 32px;
+}
+
+.book-appointment-page .wizard-step-circle {
+    width: 34px;
+    height: 34px;
+    font-size: 13.5px;
+}
+
+.book-appointment-page .wizard-step-connector {
+    width: 44px;
+    border-radius: 1px;
+    transition: background var(--t-base);
+}
+
+@media (max-width: 480px) {
+    .book-appointment-page .wizard-steps {
+        gap: 4px;
+    }
+
+    .book-appointment-page .wizard-step-connector {
+        width: 24px;
+    }
+}
+
+/* === Wizard card / panels === */
+.book-appointment-page .wizard-card,
+.book-appointment-page .wizard-card:hover {
+    box-shadow: none;
+    transform: none;
+}
+
+.book-appointment-page .wizard-panel-title {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 480px) {
+    .book-appointment-page .card-body {
+        padding: 16px;
+    }
+}
+
+/* === Loading state === */
+.book-appointment-page #wizardLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: var(--text-mute);
+}
+
+/* === Step 1: doctor search === */
+.book-appointment-page .doctor-search-box .input-wrapper {
+    min-height: 44px;
+}
+
+.book-appointment-page #doctorSearchInput {
+    min-height: 44px;
+}
+
+.book-appointment-page .doctor-pick-item {
+    min-height: 44px;
+}
+
+.book-appointment-page .doctor-pick-item:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+    background: var(--bg-soft);
+}
+
+.book-appointment-page .doctor-pick-item-name,
+.book-appointment-page .doctor-pick-item-meta {
+    overflow-wrap: anywhere;
+}
+
+.book-appointment-page .selected-doctor-name,
+.book-appointment-page .selected-doctor-specialty {
+    overflow-wrap: anywhere;
+}
+
+.book-appointment-page #changeDoctorBtn {
+    min-height: 44px;
+    flex-shrink: 0;
+}
+
+.book-appointment-page #changeDoctorBtn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.book-appointment-page #doctorPickerWrap p[data-i18n="bookAppt.searchHint"] {
+    font-size: 12.5px;
+    color: var(--text-faint);
+    margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+    .book-appointment-page .selected-doctor-card {
+        flex-wrap: wrap;
+    }
+
+    .book-appointment-page #changeDoctorBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* === Step 2: clinic / date / slots === */
+.book-appointment-page .date-pill {
+    min-height: 44px;
+    min-width: 60px;
+}
+
+.book-appointment-page .date-pill:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.book-appointment-page .slot-btn {
+    min-height: 44px;
+}
+
+.book-appointment-page .slot-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.book-appointment-page .slot-btn .slot-btn-type {
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+/* === Step 3: confirmation === */
+.book-appointment-page .booking-summary-row .value {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+    .book-appointment-page .booking-summary-row {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .book-appointment-page .booking-summary-row .value {
+        text-align: start;
+    }
+}
+
+/* === Wizard actions === */
+.book-appointment-page .wizard-actions .btn {
+    min-height: 44px;
+}
+
+.book-appointment-page .wizard-actions .btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+    .book-appointment-page .wizard-actions {
+        flex-direction: column-reverse;
+    }
+
+    .book-appointment-page .wizard-actions .btn {
+        width: 100%;
+    }
+}
+
+/* === Success state === */
+.book-appointment-page .wizard-success-actions .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 480px) {
+    .book-appointment-page .wizard-success-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+}

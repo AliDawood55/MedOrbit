@@ -215,6 +215,32 @@
     margin-top: 10px;
 }
 
+/* === My Doctor list: keep actions contained inside the card regardless of
+   language/label length (RTL/LTR-neutral, scoped to #doctorsList only) === */
+#doctorsList .care-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+#doctorsList .care-person-card {
+    min-width: 0;
+}
+
+#doctorsList .care-person-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+}
+
+#doctorsList .care-person-actions .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    text-align: center;
+}
+
 /* === Generic section card (patient-detail.html / my-doctor.html) === */
 .care-section {
     background: var(--bg-card);
@@ -351,6 +377,21 @@
     margin-bottom: 12px;
 }
 
+/* === Prescription medication items === */
+.rx-item-card {
+    position: relative;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    margin-bottom: 12px;
+}
+
+.rx-item-remove {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+}
+
 @media (max-width: 768px) {
     .care-detail-header {
         flex-direction: column;
@@ -369,5 +410,140 @@
 
     .care-form-actions .btn {
         width: 100%;
+    }
+
+    #doctorsList .care-person-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===========================================
+   Wave C4 — My Doctor page scope
+   =========================================== */
+
+.my-doctor-page {
+    max-width: 900px;
+}
+
+.my-doctor-subtitle {
+    color: var(--text-mute);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.my-doctor-page .page-header {
+    margin-bottom: 24px;
+}
+
+.my-doctor-page .care-section {
+    margin-bottom: 22px;
+}
+
+.my-doctor-page .care-section-title {
+    margin: 0 0 14px;
+}
+
+.my-doctor-page .care-section .empty-state,
+.my-doctor-page .care-section .error-state {
+    padding: 28px 16px;
+}
+
+/* Doctor cards are not themselves clickable — remove the lift affordance
+   used elsewhere and replace it with a calmer static hover. */
+.my-doctor-page #doctorsList .care-person-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-strong);
+}
+
+.my-doctor-page #doctorsList .care-person-card {
+    align-items: flex-start;
+}
+
+.my-doctor-page #doctorsList .care-person-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 19px;
+}
+
+.my-doctor-page #doctorsList .care-person-name {
+    font-size: 15px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.my-doctor-page #doctorsList .care-person-subtitle {
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+.my-doctor-page #doctorsList .care-person-meta {
+    margin-top: 10px;
+    gap: 4px;
+}
+
+.my-doctor-page #doctorsList .care-person-meta span {
+    flex-wrap: wrap;
+}
+
+.my-doctor-page #doctorsList .care-person-actions {
+    margin-top: 14px;
+    gap: 8px;
+}
+
+.my-doctor-page #doctorsList .care-person-actions .btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Upcoming appointment rows are static display, not selectable cards. */
+.my-doctor-page #upcomingWithThemList .records-real-card {
+    cursor: default;
+}
+
+.my-doctor-page #upcomingWithThemList .records-real-card:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.my-doctor-page #upcomingWithThemList .records-real-title,
+.my-doctor-page #upcomingWithThemList .records-real-meta {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Shared notes: patient-readable presentation */
+.my-doctor-page #sharedNotesList .note-card-header {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+}
+
+.my-doctor-page #sharedNotesList .note-card-body {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .my-doctor-page #doctorsList .care-person-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 17px;
+    }
+}
+
+@media (max-width: 480px) {
+    .my-doctor-page #doctorsList .care-person-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .my-doctor-page #doctorsList .care-person-info {
+        width: 100%;
+    }
+
+    .my-doctor-page #doctorsList .care-person-meta span {
+        justify-content: center;
     }
 }

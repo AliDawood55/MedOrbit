@@ -48,18 +48,6 @@ const DrugChecker = (() => {
             .replace(/"/g, '&quot;');
     }
 
-    function showAlert(message) {
-        const box = document.getElementById('formAlert');
-        if (!box) return;
-        box.className = 'alert error';
-        box.textContent = message;
-    }
-
-    function clearAlert() {
-        const box = document.getElementById('formAlert');
-        if (box) box.className = 'alert';
-    }
-
     function setLoading(loading) {
         document.getElementById('submitBtn')?.classList.toggle('loading', loading);
     }
@@ -92,11 +80,11 @@ const DrugChecker = (() => {
     // ================= SUBMIT =================
 
     async function submit() {
-        clearAlert();
+        FormAlert.clear();
         const medications = chipInput.getItems();
 
         if (medications.length < 2) {
-            showAlert(t('drugChecker.errorMinMeds'));
+            FormAlert.error(t('drugChecker.errorMinMeds'));
             return;
         }
 
@@ -214,7 +202,7 @@ const DrugChecker = (() => {
 
     function reset() {
         chipInput.clear();
-        clearAlert();
+        FormAlert.clear();
         const result = document.getElementById('resultSection');
         if (result) {
             result.innerHTML = '';

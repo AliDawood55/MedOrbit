@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Centralized environment configuration for the MedOrbit mobile app.
 ///
 /// The backend runs on the developer's LAN, not localhost — a physical
@@ -6,7 +8,9 @@
 ///
 /// ## Environments
 ///
-/// The LAN defaults below are **development only**. A build targets any other
+/// The LAN defaults below are **debug builds only** (`kDebugMode`). A
+/// release or profile build without an explicit override throws instead of
+/// silently pointing at the developer's LAN IP. A build targets any other
 /// environment through `--dart-define`, with no source edit:
 ///
 /// ```
@@ -49,7 +53,23 @@ class AppConfig {
   static bool get hasAiOverride => _aiUrlOverride.isNotEmpty;
 
   /// The configured backend base URL — always ending in exactly one `/api`.
-  static String get baseUrl => hasApiOverride ? normalizeApiBase(_apiUrlOverride) : devLanBaseUrl;
+  ///
+  /// Outside a debug build, a missing override throws rather than silently
+  /// falling back to the developer's LAN IP.
+  static String get baseUrl => resolveBaseUrl(debug: kDebugMode, apiUrlOverride: _apiUrlOverride);
+
+  /// Pure resolution logic behind [baseUrl]. Split out because `kDebugMode`
+  /// and `String.fromEnvironment` are both compile-time and cannot be varied
+  /// from a test otherwise.
+  static String resolveBaseUrl({required bool debug, required String apiUrlOverride}) {
+    if (apiUrlOverride.isNotEmpty) return normalizeApiBase(apiUrlOverride);
+    if (debug) return devLanBaseUrl;
+    throw StateError(
+      'MEDORBIT_API_URL must be set outside debug builds — pass '
+      '--dart-define=MEDORBIT_API_URL=<backend origin>. The developer LAN '
+      'default ($devLanBaseUrl) is never used for release/profile builds.',
+    );
+  }
 
   /// Probed in order at startup by `ApiHostResolver`; the first host that
   /// answers `GET /health` wins.
@@ -60,15 +80,24 @@ class AppConfig {
   /// across all three targets, not as a recovery path for a device outage.
   ///
   /// With an explicit override they are dropped entirely: a configured host is
-  /// the only host that build is allowed to talk to.
+  /// the only host that build is allowed to talk to. Outside a debug build,
+  /// a missing override throws — see [resolveBaseUrl].
   static List<String> get baseUrlCandidates => candidatesFor(_apiUrlOverride);
 
   /// Candidate list for a given override value. Split out from
   /// [baseUrlCandidates] because `String.fromEnvironment` is resolved at
-  /// compile time and cannot be varied from a test.
-  static List<String> candidatesFor(String apiUrlOverride) {
+  /// compile time and cannot be varied from a test. `debug` defaults to
+  /// `kDebugMode` for the same reason; tests pass it explicitly.
+  static List<String> candidatesFor(String apiUrlOverride, {bool debug = kDebugMode}) {
     if (apiUrlOverride.isNotEmpty) {
       return <String>[normalizeApiBase(apiUrlOverride)];
+    }
+    if (!debug) {
+      throw StateError(
+        'MEDORBIT_API_URL must be set outside debug builds — pass '
+        '--dart-define=MEDORBIT_API_URL=<backend origin>. The developer LAN '
+        'default ($devLanBaseUrl) is never used for release/profile builds.',
+      );
     }
     return const <String>[devLanBaseUrl, emulatorBaseUrl, localhostBaseUrl];
   }

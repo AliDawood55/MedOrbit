@@ -107,6 +107,68 @@
     display: none;
 }
 
+/* === Marker Clusters (leaflet.markercluster) ===
+   Plugin default CSS keeps the outer .marker-cluster box at a fixed 40x40
+   anchor (verified against the loaded MarkerCluster.Default.css) and only
+   varies color between the small/medium/large classes — the inner div's
+   own size is what visually communicates density, offset by an equal
+   margin on all sides so the anchor point stays centered. We follow the
+   same box-model trick, just with MedOrbit tokens instead of the plugin's
+   green/yellow/orange defaults. */
+.marker-cluster {
+    background: transparent;
+    transition: transform var(--t-fast);
+}
+
+.marker-cluster:hover {
+    transform: scale(1.08);
+}
+
+.marker-cluster div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin: 5px 0 0 5px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    border: 2px solid var(--bg-elevated);
+    box-shadow: var(--shadow-md);
+    font-family: 'Cairo', 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.marker-cluster span {
+    line-height: 1;
+}
+
+.marker-cluster-small div {
+    width: 28px;
+    height: 28px;
+    margin: 6px 0 0 6px;
+    background: var(--primary-light);
+    font-size: 11px;
+}
+
+.marker-cluster-medium div {
+    width: 32px;
+    height: 32px;
+    margin: 4px 0 0 4px;
+    background: var(--primary);
+    font-size: 12px;
+}
+
+.marker-cluster-large div {
+    width: 36px;
+    height: 36px;
+    margin: 2px 0 0 2px;
+    background: var(--primary-dark);
+    font-size: 13px;
+}
+
 /* === Map Controls (Floating) === */
 .map-controls {
     position: absolute;
@@ -192,6 +254,11 @@
     border-color: var(--primary-200, var(--primary));
 }
 
+.location-pill:focus-visible {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 2px;
+}
+
 .location-pill.locating {
     background: var(--primary);
     color: #fff;
@@ -263,6 +330,12 @@
     background: var(--bg-soft);
 }
 
+.location-menu-item:focus-visible {
+    outline: 3px solid var(--primary-light);
+    outline-offset: -2px;
+    background: var(--bg-soft);
+}
+
 .location-menu-item i {
     width: 16px;
     color: var(--primary);
@@ -298,6 +371,11 @@
     border-color: var(--primary);
     color: var(--primary);
     background: var(--primary-50);
+}
+
+.location-district-btn:focus-visible {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 2px;
 }
 
 /* === Mobile: the location menu becomes a bottom sheet instead of a small
@@ -502,6 +580,9 @@
     font-size: 14px;
     line-height: 1.3;
     flex: 1;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
 }
 
 .popup-type {
@@ -534,6 +615,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.popup-meta-row span,
+.popup-meta-row a {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .popup-meta-row i {
@@ -597,5 +685,50 @@
         width: 44px !important;
         height: 44px !important;
         line-height: 44px !important;
+    }
+}
+
+/* === Reduced Motion (map-specific cosmetic animation only) ===
+   Leaflet's own pan/zoom/tile transitions are untouched — only decorative
+   CSS animations/transitions defined in this file are suppressed. */
+@media (prefers-reduced-motion: reduce) {
+    .marker-pin {
+        transition: none;
+    }
+
+    .marker-pin:hover,
+    [dir="rtl"] .marker-pin:hover {
+        transform: rotate(-45deg);
+    }
+
+    [dir="rtl"] .marker-pin:hover {
+        transform: rotate(45deg);
+    }
+
+    .marker-pin.user::after {
+        animation: none;
+    }
+
+    .marker-cluster {
+        transition: none;
+    }
+
+    .marker-cluster:hover {
+        transform: none;
+    }
+
+    .map-control-btn,
+    .location-pill,
+    .location-menu-item,
+    .location-district-btn {
+        transition: none;
+    }
+
+    .map-status {
+        animation: none;
+    }
+
+    .map-status.locating i {
+        animation: none;
     }
 }

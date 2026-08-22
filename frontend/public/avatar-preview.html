@@ -574,11 +574,24 @@
             }
         }
 
-        function endConsultation() {
+        /**
+         * Mic/speech/UI cleanup happens first and does not wait on the
+         * network — the user should not stand around with a live microphone
+         * while the server call is in flight. VirtualDoctorSession.end()
+         * clears its own local state (including the session id) synchronously
+         * before awaiting the request, so a stray re-entry here already has
+         * nothing to end.
+         *
+         * Start stays disabled until the end request settles: the visual
+         * start card can come back immediately, but a new consultation must
+         * not be able to reach the server before the old one's /end does —
+         * otherwise a still-active grant could resume the very session the
+         * user just chose to end.
+         */
+        async function endConsultation() {
             sessionActive = false;
             VirtualDoctorSTT.stop();
             VirtualDoctorTTS.stop();
-            VirtualDoctorSession.reset();
             hideSubtitle();
             stopTimer();
             clearError();
@@ -589,8 +602,21 @@
             els.reportUnavailable.hidden = true;
             els.consultShell.hidden = true;
             els.startCard.hidden = false;
-            els.btnStartConsult.disabled = false;
+            els.btnStartConsult.disabled = true;
             setStatus('idle');
+
+            const result = await VirtualDoctorSession.end();
+            els.btnStartConsult.disabled = false;
+            if (result.ended) {
+                logLine('Consultation ended');
+            } else if (result.reason === 'error') {
+                // Local state is already clear and Start is usable again, but
+                // the server grant may still be active — the next /start can
+                // legitimately RESUME this same consultation rather than
+                // create a new one, until backend stale-grant cleanup runs.
+                // That is expected recovery behavior here, not a bug.
+                logLine('Consultation ended locally; server cleanup failed: ' + (result.detail || ''));
+            }
         }
 
         function initConsultation() {

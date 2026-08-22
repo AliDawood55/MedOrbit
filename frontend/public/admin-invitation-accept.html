@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Accept administrative invitation | MedOrbit</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="../src/css/main.css">
+  <link rel="stylesheet" href="../src/css/components.css">
+  <link rel="stylesheet" href="../src/css/auth.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -17,7 +19,7 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body>
-  <main class="auth-page"><section class="auth-card">
+  <main class="auth-page"><section class="auth-card card">
     <h1>Administrative invitation</h1>
     <p id="message">Confirm that you are signed in to the invited account.</p>
     <button id="acceptInvitation" type="button" class="btn btn-primary">Accept invitation</button>

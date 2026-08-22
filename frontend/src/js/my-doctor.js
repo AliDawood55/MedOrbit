@@ -117,7 +117,7 @@ const MyDoctor = (() => {
         return (
             '<div class="care-person-card">' +
                 '<div class="care-person-avatar">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
+                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="" data-fallback-initials="' + escapeHtml(initials) + '" onerror="MyDoctor.__avatarFallback(this)">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="care-person-info">' +
                     '<div class="care-person-name" title="' + name + '">' + name + '</div>' +
@@ -277,6 +277,15 @@ const MyDoctor = (() => {
         load();
     }
 
-    return { init };
+    // Swaps a broken avatar <img> for the same plain-text initials fallback
+    // already used when no profile_image_url exists at all. Invoked from a
+    // static onerror="MyDoctor.__avatarFallback(this)" attribute (no
+    // user-derived string is ever embedded in executable JS); the initials
+    // travel only as an HTML-escaped data attribute.
+    function avatarFallback(img) {
+        img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
+    }
+
+    return { init, __avatarFallback: avatarFallback };
 
 })();
