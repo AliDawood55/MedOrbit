@@ -23,6 +23,8 @@ class AuthRepository {
       return result;
     } on DioException catch (e) {
       throw _asApiException(e);
+    } on FormatException {
+      throw _invalidResponseException;
     }
   }
 
@@ -50,6 +52,8 @@ class AuthRepository {
       return UserModel.fromJson(json);
     } on DioException catch (e) {
       throw _asApiException(e);
+    } on FormatException {
+      throw _invalidResponseException;
     }
   }
 
@@ -94,6 +98,8 @@ class AuthRepository {
       return result;
     } on DioException catch (e) {
       throw _asApiException(e);
+    } on FormatException {
+      throw _invalidResponseException;
     }
   }
 
@@ -109,10 +115,20 @@ class AuthRepository {
     await _storage.clear();
   }
 
+  /// Returns `null` if no session is cached, or if the cached JSON is
+  /// corrupt/incompatible (e.g. changed shape across an app update) — the
+  /// caller then treats this the same as "no persisted user" rather than
+  /// crashing the splash screen on startup.
   Future<UserModel?> getPersistedUser() async {
     final json = await _storage.getUserJson();
     if (json == null) return null;
-    return UserModel.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is! Map<String, dynamic>) return null;
+      return UserModel.fromJson(decoded);
+    } on FormatException {
+      return null;
+    }
   }
 
   Future<bool> hasValidSession() async {
@@ -125,4 +141,11 @@ class AuthRepository {
     if (error is ApiException) return error;
     return const ApiException(message: 'Unexpected error occurred. Please try again.', code: 'UNKNOWN_ERROR');
   }
+
+  /// A malformed `data` payload from an otherwise-successful auth response —
+  /// not a `DioException`, so [_asApiException] never sees it.
+  static const _invalidResponseException = ApiException(
+    message: 'Unexpected response from server. Please try again.',
+    code: 'INVALID_RESPONSE',
+  );
 }

@@ -74,6 +74,14 @@ class AuthController extends StateNotifier<AuthState> {
       return;
     }
     final user = await _repository.getPersistedUser();
+    if (user == null) {
+      // Token present but the cached user snapshot is missing/corrupt: an
+      // "authenticated" state with no identity isn't a safe state to route
+      // into, so drop the session and send the user back through login.
+      await _storage.clear();
+      state = const AuthState(status: AuthStatus.unauthenticated);
+      return;
+    }
     state = state.copyWith(status: AuthStatus.authenticated, user: user);
   }
 
