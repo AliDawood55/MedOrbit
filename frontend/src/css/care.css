@@ -613,3 +613,60 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ===========================================
+   Wave D2a — Patient Detail page scope
+   (shell + patient header + appointment history only)
+   =========================================== */
+
+.patient-detail-page {
+    max-width: 900px;
+}
+
+.patient-detail-page .back-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--r-sm, 4px);
+}
+
+.patient-detail-page #patientHeader {
+    margin-top: 14px;
+    min-width: 0;
+}
+
+.patient-detail-page .care-detail-name,
+.patient-detail-page .care-detail-subtitle {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.patient-detail-page .care-detail-subtitle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+}
+
+/* Appointment history rows are static display, not selectable cards. */
+.patient-detail-page #appointmentHistoryList .records-real-card {
+    cursor: default;
+}
+
+.patient-detail-page #appointmentHistoryList .records-real-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+}
+
+.patient-detail-page #appointmentHistoryList .records-real-title,
+.patient-detail-page #appointmentHistoryList .records-real-meta,
+.patient-detail-page #appointmentHistoryList .records-real-subtitle {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .patient-detail-page .care-detail-subtitle {
+        justify-content: center;
+    }
+}
