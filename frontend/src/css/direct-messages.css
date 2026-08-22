@@ -10,3 +10,39 @@
 .recipient-picker{position:absolute;z-index:20;inset:80px 20px auto;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-xl,22px);box-shadow:var(--shadow-lg);padding:20px;max-height:650px;overflow:auto}.recipient-picker-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.recipient-picker-header h2{margin:0}.recipient-picker-header p{font-size:13px;color:var(--text-mute);margin-top:5px}.recipient-search{display:flex;gap:9px;margin-block:18px}.recipient-search input{flex:1;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);color:var(--text);padding:11px;font:inherit}.recipient-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.recipient-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:11px;padding:13px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg);color:var(--text);font:inherit;text-align:start;cursor:pointer;transition:border-color .15s ease,transform .15s ease}.recipient-card:hover{border-color:var(--primary);transform:translateY(-1px)}.recipient-card>span:nth-child(2){display:grid;gap:4px;min-width:0}.recipient-card small{color:var(--text-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:760px){.messages-heading{align-items:flex-start}.messages-heading-actions{display:grid;justify-items:end}.messages-shell{display:block;height:calc(100dvh - 190px);min-height:560px;position:relative}.conversation-pane,.thread-pane{position:absolute;inset:0;background:var(--bg-card)}.conversation-pane{border:0;overflow:auto}.thread-pane{display:none;grid-template-rows:auto auto auto minmax(0,1fr) auto}.messages-thread-open .conversation-pane{display:none}.messages-thread-open .thread-pane{display:grid}.thread-back{display:inline-grid}.message-bubble{max-width:88%}.recipient-picker{position:fixed;inset:0;border:0;border-radius:0;max-height:none;padding:18px;padding-top:max(18px,env(safe-area-inset-top))}.recipient-results{grid-template-columns:1fr}.message-request-banner{align-items:flex-start;display:grid}.request-actions{width:100%}.request-actions .btn{flex:1}}
 @media(max-width:480px){.messages-heading{display:grid}.messages-heading-actions{display:flex;justify-content:space-between}.messages-heading-actions .btn{margin-inline-start:auto}.message-composer{padding:9px}.message-composer .btn span{display:none}.message-composer .btn{width:44px;padding-inline:0}.recipient-search{display:grid}.conversation-item{padding:12px}}
+
+/* ===== Phase 4 Wave F3 — Direct Messages polish (page-scoped, visual only) ===== */
+body.direct-messages-page .messages-heading{padding-block-end:4px}
+body.direct-messages-page .messages-heading h1{letter-spacing:-0.01em}
+body.direct-messages-page .messages-heading-actions{flex-wrap:wrap;justify-content:flex-end}
+body.direct-messages-page .connection-state{padding:4px 10px;border-radius:var(--r-full);background:var(--bg);border:1px solid var(--border);white-space:nowrap}
+body.direct-messages-page .connection-state.online{border-color:color-mix(in srgb,var(--success) 35%,var(--border))}
+body.direct-messages-page .connection-state.reconnecting{border-color:color-mix(in srgb,var(--warning) 35%,var(--border))}
+body.direct-messages-page .connection-state.offline,body.direct-messages-page .connection-state.unavailable{border-color:color-mix(in srgb,var(--danger) 35%,var(--border))}
+body.direct-messages-page .conversation-item:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+body.direct-messages-page .conversation-item.active{border-inline-start:3px solid var(--primary);padding-inline-start:12px}
+body.direct-messages-page .conversation-avatar{flex:none}
+body.direct-messages-page .thread-header{gap:12px}
+body.direct-messages-page #threadName{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.direct-messages-page .thread-header .role-badge{flex:none;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.direct-messages-page .thread-back{width:44px;height:44px}
+html[dir="ltr"] body.direct-messages-page .thread-back i{transform:scaleX(-1)}
+body.direct-messages-page .message-request-banner{border-inline-start:3px solid var(--warning)}
+body.direct-messages-page .load-older{min-height:44px;font-weight:700}
+body.direct-messages-page .load-older:hover{background:color-mix(in srgb,var(--primary) 6%,var(--bg-card))}
+body.direct-messages-page .message-history{gap:11px}
+body.direct-messages-page .message-body{unicode-bidi:plaintext}
+body.direct-messages-page .jump-latest{width:44px;height:44px;bottom:88px}
+body.direct-messages-page .message-composer textarea{min-height:44px}
+body.direct-messages-page #closeRecipientPicker{width:44px;height:44px}
+body.direct-messages-page #recipientSearchInput{min-height:44px}
+body.direct-messages-page .recipient-search .btn{min-height:44px}
+@media(max-width:480px){body.direct-messages-page .connection-state{padding:3px 8px;font-size:11px}}
+body.direct-messages-page #newConversationBtn,body.direct-messages-page #sendMessageBtn,body.direct-messages-page .request-actions .btn,body.direct-messages-page .conversation-error .btn{min-height:44px}
+/* Transport-level state (connecting/reconnecting/offline/unavailable + manual
+   retry) stays functional in JS — the silent REST fallback makes it mostly
+   invisible to the user, so the pill itself is hidden here rather than shown. */
+body.direct-messages-page #connectionState,
+body.direct-messages-page .connection-retry {
+    display: none !important;
+}
