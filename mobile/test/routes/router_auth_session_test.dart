@@ -20,6 +20,7 @@ void main() {
     RoutePaths.drugChecker,
     RoutePaths.reportSummarizer,
     RoutePaths.myReports,
+    RoutePaths.myDoctor,
   ];
 
   const public = [
@@ -102,7 +103,7 @@ void main() {
   });
 
   group('protected set', () {
-    test('covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, and my reports', () {
+    test('covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, my reports, and my doctor', () {
       expect(protectedRoutes, protected.toSet());
     });
 

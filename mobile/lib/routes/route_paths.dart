@@ -19,6 +19,7 @@ class RoutePaths {
   static const String drugChecker = '/drug-checker';
   static const String reportSummarizer = '/report-summarizer';
   static const String myReports = '/my-reports';
+  static const String myDoctor = '/my-doctor';
   static const String virtualDoctor = '/virtual-doctor';
   static const String mapFoundation = '/map-foundation';
   static const String clinics = '/clinics';

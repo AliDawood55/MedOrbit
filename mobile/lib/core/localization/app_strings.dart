@@ -518,6 +518,49 @@ class AppStrings {
   String get backAction => _t('السابق', 'Back');
   String get nextAction => _t('التالي', 'Next');
 
+  // My Doctor / care relationships
+  String get myDoctorTitle => _t('طبيبي', 'My Doctor');
+  String get myDoctorSubtitle => _t(
+        'تابع أطباءك المعالجين ومواعيدك والملاحظات التي شاركوها معك.',
+        "Keep track of your treating doctors, your appointments with them, and notes they've shared with you.",
+      );
+  String get myDoctorsSectionTitle => _t('أطبائي المعالجون', 'My Doctors');
+  String get upcomingWithMyDoctorsTitle =>
+      _t('المواعيد القادمة مع أطبائي', 'Upcoming Appointments With My Doctors');
+  String get sharedNotesSectionTitle => _t('الملاحظات المشتركة', 'Shared Notes');
+  String get noActiveDoctorsTitle => _t('لا يوجد أطباء معالجون حاليًا', 'No active doctors yet');
+  String get noActiveDoctorsHint => _t(
+        'سيظهر هنا الأطباء الذين لديك علاقة رعاية نشطة معهم.',
+        'Doctors you have an active care relationship with will appear here.',
+      );
+  String get browseDoctorsAction => _t('تصفح الأطباء', 'Browse Doctors');
+  String get doctorsLoadErrorTitle => _t('تعذر تحميل أطبائك', 'Could not load your doctors');
+  String get doctorsLoadErrorMessage =>
+      _t('تحقق من الاتصال ثم أعد المحاولة.', 'Check your connection and try again.');
+  String get noUpcomingWithMyDoctorsTitle => _t('لا توجد مواعيد قادمة', 'No upcoming appointments');
+  String get noUpcomingWithMyDoctorsHint => _t(
+        'ستظهر هنا مواعيدك القادمة مع أطبائك المعالجين.',
+        'Your upcoming appointments with your treating doctors will appear here.',
+      );
+  String get upcomingWithMyDoctorsErrorTitle => _t('تعذر تحميل المواعيد', 'Could not load appointments');
+  String get upcomingWithMyDoctorsErrorMessage =>
+      _t('تحقق من الاتصال ثم أعد المحاولة.', 'Check your connection and try again.');
+  String get noSharedNotesTitle => _t('لا توجد ملاحظات مشتركة', 'No shared notes');
+  String get noSharedNotesHint => _t(
+        'الملاحظات التي يشاركها طبيبك معك ستظهر هنا.',
+        'Notes your doctor shares with you will appear here.',
+      );
+  String get sharedNotesErrorTitle => _t('تعذر تحميل الملاحظات المشتركة', 'Could not load shared notes');
+  String get sharedNotesErrorMessage =>
+      _t('تحقق من الاتصال ثم أعد المحاولة.', 'Check your connection and try again.');
+  String get viewDoctorAction => _t('عرض الطبيب', 'View Doctor');
+  String get bookAppointmentWithDoctorAction => _t('حجز موعد', 'Book Appointment');
+  String careSinceLabel(String date) => _t('مريض منذ $date', 'Patient since $date');
+  String nextVisitLabel(String date) => _t('الزيارة القادمة: $date', 'Next visit: $date');
+  String lastVisitLabel(String date) => _t('آخر زيارة: $date', 'Last visit: $date');
+  String get quickMyDoctorDescription =>
+      _t('تابع أطباءك المعالجين ومواعيدك معهم.', 'Track your treating doctors and appointments with them.');
+
   // Notifications
   String get navNotifications => _t('الإشعارات', 'Notifications');
   String get notificationsTitle => _t('الإشعارات', 'Notifications');
