@@ -43,6 +43,36 @@ html:not(.app-shell) {
     html:not(.app-shell) {
         scroll-behavior: auto;
     }
+
+    /* Loader stays visible as feedback but stops looping motion. */
+    .loader-logo {
+        animation: none;
+    }
+
+    .loader-bar-fill {
+        animation: none;
+        width: 60%;
+    }
+
+    .toast {
+        animation: none;
+    }
+
+    .brand-icon,
+    .icon-btn,
+    .filter-chip,
+    .mobile-view-toggle {
+        transition: none;
+    }
+
+    .brand-icon:hover,
+    .icon-btn:hover {
+        transform: none;
+    }
+
+    .mobile-view-toggle:active {
+        transform: none;
+    }
 }
 
 /* Reference-counted overlay lock (see Dom.lockScroll/unlockScroll) — blocks
