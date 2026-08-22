@@ -103,10 +103,10 @@
             </div>
 
             <!-- Medical records timeline + real record-authoring form -->
-            <div class="care-section">
-                <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">السجلات الطبية</span></div>
+            <div class="care-section care-records-section">
+                <h2 class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">السجلات الطبية</span></h2>
 
-                <div class="note-timeline" id="notesTimeline" style="margin-bottom:20px;"></div>
+                <div class="note-timeline" id="notesTimeline"></div>
 
                 <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة سجل طبي</div>
                 <div class="alert" id="noteFormAlert"></div>
@@ -143,7 +143,7 @@
 
                     <div class="form-group">
                         <label for="noteChiefComplaint" data-i18n="patientDetail.chiefComplaint">الشكوى الرئيسية</label>
-                        <textarea class="feedback-textarea" id="noteChiefComplaint" style="min-height:60px;"></textarea>
+                        <textarea class="feedback-textarea" id="noteChiefComplaint"></textarea>
                     </div>
 
                     <div class="form-group">
@@ -153,12 +153,12 @@
 
                     <div class="form-group">
                         <label for="noteTreatmentPlan" data-i18n="patientDetail.treatmentPlan">خطة العلاج</label>
-                        <textarea class="feedback-textarea" id="noteTreatmentPlan" style="min-height:60px;"></textarea>
+                        <textarea class="feedback-textarea" id="noteTreatmentPlan"></textarea>
                     </div>
 
                     <div class="form-group">
                         <label for="notePrognosis" data-i18n="patientDetail.prognosis">التوقعات</label>
-                        <textarea class="feedback-textarea" id="notePrognosis" style="min-height:60px;"></textarea>
+                        <textarea class="feedback-textarea" id="notePrognosis"></textarea>
                     </div>
 
                     <div class="form-group">
@@ -166,7 +166,7 @@
                         <textarea class="feedback-textarea" id="noteClinicalNotes"></textarea>
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-group care-form-group-internal">
                         <label for="noteDoctorNotes" data-i18n="patientDetail.doctorNotes">ملاحظات داخلية (لا تظهر للمريض)</label>
                         <textarea class="feedback-textarea" id="noteDoctorNotes"></textarea>
                     </div>
@@ -176,7 +176,7 @@
                         <span data-i18n="patientDetail.saveDraft">حفظ كمسودة (غير مرئية للمريض)</span>
                     </label>
 
-                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                    <div class="care-form-actions">
                         <button type="button" class="btn btn-primary" id="noteSubmitBtn">
                             <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ السجل</span>
                             <span class="spinner spinner-sm btn-spinner"></span>
