@@ -210,6 +210,12 @@ const ReportSummary = (() => {
 
         dropzone?.addEventListener('click', () => fileInput?.click());
 
+        dropzone?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            fileInput?.click();
+        });
+
         fileInput?.addEventListener('change', () => {
             if (fileInput.files && fileInput.files[0]) selectFile(fileInput.files[0]);
         });
