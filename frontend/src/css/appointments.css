@@ -525,3 +525,112 @@
         flex: 1;
     }
 }
+
+/* ===========================================
+   My Appointments — page modernization (C1)
+   Scoped to .my-appointments-page: this page shares
+   .page-header / .loading-state / appt-tab / appt-card
+   with book-appointment.html's load set, so all new
+   rules stay scoped to avoid touching the wizard.
+   =========================================== */
+
+.my-appointments-page .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.my-appointments-page .page-header p {
+    margin-top: 4px;
+}
+
+.my-appointments-page .page-header .btn {
+    min-height: 44px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+    .my-appointments-page .page-header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.my-appointments-page .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--text-mute);
+}
+
+/* === Tabs === */
+.my-appointments-page .appt-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.my-appointments-page .appt-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.my-appointments-page .appt-tab {
+    min-height: 44px;
+    white-space: nowrap;
+    border-radius: var(--r-sm, 4px) var(--r-sm, 4px) 0 0;
+}
+
+.my-appointments-page .appt-tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
+}
+
+/* === Cards === */
+.my-appointments-page .appt-card-header {
+    gap: 10px 14px;
+}
+
+.my-appointments-page .appt-card-number {
+    word-break: break-word;
+}
+
+.my-appointments-page .appt-card-meta span {
+    min-width: 0;
+}
+
+.my-appointments-page .appt-card-reason {
+    line-height: 1.5;
+    word-break: break-word;
+}
+
+.my-appointments-page .appt-card-actions {
+    flex-wrap: wrap;
+}
+
+.my-appointments-page .appt-card-actions .btn {
+    min-height: 44px;
+}
+
+.my-appointments-page .appt-card-actions .btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+    .my-appointments-page .appt-card-actions .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+@media (min-width: 1024px) {
+    .my-appointments-page #apptContent {
+        max-width: 880px;
+        margin-inline: auto;
+    }
+}
