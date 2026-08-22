@@ -51,7 +51,7 @@
         </div>
     </header>
 
-    <main class="page-container">
+    <main class="page-container report-summary-page">
         <div class="tool-header">
             <div class="tool-icon"><i class="fas fa-file-medical"></i></div>
             <h1 data-i18n="reportSummary.title">تلخيص التقارير الطبية</h1>
@@ -70,7 +70,7 @@
         </div>
 
         <div id="formSection">
-            <div class="upload-dropzone" id="dropzone">
+            <div class="upload-dropzone" id="dropzone" role="button" tabindex="0" data-i18n-aria="reportSummary.dropzoneTitle">
                 <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
                 <i class="fas fa-cloud-arrow-up"></i>
                 <h3 data-i18n="reportSummary.dropzoneTitle">اسحب الملف هنا أو انقر للاختيار</h3>
@@ -86,7 +86,7 @@
                 <button type="button" class="btn btn-ghost btn-sm" id="removeFileBtn" data-i18n="reportSummary.remove">إزالة</button>
             </div>
 
-            <div class="alert" id="formAlert" style="max-width:640px;margin:0 auto 20px;"></div>
+            <div class="alert" id="formAlert"></div>
 
             <div class="result-actions">
                 <button type="button" class="btn btn-primary tool-submit" id="submitBtn" disabled>
