@@ -186,9 +186,9 @@
             </div>
 
             <!-- Prescriptions + real prescription-authoring form -->
-            <div class="care-section">
-                <div class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></div>
-                <div id="prescriptionsList" style="margin-bottom:20px;"></div>
+            <div class="care-section care-prescriptions-section">
+                <h2 class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></h2>
+                <div id="prescriptionsList"></div>
 
                 <div class="care-form-title" data-i18n="patientDetail.addPrescription">إنشاء وصفة طبية</div>
                 <div class="alert" id="rxFormAlert"></div>
@@ -221,19 +221,19 @@
 
                     <div class="form-group">
                         <label for="rxInstructions" data-i18n="patientDetail.rxInstructions">تعليمات للمريض</label>
-                        <textarea class="feedback-textarea" id="rxInstructions" style="min-height:60px;"></textarea>
+                        <textarea class="feedback-textarea" id="rxInstructions"></textarea>
                     </div>
 
-                    <div class="care-form-title" data-i18n="patientDetail.medications" style="margin-top:8px;">الأدوية</div>
+                    <div class="care-form-title" data-i18n="patientDetail.medications">الأدوية</div>
                     <div id="rxItemsContainer"></div>
 
-                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                    <div class="care-form-actions">
                         <button type="button" class="btn btn-ghost btn-sm" id="rxAddItemBtn">
                             <i class="fas fa-plus"></i> <span data-i18n="patientDetail.addMedication">إضافة دواء</span>
                         </button>
                     </div>
 
-                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                    <div class="care-form-actions">
                         <button type="button" class="btn btn-primary" id="rxSubmitBtn">
                             <span class="btn-label" data-i18n="patientDetail.savePrescription">حفظ الوصفة</span>
                             <span class="spinner spinner-sm btn-spinner"></span>
