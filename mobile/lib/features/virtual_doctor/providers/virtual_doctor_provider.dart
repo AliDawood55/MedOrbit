@@ -53,6 +53,7 @@ class VirtualDoctorState {
     this.differential = const [],
     this.recordingRemainingSeconds,
     this.recoveredSession = false,
+    this.entitlementRetryAt,
   });
 
   final ConsultState state;
@@ -78,6 +79,12 @@ class VirtualDoctorState {
   final List<Map<String, dynamic>> differential;
   final int? recordingRemainingSeconds;
   final bool recoveredSession;
+
+  /// When [errorMessage] is `'voice_cooldown'`, the server-supplied timestamp
+  /// the free consultation becomes available again — from the backend's
+  /// `VOICE_COOLDOWN` `details.next_free_at`. Null whenever the backend did
+  /// not supply one; the UI must never invent a time in that case.
+  final DateTime? entitlementRetryAt;
 
   bool get isActive => state != ConsultState.idle && state != ConsultState.error;
   bool get canRecord => state == ConsultState.listening || state == ConsultState.recording;
@@ -110,6 +117,8 @@ class VirtualDoctorState {
     int? recordingRemainingSeconds,
     bool clearRecordingRemainingSeconds = false,
     bool? recoveredSession,
+    DateTime? entitlementRetryAt,
+    bool clearEntitlementRetryAt = false,
   }) {
     return VirtualDoctorState(
       state: state ?? this.state,
@@ -135,6 +144,7 @@ class VirtualDoctorState {
       differential: differential ?? this.differential,
       recordingRemainingSeconds: clearRecordingRemainingSeconds ? null : (recordingRemainingSeconds ?? this.recordingRemainingSeconds),
       recoveredSession: recoveredSession ?? this.recoveredSession,
+      entitlementRetryAt: clearEntitlementRetryAt ? null : (entitlementRetryAt ?? this.entitlementRetryAt),
     );
   }
 }
@@ -252,10 +262,14 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
       // Health passed but the call still failed, so the cached pass is stale —
       // drop it so a retry re-probes instead of trusting it.
       _health.invalidate();
+      final api = ApiException.from(e);
+      final retryAt = _retryAtFrom(api);
       _set(
         state.copyWith(
           state: ConsultState.error,
-          errorMessage: _failureCode(ApiException.from(e)),
+          errorMessage: _failureCode(api),
+          entitlementRetryAt: retryAt,
+          clearEntitlementRetryAt: retryAt == null,
         ),
       );
     }
@@ -267,12 +281,39 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
   /// produced unmapped codes like `start_UNKNOWN_ERROR`, and the turn handlers
   /// passed `ApiException.message` straight through, leaving the displayed text
   /// to depend on substring luck against English transport copy.
+  ///
+  /// Billing/entitlement codes (`backend/src/config/billing.js`'s
+  /// `ERROR_CODES`) are checked first and given their own vocabulary entries
+  /// rather than collapsing into `'ai_failed'` — a cooldown or an exhausted
+  /// quota is not the same failure as the AI service actually breaking, and
+  /// telling the patient "something went wrong, try again" for a denial the
+  /// backend will repeat on the very next attempt is actively misleading.
   static String _failureCode(ApiException api) {
+    if (api.code == ApiException.codeVoiceCooldown) return 'voice_cooldown';
+    if (api.code == ApiException.codeVoiceSessionActive) return 'voice_session_active';
+    if (api.code == ApiException.codeFreeQuotaExhausted) return 'free_quota_exhausted';
+    if (api.code == ApiException.codeSubscriptionRequired) return 'subscription_required';
+    if (api.code == ApiException.codeSubscriptionInactive) return 'subscription_inactive';
+    if (api.code == ApiException.codeEntitlementUnavailable) return 'entitlement_unavailable';
     if (api.isTimeout) return 'ai_timeout';
     if (api.code == ApiException.codeServiceUnavailable) return 'ai_unreachable';
     // The AI service answers 404 once a session has been evicted.
     if (api.statusCode == 404) return 'session_expired';
     return 'ai_failed';
+  }
+
+  /// The server-supplied cooldown-end timestamp, if the backend sent one.
+  ///
+  /// Only ever read for `VOICE_COOLDOWN` — every other denial has no such
+  /// timestamp, and this must never be invented client-side.
+  static DateTime? _retryAtFrom(ApiException api) {
+    if (api.code != ApiException.codeVoiceCooldown) return null;
+    final details = api.details;
+    if (details is Map) {
+      final raw = details['next_free_at'];
+      if (raw is String) return DateTime.tryParse(raw);
+    }
+    return null;
   }
 
   Future<void> startRecording() async {
@@ -333,10 +374,14 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
       await _submit(transcription.text);
     } catch (e) {
       unawaited(File(path).delete().catchError((_) => File(path!)));
+      final api = ApiException.from(e);
+      final retryAt = _retryAtFrom(api);
       _set(
         state.copyWith(
           state: ConsultState.listening,
-          errorMessage: _failureCode(ApiException.from(e)),
+          errorMessage: _failureCode(api),
+          entitlementRetryAt: retryAt,
+          clearEntitlementRetryAt: retryAt == null,
         ),
       );
     }
@@ -385,10 +430,14 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
         ),
       );
     } catch (e) {
+      final api = ApiException.from(e);
+      final retryAt = _retryAtFrom(api);
       _set(
         state.copyWith(
           state: ConsultState.listening,
-          errorMessage: _failureCode(ApiException.from(e)),
+          errorMessage: _failureCode(api),
+          entitlementRetryAt: retryAt,
+          clearEntitlementRetryAt: retryAt == null,
         ),
       );
     }
@@ -469,7 +518,7 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     }
   }
 
-  void clearError() => _set(state.copyWith(clearError: true));
+  void clearError() => _set(state.copyWith(clearError: true, clearEntitlementRetryAt: true));
 
   Future<void> endConsultation() async {
     _recordingCapTimer?.cancel();

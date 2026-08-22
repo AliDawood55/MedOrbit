@@ -45,9 +45,48 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
       ChatFailureKind.unavailable => strings.chatErrUnavailable,
       ChatFailureKind.invalidResponse => strings.chatErrInvalidResponse,
       ChatFailureKind.backend => strings.chatErrServer,
+      ChatFailureKind.freeQuotaExhausted => strings.chatErrQuotaMessage,
+      ChatFailureKind.duplicateInFlight => strings.chatErrDuplicateMessage,
+      ChatFailureKind.entitlementUnavailable => strings.chatErrEntitlementUnavailable,
+      ChatFailureKind.subscriptionRequired => strings.chatErrSubscriptionRequired,
+      ChatFailureKind.subscriptionInactive => strings.chatErrSubscriptionInactive,
       ChatFailureKind.unknown => strings.errorGeneric,
     };
   }
 
-  @override Widget build(BuildContext context) { final chat = ref.watch(chatbotControllerProvider); final strings = ref.watch(appStringsProvider); final location = _attachLocation ? ref.watch(locationControllerProvider).currentLocation : null; return AppScaffold(appBar: AppBar(title: const Text('Medical chat'), actions: [IconButton(tooltip: 'Conversation history', onPressed: () => context.push(RoutePaths.conversations), icon: const Icon(Icons.history_rounded)), IconButton(tooltip: 'New conversation', onPressed: _newConversation, icon: const Icon(Icons.add_comment_outlined))]), useSafeArea: true, keyboardAware: true, body: Column(children: [Expanded(child: ListView(controller: _scroll, padding: const EdgeInsets.all(AppTheme.spaceMd), children: [const PageIntro(title: 'Medical guidance', subtitle: 'This service provides general guidance and does not replace professional medical care.', icon: Icons.chat_bubble_outline_rounded), const SizedBox(height: AppTheme.spaceMd), ChatLocationBanner(location: location, onAttach: _chooseLocation, onClear: () { ref.read(locationControllerProvider.notifier).clearLocation(); setState(() => _attachLocation = false); }), const SizedBox(height: AppTheme.spaceMd), if (chat.isInitialLoading) const Center(child: CircularProgressIndicator()) else if (!chat.hasMessages) const EmptyState(icon: Icons.chat_outlined, title: 'Start a conversation', hint: 'Describe your symptoms or ask about nearby care.', variant: EmptyStateVariant.compact) else ...[for (final message in chat.messages) ChatMessageBubble(message: message)], if (chat.isSending) const ChatTypingIndicator(), if (chat.error != null) ErrorRetryState(title: strings.chatErrTitle, message: _errorMessage(strings, chat.error!), retryLabel: strings.retry, onRetry: () => ref.read(chatbotControllerProvider.notifier).retryLastMessage(), variant: ErrorRetryVariant.compact), if (chat.places.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), const SectionHeader(title: 'Places'), for (final place in chat.places) PlaceResultCard(place: place, selected: _selectedResultId == 'place-${place.id}', onSelect: () => setState(() => _selectedResultId = 'place-${place.id}'))], if (chat.clinics.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), const SectionHeader(title: 'Clinics'), for (final clinic in chat.clinics) PlaceResultCard(place: clinic, isClinic: true, selected: _selectedResultId == 'clinic-${clinic.id}', onSelect: () => setState(() => _selectedResultId = 'clinic-${clinic.id}'))], if (chat.doctors.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), const SectionHeader(title: 'Doctors'), for (final doctor in chat.doctors) ChatDoctorResultCard(doctor: doctor, selected: _selectedResultId == 'doctor-${doctor.id}', onSelect: () => setState(() => _selectedResultId = 'doctor-${doctor.id}'))], if (chat.places.isNotEmpty || chat.clinics.isNotEmpty || chat.doctors.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), Card(child: ExpansionTile(key: ValueKey('chat-results-map-${_selectedResultId ?? 'closed'}'), initiallyExpanded: _selectedResultId != null, title: const Text('Results map'), children: [Padding(padding: const EdgeInsets.all(AppTheme.spaceMd), child: ChatResultsMap(places: chat.places, clinics: chat.clinics, doctors: chat.doctors, userLocation: _resultLocation, selectedId: _selectedResultId, onSelected: (id) => setState(() => _selectedResultId = id)))]) )], if (chat.route != null) ChatRouteCard(route: chat.route!), if (chat.suggestions.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), SuggestionChips(suggestions: chat.suggestions, onSelected: (text) { _input.text = text; setState(() {}); })]])), ChatInput(controller: _input, enabled: !chat.isSending, onSend: _send)])); }
+  /// Title to pair with [_errorMessage]. Entitlement failures get a title
+  /// naming the actual limitation instead of the generic "could not send" —
+  /// the patient did not fail to send a message, they hit a real quota or
+  /// subscription rule.
+  String _errorTitle(AppStrings strings, ChatbotError error) {
+    return switch (error.kind) {
+      ChatFailureKind.freeQuotaExhausted => strings.chatErrQuotaTitle,
+      ChatFailureKind.duplicateInFlight => strings.chatErrDuplicateTitle,
+      ChatFailureKind.subscriptionRequired => strings.chatErrSubscriptionRequiredTitle,
+      ChatFailureKind.subscriptionInactive => strings.chatErrSubscriptionInactiveTitle,
+      _ => strings.chatErrTitle,
+    };
+  }
+
+  /// Non-retryable entitlement failures get a quiet inline notice instead of
+  /// [ErrorRetryState]: the backend enforces the same denial server-side, so
+  /// a prominent "Retry" action would just spend another round trip on a
+  /// request that cannot succeed yet.
+  Widget _errorWidget(AppStrings strings, ChatbotError error) {
+    if (!error.retryable) {
+      return InlineMessage(
+        message: '${_errorTitle(strings, error)}. ${_errorMessage(strings, error)}',
+        tone: InlineMessageTone.warning,
+      );
+    }
+    return ErrorRetryState(
+      title: _errorTitle(strings, error),
+      message: _errorMessage(strings, error),
+      retryLabel: strings.retry,
+      onRetry: () => ref.read(chatbotControllerProvider.notifier).retryLastMessage(),
+      variant: ErrorRetryVariant.compact,
+    );
+  }
+
+  @override Widget build(BuildContext context) { final chat = ref.watch(chatbotControllerProvider); final strings = ref.watch(appStringsProvider); final location = _attachLocation ? ref.watch(locationControllerProvider).currentLocation : null; return AppScaffold(appBar: AppBar(title: const Text('Medical chat'), actions: [IconButton(tooltip: 'Conversation history', onPressed: () => context.push(RoutePaths.conversations), icon: const Icon(Icons.history_rounded)), IconButton(tooltip: 'New conversation', onPressed: _newConversation, icon: const Icon(Icons.add_comment_outlined))]), useSafeArea: true, keyboardAware: true, body: Column(children: [Expanded(child: ListView(controller: _scroll, padding: const EdgeInsets.all(AppTheme.spaceMd), children: [const PageIntro(title: 'Medical guidance', subtitle: 'This service provides general guidance and does not replace professional medical care.', icon: Icons.chat_bubble_outline_rounded), const SizedBox(height: AppTheme.spaceMd), ChatLocationBanner(location: location, onAttach: _chooseLocation, onClear: () { ref.read(locationControllerProvider.notifier).clearLocation(); setState(() => _attachLocation = false); }), const SizedBox(height: AppTheme.spaceMd), if (chat.isInitialLoading) const Center(child: CircularProgressIndicator()) else if (!chat.hasMessages) const EmptyState(icon: Icons.chat_outlined, title: 'Start a conversation', hint: 'Describe your symptoms or ask about nearby care.', variant: EmptyStateVariant.compact) else ...[for (final message in chat.messages) ChatMessageBubble(message: message)], if (chat.isSending) const ChatTypingIndicator(), if (chat.error != null) _errorWidget(strings, chat.error!), if (chat.places.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), const SectionHeader(title: 'Places'), for (final place in chat.places) PlaceResultCard(place: place, selected: _selectedResultId == 'place-${place.id}', onSelect: () => setState(() => _selectedResultId = 'place-${place.id}'))], if (chat.clinics.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), const SectionHeader(title: 'Clinics'), for (final clinic in chat.clinics) PlaceResultCard(place: clinic, isClinic: true, selected: _selectedResultId == 'clinic-${clinic.id}', onSelect: () => setState(() => _selectedResultId = 'clinic-${clinic.id}'))], if (chat.doctors.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), const SectionHeader(title: 'Doctors'), for (final doctor in chat.doctors) ChatDoctorResultCard(doctor: doctor, selected: _selectedResultId == 'doctor-${doctor.id}', onSelect: () => setState(() => _selectedResultId = 'doctor-${doctor.id}'))], if (chat.places.isNotEmpty || chat.clinics.isNotEmpty || chat.doctors.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), Card(child: ExpansionTile(key: ValueKey('chat-results-map-${_selectedResultId ?? 'closed'}'), initiallyExpanded: _selectedResultId != null, title: const Text('Results map'), children: [Padding(padding: const EdgeInsets.all(AppTheme.spaceMd), child: ChatResultsMap(places: chat.places, clinics: chat.clinics, doctors: chat.doctors, userLocation: _resultLocation, selectedId: _selectedResultId, onSelected: (id) => setState(() => _selectedResultId = id)))]) )], if (chat.route != null) ChatRouteCard(route: chat.route!), if (chat.suggestions.isNotEmpty) ...[const SizedBox(height: AppTheme.spaceMd), SuggestionChips(suggestions: chat.suggestions, onSelected: (text) { _input.text = text; setState(() {}); })]])), ChatInput(controller: _input, enabled: !chat.isSending, onSend: _send)])); }
 }
