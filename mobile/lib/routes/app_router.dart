@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/appointments/screens/appointments_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/care/screens/my_doctor_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
@@ -57,6 +58,7 @@ const Set<String> protectedRoutes = {
   RoutePaths.drugChecker,
   RoutePaths.reportSummarizer,
   RoutePaths.myReports,
+  RoutePaths.myDoctor,
 };
 
 /// Redirect target for [location], or null to allow it.
@@ -197,6 +199,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.myReports,
         builder: (context, state) => const MyReportsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.myDoctor,
+        builder: (context, state) => const MyDoctorScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
