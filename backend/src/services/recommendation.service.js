@@ -114,8 +114,9 @@ async function getRankedFeed({ userId = null, limit = 10, cursor = null, queryab
                 (SELECT count(*)::int FROM medorbit.post_likes l WHERE l.post_id=p.id) like_count,
                 (SELECT count(*)::int FROM medorbit.post_comments c WHERE c.post_id=p.id AND c.deleted_at IS NULL AND c.moderation_status='approved') comment_count,
                 CASE WHEN $1::uuid IS NULL THEN false ELSE EXISTS(SELECT 1 FROM medorbit.post_likes l WHERE l.post_id=p.id AND l.user_id=$1) END liked_by_me,
-                CASE WHEN $1::uuid IS NULL THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_follows f WHERE f.doctor_id=d.id AND f.user_id=$1) END following_doctor,
-                CASE WHEN $1::uuid IS NULL THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_events e WHERE e.user_id=$1 AND e.entity_id=p.id AND e.event_type='post_view') END viewed_by_me
+                CASE WHEN $1::uuid IS NULL THEN false WHEN d.user_id=$1 THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_follows f WHERE f.doctor_id=d.id AND f.user_id=$1) END following_doctor,
+                CASE WHEN $1::uuid IS NULL THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_events e WHERE e.user_id=$1 AND e.entity_id=p.id AND e.event_type='post_view') END viewed_by_me,
+                CASE WHEN $1::uuid IS NULL THEN false ELSE d.user_id=$1 END is_own_doctor
          FROM medorbit.doctor_posts p
          JOIN medorbit.doctors d ON d.id=p.doctor_id JOIN medorbit.users u ON u.id=d.user_id
          LEFT JOIN medorbit.user_profiles pr ON pr.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id
@@ -130,7 +131,7 @@ async function getRankedFeed({ userId = null, limit = 10, cursor = null, queryab
             id:row.id,title:row.title_ar||row.title_en||null,title_ar:row.title_ar,title_en:row.title_en,body:row.body,category:row.category,
             published_at:row.published_at,created_at:row.created_at,updated_at:row.updated_at,
             like_count:row.like_count,comment_count:row.comment_count,reason_code:row._rank.reasonCode,
-            ...(userId ? {liked_by_me:row.liked_by_me,following_doctor:row.following_doctor} : {}),
+            ...(userId ? {liked_by_me:row.liked_by_me,following_doctor:row.following_doctor,is_own_doctor:row.is_own_doctor} : {}),
             doctor:{id:row.doctor_public_id,first_name_ar:row.first_name_ar,last_name_ar:row.last_name_ar,
                 first_name_en:row.first_name_en,last_name_en:row.last_name_en,profile_image_url:row.profile_image_url,
                 specialty_ar:row.specialty_ar,specialty_en:row.specialty_en},
