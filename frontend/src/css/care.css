@@ -770,3 +770,84 @@
 .patient-detail-page .care-form-group-internal textarea {
     margin-bottom: 0;
 }
+
+/* ===========================================
+   Wave D2c — Patient Detail page scope
+   (prescriptions section only: history + authoring form)
+   =========================================== */
+
+.patient-detail-page .care-prescriptions-section .care-section-title {
+    margin: 0 0 16px;
+}
+
+.patient-detail-page .care-prescriptions-section #prescriptionsList {
+    margin-bottom: 20px;
+}
+
+/* Prescription history rows are static display, not selectable cards. */
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-card {
+    cursor: default;
+}
+
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+}
+
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-title,
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-meta,
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-subtitle {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Prescription-authoring form */
+.patient-detail-page .care-prescriptions-section .care-note-form .care-form-title {
+    margin-top: 8px;
+}
+
+.patient-detail-page .care-prescriptions-section #rxInstructions {
+    min-height: 60px;
+}
+
+.patient-detail-page .care-prescriptions-section .care-note-form .care-form-actions {
+    border-top: none;
+    padding-top: 0;
+    justify-content: flex-start;
+}
+
+.patient-detail-page .care-prescriptions-section #rxAddItemBtn,
+.patient-detail-page .care-prescriptions-section #rxSubmitBtn {
+    min-height: 44px;
+}
+
+/* Medication item cards: one visually grouped unit per medication. */
+.patient-detail-page .care-prescriptions-section .rx-item-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-soft);
+    min-width: 0;
+}
+
+.patient-detail-page .care-prescriptions-section .rx-item-card .form-group,
+.patient-detail-page .care-prescriptions-section .rx-item-card .form-row {
+    min-width: 0;
+}
+
+/* Remove Medication: flow-based placement (not absolute) so it can never
+   overlap the fields below it at narrow widths, and always meets the
+   44px touch target regardless of viewport. */
+.patient-detail-page .care-prescriptions-section .rx-item-card .rx-item-remove {
+    position: static;
+    align-self: flex-end;
+    min-width: 44px;
+    min-height: 44px;
+    margin-bottom: 10px;
+}
+
+.patient-detail-page .care-prescriptions-section .rx-item-card .rx-item-remove:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
