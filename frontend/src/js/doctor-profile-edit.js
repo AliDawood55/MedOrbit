@@ -113,7 +113,8 @@ const DoctorProfileEditor = (() => {
     }
 
     async function load() {
-        const [profileResponse, userResponse, scheduleResponse] = await Promise.all([API.doctors.myProfile(), API.users.me(), API.doctors.mySchedule()]);
+        const [profileResponse, state, scheduleResponse] = await Promise.all([API.doctors.myProfile(), AuthGate.verifySession(), API.doctors.mySchedule()]);
+        if (state !== 'valid') return;
         profile = profileResponse.data;
         profileSchedule = scheduleResponse.data;
         byId('viewPublicProfile').href = `doctor.html?id=${encodeURIComponent(profile.id)}`;
@@ -132,7 +133,7 @@ const DoctorProfileEditor = (() => {
         editors.get('education').set(profile.education);
         editors.get('certifications').set(profile.certifications);
         editors.get('languages').set(profile.languages_spoken);
-        renderPreview(userResponse.data);
+        renderPreview(AuthGate.getVerifiedUser());
         renderCompletion();
     }
 

@@ -717,8 +717,9 @@ const Dashboard = (() => {
         document.getElementById('dashContent')?.classList.add('hidden');
 
         try {
-            const res = await API.users.me();
-            profile = res.data;
+            const state = await AuthGate.verifySession();
+            if (state !== 'valid') return;
+            profile = AuthGate.getVerifiedUser();
 
             renderWelcome();
             renderCompleteness();

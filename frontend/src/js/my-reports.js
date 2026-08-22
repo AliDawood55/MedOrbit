@@ -238,9 +238,11 @@ const MyReports = (() => {
         document.getElementById('reportError').classList.add('hidden');
         document.getElementById('reportContent').classList.add('hidden');
 
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
         try {
-            const res = await API.users.me();
-            renderPersonalInfo(res.data);
+            renderPersonalInfo(AuthGate.getVerifiedUser());
 
             document.getElementById('reportGeneratedAt').textContent =
                 t('reports.generatedAt') + ' ' + new Date().toLocaleString(isAr() ? 'ar' : 'en-US');
