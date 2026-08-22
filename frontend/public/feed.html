@@ -25,6 +25,7 @@
 </head>
 
 <body class="site-page feed-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
   <header class="app-header">
     <a class="header-brand" id="brandLink" href="home.html">
       <div class="brand-icon">
@@ -32,7 +33,7 @@
       </div>
 
       <div class="brand-text">
-        <h1>MedOrbit</h1>
+        <span class="brand-name">MedOrbit</span>
         <p>Smart Healthcare AI</p>
       </div>
     </a>
@@ -52,7 +53,8 @@
     </div>
   </header>
 
-  <main class="page-container feed-shell">
+  <main id="main-content" class="page-container feed-shell">
+    <h1 class="sr-only" data-i18n="nav.feed">المنشورات الصحية</h1>
     <aside class="feed-rail feed-rail-start" aria-hidden="true"></aside>
 
     <section class="feed-center">

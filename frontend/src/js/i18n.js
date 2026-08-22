@@ -6,6 +6,7 @@
 const I18n = (() => {
     const dict = {
         ar: {
+            'a11y.skipToContent': 'تجاوز إلى المحتوى الرئيسي',
             'brand.tagline': 'منصة رعاية صحية',
             'search.placeholder': 'ابحث عن عيادة، صيدلية، تخصص...',
             'filter.all': 'الكل',
@@ -867,6 +868,7 @@ const I18n = (() => {
             'tts.errBlocked': 'منع المتصفح تشغيل الصوت تلقائياً. ستستمر الاستشارة بالنص المكتوب.'
         },
         en: {
+            'a11y.skipToContent': 'Skip to main content',
             'brand.tagline': 'Healthcare Platform',
             'search.placeholder': 'Search clinic, pharmacy, specialty...',
             'filter.all': 'All',

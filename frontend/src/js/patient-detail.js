@@ -108,7 +108,7 @@ const PatientDetail = (() => {
                 (p.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(p.profile_image_url)) + '" alt="" data-fallback-initials="' + escapeHtml(initials) + '" onerror="PatientDetail.__avatarFallback(this)">' : escapeHtml(initials)) +
             '</div>' +
             '<div>' +
-                '<div class="care-detail-name">' + name + '</div>' +
+                '<h1 class="care-detail-name">' + name + '</h1>' +
                 '<div class="care-detail-subtitle">' + escapeHtml(p.email || '') + (p.phone ? ' · ' + escapeHtml(p.phone) : '') + '</div>' +
             '</div>';
     }

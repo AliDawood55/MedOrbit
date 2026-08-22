@@ -20,8 +20,9 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page direct-messages-page" data-theme="light">
-    <header class="app-header"><a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><h1>MedOrbit</h1><p data-i18n="brand.tagline"></p></div></a><nav class="site-nav" id="navLinks"></nav><div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle"><span id="langLabel">EN</span></button></div></header>
-    <main class="page-container messages-page">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
+    <header class="app-header"><a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><span class="brand-name">MedOrbit</span><p data-i18n="brand.tagline"></p></div></a><nav class="site-nav" id="navLinks"></nav><div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle"><span id="langLabel">EN</span></button></div></header>
+    <main id="main-content" class="page-container messages-page">
         <div class="messages-heading"><div><h1 id="messagesTitle">الرسائل</h1><p id="messagesSubtitle">محادثات نصية خاصة داخل MedOrbit</p></div><div class="messages-heading-actions"><span class="connection-state hidden" id="connectionState" role="status" aria-live="polite"></span><button class="btn btn-primary btn-sm" type="button" id="newConversationBtn"><i class="fas fa-plus"></i><span id="newConversationLabel">رسالة جديدة</span></button></div></div>
         <section class="messages-shell">
             <aside class="conversation-pane"><div class="pane-title" id="conversationListTitle">المحادثات</div><div id="conversationList" class="conversation-list"></div></aside>
