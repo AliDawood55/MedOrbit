@@ -646,3 +646,114 @@
         text-align: center;
     }
 }
+
+/* ===========================================
+   Symptom Checker — Phase 4 Wave E1
+   Scoped to .symptom-checker-page only. ai-tools.css is shared with
+   drug-checker.html / report-summary.html (E2/E3, not yet reviewed) —
+   do not extend these selectors beyond this page. See src/css/README.md.
+   =========================================== */
+
+.symptom-checker-page {
+    max-width: 640px;
+    padding-block: 32px 60px;
+}
+
+.symptom-checker-page .tool-header {
+    margin-bottom: 28px;
+}
+
+.symptom-checker-page .tool-header .tool-icon {
+    box-shadow: var(--shadow-sm);
+}
+
+.symptom-checker-page .tool-header h1 {
+    font-size: 24px;
+}
+
+.symptom-checker-page .disclaimer-banner span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.symptom-checker-page .tool-card {
+    box-shadow: var(--shadow-xs);
+}
+
+/* Input + Add composition: input shrinks safely, Add stays a fixed,
+   always-tappable secondary action (not just under the 1024px breakpoint
+   components.css uses for the generic .btn tap-target rule). */
+.symptom-checker-page .chip-input-group input {
+    min-width: 0;
+}
+
+.symptom-checker-page .chip-input-group #addSymptomBtn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding-inline: 16px;
+}
+
+.symptom-checker-page .chip-tag-list .chip-tag {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.symptom-checker-page .chip-tag-list .chip-remove {
+    width: 24px;
+    height: 24px;
+}
+
+.symptom-checker-page .quick-chips .quick-chip {
+    min-height: 44px;
+    padding: 8px 14px;
+}
+
+.symptom-checker-page #submitBtn {
+    min-height: 44px;
+}
+
+.symptom-checker-page .tool-loading {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 48px 24px;
+}
+
+.symptom-checker-page .tool-error #retryBtn {
+    min-height: 44px;
+    padding-inline: 20px;
+}
+
+.symptom-checker-page .triage-banner {
+    overflow-wrap: break-word;
+}
+
+.symptom-checker-page .triage-detail-row {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
+.symptom-checker-page .triage-detail-value {
+    min-width: 0;
+    overflow-wrap: break-word;
+    text-align: end;
+}
+
+.symptom-checker-page .result-actions .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 480px) {
+    .symptom-checker-page .chip-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .symptom-checker-page .chip-input-group #addSymptomBtn {
+        width: 100%;
+    }
+
+    .symptom-checker-page .result-actions {
+        flex-direction: column;
+    }
+}
