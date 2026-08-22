@@ -757,3 +757,125 @@
         flex-direction: column;
     }
 }
+
+/* ===========================================
+   Drug Interaction Checker — Phase 4 Wave E2
+   Scoped to .drug-checker-page only. ai-tools.css is shared with
+   symptom-checker.html (E1, already reviewed) / report-summary.html
+   (E3, not yet reviewed) — do not extend these selectors beyond this
+   page. See src/css/README.md.
+   =========================================== */
+
+.drug-checker-page {
+    max-width: 640px;
+    padding-block: 32px 60px;
+}
+
+.drug-checker-page .tool-header {
+    margin-bottom: 28px;
+}
+
+.drug-checker-page .tool-header .tool-icon {
+    box-shadow: var(--shadow-sm);
+}
+
+.drug-checker-page .tool-header h1 {
+    font-size: 24px;
+}
+
+.drug-checker-page .disclaimer-banner span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .tool-card {
+    box-shadow: var(--shadow-xs);
+}
+
+/* Input + Add composition: input shrinks safely, Add stays a fixed,
+   always-tappable secondary action (not just under the 1024px breakpoint
+   components.css uses for the generic .btn tap-target rule). */
+.drug-checker-page .chip-input-group input {
+    min-width: 0;
+}
+
+.drug-checker-page .chip-input-group #addMedBtn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding-inline: 16px;
+}
+
+.drug-checker-page .chip-tag-list .chip-tag {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .chip-tag-list .chip-remove {
+    width: 24px;
+    height: 24px;
+}
+
+.drug-checker-page .quick-chips .quick-chip {
+    min-height: 44px;
+    padding: 8px 14px;
+}
+
+.drug-checker-page #submitBtn {
+    min-height: 44px;
+}
+
+.drug-checker-page .tool-loading {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 48px 24px;
+}
+
+.drug-checker-page .tool-error #retryBtn {
+    min-height: 44px;
+    padding-inline: 20px;
+}
+
+/* === Interaction results === */
+.drug-checker-page .severity-group-title {
+    flex-wrap: wrap;
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .interaction-card {
+    min-width: 0;
+}
+
+.drug-checker-page .interaction-card-title {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .interaction-card-desc {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .no-interactions {
+    box-shadow: var(--shadow-xs);
+}
+
+.drug-checker-page .result-actions .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 480px) {
+    .drug-checker-page .chip-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .drug-checker-page .chip-input-group #addMedBtn {
+        width: 100%;
+    }
+
+    .drug-checker-page .result-actions {
+        flex-direction: column;
+    }
+}
