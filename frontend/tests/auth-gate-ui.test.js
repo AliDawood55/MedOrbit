@@ -220,6 +220,20 @@ check('super_admin-only invitation management is still marked super_admin-only',
     JSON.stringify(AuthGate.ROLE_RESTRICTED['admin-invitations.html']) === '["super_admin"]',
     JSON.stringify(AuthGate.ROLE_RESTRICTED['admin-invitations.html']));
 
+// --- admin-users.html is registered, not just deny-by-default -------------
+// classify() already fails closed for an unlisted page, so there was never an
+// auth bypass here — but an unlisted page is also absent from KNOWN_PAGES,
+// which silently broke the post-login return trip back to it.
+check('admin-users.html is PROTECTED',
+    AuthGate.classify('admin-users.html') === 'PROTECTED');
+check('admin-users.html carries the admin/super_admin role-matrix entry',
+    JSON.stringify(AuthGate.ROLE_RESTRICTED['admin-users.html']) === '["admin","super_admin"]',
+    JSON.stringify(AuthGate.ROLE_RESTRICTED['admin-users.html']));
+check('sanitizeReturnPath accepts admin-users.html as a return destination',
+    AuthGate.sanitizeReturnPath('admin-users.html') === 'admin-users.html');
+check('sanitizeReturnPath preserves query and hash on admin-users.html',
+    AuthGate.sanitizeReturnPath('admin-users.html?role=doctor#users') === 'admin-users.html?role=doctor#users');
+
 // The map is documentation and test-matrix input. The moment the gate reads it
 // to decide anything, route metadata has become a frontend authorization
 // system — which is exactly what the backend already owns.
