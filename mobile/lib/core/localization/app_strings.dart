@@ -49,6 +49,35 @@ class AppStrings {
         'تعذّر إكمال الطلب. أعد المحاولة.',
         'We could not complete the request. Please try again.',
       );
+
+  // Chat entitlement failures. Kept apart from the transport categories above
+  // — these are the backend enforcing a real quota/subscription rule, not a
+  // network or server fault, so they get their own title and never claim the
+  // problem is connectivity.
+  String get chatErrQuotaTitle => _t('تم استهلاك رسائلك المجانية', 'Free messages used');
+  String get chatErrQuotaMessage => _t(
+        'استخدمت جميع رسائلك المجانية لهذه الفترة. سيتم تجديدها تلقائيًا — يرجى المحاولة لاحقًا.',
+        "You've used all your free messages for this period. They reset automatically — please try again later.",
+      );
+  String get chatErrDuplicateTitle => _t('جارٍ المعالجة', 'Still processing');
+  String get chatErrDuplicateMessage => _t(
+        'رسالتك السابقة ما زالت قيد المعالجة. انتظر لحظة قبل إعادة المحاولة.',
+        'Your previous message is still being processed. Wait a moment before retrying.',
+      );
+  String get chatErrEntitlementUnavailable => _t(
+        'تعذّر التحقق من صلاحيتك حاليًا. حاول مرة أخرى.',
+        'Could not verify your access right now. Please try again.',
+      );
+  String get chatErrSubscriptionRequiredTitle => _t('يلزم اشتراك', 'Subscription required');
+  String get chatErrSubscriptionRequired => _t(
+        'هذه الميزة تتطلب اشتراك Pro.',
+        'This feature requires a Pro subscription.',
+      );
+  String get chatErrSubscriptionInactiveTitle => _t('الاشتراك غير نشط', 'Subscription inactive');
+  String get chatErrSubscriptionInactive => _t(
+        'اشتراكك غير نشط حاليًا.',
+        'Your subscription is not currently active.',
+      );
   String get comingSoon => _t('هذه الميزة غير متاحة حالياً', 'This feature is currently unavailable');
   String get brandTagline => _t('منصة رعاية صحية ذكية', 'Smart Healthcare Platform');
   String get moreActionsTooltip => _t('المزيد من الإجراءات', 'More actions');
@@ -777,6 +806,54 @@ class AppStrings {
       );
   String get vdErrGeneric => _t('حدث خطأ. حاول مرة أخرى.', 'Something went wrong. Please try again.');
 
+  // Voice entitlement failures. Distinct from the transport/session codes
+  // above: these are the backend enforcing the free-cooldown, quota, or
+  // subscription rule, never a network or microphone fault, so "check your
+  // connection" copy must never leak onto them.
+  String get vdCooldownTitle => _t('الاستشارة الصوتية غير متاحة مؤقتًا', 'Voice consultation unavailable for now');
+  String get vdErrVoiceCooldown => _t(
+        'استشارتك الصوتية المجانية القادمة غير متاحة بعد.',
+        'Your next free voice consultation is not available yet.',
+      );
+  String get vdCooldownUntilPrefix => _t('يمكنك المحاولة مرة أخرى بعد', 'You can try again after');
+  String get vdSessionActiveTitle => _t('استشارة أخرى نشطة', 'Another consultation active');
+  String get vdErrVoiceSessionActive => _t(
+        'لديك استشارة أخرى قيد التنفيذ بالفعل.',
+        'You already have another consultation in progress.',
+      );
+  String get vdQuotaTitle => _t('تم استهلاك استشاراتك المجانية', 'Free consultations used');
+  String get vdErrFreeQuotaExhausted => _t(
+        'استخدمت استشاراتك المجانية لهذه الفترة.',
+        'You have used your free consultations for this period.',
+      );
+  String get vdSubscriptionRequiredTitle => _t('يلزم اشتراك', 'Subscription required');
+  String get vdErrSubscriptionRequired => _t(
+        'هذه الميزة تتطلب اشتراك Pro.',
+        'This feature requires a Pro subscription.',
+      );
+  String get vdSubscriptionInactiveTitle => _t('الاشتراك غير نشط', 'Subscription inactive');
+  String get vdErrSubscriptionInactive => _t(
+        'اشتراكك غير نشط حاليًا.',
+        'Your subscription is not currently active.',
+      );
+  String get vdErrEntitlementUnavailable => _t(
+        'تعذّر التحقق من صلاحيتك حاليًا. حاول مرة أخرى.',
+        'Could not verify your access right now. Please try again.',
+      );
+
+  /// Title to pair with [vdError] for the fatal-error screen. Falls back to
+  /// [vdSessionErrorTitle] for every code that isn't an entitlement denial.
+  String vdErrorTitle(String code) {
+    return switch (code) {
+      'voice_cooldown' => vdCooldownTitle,
+      'voice_session_active' => vdSessionActiveTitle,
+      'free_quota_exhausted' => vdQuotaTitle,
+      'subscription_required' => vdSubscriptionRequiredTitle,
+      'subscription_inactive' => vdSubscriptionInactiveTitle,
+      _ => vdSessionErrorTitle,
+    };
+  }
+
   /// Maps a controller error code to display text.
   ///
   /// Unrecognized codes fall back to [vdErrGeneric] rather than being rendered
@@ -793,6 +870,12 @@ class AppStrings {
       'ai_timeout' => vdErrAiTimeout,
       'ai_unreachable' => vdErrConnect,
       'session_expired' || 'session_unavailable' => vdErrSessionExpired,
+      'voice_cooldown' => vdErrVoiceCooldown,
+      'voice_session_active' => vdErrVoiceSessionActive,
+      'free_quota_exhausted' => vdErrFreeQuotaExhausted,
+      'subscription_required' => vdErrSubscriptionRequired,
+      'subscription_inactive' => vdErrSubscriptionInactive,
+      'entitlement_unavailable' => vdErrEntitlementUnavailable,
       'ai_failed' ||
       'stt_failed' ||
       'engine_failed' ||

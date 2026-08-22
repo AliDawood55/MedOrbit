@@ -146,6 +146,116 @@ void main() {
     expect(fake.createConversationCalls, 0);
   });
 
+  group('entitlement failures', () {
+    test('FREE_QUOTA_EXHAUSTED classifies as freeQuotaExhausted and is not retryable', () async {
+      final fake = _FakeChatbotApi()
+        ..sendResults.add(
+          Future.error(
+            const ApiException(
+              message: 'Your free messages are used for this period.',
+              code: ApiException.codeFreeQuotaExhausted,
+              statusCode: 429,
+              details: {'used': 20, 'limit': 20, 'remaining': 0, 'resets_at': '2026-08-23T00:00:00Z'},
+            ),
+          ),
+        );
+      final container = _container(fake);
+      addTearDown(container.dispose);
+
+      await container.read(chatbotControllerProvider.notifier).sendMessage('Hello');
+      final error = container.read(chatbotControllerProvider).error;
+
+      expect(error, isNotNull);
+      expect(error!.kind, ChatFailureKind.freeQuotaExhausted);
+      expect(error.retryable, isFalse);
+      expect(error.code, ApiException.codeFreeQuotaExhausted);
+    });
+
+    test('DUPLICATE_IN_FLIGHT classifies as duplicateInFlight and stays retryable', () async {
+      final fake = _FakeChatbotApi()
+        ..sendResults.add(
+          Future.error(
+            const ApiException(
+              message: 'This message is already being processed.',
+              code: ApiException.codeDuplicateInFlight,
+              statusCode: 409,
+              details: {'retry_after_seconds': 2},
+            ),
+          ),
+        );
+      final container = _container(fake);
+      addTearDown(container.dispose);
+
+      await container.read(chatbotControllerProvider.notifier).sendMessage('Hello');
+      final error = container.read(chatbotControllerProvider).error;
+
+      expect(error!.kind, ChatFailureKind.duplicateInFlight);
+      expect(error.retryable, isTrue);
+    });
+
+    test('ENTITLEMENT_UNAVAILABLE classifies distinctly from quota exhaustion and stays retryable', () async {
+      final fake = _FakeChatbotApi()
+        ..sendResults.add(
+          Future.error(
+            const ApiException(
+              message: 'Entitlement could not be determined. Please try again.',
+              code: ApiException.codeEntitlementUnavailable,
+              statusCode: 403,
+            ),
+          ),
+        );
+      final container = _container(fake);
+      addTearDown(container.dispose);
+
+      await container.read(chatbotControllerProvider.notifier).sendMessage('Hello');
+      final error = container.read(chatbotControllerProvider).error;
+
+      expect(error!.kind, ChatFailureKind.entitlementUnavailable);
+      expect(error.kind, isNot(ChatFailureKind.freeQuotaExhausted));
+      expect(error.retryable, isTrue);
+    });
+
+    test('SUBSCRIPTION_REQUIRED and SUBSCRIPTION_INACTIVE are handled defensively and are not retryable', () async {
+      for (final code in [ApiException.codeSubscriptionRequired, ApiException.codeSubscriptionInactive]) {
+        final fake = _FakeChatbotApi()
+          ..sendResults.add(
+            Future.error(ApiException(message: 'Subscription issue.', code: code, statusCode: 403)),
+          );
+        final container = _container(fake);
+        addTearDown(container.dispose);
+
+        await container.read(chatbotControllerProvider.notifier).sendMessage('Hello');
+        final error = container.read(chatbotControllerProvider).error;
+
+        expect(error, isNotNull, reason: code);
+        expect(error!.retryable, isFalse, reason: code);
+      }
+    });
+
+    test('an entitlement failure never crashes and carries no raw server message dependency', () async {
+      final fake = _FakeChatbotApi()
+        ..sendResults.add(
+          Future.error(
+            const ApiException(
+              message: 'some arbitrary backend copy that could change at any time',
+              code: ApiException.codeFreeQuotaExhausted,
+              statusCode: 429,
+            ),
+          ),
+        );
+      final container = _container(fake);
+      addTearDown(container.dispose);
+
+      final ok = await container.read(chatbotControllerProvider.notifier).sendMessage('Hello');
+
+      expect(ok, isFalse);
+      // The controller classifies by `code`, a machine-readable constant — the
+      // screen renders text from AppStrings keyed on `error.kind`, never
+      // `error.message`, so a copy change on the backend cannot break display.
+      expect(container.read(chatbotControllerProvider).error?.kind, ChatFailureKind.freeQuotaExhausted);
+    });
+  });
+
   test('no manual sensitive logging', () async {
     final fake = _FakeChatbotApi()
       ..sendResults.add(
