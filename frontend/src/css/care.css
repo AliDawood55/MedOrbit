@@ -215,6 +215,32 @@
     margin-top: 10px;
 }
 
+/* === My Doctor list: keep actions contained inside the card regardless of
+   language/label length (RTL/LTR-neutral, scoped to #doctorsList only) === */
+#doctorsList .care-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+#doctorsList .care-person-card {
+    min-width: 0;
+}
+
+#doctorsList .care-person-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+}
+
+#doctorsList .care-person-actions .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    text-align: center;
+}
+
 /* === Generic section card (patient-detail.html / my-doctor.html) === */
 .care-section {
     background: var(--bg-card);
@@ -384,5 +410,9 @@
 
     .care-form-actions .btn {
         width: 100%;
+    }
+
+    #doctorsList .care-person-actions {
+        grid-template-columns: 1fr;
     }
 }
