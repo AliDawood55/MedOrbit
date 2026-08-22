@@ -738,13 +738,10 @@ const PatientDetail = (() => {
             return;
         }
 
-        let isDoctor = false;
-        try {
-            const res = await API.users.me();
-            isDoctor = res?.data?.role === 'doctor';
-        } catch (err) {
-            console.error('PatientDetail: failed to verify role', err);
-        }
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        const isDoctor = AuthGate.getVerifiedUser()?.role === 'doctor';
 
         if (!isDoctor) {
             document.getElementById('restrictedNotice').classList.remove('hidden');
