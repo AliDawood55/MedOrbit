@@ -779,3 +779,143 @@
         font-size: 24px;
     }
 }
+
+/* ===========================================
+   Clinic Profile Modernization (Phase 4 / B2a)
+   Scoped under .clinic-profile-page (set on clinic.html's <main>) so this
+   visual pass never reaches the shared .profile-* / .sub-item / .chip-list
+   classes used by doctor.html, find-doctors.html, or find-clinics.html.
+   .schedule-grid is intentionally left unscoped here beyond what's already
+   generic above — doctor-profile.css defines its own competing
+   .schedule-grid; consolidating that dual ownership is deferred (see B2a
+   report), not solved by this section.
+   =========================================== */
+
+.clinic-profile-page .profile-header {
+    padding: clamp(20px, 4vw, 32px);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 7%, var(--bg-card)), var(--bg-card));
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-sm);
+    align-items: flex-start;
+}
+
+.clinic-profile-page .profile-avatar {
+    width: 84px;
+    height: 84px;
+    border-radius: var(--r-xl);
+    font-size: 28px;
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.clinic-profile-page .profile-info h1 {
+    font-size: clamp(19px, 2.4vw, 25px);
+    overflow-wrap: anywhere;
+}
+
+.clinic-profile-page .profile-meta {
+    row-gap: 10px;
+}
+
+.clinic-profile-page .profile-meta span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.clinic-profile-page .profile-meta a {
+    color: var(--primary);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.clinic-profile-page .profile-meta a:hover,
+.clinic-profile-page .profile-meta a:focus-visible {
+    text-decoration: underline;
+}
+
+.clinic-profile-page .profile-actions {
+    min-width: 150px;
+}
+
+.clinic-profile-page .profile-actions .btn {
+    min-height: 44px;
+}
+
+.clinic-profile-page .profile-section {
+    border-radius: var(--r-lg);
+}
+
+.clinic-profile-page .profile-section h2 {
+    font-size: 13.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--text-mute);
+}
+
+.clinic-profile-page .profile-section h2 i {
+    font-size: 13px;
+}
+
+/* Operating hours */
+.clinic-profile-page .schedule-day {
+    border: 1px solid transparent;
+}
+
+.clinic-profile-page .schedule-day.today {
+    border-color: var(--primary);
+}
+
+.clinic-profile-page .schedule-day-off {
+    color: var(--text-faint);
+    font-style: italic;
+}
+
+/* Services / insurance chips */
+.clinic-profile-page .chip-list .chip {
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+}
+
+/* Doctors sub-list */
+.clinic-profile-page .sub-item {
+    text-decoration: none;
+    color: inherit;
+    min-height: 44px;
+    padding-inline: 8px;
+    border-radius: var(--r-md);
+    transition: background var(--t-fast);
+}
+
+.clinic-profile-page .sub-item:hover {
+    background: var(--bg-soft);
+}
+
+.clinic-profile-page .sub-item:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    background: var(--bg-soft);
+}
+
+.clinic-profile-page .sub-item .entity-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 13px;
+}
+
+.clinic-profile-page .sub-item-title {
+    overflow-wrap: anywhere;
+}
+
+/* Mini-map */
+.clinic-profile-page .mini-map {
+    border: 1px solid var(--border);
+}
+
+@media (max-width: 480px) {
+    .clinic-profile-page .profile-avatar {
+        width: 64px;
+        height: 64px;
+        font-size: 22px;
+        border-radius: var(--r-lg);
+    }
+}
