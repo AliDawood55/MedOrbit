@@ -96,7 +96,7 @@ const DoctorProfile = (() => {
         return '<section class="doctor-hero">'
             + '<div class="profile-avatar doctor-profile-avatar">'
             + (doctor.profile_image_url
-                ? '<img src="' + escapeHtml(assetUrl(doctor.profile_image_url)) + '" alt="">'
+                ? '<img src="' + escapeHtml(assetUrl(doctor.profile_image_url)) + '" alt="" data-fallback-initials="' + escapeHtml(initials) + '" onerror="DoctorProfile.__avatarFallback(this)">'
                 : '<span>' + escapeHtml(initials) + '</span>') + '</div>'
             + '<div class="doctor-hero-copy"><div class="doctor-name-row"><h1>' + escapeHtml(fullName) + '</h1>'
             + (doctor.is_verified ? '<span class="verified-badge"><i class="fas fa-circle-check"></i>' + escapeHtml(isAr() ? 'طبيب معتمد' : 'Verified doctor') + '</span>' : '')
@@ -343,5 +343,16 @@ const DoctorProfile = (() => {
         window.addEventListener('languageChanged', () => { if (currentDoctor) load(); });
     }
 
-    return { init };
+    // Swaps a broken hero avatar <img> for the same initials <span> already
+    // used when no profile_image_url exists. Invoked from a static
+    // onerror="DoctorProfile.__avatarFallback(this)" attribute (no
+    // user-derived string is ever embedded in executable JS); the initials
+    // travel only as an HTML-escaped data attribute.
+    function avatarFallback(img) {
+        const span = document.createElement('span');
+        span.textContent = img.dataset.fallbackInitials || '?';
+        img.replaceWith(span);
+    }
+
+    return { init, __avatarFallback: avatarFallback };
 })();
