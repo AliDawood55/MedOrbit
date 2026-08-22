@@ -540,9 +540,7 @@ class _PrescriptionCard extends StatelessWidget {
           );
     final preview = prescription.instructions?.trim().isNotEmpty == true
         ? prescription.instructions!.trim()
-        : prescription.doctorNotes?.trim().isNotEmpty == true
-            ? prescription.doctorNotes!.trim()
-            : null;
+        : null;
     final semanticLabel = [
       strings.prescriptionNumberValue(prescription.prescriptionNumber),
       title,
@@ -675,9 +673,7 @@ class _PrescriptionCard extends StatelessWidget {
               if (preview != null) ...[
                 const SizedBox(height: AppTheme.spaceSm),
                 _TextPreview(
-                  label: prescription.instructions?.trim().isNotEmpty == true
-                      ? strings.detailInstructions
-                      : strings.doctorNotes,
+                  label: strings.detailInstructions,
                   value: preview,
                 ),
               ],

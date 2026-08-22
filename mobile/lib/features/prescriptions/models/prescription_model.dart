@@ -11,7 +11,6 @@ class PrescriptionModel {
     required this.status,
     this.diagnosis,
     this.instructions,
-    this.doctorNotes,
     this.items = const [],
   });
 
@@ -22,7 +21,6 @@ class PrescriptionModel {
   final String status;
   final String? diagnosis;
   final String? instructions;
-  final String? doctorNotes;
   final List<PrescriptionItemModel> items;
 
   factory PrescriptionModel.fromJson(Map<String, dynamic> json) {
@@ -35,7 +33,6 @@ class PrescriptionModel {
       status: (json['status'] as String? ?? '').toLowerCase(),
       diagnosis: json['diagnosis'] as String?,
       instructions: json['instructions'] as String?,
-      doctorNotes: json['doctor_notes'] as String?,
       items: rawItems is List
           ? rawItems.map((e) => PrescriptionItemModel.fromJson(e as Map<String, dynamic>)).toList()
           : const [],
