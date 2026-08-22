@@ -620,8 +620,9 @@ const DirectMessages=(()=>{
     // re-run just this part without re-registering every event listener.
     async function bootstrap(){
         try{
-            const response=await API.users.me();
-            currentUser=response?.data;
+            const state=await AuthGate.verifySession();
+            if(state!=='valid')return;
+            currentUser=AuthGate.getVerifiedUser();
             if(!['patient','doctor'].includes(currentUser?.role)){location.href='dashboard.html';return;}
             if(currentUser.role==='doctor')ownDoctorId=(await API.doctors.myProfile()).data.id;
             const counterpart=new URLSearchParams(location.search).get('counterpart');

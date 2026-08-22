@@ -103,14 +103,16 @@ const AdminSocial = (() => {
 
     async function init() {
         if (!API.requireAuth()) return;
-        try {
-            const me = await API.users.me();
-            const currentUser = me?.data || null;
-            if (!currentUser || !['admin', 'super_admin'].includes(currentUser.role)) {
-                location.href = 'dashboard.html';
-                return;
-            }
 
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        const currentUser = AuthGate.getVerifiedUser();
+        if (!currentUser || !['admin', 'super_admin'].includes(currentUser.role)) {
+            location.href = 'dashboard.html';
+            return;
+        }
+        try {
             document.getElementById('postModerationFilter').onchange = posts;
             document.getElementById('commentModerationFilter').onchange = comments;
             window.addEventListener('languageChanged', posts);

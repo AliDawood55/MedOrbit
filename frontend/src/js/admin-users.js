@@ -185,13 +185,16 @@ const AdminUsers = (() => {
 
     async function init() {
         if (!API.requireAuth()) return;
+
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        currentUser = AuthGate.getVerifiedUser();
+        if (!currentUser || !['admin', 'super_admin'].includes(currentUser.role)) {
+            location.href = 'dashboard.html';
+            return;
+        }
         try {
-            const me = await API.users.me();
-            currentUser = me?.data || null;
-            if (!currentUser || !['admin', 'super_admin'].includes(currentUser.role)) {
-                location.href = 'dashboard.html';
-                return;
-            }
             localize();
             window.addEventListener('languageChanged', localize);
             byId('userSearchInput').addEventListener('input', debouncedSearch);

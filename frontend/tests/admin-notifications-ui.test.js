@@ -91,7 +91,7 @@ check(
 );
 check(
     'super-admin invitation create list and revoke are wired with server role verification',
-    /admin-invitations\.js/.test(invitationPage) && /API\.users\.me\(\)/.test(invitationController) &&
+    /admin-invitations\.js/.test(invitationPage) && /AuthGate\.getVerifiedUser\(\)/.test(invitationController) &&
     /role !== 'super_admin'/.test(invitationController) && /adminInvitations\.list/.test(invitationController) &&
     /adminInvitations\.create/.test(invitationController) && /adminInvitations\.revoke/.test(invitationController)
 );

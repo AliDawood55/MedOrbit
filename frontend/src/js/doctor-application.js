@@ -75,11 +75,12 @@ const DoctorApplication = (() => {
     async function load() {
         if (!API.requireAuth('doctor-application.html')) return;
         try {
-            const [me, apps] = await Promise.all([
-                API.users.me(),
+            const [state, apps] = await Promise.all([
+                AuthGate.verifySession(),
                 API.get('/doctor-applications/me'),
             ]);
-            profile = me.data;
+            if (state !== 'valid') return;
+            profile = AuthGate.getVerifiedUser();
             applications = apps.data || [];
             if (!['patient', 'doctor'].includes(profile.role)) {
                 showAlert('هذه الصفحة متاحة لحسابات المرضى فقط / Patient accounts only');

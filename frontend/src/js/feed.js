@@ -523,15 +523,10 @@ const SocialFeed = (() => {
         const cachedUser = API.getUser();
         if (cachedUser && cachedUser.role !== 'doctor') return;
 
-        let profile = null;
-        try {
-            const res = await API.users.me();
-            profile = res?.data || null;
-        } catch (err) {
-            console.error('SocialFeed: failed to verify account role for composer', err);
-            return;
-        }
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
 
+        const profile = AuthGate.getVerifiedUser();
         if (!profile || profile.role !== 'doctor') return;
 
         composerProfile = profile;

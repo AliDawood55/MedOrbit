@@ -104,12 +104,16 @@ const AdminInvitations = (() => {
 
     async function init() {
         if (!API.requireAuth()) return;
+
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        const me = AuthGate.getVerifiedUser();
+        if (me?.role !== 'super_admin') {
+            location.href = 'dashboard.html';
+            return;
+        }
         try {
-            const me = await API.users.me();
-            if (me?.data?.role !== 'super_admin') {
-                location.href = 'dashboard.html';
-                return;
-            }
             localize();
             window.addEventListener('languageChanged', localize);
             byId('adminInvitationForm').addEventListener('submit', submit);

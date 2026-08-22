@@ -140,12 +140,16 @@ const AdminContactInbox = (() => {
 
     async function init() {
         if (!API.requireAuth()) return;
+
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        const me = AuthGate.getVerifiedUser();
+        if (!['admin', 'super_admin'].includes(me?.role)) {
+            location.href = 'dashboard.html';
+            return;
+        }
         try {
-            const me = await API.users.me();
-            if (!['admin', 'super_admin'].includes(me?.data?.role)) {
-                location.href = 'dashboard.html';
-                return;
-            }
             localize();
             window.addEventListener('languageChanged', localize);
             byId('contactStatusFilter').addEventListener('change', () => { offset = 0; load(); });

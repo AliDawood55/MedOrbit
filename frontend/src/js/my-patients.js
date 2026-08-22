@@ -168,8 +168,9 @@ const MyPatients = (() => {
     function init() {
         if (!API.requireAuth()) return;
 
-        API.users.me().then((res) => {
-            const isDoctor = res?.data?.role === 'doctor';
+        AuthGate.verifySession().then((state) => {
+            if (state !== 'valid') return;
+            const isDoctor = AuthGate.getVerifiedUser()?.role === 'doctor';
             if (!isDoctor) {
                 document.getElementById('restrictedNotice').classList.remove('hidden');
                 return;
