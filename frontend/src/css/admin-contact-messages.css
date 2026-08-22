@@ -7,6 +7,15 @@
    leaks onto other experience.css consumers.
    =========================================== */
 
+/* experience.css's .experience-page sets max-width but no margin — this page
+   doesn't load listing.css (the usual source of .page-container centering),
+   so the shell stretches and clips flush to one side instead of centering. */
+body.admin-contact-messages-page .experience-page {
+    width: 100%;
+    max-width: 1040px;
+    margin-inline: auto;
+}
+
 /* === Page header === */
 body.admin-contact-messages-page .experience-heading {
     padding-block-end: 16px;
