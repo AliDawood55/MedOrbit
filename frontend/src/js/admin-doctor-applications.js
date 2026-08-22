@@ -174,13 +174,16 @@ const AdminDoctorApplications = (() => {
         initialized = true;
         if (!API.requireAuth('admin-doctor-applications.html')) return;
 
-        try {
-            const me = await API.users.me();
-            if (!['admin', 'super_admin'].includes(me?.data?.role)) {
-                location.href = 'dashboard.html';
-                return;
-            }
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
 
+        const me = AuthGate.getVerifiedUser();
+        if (!['admin', 'super_admin'].includes(me?.role)) {
+            location.href = 'dashboard.html';
+            return;
+        }
+
+        try {
             const params = new URLSearchParams(window.location.search);
             const requestedStatus = params.get('status');
             if (requestedStatus !== null && VALID_STATUSES.has(requestedStatus)) {

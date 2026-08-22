@@ -495,14 +495,11 @@ const Analytics = (() => {
     async function init() {
         if (!API.requireAuth()) return;
 
-        let isAdmin = false;
-        try {
-            const res = await API.users.me();
-            isAdmin = ['admin', 'super_admin'].includes(res?.data?.role);
-        } catch (err) {
-            console.error('Analytics: failed to verify role', err);
-            isAdmin = false;
-        }
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        const user = AuthGate.getVerifiedUser();
+        const isAdmin = ['admin', 'super_admin'].includes(user?.role);
 
         document.getElementById('analyticsLoading').classList.add('hidden');
 
