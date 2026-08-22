@@ -560,6 +560,11 @@
     .dashboard-groups-grid {
         grid-template-columns: 1fr;
     }
+
+    .dashboard-item-btn {
+        width: 44px;
+        height: 44px;
+    }
 }
 
 @media (max-width: 768px) {

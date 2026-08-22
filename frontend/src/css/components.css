@@ -189,6 +189,15 @@
     to { transform: rotate(360deg); }
 }
 
+/* Spinner stays visible (loading feedback), just stops spinning. */
+@media (prefers-reduced-motion: reduce) {
+    .spinner,
+    .spinner-sm,
+    .spinner-lg {
+        animation: none;
+    }
+}
+
 /* === Divider === */
 .divider {
     height: 1px;
