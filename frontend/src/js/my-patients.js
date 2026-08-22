@@ -78,9 +78,14 @@ const MyPatients = (() => {
         const content = document.getElementById('patientsContent');
         if (!content) return;
 
+        if (!patients.length) {
+            content.innerHTML = renderEmpty();
+            return;
+        }
+
         const list = filteredPatients();
         if (!list.length) {
-            content.innerHTML = renderEmpty();
+            content.innerHTML = renderFilteredEmpty();
             return;
         }
 
@@ -115,6 +120,18 @@ const MyPatients = (() => {
         '</div>';
     }
 
+    // Search/filter matched zero of an otherwise non-empty roster. Runtime
+    // bilingual copy (not an i18n.js key) since this state has no key of its
+    // own yet — see PHASE 4 WAVE D1.
+    function renderFilteredEmpty() {
+        const ar = isAr();
+        return '<div class="empty-state">' +
+            '<div class="empty-state-icon"><i class="fas fa-magnifying-glass"></i></div>' +
+            '<h3>' + escapeHtml(ar ? 'لا توجد نتائج مطابقة' : 'No matching patients') + '</h3>' +
+            '<p>' + escapeHtml(ar ? 'جرّب تغيير كلمة البحث أو الفلتر.' : 'Try changing the search term or filter.') + '</p>' +
+        '</div>';
+    }
+
     function renderPatientCard(p) {
         const ar = isAr();
         const name = escapeHtml(patientName(p));
@@ -125,7 +142,7 @@ const MyPatients = (() => {
         return (
             '<div class="care-person-card">' +
                 '<div class="care-person-avatar">' +
-                    (p.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(p.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
+                    (p.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(p.profile_image_url)) + '" alt="" data-fallback-initials="' + escapeHtml(initials) + '" onerror="MyPatients.__avatarFallback(this)">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="care-person-info">' +
                     '<div class="care-person-name" title="' + name + '">' + name + '</div>' +
@@ -166,12 +183,27 @@ const MyPatients = (() => {
             document.getElementById('patientsContent')?.addEventListener('click', (e) => {
                 if (e.target.closest('#patientsRetryBtn')) loadPatients();
             });
+            // Filtered-empty copy is runtime bilingual text (not data-i18n),
+            // so it needs its own re-render on language switch; skip this
+            // while loading/error/true-empty/card-grid are showing so we
+            // never clobber those states (mirrors my-records.js).
+            window.addEventListener('languageChanged', () => {
+                if (patients.length && !filteredPatients().length) render();
+            });
         }).catch((err) => {
             console.error('MyPatients: failed to verify role', err);
             document.getElementById('restrictedNotice').classList.remove('hidden');
         });
     }
 
-    return { init };
+    // Swaps a broken avatar <img> for the same plain-text initials fallback
+    // already used when no profile_image_url exists at all (mirrors
+    // my-doctor.js). Invoked from a static onerror="MyPatients.__avatarFallback(this)"
+    // attribute; the initials travel only as an HTML-escaped data attribute.
+    function avatarFallback(img) {
+        img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
+    }
+
+    return { init, __avatarFallback: avatarFallback };
 
 })();
