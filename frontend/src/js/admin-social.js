@@ -8,13 +8,24 @@ const AdminSocial = (() => {
             : (arValue || enValue || '')
     );
 
-    function guard() {
-        const user = API.getUser();
-        if (!API.isAuthenticated() || !['admin', 'super_admin'].includes(user?.role)) {
-            window.location.href = 'dashboard.html';
-            return false;
-        }
-        return true;
+    const pendingActions = new Set();
+
+    const CONFIRM_TEXT = {
+        approve: { post: 'Approve this post?', comment: 'Approve this comment?' },
+        hide: { post: 'Hide this post?', comment: 'Hide this comment?' },
+        reject: { post: 'Reject this post?', comment: 'Reject this comment?' },
+    };
+
+    function showAlert(message) {
+        const el = document.getElementById('moderationAlert');
+        el.className = 'alert alert-error';
+        el.textContent = message;
+    }
+
+    function clearAlert() {
+        const el = document.getElementById('moderationAlert');
+        el.className = 'alert';
+        el.textContent = '';
     }
 
     const actions = (type, id) => (
@@ -23,46 +34,91 @@ const AdminSocial = (() => {
         `<button class="btn btn-secondary btn-sm" data-${type}="${escapeHtml(id)}" data-action="reject">Reject</button></div>`
     );
 
+    function setItemDisabled(type, id, disabled) {
+        document.querySelectorAll(`[data-${type}="${CSS.escape(String(id))}"]`).forEach((button) => {
+            button.disabled = disabled;
+        });
+    }
+
+    async function moderate(type, id, action) {
+        const key = `${type}:${id}`;
+        if (pendingActions.has(key)) return;
+        if (!window.confirm(CONFIRM_TEXT[action][type])) return;
+
+        pendingActions.add(key);
+        setItemDisabled(type, id, true);
+        try {
+            if (type === 'post') {
+                await API.social.moderatePost(id, action);
+            } else {
+                await API.social.moderateComment(id, action);
+            }
+            Toast.success('Moderation action applied');
+            if (type === 'post') {
+                await posts();
+            } else {
+                await comments();
+            }
+        } catch (error) {
+            Toast.error(error.message || 'Moderation action failed');
+            setItemDisabled(type, id, false);
+        } finally {
+            pendingActions.delete(key);
+        }
+    }
+
+    function wireActions(type) {
+        document.querySelectorAll(`[data-${type}]`).forEach((button) => {
+            button.onclick = () => moderate(type, button.dataset[type], button.dataset.action);
+        });
+    }
+
     async function posts() {
         const filter = document.getElementById('postModerationFilter').value;
-        const response = await API.social.moderationPosts(filter ? { moderation_status: filter } : {});
-        document.getElementById('moderationPosts').innerHTML = (response.data || []).map((post) => (
-            `<article class="moderation-item"><strong>${escapeHtml(localized(post.title_ar, post.title_en) || 'Untitled')}</strong>` +
-            `<p>${escapeHtml(post.body)}</p><small>${escapeHtml(post.status)} · ${escapeHtml(post.moderation_status)}</small>${actions('post', post.id)}</article>`
-        )).join('') || '<p>No posts.</p>';
-        document.querySelectorAll('[data-post]').forEach((button) => {
-            button.onclick = async () => {
-                await API.social.moderatePost(button.dataset.post, button.dataset.action);
-                await posts();
-            };
-        });
+        try {
+            const response = await API.social.moderationPosts(filter ? { moderation_status: filter } : {});
+            document.getElementById('moderationPosts').innerHTML = (response.data || []).map((post) => (
+                `<article class="moderation-item"><strong>${escapeHtml(localized(post.title_ar, post.title_en) || 'Untitled')}</strong>` +
+                `<p>${escapeHtml(post.body)}</p><small>${escapeHtml(post.status)} · ${escapeHtml(post.moderation_status)}</small>${actions('post', post.id)}</article>`
+            )).join('') || '<p>No posts.</p>';
+            wireActions('post');
+        } catch (error) {
+            showAlert(error.message || 'Unable to load posts');
+        }
     }
 
     async function comments() {
         const filter = document.getElementById('commentModerationFilter').value;
-        const response = await API.social.moderationComments(filter ? { moderation_status: filter } : {});
-        document.getElementById('moderationComments').innerHTML = (response.data || []).map((comment) => (
-            `<article class="moderation-item"><p>${escapeHtml(comment.body)}</p><small>${escapeHtml(comment.moderation_status)}</small>` +
-            `${actions('comment', comment.id)}</article>`
-        )).join('') || '<p>No comments.</p>';
-        document.querySelectorAll('[data-comment]').forEach((button) => {
-            button.onclick = async () => {
-                await API.social.moderateComment(button.dataset.comment, button.dataset.action);
-                await comments();
-            };
-        });
+        try {
+            const response = await API.social.moderationComments(filter ? { moderation_status: filter } : {});
+            document.getElementById('moderationComments').innerHTML = (response.data || []).map((comment) => (
+                `<article class="moderation-item"><p>${escapeHtml(comment.body)}</p><small>${escapeHtml(comment.moderation_status)}</small>` +
+                `${actions('comment', comment.id)}</article>`
+            )).join('') || '<p>No comments.</p>';
+            wireActions('comment');
+        } catch (error) {
+            showAlert(error.message || 'Unable to load comments');
+        }
     }
 
     async function init() {
-        if (!guard()) return;
-        document.getElementById('postModerationFilter').onchange = posts;
-        document.getElementById('commentModerationFilter').onchange = comments;
-        window.addEventListener('languageChanged', posts);
+        if (!API.requireAuth()) return;
         try {
+            const me = await API.users.me();
+            const currentUser = me?.data || null;
+            if (!currentUser || !['admin', 'super_admin'].includes(currentUser.role)) {
+                location.href = 'dashboard.html';
+                return;
+            }
+
+            document.getElementById('postModerationFilter').onchange = posts;
+            document.getElementById('commentModerationFilter').onchange = comments;
+            window.addEventListener('languageChanged', posts);
+
+            clearAlert();
             await Promise.all([posts(), comments()]);
         } catch (error) {
-            document.getElementById('moderationAlert').className = 'alert alert-error';
-            document.getElementById('moderationAlert').textContent = error.message || 'Unable to load moderation queue';
+            showAlert(error.message || 'Unable to load moderation queue');
         }
     }
 

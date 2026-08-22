@@ -74,6 +74,7 @@
             maxlength="4000"
             dir="auto"
             data-i18n-placeholder="feed.composerPlaceholder"
+            data-i18n-aria="feed.composerPlaceholder"
           ></textarea>
         </div>
 
@@ -138,7 +139,7 @@
     <aside class="feed-rail feed-rail-end" aria-hidden="true"></aside>
   </main>
 
-  <div class="toast-container" id="toastContainer"></div>
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
   <script src="../src/utils/store.js"></script>
   <script src="../src/js/api.js"></script>

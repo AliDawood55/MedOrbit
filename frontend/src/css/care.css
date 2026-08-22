@@ -547,3 +547,307 @@
         justify-content: center;
     }
 }
+
+/* ===========================================
+   Wave D1 — My Patients page scope
+   =========================================== */
+
+.my-patients-page {
+    max-width: 1100px;
+}
+
+.my-patients-subtitle {
+    color: var(--text-mute);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+/* Patient cards are not themselves clickable — remove the lift affordance
+   used elsewhere and replace it with a calmer static hover. */
+#patientsContent .care-person-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-strong);
+}
+
+/* Avoid a cramped single-patient card at wide viewports. */
+#patientsContent .care-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+#patientsContent .care-person-card {
+    min-width: 0;
+}
+
+#patientsContent .care-person-name {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+#patientsContent .care-person-meta span {
+    flex-wrap: wrap;
+}
+
+/* Keep View Details / Message Patient contained inside the card regardless
+   of language/label length (mirrors the #doctorsList fix from c0717f4). */
+#patientsContent .care-person-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+#patientsContent .care-person-actions .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+@media (max-width: 480px) {
+    #patientsContent .care-person-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===========================================
+   Wave D2a — Patient Detail page scope
+   (shell + patient header + appointment history only)
+   =========================================== */
+
+.patient-detail-page {
+    max-width: 900px;
+}
+
+.patient-detail-page .back-link:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--r-sm, 4px);
+}
+
+.patient-detail-page #patientHeader {
+    margin-top: 14px;
+    min-width: 0;
+}
+
+.patient-detail-page .care-detail-name,
+.patient-detail-page .care-detail-subtitle {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.patient-detail-page .care-detail-subtitle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+}
+
+/* Appointment history rows are static display, not selectable cards. */
+.patient-detail-page #appointmentHistoryList .records-real-card {
+    cursor: default;
+}
+
+.patient-detail-page #appointmentHistoryList .records-real-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+}
+
+.patient-detail-page #appointmentHistoryList .records-real-title,
+.patient-detail-page #appointmentHistoryList .records-real-meta,
+.patient-detail-page #appointmentHistoryList .records-real-subtitle {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+@media (max-width: 768px) {
+    .patient-detail-page .care-detail-subtitle {
+        justify-content: center;
+    }
+}
+
+/* ===========================================
+   Wave D2b — Patient Detail page scope
+   (medical records timeline + record-authoring form only;
+   prescriptions section is untouched, deferred to D2c)
+   =========================================== */
+
+.patient-detail-page .care-records-section .care-section-title {
+    margin: 0 0 16px;
+}
+
+.patient-detail-page #notesTimeline {
+    margin-bottom: 20px;
+}
+
+/* Record timeline cards */
+.patient-detail-page #notesTimeline .note-card {
+    border: 1px solid var(--border);
+    min-width: 0;
+}
+
+.patient-detail-page #notesTimeline .note-card-header {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+}
+
+.patient-detail-page #notesTimeline .note-card-body {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.patient-detail-page #notesTimeline .note-card-body strong {
+    color: var(--text);
+}
+
+/* Record action containment: keep Edit/Delete inside the card at all widths */
+.patient-detail-page #notesTimeline .care-person-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+}
+
+.patient-detail-page #notesTimeline .care-person-actions .btn {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.patient-detail-page #notesTimeline .care-person-actions .btn[data-delete-record-id] {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+@media (max-width: 480px) {
+    .patient-detail-page #notesTimeline .care-person-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Add Medical Record form */
+.patient-detail-page .care-records-section .care-form-actions {
+    border-top: none;
+    padding-top: 0;
+    justify-content: flex-start;
+}
+
+.patient-detail-page .care-records-section #noteSubmitBtn {
+    min-height: 44px;
+}
+
+.patient-detail-page #noteChiefComplaint,
+.patient-detail-page #noteTreatmentPlan,
+.patient-detail-page #notePrognosis {
+    min-height: 60px;
+}
+
+.patient-detail-page #noteClinicalNotes,
+.patient-detail-page #noteDoctorNotes {
+    min-height: 90px;
+}
+
+/* Internal doctor notes: subtle differentiated surface using existing tokens
+   only — no privacy/security claims are made or implied here beyond the
+   existing label copy. */
+.patient-detail-page .care-form-group-internal {
+    padding: 12px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+
+.patient-detail-page .care-form-group-internal textarea {
+    margin-bottom: 0;
+}
+
+/* ===========================================
+   Wave D2c — Patient Detail page scope
+   (prescriptions section only: history + authoring form)
+   =========================================== */
+
+.patient-detail-page .care-prescriptions-section .care-section-title {
+    margin: 0 0 16px;
+}
+
+.patient-detail-page .care-prescriptions-section #prescriptionsList {
+    margin-bottom: 20px;
+}
+
+/* Prescription history rows are static display, not selectable cards. */
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-card {
+    cursor: default;
+}
+
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border);
+}
+
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-title,
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-meta,
+.patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-subtitle {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Prescription-authoring form */
+.patient-detail-page .care-prescriptions-section .care-note-form .care-form-title {
+    margin-top: 8px;
+}
+
+.patient-detail-page .care-prescriptions-section #rxInstructions {
+    min-height: 60px;
+}
+
+.patient-detail-page .care-prescriptions-section .care-note-form .care-form-actions {
+    border-top: none;
+    padding-top: 0;
+    justify-content: flex-start;
+}
+
+.patient-detail-page .care-prescriptions-section #rxAddItemBtn,
+.patient-detail-page .care-prescriptions-section #rxSubmitBtn {
+    min-height: 44px;
+}
+
+/* Medication item cards: one visually grouped unit per medication. */
+.patient-detail-page .care-prescriptions-section .rx-item-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-soft);
+    min-width: 0;
+}
+
+.patient-detail-page .care-prescriptions-section .rx-item-card .form-group,
+.patient-detail-page .care-prescriptions-section .rx-item-card .form-row {
+    min-width: 0;
+}
+
+/* Remove Medication: flow-based placement (not absolute) so it can never
+   overlap the fields below it at narrow widths, and always meets the
+   44px touch target regardless of viewport. */
+.patient-detail-page .care-prescriptions-section .rx-item-card .rx-item-remove {
+    position: static;
+    align-self: flex-end;
+    min-width: 44px;
+    min-height: 44px;
+    margin-bottom: 10px;
+}
+
+.patient-detail-page .care-prescriptions-section .rx-item-card .rx-item-remove:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}

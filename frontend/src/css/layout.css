@@ -301,6 +301,13 @@ body.site-page [id] {
 }
 
 /* === Footer === */
+/* margin-top: auto consumes the leftover flex space in body.site-page's
+   column, pinning the footer to the viewport bottom on short pages while
+   staying in normal flow (long pages scroll past it as usual). */
+body.site-page .site-footer {
+    margin-top: auto;
+}
+
 .site-footer {
     background: var(--bg-elevated);
     border-top: 1px solid var(--border);
