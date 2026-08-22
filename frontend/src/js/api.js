@@ -468,24 +468,52 @@ const API = (() => {
         createPost: (body, options) => post('/doctors/me/posts', body, options),
         updatePost: (postId, body, options) => put(`/doctors/me/posts/${postId}`, body, options),
         deletePost: (postId, options) => del(`/doctors/me/posts/${postId}`, options),
-        // Doctor's patient list + one patient's file, incl. session notes
+        // Doctor's patient list + one patient's file, incl. medical records
         // (my-patients.html, patient-detail.html)
         myPatients: (query, options) => get('/doctors/me/patients', query, options),
         patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
-        addPatientNote: (patientId, body, options) => post(`/doctors/me/patients/${patientId}/notes`, body, options),
+        // Canonical medical-record creation (backend/src/routes/medicalRecord.routes.js)
+        // — requires appointment_id; patient_id/doctor_id are derived server-side
+        // from that appointment, never taken from the request body.
+        createMedicalRecord: (body, options) => post('/medical-records', body, options),
+        // Canonical medical-record read/update/delete (same file). GET returns
+        // the full row for a doctor (not the patient-facing DTO) and is the
+        // required source of truth before an edit — the patient-detail
+        // timeline's notes list omits fields like vitals. PUT is full-field:
+        // it always overwrites diagnosis/treatment_plan/clinical_notes/
+        // doctor_notes/vitals/is_draft from the body, so omitted fields would
+        // be persisted as NULL — never send this without first loading the
+        // canonical record. DELETE is a hard delete; both PUT and DELETE are
+        // scoped server-side to records owned by the calling doctor.
+        getMedicalRecord: (id, options) => get(`/medical-records/${id}`, null, options),
+        updateMedicalRecord: (id, body, options) => put(`/medical-records/${id}`, body, options),
+        deleteMedicalRecord: (id, options) => del(`/medical-records/${id}`, options),
+        // Canonical prescription creation (backend/src/routes/prescription.routes.js)
+        // — requires appointment_id + patient_id + at least one item; the
+        // backend re-verifies the appointment belongs to this doctor/patient
+        // pair and the care relationship is active before writing anything.
+        createPrescription: (body, options) => post('/prescriptions', body, options),
         // Patient's view of their own doctor(s) + notes a doctor explicitly
         // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),
         sharedNotes: (doctorId, options) => get(`/patients/me/doctors/${doctorId}/notes`, null, options),
-        // Patient's own medical records / prescriptions — the safe,
-        // ownership-scoped equivalents of the generic GET /medical-records
-        // and GET /prescriptions/:id, which have no ownership filtering at all.
+        // Patient's own medical records / prescriptions. The generic
+        // GET /medical-records(/:id) and GET /prescriptions/:id are also
+        // ownership-scoped now (requireRecordRead / requirePrescriptionRead
+        // in the backend), but these /patients/me/* routes stay the
+        // preferred call here since they return the patient-facing DTO shape.
         myMedicalRecords: (query, options) => get('/patients/me/medical-records', query, options),
         medicalRecordDetail: (id, options) => get(`/patients/me/medical-records/${id}`, null, options),
         // Combined timeline (appointments + records + prescriptions) — my-records.html
         myRecordsTimeline: (query, options) => get('/patients/me/records', query, options),
         myPrescriptions: (query, options) => get('/patients/me/prescriptions', query, options),
         prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
+    };
+
+    // Personalized/ranked doctor suggestions (backend-authoritative ranking,
+    // reason_code only) — backend/src/routes/recommendation.routes.js.
+    const recommendations = {
+        doctors: (limit, options) => get('/recommendations/doctors', { limit }, options)
     };
 
     const social = {
@@ -610,9 +638,15 @@ const API = (() => {
         revoke: (id, options) => del(`/admin/invitations/${id}`, options)
     };
 
+    const adminUsers = {
+        list: (query, options) => get('/admin/users', query, options),
+        deactivate: (id, options) => put(`/admin/users/${id}/deactivate`, {}, options),
+        reactivate: (id, options) => put(`/admin/users/${id}/reactivate`, {}, options)
+    };
+
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, billing, virtualDoctor,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
     };

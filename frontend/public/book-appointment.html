@@ -52,11 +52,11 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:780px;">
+    <main class="page-container book-appointment-page">
 
         <div class="page-header">
             <h1 data-i18n="bookAppt.title">حجز موعد</h1>
-            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="bookAppt.subtitle">احجز موعدك مع الطبيب المناسب خلال ثلاث خطوات بسيطة</p>
+            <p data-i18n="bookAppt.subtitle">احجز موعدك مع الطبيب المناسب خلال ثلاث خطوات بسيطة</p>
         </div>
 
         <div class="wizard-steps" id="wizardSteps">
@@ -79,7 +79,7 @@
         <div class="card wizard-card">
             <div class="card-body">
 
-                <div class="loading-state" id="wizardLoading" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 20px;color:var(--text-mute);">
+                <div class="loading-state" id="wizardLoading">
                     <div class="spinner spinner-lg"></div>
                     <p data-i18n="common.loading">جارِ التحميل...</p>
                 </div>
@@ -106,7 +106,7 @@
                             <div class="doctor-search-box">
                                 <div class="input-wrapper">
                                     <i class="fas fa-search"></i>
-                                    <input type="text" id="doctorSearchInput" data-i18n-placeholder="bookAppt.searchPlaceholder" placeholder="ابحث عن طبيب بالاسم...">
+                                    <input type="text" id="doctorSearchInput" data-i18n-placeholder="bookAppt.searchPlaceholder" data-i18n-aria="bookAppt.searchPlaceholder" placeholder="ابحث عن طبيب بالاسم...">
                                 </div>
                             </div>
                             <div class="doctor-pick-list" id="doctorPickList"></div>

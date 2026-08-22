@@ -35,9 +35,11 @@ Future<void> main() async {
 
   await status('before :');
 
-  // Prepare a real Arabic clip via TTS.
+  // Prepare a real Arabic clip via TTS. /speak is scoped to a consultation
+  // the caller owns, so this probe needs its own throwaway session.
   const spoken = 'عندي صداع شديد منذ يومين';
-  final wav = await api.speak(text: spoken, language: 'ar');
+  final probeSession = await api.start(language: 'ar');
+  final wav = await api.speak(text: spoken, language: 'ar', sessionId: probeSession.sessionId);
   final clip = File('${Directory.systemTemp.path}/vd_stt_timing.wav');
   await clip.writeAsBytes(wav, flush: true);
   stdout.writeln('clip: ${wav.length} bytes\n');

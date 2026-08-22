@@ -23,14 +23,21 @@
 .dashboard-welcome {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 24px;
-    margin-bottom: 28px;
+    gap: 18px;
+    padding: 22px 24px;
+    margin-bottom: 24px;
+}
+
+/* Static identity header, not a link/button — the ambient .card hover
+   lift/shadow implies clickability it doesn't have. */
+.dashboard-welcome:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .dashboard-avatar {
-    width: 72px;
-    height: 72px;
+    width: 64px;
+    height: 64px;
     flex-shrink: 0;
     border-radius: 50%;
     background: var(--primary-gradient);
@@ -38,9 +45,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 700;
     overflow: hidden;
+    box-shadow: 0 0 0 3px var(--bg-card), 0 0 0 4px var(--border);
 }
 
 .dashboard-avatar img {
@@ -49,16 +57,23 @@
     object-fit: cover;
 }
 
+.dashboard-welcome-text {
+    flex: 1;
+    min-width: 0;
+}
+
 .dashboard-welcome-text h1 {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 800;
     color: var(--text);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .dashboard-welcome-text p {
     font-size: 13.5px;
     color: var(--text-mute);
-    margin-top: 4px;
+    margin-top: 3px;
 }
 
 /* === Search / command box === */
@@ -102,7 +117,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
 }
 
 .stat-tile {
@@ -114,6 +129,16 @@
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
     color: inherit;
+    transition: border-color var(--t-fast);
+}
+
+.stat-tile:hover {
+    border-color: var(--border-strong);
+}
+
+.stat-tile:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .stat-tile-icon {
@@ -150,7 +175,7 @@
 
 /* === Section headings === */
 .dashboard-section {
-    margin-bottom: 28px;
+    margin-bottom: 32px;
 }
 
 .dashboard-section h2 {
@@ -188,6 +213,11 @@
 
 .quick-group-header:hover {
     background: var(--bg-soft);
+}
+
+.quick-group-header:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: -2px;
 }
 
 .quick-group-icon {
@@ -243,6 +273,11 @@
     border-color: var(--border);
 }
 
+.quick-tile:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
 .quick-tile.hidden {
     display: none;
 }
@@ -277,9 +312,9 @@
 }
 
 .quick-tile-desc {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-mute);
-    line-height: 1.4;
+    line-height: 1.45;
     margin-top: 2px;
 }
 
@@ -297,6 +332,18 @@
 
 .dashboard-side .dashboard-card:last-child {
     margin-bottom: 0;
+}
+
+/* Static content containers, not links/buttons — the ambient .card hover
+   lift/shadow implies clickability they don't have. */
+.dashboard-card:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.dashboard-card .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 /* === Generic list items (conversations / saved places) === */
@@ -342,7 +389,8 @@
     flex-shrink: 0;
 }
 
-.dashboard-list-item:hover .dashboard-list-actions {
+.dashboard-list-item:hover .dashboard-list-actions,
+.dashboard-list-actions:focus-within {
     opacity: 1;
 }
 
@@ -360,6 +408,11 @@
 .dashboard-item-btn:hover {
     background: var(--bg-card);
     color: var(--text);
+}
+
+.dashboard-item-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
 }
 
 .dashboard-rename-input {
@@ -516,14 +569,29 @@
     }
 
     .dashboard-avatar {
-        width: 56px;
-        height: 56px;
-        font-size: 20px;
+        width: 52px;
+        height: 52px;
+        font-size: 19px;
+    }
+
+    .dashboard-welcome-text h1 {
+        font-size: 17px;
     }
 }
 
 @media (max-width: 480px) {
     .quick-tile-grid {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-welcome {
+        padding: 16px;
+        gap: 12px;
+    }
+
+    .dashboard-avatar {
+        width: 46px;
+        height: 46px;
+        font-size: 17px;
     }
 }
