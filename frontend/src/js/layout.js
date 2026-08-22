@@ -287,7 +287,7 @@ const Layout = (() => {
             '<div class="mobile-drawer-header">' +
                 '<div class="header-brand">' +
                     '<div class="brand-icon"><i class="fas fa-heartbeat"></i></div>' +
-                    '<div class="brand-text"><h1>MedOrbit</h1></div>' +
+                    '<div class="brand-text"><span class="brand-name">MedOrbit</span></div>' +
                 '</div>' +
                 '<button type="button" class="icon-btn" id="mobileDrawerClose" aria-label="Close"><i class="fas fa-times"></i></button>' +
             '</div>' +
