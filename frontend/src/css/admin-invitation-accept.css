@@ -1,0 +1,75 @@
+/* ===========================================
+   MedOrbit v2 - Admin Invitation Acceptance
+   Standalone secure-action page. Scoped under body.admin-invitation-accept-page.
+   =========================================== */
+
+body.admin-invitation-accept-page .auth-page {
+    padding-block: var(--sp-10);
+    padding-inline: var(--sp-5);
+}
+
+body.admin-invitation-accept-page .admin-invitation-card {
+    max-width: 420px;
+    margin-inline: auto;
+    padding: var(--sp-8) var(--sp-6);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+body.admin-invitation-accept-page .admin-invitation-icon {
+    width: 52px;
+    height: 52px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-full);
+    background: var(--primary-50);
+    color: var(--primary);
+    font-size: 22px;
+    margin-block-end: var(--sp-4);
+}
+
+[data-theme="dark"] body.admin-invitation-accept-page .admin-invitation-icon {
+    background: rgba(37, 99, 235, 0.15);
+}
+
+body.admin-invitation-accept-page .admin-invitation-card h1 {
+    font-size: var(--fs-title);
+    font-weight: 800;
+    color: var(--text);
+    margin-block-end: var(--sp-2);
+}
+
+body.admin-invitation-accept-page #message {
+    font-size: var(--fs-small);
+    line-height: var(--lh-relaxed);
+    color: var(--text-mute);
+    margin-block-end: var(--sp-6);
+}
+
+body.admin-invitation-accept-page .admin-invitation-accept-btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: var(--fs-body);
+}
+
+body.admin-invitation-accept-page .admin-invitation-login-row {
+    margin-block-start: var(--sp-5);
+    font-size: var(--fs-small);
+}
+
+body.admin-invitation-accept-page .admin-invitation-login-row a {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+body.admin-invitation-accept-page .admin-invitation-login-row a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    body.admin-invitation-accept-page .admin-invitation-card {
+        padding: var(--sp-6) var(--sp-4);
+    }
+}

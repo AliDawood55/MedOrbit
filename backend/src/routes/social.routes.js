@@ -102,7 +102,9 @@ socialDoctorRoutes.post('/:id/follow', mutationLimiter, authenticate, async (req
     const client=await db.getClient();
     try {
         await client.query('BEGIN');
-        if(!await findFollowableDoctor(req.params.id,client)){ await client.query('ROLLBACK'); return error(res,'Doctor not found',404,'NOT_FOUND'); }
+        const followable=await findFollowableDoctor(req.params.id,client);
+        if(!followable){ await client.query('ROLLBACK'); return error(res,'Doctor not found',404,'NOT_FOUND'); }
+        if(followable.user_id===req.user.sub){ await client.query('ROLLBACK'); return error(res,'You cannot follow yourself',400,'SELF_FOLLOW_NOT_ALLOWED'); }
         const inserted=await client.query(`INSERT INTO medorbit.user_follows(user_id,doctor_id) VALUES($1,$2) ON CONFLICT(user_id,doctor_id) DO NOTHING RETURNING id`,[req.user.sub,req.params.id]);
         if(inserted.rows[0]) await recordUserEvent({userId:req.user.sub,eventType:'doctor_follow',entityType:'doctor',entityId:req.params.id},client);
         const count=(await client.query('SELECT count(*)::int count FROM medorbit.user_follows WHERE doctor_id=$1',[req.params.id])).rows[0].count;

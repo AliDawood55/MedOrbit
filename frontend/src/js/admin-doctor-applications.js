@@ -77,7 +77,7 @@ const AdminDoctorApplications = (() => {
                 `<div class="review-field full"><strong>Professional bio</strong><div class="review-bio">${escapeHtml(application.bio || localized(application.bio_ar, application.bio_en) || '—')}</div></div>` +
             '</div>' +
             (pending
-                ? '<div class="form-group" style="margin-top:18px"><label for="rejectionReason">سبب الرفض / Rejection reason</label><textarea id="rejectionReason" rows="3"></textarea></div>' +
+                ? '<div class="form-group review-rejection-group"><label for="rejectionReason">سبب الرفض / Rejection reason</label><textarea id="rejectionReason" rows="3"></textarea></div>' +
                   '<div class="application-actions"><button id="approveApplication" class="btn btn-primary"><i class="fas fa-check"></i> Approve / موافقة</button>' +
                   '<button id="rejectApplication" class="btn btn-danger"><i class="fas fa-xmark"></i> Reject / رفض</button></div>'
                 : '');
@@ -169,31 +169,41 @@ const AdminDoctorApplications = (() => {
         );
     }
 
-    function init() {
+    async function init() {
         if (initialized) return;
         initialized = true;
         if (!API.requireAuth('admin-doctor-applications.html')) return;
 
-        const params = new URLSearchParams(window.location.search);
-        const requestedStatus = params.get('status');
-        if (requestedStatus !== null && VALID_STATUSES.has(requestedStatus)) {
-            byId('statusFilter').value = requestedStatus;
-        }
-        const targetApplicationId = params.get('application');
+        try {
+            const me = await API.users.me();
+            if (!['admin', 'super_admin'].includes(me?.data?.role)) {
+                location.href = 'dashboard.html';
+                return;
+            }
 
-        byId('statusFilter').addEventListener('change', () => {
-            const next = new URLSearchParams(window.location.search);
-            const status = byId('statusFilter').value;
-            if (status) next.set('status', status); else next.delete('status');
-            next.delete('application');
-            history.replaceState({}, '', `${window.location.pathname}?${next.toString()}`);
-            load();
-        });
-        window.addEventListener('languageChanged', () => {
-            renderList();
-            renderDetail();
-        });
-        load(targetApplicationId);
+            const params = new URLSearchParams(window.location.search);
+            const requestedStatus = params.get('status');
+            if (requestedStatus !== null && VALID_STATUSES.has(requestedStatus)) {
+                byId('statusFilter').value = requestedStatus;
+            }
+            const targetApplicationId = params.get('application');
+
+            byId('statusFilter').addEventListener('change', () => {
+                const next = new URLSearchParams(window.location.search);
+                const status = byId('statusFilter').value;
+                if (status) next.set('status', status); else next.delete('status');
+                next.delete('application');
+                history.replaceState({}, '', `${window.location.pathname}?${next.toString()}`);
+                load();
+            });
+            window.addEventListener('languageChanged', () => {
+                renderList();
+                renderDetail();
+            });
+            await load(targetApplicationId);
+        } catch (err) {
+            showAlert(err.message);
+        }
     }
 
     return { init };

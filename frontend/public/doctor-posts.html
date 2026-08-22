@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="../src/css/records.css">
     <link rel="stylesheet" href="../src/css/care.css">
     <link rel="stylesheet" href="../src/css/feedback.css">
+    <link rel="stylesheet" href="../src/css/doctor-posts.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -33,7 +34,7 @@
          protected markup is parsed (see frontend/src/js/auth-gate.js). -->
     <script src="../src/js/auth-gate.js"></script>
 </head>
-<body class="site-page" data-theme="light">
+<body class="site-page doctor-posts-page" data-theme="light">
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
@@ -55,7 +56,7 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:900px;">
+    <main class="page-container">
 
         <div class="care-restricted hidden" id="restrictedNotice">
             <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
@@ -70,9 +71,9 @@
         <div id="postsPageContent" class="hidden">
 
             <div class="care-header-row">
-                <div class="page-header" style="margin-bottom:0;">
+                <div class="page-header">
                     <h1 data-i18n="doctorPosts.title">منشوراتي</h1>
-                    <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="doctorPosts.subtitle">شارك مقالات وإعلانات مع مرضاك</p>
+                    <p class="doctor-posts-subtitle" data-i18n="doctorPosts.subtitle">شارك مقالات وإعلانات مع مرضاك</p>
                 </div>
                 <button type="button" class="btn btn-primary" id="newPostBtn">
                     <i class="fas fa-plus"></i>
@@ -80,8 +81,8 @@
                 </button>
             </div>
 
-            <!-- ===== Create / edit form (real, validated — no submit endpoint yet) ===== -->
-            <div class="card hidden" id="postFormCard" style="padding:22px;margin-bottom:24px;">
+            <!-- ===== Create / edit form — live CRUD workflow ===== -->
+            <div class="card hidden" id="postFormCard">
                 <h2 class="care-form-title" id="postFormTitle" data-i18n="doctorPosts.newPost">منشور جديد</h2>
 
                 <div class="alert" id="postFormAlert"></div>

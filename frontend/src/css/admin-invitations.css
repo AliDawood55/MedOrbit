@@ -1,0 +1,219 @@
+/* ===========================================
+   MedOrbit v2 - Super Admin Invitations
+   (admin-invitations.html)
+
+   Loads after experience.css and doctor-applications.css, both shared with
+   other pages. Every rule here is scoped to body.admin-invitations-page so
+   nothing leaks onto other consumers of those two files.
+   =========================================== */
+
+/* === Page header === */
+body.admin-invitations-page .experience-heading {
+    padding-block-end: 16px;
+    margin-block: 4px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+body.admin-invitations-page #invitationTitle {
+    font-size: clamp(20px, 2.4vw, 26px);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+}
+
+body.admin-invitations-page #invitationSubtitle {
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+/* === Create invitation form === */
+body.admin-invitations-page #invitationEmail {
+    min-height: 44px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-card);
+    color: var(--text);
+    font: inherit;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+body.admin-invitations-page #invitationEmail:hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+body.admin-invitations-page #invitationEmail:focus-visible {
+    outline: 0;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+body.admin-invitations-page #sendInvitation {
+    min-height: 44px;
+}
+
+body.admin-invitations-page #sendInvitation:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+/* === Feedback === */
+body.admin-invitations-page #invitationFeedback {
+    margin-block-start: 14px;
+    overflow-wrap: anywhere;
+}
+
+/* === Manual delivery note === */
+body.admin-invitations-page #manualInvitation {
+    margin-block-start: 14px;
+    display: grid;
+    gap: 8px;
+}
+
+body.admin-invitations-page #manualInvitationHint {
+    color: var(--text-mute);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* The acceptance URL is security-sensitive capability data — it must stay
+   fully visible and functional, never truncated. overflow-wrap keeps it from
+   blowing out the layout, and plaintext bidi keeps the LTR-shaped URL
+   readable inside an RTL page. */
+body.admin-invitations-page #manualInvitationLink {
+    display: block;
+    overflow-wrap: anywhere;
+    unicode-bidi: plaintext;
+    font-size: 13px;
+    color: var(--primary);
+}
+
+body.admin-invitations-page #manualInvitationLink:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* === Invitation history card === */
+body.admin-invitations-page .admin-invitations-list-card {
+    margin-block-start: 18px;
+}
+
+body.admin-invitations-page #refreshInvitations {
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.admin-invitations-page #refreshInvitations:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+body.admin-invitations-page .application-history-item {
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+/* === Invitation identity block === */
+body.admin-invitations-page .application-history-item > div:first-child {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    flex: 1 1 220px;
+}
+
+body.admin-invitations-page .application-history-item strong {
+    font-size: 15px;
+    overflow-wrap: anywhere;
+    unicode-bidi: plaintext;
+}
+
+body.admin-invitations-page .application-history-item .text-muted {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+/* === Action area === */
+body.admin-invitations-page .application-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    margin-top: 0;
+}
+
+body.admin-invitations-page .application-actions .btn {
+    min-height: 44px;
+}
+
+/* === Status badges — invitation lifecycle values not styled by shared CSS === */
+body.admin-invitations-page .application-status.accepted {
+    background: #dcfce7;
+    color: #166534;
+}
+
+body.admin-invitations-page .application-status.revoked {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+body.admin-invitations-page .application-status.expired {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+body[data-theme="dark"].admin-invitations-page .application-status.pending {
+    background: color-mix(in srgb, #fff7d6 22%, var(--bg-card));
+    color: #f0c541;
+}
+
+body[data-theme="dark"].admin-invitations-page .application-status.accepted {
+    background: color-mix(in srgb, #166534 30%, var(--bg-card));
+    color: #4ade80;
+}
+
+body[data-theme="dark"].admin-invitations-page .application-status.revoked {
+    background: color-mix(in srgb, #374151 40%, var(--bg-card));
+    color: var(--text-mute);
+}
+
+body[data-theme="dark"].admin-invitations-page .application-status.expired {
+    background: color-mix(in srgb, #991b1b 30%, var(--bg-card));
+    color: #f87171;
+}
+
+/* === Loading / empty state (unstyled by this page's other stylesheets) === */
+body.admin-invitations-page .profile-compact-empty {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding: 40px 18px;
+    color: var(--text-mute);
+    font-size: 13.5px;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    body.admin-invitations-page .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    body.admin-invitations-page .form-field.full {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    body.admin-invitations-page .application-actions {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    body.admin-invitations-page .application-actions .btn {
+        flex: 1 1 100%;
+    }
+
+    body.admin-invitations-page #sendInvitation {
+        width: 100%;
+    }
+}

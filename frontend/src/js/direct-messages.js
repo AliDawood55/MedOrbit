@@ -1,6 +1,7 @@
 const DirectMessages=(()=>{
     let conversations=[],selected=null,socket=null,currentUser=null,nextCursor=null,latestCursor=null,ownDoctorId=null;
     let sending=false,connState='idle';
+    let threadSyncTimer=null,listSyncTimer=null,threadSyncInFlight=false,listSyncInFlight=false;
     const renderedIds=new Set();
     const byId=id=>document.getElementById(id),isAr=()=>I18n.getLang()==='ar',copy=(ar,en)=>isAr()?ar:en;
     const uuid=()=>crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&3|8);return v.toString(16);});
@@ -188,6 +189,86 @@ const DirectMessages=(()=>{
         if(last)try{await API.messaging.markRead(selected.id,last.id);}catch{/* best-effort */}
     }
 
+    // ---- Silent REST fallback (Socket.IO's safety net) ----
+    // A small bounded scheduler that keeps messages/conversations flowing
+    // without a page refresh when the socket is reconnecting/unavailable, and
+    // stays as a low-frequency safety net even when it's online. Unlike
+    // loadHistory({missed:true}) this never touches nextCursor (Load Older's
+    // pagination cursor) and never clears/rebuilds existing bubbles — it only
+    // appends genuinely-new items through the same renderedIds/pending-bubble
+    // reconciliation path used by the socket's message.created handler.
+    async function syncSelectedConversation(){
+        if(!selected||selected.request_status!=='accepted')return;
+        const conversationId=selected.id;
+        const history=byId('messageHistory');
+        const wasNearBottom=isNearBottom(history);
+        const query={limit:50};
+        if(latestCursor)query.after=latestCursor;
+        let response;
+        try{
+            response=await API.messaging.history(conversationId,query);
+        }catch{
+            return;
+        }
+        if(selected?.id!==conversationId)return;
+        const items=response?.data?.items||[];
+        if(!items.length)return;
+        let appended=false;
+        items.forEach(message=>{
+            if(renderedIds.has(message.id))return;
+            const pendingMatch=message.client_message_id&&findPendingBubble(message.client_message_id);
+            if(pendingMatch)reconcileBubble(pendingMatch,message);
+            else appendMessage(message,{animate:true});
+            appended=true;
+        });
+        if(!appended)return;
+        if(wasNearBottom){history.scrollTop=history.scrollHeight;hideJumpLatest();}
+        else showJumpLatest();
+        const last=items[items.length-1];
+        if(last)try{await API.messaging.markRead(conversationId,last.id);}catch{/* best-effort */}
+        await runListSync();
+    }
+
+    async function runThreadSync(){
+        if(threadSyncInFlight)return;
+        threadSyncInFlight=true;
+        try{await syncSelectedConversation();}
+        finally{threadSyncInFlight=false;}
+    }
+
+    async function runListSync(){
+        if(listSyncInFlight)return;
+        listSyncInFlight=true;
+        try{await refreshConversationList();}
+        finally{listSyncInFlight=false;}
+    }
+
+    // Fast (~8s) fallback cadence while the socket isn't online, slow (~30s)
+    // safety net once it is. Uses a setTimeout chain (not setInterval) so a
+    // slow request never overlaps the next scheduled run, and pauses
+    // entirely while the tab is hidden or the browser is offline.
+    function scheduleThreadSync(){
+        if(threadSyncTimer){clearTimeout(threadSyncTimer);threadSyncTimer=null;}
+        if(!selected||selected.request_status!=='accepted')return;
+        if(document.visibilityState!=='visible'||!navigator.onLine)return;
+        const delay=connState==='online'?30000:8000;
+        threadSyncTimer=setTimeout(async()=>{
+            threadSyncTimer=null;
+            await runThreadSync();
+            scheduleThreadSync();
+        },delay);
+    }
+
+    function scheduleListSync(){
+        if(listSyncTimer){clearTimeout(listSyncTimer);listSyncTimer=null;}
+        if(document.visibilityState!=='visible'||!navigator.onLine)return;
+        listSyncTimer=setTimeout(async()=>{
+            listSyncTimer=null;
+            await runListSync();
+            scheduleListSync();
+        },20000);
+    }
+
     function renderRequestState(){
         const banner=byId('messageRequestBanner'),actions=byId('requestActions');
         actions.textContent='';
@@ -216,6 +297,7 @@ const DirectMessages=(()=>{
             }else{
                 await API.messaging.decline(selected.id);
                 selected=null;
+                if(threadSyncTimer){clearTimeout(threadSyncTimer);threadSyncTimer=null;}
                 document.body.classList.remove('messages-thread-open');
                 await loadConversations();
                 byId('threadName').textContent=copy('اختر محادثة','Select a conversation');
@@ -257,6 +339,7 @@ const DirectMessages=(()=>{
         try{
             await loadHistory();
             await subscribe();
+            scheduleThreadSync();
         }catch(err){
             byId('messageHistory').replaceChildren(errorNode(err,copy('تعذر تحميل الرسائل.','Unable to load messages.'),()=>selectConversation(conversation)));
         }
@@ -311,12 +394,16 @@ const DirectMessages=(()=>{
             socket.on('connect',async()=>{
                 setConnection('online');
                 try{await subscribe();}catch{/* handled inside subscribe */}
-                if(selected&&latestCursor){try{await loadHistory({missed:true});}catch{/* keep current thread visible */}}
+                // Reconnect catch-up reuses the same safe incremental sync as
+                // the background fallback — it never touches nextCursor, so
+                // Load Older's pagination cursor survives a reconnect.
+                if(selected)await runThreadSync();
+                scheduleThreadSync();
             });
-            socket.on('disconnect',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');});
-            socket.on('connect_error',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');});
-            socket.io.on('reconnect_attempt',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');});
-            socket.io.on('reconnect_failed',()=>setConnection('unavailable'));
+            socket.on('disconnect',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');scheduleThreadSync();});
+            socket.on('connect_error',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');scheduleThreadSync();});
+            socket.io.on('reconnect_attempt',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');scheduleThreadSync();});
+            socket.io.on('reconnect_failed',()=>{setConnection('unavailable');scheduleThreadSync();});
             socket.on('message.created',async message=>{
                 if(message.conversation_id!==selected?.id)return;
                 if(renderedIds.has(message.id))return;
@@ -547,6 +634,7 @@ const DirectMessages=(()=>{
             byId('conversationList').replaceChildren(conversationSkeleton());
             await loadConversations(preferred);
             await connectSocket();
+            scheduleListSync();
         }catch(err){
             byId('conversationList').replaceChildren(errorNode(err,copy('تعذر تحميل المحادثات.','Unable to load conversations.'),()=>{byId('conversationList').replaceChildren(conversationSkeleton());bootstrap();}));
         }
@@ -561,8 +649,34 @@ const DirectMessages=(()=>{
         // fire multiple 'online' events in a burst, and socket.connected is
         // still false while a connection attempt is already in flight, which
         // would otherwise fire a second overlapping socket.connect() call.
-        window.addEventListener('online',()=>{if(socket&&!socket.connected&&connState!=='connecting'){setConnection('connecting');socket.io.reconnection(true);socket.connect();}});
-        window.addEventListener('offline',()=>setConnection('offline'));
+        window.addEventListener('online',()=>{
+            if(socket&&!socket.connected&&connState!=='connecting'){setConnection('connecting');socket.io.reconnection(true);socket.connect();}
+            if(selected)runThreadSync();
+            runListSync();
+            scheduleThreadSync();
+            scheduleListSync();
+        });
+        window.addEventListener('offline',()=>{
+            setConnection('offline');
+            if(threadSyncTimer){clearTimeout(threadSyncTimer);threadSyncTimer=null;}
+            if(listSyncTimer){clearTimeout(listSyncTimer);listSyncTimer=null;}
+        });
+        // Background sync is resilience infrastructure, not a live feed — pause
+        // it entirely while the tab is hidden and catch up immediately when it
+        // becomes visible again, instead of polling at the normal rate unseen.
+        document.addEventListener('visibilitychange',()=>{
+            if(document.visibilityState==='visible'){
+                if(navigator.onLine){
+                    if(selected)runThreadSync();
+                    runListSync();
+                }
+                scheduleThreadSync();
+                scheduleListSync();
+            }else{
+                if(threadSyncTimer){clearTimeout(threadSyncTimer);threadSyncTimer=null;}
+                if(listSyncTimer){clearTimeout(listSyncTimer);listSyncTimer=null;}
+            }
+        });
         byId('jumpLatestBtn')?.addEventListener('click',()=>{const history=byId('messageHistory');history.scrollTop=history.scrollHeight;hideJumpLatest();});
         byId('messageHistory')?.addEventListener('scroll',Dom.throttle(()=>{if(isNearBottom(byId('messageHistory')))hideJumpLatest();},200));
         byId('messageInput')?.addEventListener('input',event=>autoResize(event.target));

@@ -53,7 +53,7 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:1100px;">
+    <main class="page-container my-patients-page">
 
         <div class="care-restricted hidden" id="restrictedNotice">
             <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
@@ -69,13 +69,13 @@
 
             <div class="page-header">
                 <h1 data-i18n="myPatients.title">مرضاي</h1>
-                <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="myPatients.subtitle">قائمة المرضى الذين لديهم مواعيد معك</p>
+                <p class="my-patients-subtitle" data-i18n="myPatients.subtitle">قائمة المرضى الذين لديهم مواعيد معك</p>
             </div>
 
             <div class="care-search-bar">
                 <div class="search-field">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="patientSearchInput" data-i18n-placeholder="myPatients.searchPlaceholder" placeholder="ابحث باسم المريض...">
+                    <input type="text" id="patientSearchInput" data-i18n-placeholder="myPatients.searchPlaceholder" data-i18n-aria="myPatients.searchPlaceholder" placeholder="ابحث باسم المريض...">
                 </div>
                 <select id="patientFilterSelect">
                     <option value="all" data-i18n="myPatients.filterAll">كل المرضى</option>
