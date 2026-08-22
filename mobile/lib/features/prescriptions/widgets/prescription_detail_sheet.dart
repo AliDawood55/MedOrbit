@@ -264,16 +264,6 @@ class _PrescriptionDetailContent extends StatelessWidget {
                         ],
                       ),
               ),
-              if (prescription.doctorNotes?.trim().isNotEmpty == true) ...[
-                const SizedBox(height: AppTheme.spaceLg),
-                _DetailSection(
-                  title: strings.doctorNotes,
-                  icon: Icons.note_alt_outlined,
-                  child: _DetailTextCard(
-                    value: prescription.doctorNotes!.trim(),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
