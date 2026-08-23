@@ -120,6 +120,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen>
                 textInputAction: TextInputAction.newline,
                 minLines: 3,
                 maxLines: 5,
+                maxLength: 1000,
                 textCapitalization: TextCapitalization.sentences,
                 semanticLabel: strings.cancelReasonHint,
               ),
