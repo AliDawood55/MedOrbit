@@ -17,19 +17,13 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": ".\\.venv\\Scripts\\python.exe -m http.server 8080 -d frontend",
     "dev:ollama": "ollama serve",
-    "db:migrate": "psql -U postgres -d medorbit -f db/00_extensions.sql && psql -U postgres -d medorbit -f db/01_base_tables.sql && psql -U postgres -d medorbit -f db/02_dependent_tables.sql && psql -U postgres -d medorbit -f db/03_indexes.sql && psql -U postgres -d medorbit -f db/04_triggers_sequences.sql && psql -U postgres -d medorbit -f db/05_views.sql && psql -U postgres -d medorbit -f db/06_seed_data.sql",
+    "db:migrate": "docker compose --profile tools run --rm db-migrate up",
     "db:seed": "psql -U postgres -d medorbit -f db/06_seed_data.sql",
+    "db:migrate:status": "docker compose --profile tools run --rm db-migrate status",
+    "db:migrate:dry-run": "docker compose --profile tools run --rm db-migrate dry-run",
     "test": "jest --detectOpenHandles",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
-  },
-  "devDependencies": {
-    "concurrently": "^9.2.4",
-    "cross-env": "^10.1.0",
-    "jest": "^30.4.2",
-    "jest-mock-extended": "^4.0.1",
-    "supertest": "^7.2.2",
-    "cypress": "^15.19.0",
+    "test:coverage": "jest --coverage",
     "test:db:init": "docker compose --profile test run --rm test-db-init",
     "test:auth:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth:baseline",
     "test:s1a:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:s1a",
@@ -40,10 +34,15 @@
     "test:virtual-doctor-tts-ui": "node frontend/tests/virtual-doctor-tts-ui.test.js",
     "test:auth-gate:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth-gate && npm run test:auth-gate-ui",
     "test:billing:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test ai-service-test && docker compose --profile test exec -T backend-test npm run test:billing",
-    "test:admin-rate-notifications:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:admin-rate-notifications && npm run test:admin-notifications-ui",
-    "db:migrate": "docker compose --profile tools run --rm db-migrate up",
-    "db:migrate:status": "docker compose --profile tools run --rm db-migrate status",
-    "db:migrate:dry-run": "docker compose --profile tools run --rm db-migrate dry-run"
+    "test:admin-rate-notifications:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:admin-rate-notifications && npm run test:admin-notifications-ui"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4",
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
+    "jest-mock-extended": "^4.0.1",
+    "supertest": "^7.2.2",
+    "cypress": "^15.19.0"
   },
   "dependencies": {
     "json2csv": "^6.0.0-alpha.2",
