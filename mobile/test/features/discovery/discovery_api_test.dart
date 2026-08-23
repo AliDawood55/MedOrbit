@@ -248,6 +248,38 @@ void main() {
 
     expect(printed, isEmpty);
   });
+
+  test('a doctor missing its id throws instead of the list silently succeeding with a broken entry', () async {
+    final fake = _FakeDio([
+      {
+        'success': true,
+        'data': {
+          'doctors': [
+            {'first_name_en': 'No id doctor'},
+          ],
+        },
+      },
+    ]);
+    final api = DiscoveryApi(fake.dio);
+
+    await expectLater(api.listDoctors(), throwsFormatException);
+  });
+
+  test('a clinic missing its id throws instead of the list silently succeeding with a broken entry', () async {
+    final fake = _FakeDio([
+      {
+        'success': true,
+        'data': {
+          'clinics': [
+            {'name_en': 'No id clinic'},
+          ],
+        },
+      },
+    ]);
+    final api = DiscoveryApi(fake.dio);
+
+    await expectLater(api.listClinics(), throwsFormatException);
+  });
 }
 
 class _FakeDio {
