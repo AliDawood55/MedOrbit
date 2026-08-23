@@ -409,6 +409,16 @@ class AppStrings {
   String get statusCompleted => _t('مكتملة', 'Completed');
   String get statusCancelled => _t('ملغاة', 'Cancelled');
   String get doctorNotes => _t('ملاحظات الطبيب', "Doctor's Notes");
+  String get openPrescriptionPdf => _t('عرض PDF', 'Open PDF');
+  String get preparingPrescriptionPdf => _t('جارٍ تحضير PDF', 'Preparing PDF');
+  String get prescriptionPdfDownloadFailed => _t(
+        'تعذر تحميل ملف PDF للوصفة. حاول مرة أخرى.',
+        'Could not download prescription PDF. Please try again.',
+      );
+  String get prescriptionPdfOpenFailed => _t(
+        'تعذر فتح ملف PDF. حاول مرة أخرى.',
+        'Could not open PDF. Please try again.',
+      );
 
   // Appointments
   String get appointmentsTitle => _t('مواعيدي', 'My Appointments');
