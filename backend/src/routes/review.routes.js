@@ -116,6 +116,25 @@ router.post(
 
             }
 
+            // The canonical database enforces one review per appointment.
+            // Check first so a normal duplicate attempt receives a stable API
+            // response instead of a raw PostgreSQL unique-constraint error.
+            const existingReview = await db.query(
+                `SELECT id
+                 FROM medorbit.doctor_reviews
+                 WHERE appointment_id=$1`,
+                [appointment_id]
+            );
+
+            if (existingReview.rows.length) {
+                return error(
+                    res,
+                    "A review already exists for this appointment",
+                    409,
+                    "DUPLICATE_REVIEW"
+                );
+            }
+
 
 
 
@@ -203,6 +222,17 @@ router.post(
 
         }
         catch (err) {
+
+            // Keep the concurrent-request race stable as well. The unique
+            // database constraint remains the final authority.
+            if (err.code === "23505") {
+                return error(
+                    res,
+                    "A review already exists for this appointment",
+                    409,
+                    "DUPLICATE_REVIEW"
+                );
+            }
 
             next(err);
 
