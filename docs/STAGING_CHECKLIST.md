@@ -23,6 +23,10 @@ Full details: [`AZURE_STAGING_DEPLOYMENT.md`](AZURE_STAGING_DEPLOYMENT.md).
       a real DNS name, not an IP)
 - [ ] Fresh schema initialized with tracked baseline + migrations, or an
       intentional backup restore completed and followed by migrations
+- [ ] Backup/restore verification completed with a disposable
+      `*_restore_verify_*` database; PostGIS and the migration ledger survived
+- [ ] `backend/uploads/` and `backend/storage/` are included in the VM backup
+      schedule; PostgreSQL dumps do not include them
 
 ## Start & verify
 - [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging up -d postgres`

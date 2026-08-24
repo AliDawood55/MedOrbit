@@ -121,6 +121,32 @@ Or use the helper script (does the same, plus health polling):
 ./scripts/deploy-staging.sh
 ```
 
+### Backup and restore verification
+
+Run a backup/restore verification before each staging release and after a
+PostgreSQL or PostGIS upgrade. It creates a fresh custom-format backup,
+restores it only into the explicitly named disposable database, and verifies
+PostGIS, the migration ledger, core tables, and a data query. It refuses to
+use the canonical `DB_NAME` as its restore target.
+
+```bash
+VERIFY_DB_NAME=medorbit_restore_verify_$(date +%Y%m%d) \
+  ./scripts/verify-backup-restore.sh
+```
+
+The verified database is retained for inspection. When disk space matters,
+remove it only after reviewing the successful output:
+
+```bash
+KEEP_RESTORE_DATABASE=false \
+VERIFY_DB_NAME=medorbit_restore_verify_$(date +%Y%m%d) \
+  ./scripts/verify-backup-restore.sh
+```
+
+Database backups do not contain `backend/uploads/` or `backend/storage/`.
+Back up those runtime directories separately, with restricted permissions,
+on the same schedule.
+
 ### Persistent uploads and reports
 
 The staging Compose file persists `backend/uploads/` and `backend/storage/` on
