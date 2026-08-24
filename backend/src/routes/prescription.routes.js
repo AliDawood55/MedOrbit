@@ -6,6 +6,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 const { generatePrescriptionPDF } = require('../services/prescription.service');
 const { createAudit } = require('../services/audit.service');
+const medicalService = require('../services/chatbot/medical.service');
 const {
     resolveDoctorForUser,
     hasActiveCareRelationship,
@@ -53,6 +54,11 @@ router.post('/', authenticate, authorize('doctor'), async (req, res, next) => {
             return error(res, 'appointment_id, patient_id and items are required', 400, 'VALIDATION_ERROR');
         }
 
+        // Advisory only: AI must not block, edit, or silently replace a
+        // clinician's prescription.  An outage is reported explicitly in the
+        // response after the prescription has been saved.
+        const safetyCheck = await medicalService.checkPrescriptionInteractions(items, req.user.sub);
+
         await client.query('BEGIN');
         const doctor = await resolveDoctorForUser(req.user.sub, client);
         if (!doctor) {
@@ -96,9 +102,25 @@ router.post('/', authenticate, authorize('doctor'), async (req, res, next) => {
         }
 
         await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'PRESCRIPTION_CREATED', entity_type: 'PRESCRIPTION', entity_id: prescription.id, new_values: { id: prescription.id, patient_id: prescription.patient_id, doctor_id: prescription.doctor_id, appointment_id: prescription.appointment_id, status: prescription.status, item_count: items.length } }, client);
+        if (safetyCheck.status === 'warning') {
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'PRESCRIPTION_SAFETY_WARNING_REPORTED',
+                entity_type: 'PRESCRIPTION',
+                entity_id: prescription.id,
+                // Keep the audit useful without duplicating medication names,
+                // interaction prose, or other clinical content into audit logs.
+                new_values: {
+                    prescription_safe: safetyCheck.prescription_safe,
+                    warning_count: safetyCheck.warnings.length,
+                    interaction_count: safetyCheck.interactions.length,
+                },
+            }, client);
+        }
 
         await client.query('COMMIT');
-        return success(res, prescription, 'Prescription created', 201);
+        return success(res, { ...prescription, safety_check: safetyCheck }, 'Prescription created', 201);
     } catch (err) {
         if (client) await client.query('ROLLBACK').catch(() => {});
         return next(err);

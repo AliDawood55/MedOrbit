@@ -257,6 +257,38 @@ async function main() {
             items: [{ medication_name_ar: 'دواء', medication_name_en: 'Medicine', dosage: '1', frequency: 'daily', quantity: 1 }],
         });
         check('doctor cannot prescribe from another doctor appointment', response.status === 404);
+        const prescriptionRequest = (medicationName) => ({
+            patient_id: ids.p1,
+            appointment_id: ids.a1,
+            diagnosis: 'Safety integration test',
+            items: [{ medication_name_ar: 'دواء', medication_name_en: medicationName, dosage: '1', frequency: 'daily', quantity: 1 }],
+        });
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('Safe medicine'));
+        check('prescription safety returns a clear advisory result', response.status === 201
+            && response.body.data?.safety_check?.status === 'clear'
+            && response.body.data?.safety_check?.prescription_safe === true);
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('__PRESCRIPTION_CHECK_WARNING__'));
+        const warnedPrescriptionId = response.body.data?.id;
+        check('warning is returned without changing the clinician item', response.status === 201
+            && response.body.data?.safety_check?.status === 'warning'
+            && response.body.data?.safety_check?.prescription_safe === false
+            && response.body.data?.safety_check?.warnings?.length === 1
+            && (await pool.query('SELECT medication_name_en FROM medorbit.prescription_items WHERE prescription_id=$1', [warnedPrescriptionId])).rows[0]?.medication_name_en === '__PRESCRIPTION_CHECK_WARNING__');
+        const warningAudit = await pool.query(
+            "SELECT new_values FROM medorbit.audit_logs WHERE action='PRESCRIPTION_SAFETY_WARNING_REPORTED' AND entity_id=$1",
+            [warnedPrescriptionId]
+        );
+        check('safety warning is audited without storing warning text', warningAudit.rows.length === 1
+            && warningAudit.rows[0].new_values.warning_count === 1
+            && !JSON.stringify(warningAudit.rows[0].new_values).includes('Drug A'));
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('__PRESCRIPTION_CHECK_UNAVAILABLE__'));
+        check('AI outage saves prescription with unavailable safety status', response.status === 201
+            && response.body.data?.safety_check?.status === 'unavailable'
+            && response.body.data?.safety_check?.prescription_safe === null);
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('__PRESCRIPTION_CHECK_MALFORMED__'));
+        check('malformed AI response saves prescription with unavailable safety status', response.status === 201
+            && response.body.data?.safety_check?.status === 'unavailable'
+            && response.body.data?.safety_check?.prescription_safe === null);
 
         response = await request('PUT', `/appointments/${ids.aConfirm}/confirm`, doctor2, {});
         check('unrelated doctor cannot confirm appointment', response.status === 404);
