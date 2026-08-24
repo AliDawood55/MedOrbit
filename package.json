@@ -30,6 +30,7 @@
     "test:auth:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth:baseline",
     "test:s1a:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:s1a",
     "test:s1c:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:s1c",
+    "test:s1b:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test ai-service-test && docker compose --profile test exec -T backend-test npm run test:s1b",
     "test:admin-notifications-ui": "node frontend/tests/admin-notifications-ui.test.js",
     "test:user-content-ui": "node frontend/tests/user-content-unification-ui.test.js",
     "test:doctor-scheduling-ui": "node frontend/tests/doctor-scheduling-ui.test.js",
