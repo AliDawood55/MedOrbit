@@ -1,4 +1,14 @@
-# Backend gaps hit while building the appointment booking UI
+# Historical: backend gap investigation (archived)
+
+> **Status: superseded on 2026-08-25.** This document is preserved for its
+> original investigation notes, not as a current work queue. Several items
+> below were completed as the backend evolved. Do not implement work from this
+> list without first checking `docs/SHARED_API_CONTRACTS_V1.md`, the current
+> route tests, and `docs/DEFERRED_BACKEND_SURFACES.md`.
+
+---
+
+## Original investigation notes
 
 Frontend-side notes for Omar, written while building `book-appointment.html` /
 `my-appointments.html` against the current API. Nothing in `backend/**`,

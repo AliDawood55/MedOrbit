@@ -134,27 +134,6 @@ class ClinicRepository {
         return result.rows[0] || null;
     }
 
-    // ==================== DOCTORS IN CLINIC ====================
-
-    async findDoctorsByClinicId(clinicId) {
-        const result = await db.query(
-            `SELECT 
-                d.id, d.years_of_experience, d.consultation_fee,
-                d.average_rating, d.is_accepting_patients,
-                p.first_name_ar, p.first_name_en, p.last_name_ar, p.last_name_en,
-                p.profile_image_url,
-                s.name_ar as specialty_ar, s.name_en as specialty_en
-              FROM medorbit.doctor_clinic_assignments dca
-              JOIN medorbit.doctors d ON d.id = dca.doctor_id
-              JOIN medorbit.users u ON u.id = d.user_id
-              LEFT JOIN medorbit.user_profiles p ON p.user_id = d.user_id
-              LEFT JOIN medorbit.specialties s ON s.id = d.specialty_id
-              WHERE dca.clinic_id = $1 AND dca.is_active = true AND u.is_active = true`,
-            [clinicId]
-        );
-        return result.rows;
-    }
-
     // ==================== TYPES ====================
 
     async findAllTypes() {
