@@ -32,6 +32,7 @@ BEGIN
     'appointments', 'doctor_posts', 'doctor_reviews',
     'medical_records', 'medical_record_attachments',
     'prescriptions', 'prescription_items',
+    'notification_templates', 'notifications', 'system_settings', 'feedback',
     'virtual_doctor_sessions', 'virtual_doctor_messages', 'virtual_doctor_reports'
   ]) AS t
   WHERE to_regclass('medorbit.' || t) IS NULL;
@@ -80,8 +81,8 @@ BEGIN
       latest_version, missing_versions;
   END IF;
 
-  IF latest_version < '017' THEN
-    RAISE EXCEPTION 'expected migrations through 017, newest applied is %', latest_version;
+  IF latest_version < '018' THEN
+    RAISE EXCEPTION 'expected migrations through 018, newest applied is %', latest_version;
   END IF;
 
   -- 4. No application data. A CI database that has users has been seeded by
