@@ -280,12 +280,13 @@ the target doctor, and have `status='completed'`; otherwise the response is
 `400 INVALID_APPOINTMENT`. Publicly returned review text has canonical
 `review_text` plus bilingual fields.
 
-**Known v1 limitation:** there is no server-side duplicate-review prevention,
-edit endpoint, delete endpoint, moderation endpoint, or pagination. The
-client should show a single review action per completed appointment and treat
-duplicate handling as a backend follow-up, not a client-only guarantee. This
-is the remaining OMAR-BE-007 product gap; it must be resolved before calling
-the review contract feature-complete.
+One review is allowed per appointment. A repeated attempt returns
+`409 DUPLICATE_REVIEW`; the database unique constraint is the final guard
+against concurrent submissions. There is no edit endpoint, delete endpoint,
+moderation endpoint, or pagination in v1. The client should show one review
+action per completed appointment and treat `DUPLICATE_REVIEW` as an already
+submitted state. Those remaining review-management capabilities are the
+outstanding OMAR-BE-007 product gap.
 
 ## 7. SHARED-08 — Virtual Doctor lifecycle
 
