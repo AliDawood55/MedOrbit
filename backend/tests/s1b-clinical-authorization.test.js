@@ -10,7 +10,7 @@ const run = Date.now();
 const shortRun = String(run).slice(-6);
 const ids = Object.fromEntries([
     'u1', 'u2', 'u3', 'u4', 'p1', 'p2', 'd1', 'd2', 'd3',
-    'a1', 'a2', 'a3', 'aConfirm', 'aComplete', 'aCancel', 'aReview',
+    'a1', 'a2', 'a3', 'aConfirm', 'aComplete', 'aCancel', 'aReview', 'aReviewNew',
     'r1', 'r2', 'rx1', 'rx2', 'slot1', 'review1',
 ].map((key) => [key, crypto.randomUUID()]));
 
@@ -92,6 +92,7 @@ async function seed() {
             [ids.aComplete, ids.p1, ids.d1, 'confirmed'],
             [ids.aCancel, ids.p1, ids.d1, 'scheduled'],
             [ids.aReview, ids.p1, ids.d1, 'completed'],
+            [ids.aReviewNew, ids.p1, ids.d1, 'completed'],
         ];
         for (const [index, [id, patientId, doctorId, status]] of appointmentRows.entries()) {
             await client.query(
@@ -170,7 +171,7 @@ async function cleanup() {
         await client.query('DELETE FROM medorbit.prescription_items WHERE prescription_id IN (SELECT id FROM medorbit.prescriptions WHERE patient_id=ANY($1::uuid[]))', [[ids.p1, ids.p2]]);
         await client.query('DELETE FROM medorbit.prescriptions WHERE patient_id=ANY($1::uuid[])', [[ids.p1, ids.p2]]);
         await client.query('DELETE FROM medorbit.medical_records WHERE patient_id=ANY($1::uuid[])', [[ids.p1, ids.p2]]);
-        await client.query('DELETE FROM medorbit.doctor_reviews WHERE id=$1', [ids.review1]);
+        await client.query('DELETE FROM medorbit.doctor_reviews WHERE patient_id=ANY($1::uuid[])', [[ids.p1, ids.p2]]);
         await client.query('DELETE FROM medorbit.doctor_availability WHERE doctor_id=ANY($1::uuid[])', [[ids.d1, ids.d2, ids.d3]]);
         await client.query('DELETE FROM medorbit.doctor_patient_relationships WHERE doctor_id=ANY($1::uuid[])', [[ids.d1, ids.d2, ids.d3]]);
         await client.query("DELETE FROM medorbit.appointment_status_history WHERE appointment_id IN (SELECT id FROM medorbit.appointments WHERE appointment_number LIKE 'S1B-%')");
@@ -278,6 +279,33 @@ async function main() {
         check('public review omits patient UUID', response.status === 200 && !('patient_id' in review));
         check('public review omits appointment UUID', !('appointment_id' in review));
         check('public review rating fields remain correct', review.rating === 5 && review.professionalism_rating === 5);
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, doctor1, {
+            appointment_id: ids.aReviewNew, rating: 4, professionalism_rating: 4, treatment_rating: 4, communication_rating: 4,
+        });
+        check('doctor cannot submit a patient review', response.status === 404);
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.a1, rating: 4, professionalism_rating: 4, treatment_rating: 4, communication_rating: 4,
+        });
+        check('review requires a completed matching appointment', response.status === 400 && response.body.error?.code === 'INVALID_APPOINTMENT');
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.aReviewNew, rating: 6, professionalism_rating: 4, treatment_rating: 4, communication_rating: 4,
+        });
+        check('review ratings are validated before persistence', response.status === 400 && response.body.error?.code === 'VALIDATION_ERROR');
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.aReviewNew, rating: 4, professionalism_rating: 4, treatment_rating: 5, communication_rating: 4,
+            review_text: { ar: 'مراجعة موثوقة', en: 'Trusted review' },
+        });
+        const createdReviewId = response.body.data?.id;
+        check('patient can review one completed appointment once', response.status === 201 && Boolean(createdReviewId)
+            && response.body.data.review_text_ar === 'مراجعة موثوقة'
+            && response.body.data.review_text_en === 'Trusted review'
+            && response.body.data.review_text === 'مراجعة موثوقة', JSON.stringify(response.body));
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.aReviewNew, rating: 4, professionalism_rating: 4, treatment_rating: 5, communication_rating: 4,
+        });
+        check('duplicate appointment review is rejected deterministically', response.status === 409 && response.body.error?.code === 'DUPLICATE_REVIEW');
+        const updatedDoctorRating = await pool.query('SELECT average_rating FROM medorbit.doctors WHERE id=$1', [ids.d1]);
+        check('review creation updates the doctor aggregate rating', Number(updatedDoctorRating.rows[0].average_rating) === 4.5);
 
         const aiDirect = 'http://ai-service-test:8001';
         let direct = await fetch(`${aiDirect}/triage`, {

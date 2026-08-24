@@ -17,6 +17,10 @@ const {
     withCanonicalContent
 } = require("../utils/bilingualUserContent");
 
+function isRating(value) {
+    return Number.isInteger(value) && value >= 1 && value <= 5;
+}
+
 
 
 
@@ -81,6 +85,18 @@ router.post(
                 legacyEnKeys: ['review_text_en', 'reviewTextEn'],
                 label: 'Review text'
             });
+
+            if (!isRating(rating)
+                || !isRating(professionalism_rating)
+                || !isRating(treatment_rating)
+                || !isRating(communication_rating)) {
+                return error(res, "Ratings must be whole numbers from 1 to 5", 400, "VALIDATION_ERROR");
+            }
+
+            if ((reviewText.ar && reviewText.ar.length > 5000)
+                || (reviewText.en && reviewText.en.length > 5000)) {
+                return error(res, "Review text is too long", 400, "VALIDATION_ERROR");
+            }
 
 
 
