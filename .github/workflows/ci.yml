@@ -77,7 +77,9 @@ jobs:
             < scripts/ci/verify-bootstrap.sql
 
       - name: Backend authorization integration tests
-        run: npm run test:s1c:docker
+        run: |
+          npm run test:s1b:docker
+          npm run test:s1c:docker
 
       - name: Start Containers
         run: docker compose up -d --wait --wait-timeout 180
