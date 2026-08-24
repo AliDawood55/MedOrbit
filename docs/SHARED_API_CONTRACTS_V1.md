@@ -110,7 +110,54 @@ served as `application/pdf` with an attachment disposition. Prescription
 safety warnings are **not yet part of this contract**; UI must not assume a
 `warnings` field until the Phase 5 contract amendment is published.
 
-## 3. SHARED-07 — Drug-interaction API and response normalization
+## 3. SHARED-05 — Public-page and crawler policy
+
+This is the v1 public-page decision for the Next.js migration. Public means a
+visitor may request the page without a token; crawlable means it may also be
+included in the sitemap and receive canonical/locale metadata.
+
+| Surface | Public | Crawlable | Notes |
+|---|---:|---:|---|
+| Home | Yes | Yes | Product landing page. |
+| Doctor directory and doctor profile | Yes | Yes | Only public profile fields; no appointment, review-author, or patient data in HTML/metadata. |
+| Clinic directory and clinic profile | Yes | Yes | Only public clinic fields. |
+| Contact | Yes | Yes | Form submission remains rate-limited and uses the API. |
+| Login, register, password reset, email verification | Yes | No | Use `noindex`; these are functional entry points, not search content. |
+| Billing, booking, all dashboards, records, prescriptions, messaging, AI tools, Virtual Doctor, and every admin page | No | No | Authentication is required; send `X-Robots-Tag: noindex, nofollow` or equivalent page metadata. |
+
+Public profiles must not depend on a browser token and must degrade safely when
+an optional authenticated feature is unavailable. Do not publish profile data
+that the existing API treats as private. Ali may add localized SEO metadata,
+canonical URLs, hreflang, sitemap entries, and structured data only for the
+crawlable rows above. Any new crawlable surface requires a contract amendment.
+
+## 4. SHARED-06 — Web authentication storage decision
+
+**Decision for the initial Next.js migration: retain the existing browser
+Bearer-token model.** The current backend issues `accessToken` and
+`refreshToken` in the JSON response; the browser stores `accessToken`,
+`refreshToken`, and the non-authoritative user DTO in `localStorage` and sends
+`Authorization: Bearer <accessToken>`. On one `401`, the shared client sends
+`POST /auth/refresh` with `{ "refreshToken": "..." }`, stores the replacement
+tokens, and retries the original request once. A failed refresh clears the
+local session.
+
+For v1, protected Next.js pages are client-authenticated after hydration.
+Server-side rendering must not claim an authenticated user or call protected
+API endpoints on behalf of the browser. Public pages may be server-rendered.
+The access token must also be supplied in Socket.IO `auth.token` (or the
+Authorization handshake header) after every reconnect.
+
+This preserves the current web/mobile-compatible backend contract and avoids
+introducing cookie, CSRF, cross-origin, or SSR session behavior during the
+migration. An HttpOnly-cookie migration is explicitly deferred and requires a
+new contract covering refresh/logout cookie attributes, CSRF, CORS,
+same-origin proxying, Socket.IO handshake changes, SSR identity, and mobile
+compatibility. Until then, all new web code must use the shared API client,
+must not store tokens in URL parameters, and must preserve the single-refresh
+behavior.
+
+## 5. SHARED-07 — Drug-interaction API and response normalization
 
 `POST /ai/drug-interactions` is the only client-facing drug-interaction path.
 It requires authentication and must replace direct requests to port 8001.
@@ -132,7 +179,7 @@ AI upstream failure is normalized to `AI_SERVICE_ERROR` (client status from
 the AI is preserved for 4xx, server failures become 502). Clients must display
 the standard error state and never retry rapidly on 429/5xx.
 
-## 4. SHARED-03 — Socket.IO direct-messaging contract
+## 6. SHARED-03 — Socket.IO direct-messaging contract
 
 ### Connection
 
@@ -183,7 +230,7 @@ is rate-limited to 120/minute; conversation creation is limited to 20 per 15
 minutes. UI should preserve unsent drafts, retry only idempotent sends with the
 same `client_message_id`, and refetch on authorization/request-status errors.
 
-## 5. SHARED-04 — Mobile billing contract
+## 7. SHARED-04 — Mobile billing contract
 
 **Decision: native IAP is deferred.** Mobile is read-only for billing and
 opens the existing web billing page for purchases or subscription changes.
@@ -226,7 +273,7 @@ web application billing route in the system browser, then refresh
 focus. Mobile must not call `POST /billing/checkout`, cancellation, resume,
 plan-change, `/billing/webhook`, or any `/billing/sandbox/*` route in v1.
 
-## 6. SHARED-02 — Admin users and doctor reviews
+## 8. SHARED-02 — Admin users and doctor reviews
 
 ### Admin user management
 
@@ -288,7 +335,7 @@ action per completed appointment and treat `DUPLICATE_REVIEW` as an already
 submitted state. Those remaining review-management capabilities are the
 outstanding OMAR-BE-007 product gap.
 
-## 7. SHARED-08 — Virtual Doctor lifecycle
+## 9. SHARED-08 — Virtual Doctor lifecycle
 
 All Virtual Doctor traffic goes through `/api/virtual-doctor`; no Web or
 Mobile client may call the AI service directly. Every endpoint requires an
@@ -353,11 +400,10 @@ an abandoned session when possible and clear local state after 404/409. A
 report or a completed AI phase is also an end event; do not send more turns
 after either.
 
-## 8. Compatibility and change policy
+## 10. Compatibility and change policy
 
 This is v1. Additive optional fields are allowed. Renaming/removing fields,
-changing authorization, response envelopes, or the clinical visibility rules
-requires a new documented version and coordinated client release. The following
-planned contracts remain separate deliverables: SHARED-02 admin/reviews,
-SHARED-05 public pages, SHARED-06 web auth storage, and SHARED-08 Virtual
-Doctor lifecycle.
+changing authorization, response envelopes, auth storage, public-page policy,
+or the clinical visibility rules requires a new documented version and
+coordinated client release. SHARED-01 through SHARED-08 are frozen by this
+document; prescription safety warnings remain a planned Phase 5 amendment.
