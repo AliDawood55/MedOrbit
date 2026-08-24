@@ -6,10 +6,10 @@ class MedicalRecordService {
 
 
 
-    async create(data) {
+    async create(data, queryable = db) {
 
 
-        const result = await db.query(
+        const result = await queryable.query(
 
             `
 INSERT INTO medorbit.medical_records
@@ -121,11 +121,11 @@ WHERE id=$1
 
 
 
-    async update(id, data) {
+    async update(id, data, queryable = db) {
 
 
         const result =
-            await db.query(
+            await queryable.query(
 
                 `
 UPDATE medorbit.medical_records
@@ -168,10 +168,10 @@ RETURNING *
 
 
 
-    async remove(id) {
+    async remove(id, queryable = db) {
 
 
-        await db.query(
+        await queryable.query(
 
             `
 DELETE FROM medorbit.medical_records

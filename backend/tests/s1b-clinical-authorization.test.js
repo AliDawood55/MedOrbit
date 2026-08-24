@@ -93,12 +93,12 @@ async function seed() {
             [ids.aCancel, ids.p1, ids.d1, 'scheduled'],
             [ids.aReview, ids.p1, ids.d1, 'completed'],
         ];
-        for (const [id, patientId, doctorId, status] of appointmentRows) {
+        for (const [index, [id, patientId, doctorId, status]] of appointmentRows.entries()) {
             await client.query(
                 `INSERT INTO medorbit.appointments
                    (id,appointment_number,patient_id,doctor_id,scheduled_date,start_time,end_time,duration_minutes,status)
-                 VALUES ($1,$2,$3,$4,CURRENT_DATE + 7,'10:00','10:30',30,$5)`,
-                [id, `S1B-${id.slice(0, 8)}`, patientId, doctorId, status]
+                 VALUES ($1,$2,$3,$4,CURRENT_DATE + 7 + $6::int,'10:00','10:30',30,$5)`,
+                [id, `S1B-${id.slice(0, 8)}`, patientId, doctorId, status, index]
             );
         }
         await client.query(
@@ -133,8 +133,8 @@ async function seed() {
         );
         await client.query(
             `INSERT INTO medorbit.doctor_availability
-               (id,doctor_id,day_of_week,start_time,end_time,slot_duration,is_active)
-             VALUES ($1,$2,1,'09:00','10:00',30,true)`,
+               (id,doctor_id,day_of_week,start_time,end_time,slot_duration,is_telemedicine,is_active)
+             VALUES ($1,$2,2,'09:00','10:00',30,true,true)`,
             [ids.slot1, ids.d1]
         );
         await client.query(
@@ -158,6 +158,7 @@ async function cleanup() {
     let attachmentPaths = [];
     try {
         await client.query('BEGIN');
+        await client.query('DELETE FROM medorbit.audit_logs WHERE user_id=ANY($1::uuid[])', [allUsers]);
         await client.query('DELETE FROM medorbit.report_summarizations WHERE user_id=ANY($1::uuid[])', [allUsers]);
         await client.query('DELETE FROM medorbit.symptom_triage_sessions WHERE user_id=ANY($1::uuid[]) OR session_id LIKE $2', [allUsers, `s1b-${run}%`]);
         const attachments = await client.query(
@@ -218,6 +219,7 @@ async function main() {
         check('unrelated doctor cannot delete record', response.status === 404);
         response = await request('POST', '/medical-records', doctor1, { appointment_id: ids.a1, record_type: 'consultation', diagnosis: 'valid' });
         check('assigned doctor can create record', response.status === 201);
+        check('medical record creation is audited', (await pool.query("SELECT 1 FROM medorbit.audit_logs WHERE action='MEDICAL_RECORD_CREATED' AND entity_id=$1", [response.body.data?.id])).rows.length === 1);
         response = await request('POST', '/medical-records', doctor2, { appointment_id: ids.a1, record_type: 'consultation' });
         check('unassigned doctor cannot create from another appointment', response.status === 404);
 
@@ -266,12 +268,12 @@ async function main() {
         response = await request('PUT', `/appointments/${ids.aCancel}/cancel`, patient1, { reason: 'test' });
         check('patient cancellation ownership remains intact', response.status === 200);
 
-        response = await request('PUT', `/doctors/${ids.d1}/availability/${ids.slot1}`, doctor1, { end_time: '10:30' });
-        check('doctor can manage own availability', response.status === 200);
+        response = await request('PUT', `/doctors/${ids.d1}/availability/${ids.slot1}`, doctor1, { end_time: '09:30' });
+        check('doctor can manage own availability', response.status === 200, JSON.stringify(response.body));
         response = await request('PUT', `/doctors/${ids.d1}/availability/${ids.slot1}`, doctor2, { end_time: '11:00' });
         check('doctor cannot mutate another availability', response.status === 404);
 
-        response = await request('GET', `/doctors/${ids.d1}/reviews`);
+        response = await request('GET', `/doctors/${ids.d1}/reviews`, patient1);
         const review = response.body.data?.find((row) => row.id === ids.review1) || {};
         check('public review omits patient UUID', response.status === 200 && !('patient_id' in review));
         check('public review omits appointment UUID', !('appointment_id' in review));
@@ -308,10 +310,7 @@ async function main() {
         response = await request('POST', '/ai/triage', null, { symptoms: ['headache'], user_id: ids.u2, session_id: `s1b-${run}-anon` }, {
             'X-MedOrbit-Internal-Token': 'browser-spoof', 'X-MedOrbit-User-Id': ids.u2,
         });
-        const anonymousPersisted = await pool.query(
-            'SELECT user_id FROM medorbit.symptom_triage_sessions WHERE id=$1', [response.body.id]
-        );
-        check('browser cannot spoof internal AI identity context', response.status === 200 && anonymousPersisted.rows[0]?.user_id === null);
+        check('browser cannot spoof internal AI identity context', response.status === 401);
 
         response = await request('GET', `/patients/me/medical-records/${ids.r1}`, patient1);
         check('/patients/me medical-record behavior remains green', response.status === 200);

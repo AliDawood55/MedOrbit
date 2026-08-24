@@ -5,6 +5,7 @@ const db = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 const { generatePrescriptionPDF } = require('../services/prescription.service');
+const { createAudit } = require('../services/audit.service');
 const {
     resolveDoctorForUser,
     hasActiveCareRelationship,
@@ -93,6 +94,8 @@ router.post('/', authenticate, authorize('doctor'), async (req, res, next) => {
                     item.dosage, item.frequency, item.duration, item.quantity, item.instructions]
             );
         }
+
+        await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'PRESCRIPTION_CREATED', entity_type: 'PRESCRIPTION', entity_id: prescription.id, new_values: { id: prescription.id, patient_id: prescription.patient_id, doctor_id: prescription.doctor_id, appointment_id: prescription.appointment_id, status: prescription.status, item_count: items.length } }, client);
 
         await client.query('COMMIT');
         return success(res, prescription, 'Prescription created', 201);
