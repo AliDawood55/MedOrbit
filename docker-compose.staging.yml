@@ -40,6 +40,32 @@ services:
       retries: 10
       start_period: 10s
 
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: medorbit-kafka-staging
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - medorbit_kafka_data_staging:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
   backend:
     build:
       context: .
@@ -54,10 +80,14 @@ services:
       DB_HOST: postgres
       AI_SERVICE_URL: http://ai-service:8001
       NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     volumes:
       # Persist clinical attachments and generated reports outside the
@@ -86,8 +116,7 @@ services:
       - .env.staging
     environment:
       DB_HOST: postgres
-    ports:
-      - "8001:8001"
+    # Never publish the AI service; backend-to-AI traffic uses Docker DNS.
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,6 +132,95 @@ services:
       start_period: 15s
     volumes:
       - medorbit_hf_cache_staging:/root/.cache/huggingface
+
+  outbox-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: medorbit-outbox-worker-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
+      WORKER_HEALTH_PORT: 3002
+    command: ["node", "scripts/outbox-worker.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  event-consumer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: medorbit-event-consumer-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
+      WORKER_HEALTH_PORT: 3003
+    command: ["node", "scripts/event-consumer.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      outbox-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3003/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  recommendation-consumer:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: medorbit-recommendation-consumer-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      NODE_ENV: production
+      KAFKA_ENABLED: "true"
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_RECOMMENDATION_CONSUMER_GROUP: recommendation-profile-v1
+      WORKER_HEALTH_PORT: 3004
+    command: ["node", "scripts/recommendation-consumer.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      outbox-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3004/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   db-bootstrap:
     image: postgis/postgis:18-3.6
@@ -152,12 +270,39 @@ services:
     container_name: medorbit-frontend-staging
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - backend
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: medorbit-caddy-staging
+    profiles: ["tls"]
+    restart: unless-stopped
+    environment:
+      MEDORBIT_PUBLIC_HOST: ${MEDORBIT_PUBLIC_HOST:-}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - medorbit_caddy_data_staging:/data
+      - medorbit_caddy_config_staging:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
 
 volumes:
   medorbit_pgdata_staging:
     name: medorbit_pgdata_staging
   medorbit_hf_cache_staging:
     name: medorbit_hf_cache_staging
+  medorbit_kafka_data_staging:
+    name: medorbit_kafka_data_staging
+  medorbit_caddy_data_staging:
+    name: medorbit_caddy_data_staging
+  medorbit_caddy_config_staging:
+    name: medorbit_caddy_config_staging

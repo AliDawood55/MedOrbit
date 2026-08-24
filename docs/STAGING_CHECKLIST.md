@@ -5,7 +5,8 @@ Full details: [`AZURE_STAGING_DEPLOYMENT.md`](AZURE_STAGING_DEPLOYMENT.md).
 
 ## Azure setup
 - [ ] Ubuntu LTS VM created (Standard_B2s or B2ms, no GPU, 30GB+ disk)
-- [ ] NSG rules: 22 (your IP), 8080, 3001, 8001 open; 5432 **not** opened
+- [ ] NSG rules: 22 (your IP), 80 and 443 open; 8080, 3001, 8001, Kafka,
+      and 5432 **not** opened
 - [ ] VM public IP noted
 
 ## VM install
@@ -17,9 +18,9 @@ Full details: [`AZURE_STAGING_DEPLOYMENT.md`](AZURE_STAGING_DEPLOYMENT.md).
 - [ ] Repo cloned/uploaded to VM
 - [ ] `cp .env.staging.example .env.staging`
 - [ ] `.env.staging` filled in: `DB_PASSWORD`, `JWT_SECRET`, `CORS_ORIGIN`,
-      `FRONTEND_URL`, `BACKEND_PUBLIC_URL`, `GOOGLE_CLIENT_ID`, `EMAIL_*`
-      (all with real values, VM's real public IP, fresh secrets — not local
-      dev's)
+      `FRONTEND_URL`, `BACKEND_PUBLIC_URL`, `MEDORBIT_PUBLIC_HOST`,
+      `GOOGLE_CLIENT_ID`, `EMAIL_*` (all with fresh values; the public host is
+      a real DNS name, not an IP)
 - [ ] Fresh schema initialized with tracked baseline + migrations, or an
       intentional backup restore completed and followed by migrations
 
@@ -27,26 +28,20 @@ Full details: [`AZURE_STAGING_DEPLOYMENT.md`](AZURE_STAGING_DEPLOYMENT.md).
 - [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging up -d postgres`
 - [ ] Fresh DB only: `docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-bootstrap`
 - [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-migrate up`
-- [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build`
-      (or `./scripts/deploy-staging.sh`)
+- [ ] `./scripts/deploy-staging.sh` (starts the TLS proxy, Kafka, and workers)
 - [ ] Existing deployment only: runtime uploads/reports recovered from the old
       backend container before it is recreated, then stored under
       `backend/uploads/` and `backend/storage/`
 - [ ] `docker compose -f docker-compose.staging.yml ps` — all healthy
 - [ ] `curl http://localhost:3001/api/health` (on VM)
-- [ ] `curl http://localhost:8001/health` (on VM)
-- [ ] `curl http://<VM_PUBLIC_IP>:3001/api/health` (from your machine)
-- [ ] `curl http://<VM_PUBLIC_IP>:8001/health` (from your machine)
-- [ ] `http://<VM_PUBLIC_IP>:8080` loads in a browser on a different network
+- [ ] AI health works through `docker compose ... exec ai-service` on the VM
+- [ ] `https://<MEDORBIT_PUBLIC_HOST>/api/health` works from your machine
+- [ ] `https://<MEDORBIT_PUBLIC_HOST>` loads in a browser on a different network
+- [ ] Kafka and all three workers show healthy in `docker compose ... ps`
 
-## Mobile (optional, temporary local edits — revert after testing)
-- [ ] Android: uncommented staging domain in `network_security_config.xml`,
-      filled in real IP
-- [ ] iOS: uncommented staging `NSAppTransportSecurity` block in
-      `Info.plist`, filled in real IP
-- [ ] `flutter run` / `flutter build apk --release` with
-      `--dart-define=MEDORBIT_API_URL=...` / `MEDORBIT_AI_URL=...`
-- [ ] **Reverted both mobile edits** before committing anything
+## Mobile
+- [ ] Use only `https://<MEDORBIT_PUBLIC_HOST>/api` for `MEDORBIT_API_URL`
+- [ ] Do not set `MEDORBIT_AI_URL` or add plaintext security exceptions
 
 ## Cost safety
 - [ ] VM stopped/deallocated when not actively testing
@@ -55,5 +50,5 @@ Full details: [`AZURE_STAGING_DEPLOYMENT.md`](AZURE_STAGING_DEPLOYMENT.md).
 ## Known limitations (expected, not bugs)
 - [ ] AI-chat features (virtual doctor, symptom/drug checker LLM reasoning)
       unavailable — Ollama not installed on staging
-- [ ] Traffic is HTTP only, no TLS
-- [ ] Backend/AI ports directly exposed, no reverse proxy yet
+- [ ] Client release remains blocked until Ali repoints every direct AI call
+      to the authenticated backend; AI is internal-only in this topology
