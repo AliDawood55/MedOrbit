@@ -132,11 +132,105 @@ AI upstream failure is normalized to `AI_SERVICE_ERROR` (client status from
 the AI is preserved for 4xx, server failures become 502). Clients must display
 the standard error state and never retry rapidly on 429/5xx.
 
-## 4. Compatibility and change policy
+## 4. SHARED-03 — Socket.IO direct-messaging contract
+
+### Connection
+
+Connect to the same backend origin as the REST API using Socket.IO transport
+`websocket` or `polling`. Authenticate in either `auth.token` or the
+`Authorization: Bearer <access-token>` handshake header. A missing, invalid,
+revoked, or stale token rejects the connection with `UNAUTHORIZED`.
+
+The server allows only configured CORS origins and limits a Socket.IO frame to
+32 KiB. A client must reconnect using a refreshed access token after a 401
+refresh cycle. Socket.IO room membership is connection-local, so after every
+reconnect the client must re-subscribe to each visible conversation.
+
+### Client events and acknowledgements
+
+| Client event | Payload | Ack / effect |
+|---|---|---|
+| `conversation.subscribe` | `{ "conversation_id": "uuid" }` (camelCase accepted) | `{ "ok": true, "conversation_id": "uuid" }`; failure is `{ "ok": false, "code": "FORBIDDEN" \| "NOT_FOUND" }` |
+| `conversation.unsubscribe` | `{ "conversation_id": "uuid" }` | Leaves the room; no acknowledgement |
+
+Subscription does not create a conversation and is authorized against active
+conversation membership. Do not subscribe to arbitrary IDs or rely on a room
+as an authorization mechanism for REST actions.
+
+### Server events
+
+| Server event | Payload | Client handling |
+|---|---|---|
+| `message.created` | `{ id, conversation_id, sender_user_id, client_message_id, body, message_type, created_at }` | Upsert by `id` or `client_message_id`; do not add a second optimistic message. |
+| `conversation.read` | `{ conversation_id, last_read_message_id, last_read_at, user_id }` | Update the other member's read state. |
+
+There is no Socket.IO replay, typing signal, delivery signal, or push-notification
+event in v1. REST remains the source of truth:
+
+- `POST /messages/conversations` creates/retrieves a conversation.
+- `GET /messages/conversations?limit=1..50&offset=n` lists conversations.
+- `GET /messages/conversations/:id/messages?limit=1..100&cursor=...` loads
+  older messages; `after=latest_cursor` catches up after reconnection.
+- `POST /messages/conversations/:id/messages` sends a message with
+  `{ "body": "1–4000 chars", "client_message_id": "uuid" }`. This key is
+  idempotent for that sender/conversation.
+- `POST /messages/conversations/:id/read` accepts optional `message_id`.
+- `POST /messages/conversations/:id/accept` and `/decline` handle patient
+  message requests.
+
+The REST success/error envelope applies to all message actions. Send creation
+is rate-limited to 120/minute; conversation creation is limited to 20 per 15
+minutes. UI should preserve unsent drafts, retry only idempotent sends with the
+same `client_message_id`, and refetch on authorization/request-status errors.
+
+## 5. SHARED-04 — Mobile billing contract
+
+**Decision: native IAP is deferred.** Mobile is read-only for billing and
+opens the existing web billing page for purchases or subscription changes.
+It must not call provider webhooks, sandbox simulation routes, or direct
+payment-provider APIs.
+
+Allowed authenticated mobile reads:
+
+| Endpoint | Mobile use |
+|---|---|
+| `GET /billing/entitlements` | Current plan, server time, chatbot quota, and voice availability. |
+| `GET /billing/plans` | Render server-owned plan names and prices. |
+| `GET /billing/config` | Show whether web checkout is currently available/sandboxed. |
+| `GET /billing/subscription` | Show the caller's current subscription state. |
+| `GET /billing/history?limit=n` | Read the caller's billing-event timeline. |
+
+The entitlement shape is:
+
+```json
+{
+  "plan": "free|pro",
+  "subscription": {
+    "status": "active|past_due|canceled|null",
+    "cancel_at_period_end": false,
+    "current_period_end": "ISO-8601",
+    "billing_interval": "month|year"
+  },
+  "features": {
+    "chatbot": { "allowed": true, "unlimited": false, "used": 0, "limit": 20, "remaining": 20, "resets_at": "ISO-8601|null" },
+    "voice_doctor": { "allowed": true, "unlimited": false, "active_session_id": null, "next_free_at": null }
+  },
+  "server_time": "ISO-8601"
+}
+```
+
+Use `server_time` and returned absolute timestamps for countdowns; never
+recalculate quotas or prices. For upgrade/manage actions, open the configured
+web application billing route in the system browser, then refresh
+`/billing/entitlements` and `/billing/subscription` when the app regains
+focus. Mobile must not call `POST /billing/checkout`, cancellation, resume,
+plan-change, `/billing/webhook`, or any `/billing/sandbox/*` route in v1.
+
+## 6. Compatibility and change policy
 
 This is v1. Additive optional fields are allowed. Renaming/removing fields,
 changing authorization, response envelopes, or the clinical visibility rules
 requires a new documented version and coordinated client release. The following
 planned contracts remain separate deliverables: SHARED-02 admin/reviews,
-SHARED-03 Socket.IO, SHARED-04 mobile billing, SHARED-05 public pages,
-SHARED-06 web auth storage, and SHARED-08 Virtual Doctor lifecycle.
+SHARED-05 public pages, SHARED-06 web auth storage, and SHARED-08 Virtual
+Doctor lifecycle.
