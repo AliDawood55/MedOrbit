@@ -342,7 +342,8 @@ async function residualCounts() {
         const directCss = readFrontend('src/css/direct-messages.css');
         const sharedCss = readFrontend('src/css/experience.css');
         const badgeSource = readFrontend('src/js/layout.js');
-        check(60, 'Doctor Profile primary CTA order correct', doctorUi.indexOf('doctorMessageBtn') < doctorUi.indexOf('book-appointment.html') && doctorUi.indexOf('book-appointment.html') < doctorUi.indexOf('doctorFollowBtn'));
+        const messageThenBookingThenFollow = /return \(showMessage \?[^]*?doctorMessageBtn[^]*?\)\s*\+\s*bookingAction[^]*?doctorFollowBtn/.test(doctorUi);
+        check(60, 'Doctor Profile primary CTA order correct', messageThenBookingThenFollow);
         check(61, 'Doctor tabs work', ['about','posts','reviews','availability','clinics'].every((tab) => doctorUi.includes(`['${tab}'`) || doctorUi.includes(`data-panel=\"${tab}`)) && doctorUi.includes("addEventListener('click'"));
         check(62, 'Patient profile renders safely', patientUi.includes('textContent') && readFrontend('public/patient-profile.html').includes('patientProfileForm'));
         check(63, 'messaging desktop layout initializes', /grid-template-columns:minmax\(270px,34%\) 1fr/.test(directCss) && frontendProduction.includes('loadConversations'));
@@ -351,7 +352,7 @@ async function residualCounts() {
         check(66, 'RTL layout works', sharedCss.includes('border-inline-end') && readFrontend('public/doctor.html').includes('dir="rtl"'));
         check(67, 'LTR layout works', readFrontend('src/js/i18n.js').includes("document.documentElement.dir") && readFrontend('src/js/i18n.js').includes("'ltr'"));
         check(68, 'safe user-content rendering', doctorUi.includes('escapeHtml') && readFrontend('src/js/direct-messages.js').includes('body.textContent=message.body'));
-        check(69, 'no unsafe innerHTML for profile/message/contact user content', patientUi.includes('textContent') && readFrontend('src/js/contact.js').includes('textContent') && readFrontend('src/js/admin-contact-messages.js').includes('body.textContent=item.message'));
+        check(69, 'no unsafe innerHTML for profile/message/contact user content', patientUi.includes('textContent') && readFrontend('src/js/contact.js').includes('textContent') && /body\.textContent\s*=\s*item\.message/.test(readFrontend('src/js/admin-contact-messages.js')));
         check(70, 'empty states render correctly', doctorUi.includes('profile-compact-empty') && readFrontend('src/js/direct-messages.js').includes('No conversations yet'));
 
         const safePatientResponse = JSON.stringify((await request('GET', '/patients/me/profile', token(patient))).body);

@@ -81,6 +81,21 @@ if psql --dbname="$SOURCE_DB_NAME" --no-psqlrc --tuples-only --no-align \
         --file=/tmp/medorbit-test-migration-ledger.sql
 fi
 
+# The billing plan catalogue is immutable reference data, not application or
+# user seed data. Billing integration tests must start with the same three
+# canonical plans while the rest of the disposable database stays empty.
+psql \
+    --dbname="$TEST_DB_NAME" \
+    --no-psqlrc \
+    --set=ON_ERROR_STOP=1 \
+    --command="INSERT INTO medorbit.subscription_plans
+      (plan_code,name_en,name_ar,price_cents,currency,billing_interval,interval_count,grants_pro,sort_order)
+      VALUES
+        ('free','Free','مجاني',0,'USD','none',1,false,0),
+        ('pro_monthly','MedOrbit Pro','مدأوربت برو',2000,'USD','month',1,true,1),
+        ('pro_annual','MedOrbit Pro','مدأوربت برو',20000,'USD','year',1,true,2)
+      ON CONFLICT (plan_code) DO NOTHING"
+
 TEST_TABLE_COUNT="$(psql --dbname="$TEST_DB_NAME" --no-psqlrc --tuples-only --no-align --command="SELECT COUNT(*) FROM pg_tables WHERE schemaname='medorbit'")"
 TEST_USER_COUNT="$(psql --dbname="$TEST_DB_NAME" --no-psqlrc --tuples-only --no-align --command="SELECT COUNT(*) FROM medorbit.users")"
 
