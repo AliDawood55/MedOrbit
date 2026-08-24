@@ -12,6 +12,10 @@ COPY backend/package.json ./backend/package.json
 RUN npm ci -w backend
 
 COPY backend/ ./backend/
+# A small number of contract tests assert that retired client-only video/call
+# paths are absent. Keep the source available to the dedicated test image;
+# this image is test-only and is never used as a production frontend image.
+COPY frontend/ ./frontend/
 
 WORKDIR /app/backend
 

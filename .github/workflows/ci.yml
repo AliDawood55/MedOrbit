@@ -2,17 +2,10 @@ name: MedOrbit CI
 
 on:
   push:
-    branches:
-      - main
-      - ALI
-      - omar
-
   pull_request:
-    branches:
-      - main
 
 jobs:
-  docker:
+  backend-integration:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,12 +20,12 @@ jobs:
 
           DB_HOST=localhost
           DB_PORT=5432
-          DB_NAME=${{ secrets.DB_NAME }}
-          DB_USER=${{ secrets.DB_USER }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=medorbit
+          DB_USER=postgres
+          DB_PASSWORD=medorbit_ci_password
           DB_SCHEMA=medorbit
 
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_SECRET=ci-only-not-a-production-secret-please-change
           JWT_ACCESS_EXPIRES_IN=15m
           JWT_REFRESH_EXPIRES_IN=7d
 
@@ -40,7 +33,7 @@ jobs:
 
           CORS_ORIGIN=http://localhost:8080,http://127.0.0.1:8080
 
-          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_ID=ci-test-client.apps.googleusercontent.com
 
           AI_SERVICE_URL=http://localhost:8001
           AI_SERVICE_TIMEOUT_MS=90000
@@ -48,9 +41,9 @@ jobs:
           EMAIL_HOST=smtp.gmail.com
           EMAIL_PORT=587
           EMAIL_SECURE=false
-          EMAIL_USER=${{ secrets.EMAIL_USER }}
-          EMAIL_PASS=${{ secrets.EMAIL_PASS }}
-          EMAIL_FROM=${{ secrets.EMAIL_USER }}
+          EMAIL_USER=ci@medorbit.test
+          EMAIL_PASS=ci-email-password-not-used
+          EMAIL_FROM=ci@medorbit.test
 
           FRONTEND_URL=http://localhost:8080/public
 
@@ -76,10 +69,9 @@ jobs:
             'psql --no-psqlrc --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set ON_ERROR_STOP=1' \
             < scripts/ci/verify-bootstrap.sql
 
-      - name: Backend authorization integration tests
+      - name: Backend integration test gate
         run: |
-          npm run test:s1b:docker
-          npm run test:s1c:docker
+          bash scripts/ci/run-backend-integration-tests.sh
 
       - name: Start Containers
         run: docker compose up -d --wait --wait-timeout 180
@@ -125,3 +117,32 @@ jobs:
       - name: Shutdown
         if: always()
         run: docker compose down -v
+
+  ai-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install AI runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            tesseract-ocr tesseract-ocr-ara poppler-utils \
+            libpango-1.0-0 libpangoft2-1.0-0 fonts-noto-core swi-prolog-core
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: AI unit, characterization, symbolic, and safety test gate
+        working-directory: ai-service
+        run: |
+          export PYTHONPATH=".:data/ml/nablus_facility_type${PYTHONPATH:+:$PYTHONPATH}"
+          find tests -name 'test_*.py' -type f -print | sort | xargs -r -n 1 python
