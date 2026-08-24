@@ -112,7 +112,7 @@ All configuration is a single root `.env` file, read by the backend, ai-service,
 
 - `docker-compose.gpu.yml` — optional GPU overlay for `ai-service` (Whisper on CUDA); apply with `-f docker-compose.yml -f docker-compose.gpu.yml`
 - `docker-compose.staging.yml` — standalone Azure VM staging stack, not an overlay; postgres publishes no host port there
-- Known backend gaps hit while building the current frontend (missing endpoints, a data-isolation constraint on shared doctor notes) are tracked in [BACKEND_NEEDED.md](BACKEND_NEEDED.md) and referenced directly from code comments — check it before assuming an endpoint or feature gap is unintentional.
+- The former frontend gap investigation is retained as a historical record in [BACKEND_NEEDED.md](BACKEND_NEEDED.md). Current client-facing API decisions are in [docs/SHARED_API_CONTRACTS_V1.md](docs/SHARED_API_CONTRACTS_V1.md), and intentionally deferred backend surfaces are listed in [docs/DEFERRED_BACKEND_SURFACES.md](docs/DEFERRED_BACKEND_SURFACES.md).
 
 ## Team
 

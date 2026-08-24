@@ -59,11 +59,9 @@ class MedicalRepository {
 
     // Doctor name joined the same way findReviewsByDoctorId already does it
     // in this file (doctors -> user_profiles via user_id). clinical_notes/
-    // doctor_notes are deliberately excluded — doctor-internal, per the
-    // "Data isolation" warning in BACKEND_NEEDED.md item 14 (that warning is
-    // scoped to the my-doctor.html "shared notes" feature; diagnosis/
-    // chief_complaint/treatment_plan are ordinary patient-facing fields, and
-    // is_draft=false is already the line this file draws for that).
+    // doctor_notes are deliberately excluded because they are doctor-internal;
+    // diagnosis/chief_complaint/treatment_plan are patient-facing only after
+    // publication (is_draft=false).
     async findRecordsByPatientId(patientId, { limit = 10, offset = 0 }) {
         const result = await db.query(
             `SELECT

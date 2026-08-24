@@ -102,11 +102,11 @@ The logger records application events in a consistent and structured format.
 
 ---
 
-# File: `src/routes/health.routes.js`
+# Health endpoint
 
 ## Purpose
 
-The Health Route provides an endpoint that allows developers and infrastructure services to verify that the backend application is running correctly.
+The canonical health endpoint is defined directly in `backend/src/app.js`. The old unmounted `src/routes/health.routes.js` file was removed during backend-surface cleanup.
 
 It does not perform any business logic and does not require authentication.
 
@@ -118,16 +118,15 @@ This endpoint is commonly used by Docker, Kubernetes, monitoring systems, and lo
 
 - Respond to Health Check requests.
 - Return server status.
-- Return application uptime.
 - Return current timestamp.
-- Return application environment.
+- Return the application version.
 
 ---
 
 ## Endpoint
 
 ```
-GET /health
+GET /api/health
 ```
 
 ---
@@ -137,11 +136,10 @@ GET /health
 ```json
 {
     "success": true,
-    "message": "MedOrbit API is running.",
     "data": {
-        "uptime": 152.63,
-        "timestamp": "2026-07-07T20:30:51.000Z",
-        "environment": "development"
+        "status": "healthy",
+        "version": "2.0.0",
+        "timestamp": "2026-08-25T00:00:00.000Z"
     }
 }
 ```
@@ -256,7 +254,7 @@ Future modules such as Authentication, User Management, Clinics, Doctors, Appoin
 - # Testing using Postman:
        - ## Test Health Endpoint:
               - ### Collection Name: Service
-                     - #### Requst Name:[health.routes.js](https://oa0922592-3317435.postman.co/workspace/omar-abdallah's-Workspace~2e3179c7-ad31-47b2-82e7-7082c5718687/request/49494101-46edb10d-9595-4cc2-b4c7-d3834a8cf847?action=share&source=copy-link&creator=49494101):
+                     - #### Request Name: `GET /api/health`
                             - #### Status: the test #success.
                      - #### Request Name:[notFound.js](https://oa0922592-3317435.postman.co/workspace/omar-abdallah's-Workspace~2e3179c7-ad31-47b2-82e7-7082c5718687/request/49494101-c594109f-9c73-42f2-bf79-3e6cc83fdca7?action=share&source=copy-link&creator=49494101):
                             - #### Status: the test #success.
