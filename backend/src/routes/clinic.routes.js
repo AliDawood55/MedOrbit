@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
 const { authenticate, authorizeAdmin } = require('../middleware/auth');
+const { createAudit } = require('../services/audit.service');
 
 const router = express.Router();
 
@@ -191,25 +192,42 @@ router.post(
   authenticate,
   authorizeAdmin,
   async (req, res, next) => {
+    let client;
     try {
       const {
         name_ar, name_en, address_ar, address_en, city, region,
         latitude, longitude, phone, email, website, type
       } = req.body;
 
-      await db.query(
+      client = await db.getClient();
+      await client.query('BEGIN');
+
+      const created = await client.query(
         `INSERT INTO medorbit.clinics(
           name_ar, name_en, address_ar, address_en, city, region,
           latitude, longitude, phone, email, website, type
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        RETURNING id, name_ar, name_en, type`,
         [name_ar, name_en, address_ar, address_en, city, region,
           latitude, longitude, phone, email, website, type]
       );
+      await createAudit({
+        user_id: req.user.sub,
+        user_role: req.user.role,
+        action: 'CLINIC_CREATED',
+        entity_type: 'CLINIC',
+        entity_id: created.rows[0].id,
+        new_values: created.rows[0],
+      }, client);
+      await client.query('COMMIT');
 
       return success(res, null, "Clinic created successfully");
     } catch (err) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
       next(err);
+    } finally {
+      client?.release();
     }
   }
 );
@@ -220,25 +238,50 @@ router.put(
   authenticate,
   authorizeAdmin,
   async (req, res, next) => {
+    let client;
     try {
       const { name_ar, name_en, phone } = req.body;
 
-      const result = await db.query(
+      client = await db.getClient();
+      await client.query('BEGIN');
+      const existing = await client.query(
+        `SELECT id, name_ar, name_en, phone
+         FROM medorbit.clinics
+         WHERE id = $1 AND is_active = true
+         FOR UPDATE`,
+        [req.params.id]
+      );
+      if (existing.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return error(res, "Clinic not found", 404, "NOT_FOUND");
+      }
+
+      const result = await client.query(
         `UPDATE medorbit.clinics
          SET name_ar = COALESCE($1, name_ar),
              name_en = COALESCE($2, name_en),
              phone = COALESCE($3, phone)
-         WHERE id = $4 AND is_active = true`,
+         WHERE id = $4 AND is_active = true
+         RETURNING id, name_ar, name_en, phone`,
         [name_ar, name_en, phone, req.params.id]
       );
-
-      if (result.rowCount === 0) {
-        return error(res, "Clinic not found", 404, "NOT_FOUND");
-      }
+      await createAudit({
+        user_id: req.user.sub,
+        user_role: req.user.role,
+        action: 'CLINIC_UPDATED',
+        entity_type: 'CLINIC',
+        entity_id: result.rows[0].id,
+        old_values: existing.rows[0],
+        new_values: result.rows[0],
+      }, client);
+      await client.query('COMMIT');
 
       return success(res, null, "Clinic updated");
     } catch (err) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
       next(err);
+    } finally {
+      client?.release();
     }
   }
 );
@@ -249,21 +292,46 @@ router.delete(
   authenticate,
   authorizeAdmin,
   async (req, res, next) => {
+    let client;
     try {
-      const result = await db.query(
-        `UPDATE medorbit.clinics
-         SET is_active = false
-         WHERE id = $1 AND is_active = true`,
+      client = await db.getClient();
+      await client.query('BEGIN');
+      const existing = await client.query(
+        `SELECT id, name_ar, name_en, type, is_active
+         FROM medorbit.clinics
+         WHERE id = $1 AND is_active = true
+         FOR UPDATE`,
         [req.params.id]
       );
-
-      if (result.rowCount === 0) {
+      if (existing.rowCount === 0) {
+        await client.query('ROLLBACK');
         return error(res, "Clinic not found", 404, "NOT_FOUND");
       }
 
+      const result = await client.query(
+        `UPDATE medorbit.clinics
+         SET is_active = false
+         WHERE id = $1 AND is_active = true
+         RETURNING id, name_ar, name_en, type, is_active`,
+        [req.params.id]
+      );
+      await createAudit({
+        user_id: req.user.sub,
+        user_role: req.user.role,
+        action: 'CLINIC_DEACTIVATED',
+        entity_type: 'CLINIC',
+        entity_id: result.rows[0].id,
+        old_values: existing.rows[0],
+        new_values: result.rows[0],
+      }, client);
+      await client.query('COMMIT');
+
       return success(res, null, "Clinic deleted");
     } catch (err) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
       next(err);
+    } finally {
+      client?.release();
     }
   }
 );
@@ -274,6 +342,7 @@ router.post(
   authenticate,
   authorizeAdmin,
   async (req, res, next) => {
+    let client;
     try {
       const clinicId = req.params.id;
       const { doctorId, isPrimary = false, consultationFeeOverride = null } = req.body;
@@ -282,23 +351,27 @@ router.post(
         return error(res, "Doctor id is required", 400, "VALIDATION_ERROR");
       }
 
-      const clinic = await db.query(
+      client = await db.getClient();
+      await client.query('BEGIN');
+      const clinic = await client.query(
         `SELECT id FROM medorbit.clinics WHERE id = $1 AND is_active = true`,
         [clinicId]
       );
       if (clinic.rows.length === 0) {
+        await client.query('ROLLBACK');
         return error(res, "Clinic not found", 404, "NOT_FOUND");
       }
 
-      const doctor = await db.query(
+      const doctor = await client.query(
         `SELECT id FROM medorbit.doctors WHERE id = $1`,
         [doctorId]
       );
       if (doctor.rows.length === 0) {
+        await client.query('ROLLBACK');
         return error(res, "Doctor not found", 404, "NOT_FOUND");
       }
 
-      await db.query(
+      const assignment = await client.query(
         `INSERT INTO medorbit.doctor_clinic_assignments
            (doctor_id, clinic_id, is_primary, consultation_fee_override, is_active)
          VALUES ($1,$2,$3,$4,true)
@@ -306,13 +379,26 @@ router.post(
          DO UPDATE SET
            is_active = true,
            is_primary = $3,
-           consultation_fee_override = $4`,
+           consultation_fee_override = $4
+         RETURNING doctor_id, clinic_id, is_primary, consultation_fee_override, is_active`,
         [doctorId, clinicId, isPrimary, consultationFeeOverride]
       );
+      await createAudit({
+        user_id: req.user.sub,
+        user_role: req.user.role,
+        action: 'CLINIC_DOCTOR_ASSIGNED',
+        entity_type: 'CLINIC_DOCTOR_ASSIGNMENT',
+        entity_id: null,
+        new_values: assignment.rows[0],
+      }, client);
+      await client.query('COMMIT');
 
       return success(res, null, "Doctor assigned successfully");
     } catch (err) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
       next(err);
+    } finally {
+      client?.release();
     }
   }
 );
@@ -323,17 +409,45 @@ router.delete(
   authenticate,
   authorizeAdmin,
   async (req, res, next) => {
+    let client;
     try {
-      await db.query(
-        `UPDATE medorbit.doctor_clinic_assignments
-         SET is_active = false
-         WHERE clinic_id = $1 AND doctor_id = $2`,
+      client = await db.getClient();
+      await client.query('BEGIN');
+      const existing = await client.query(
+        `SELECT doctor_id, clinic_id, is_primary, consultation_fee_override, is_active
+         FROM medorbit.doctor_clinic_assignments
+         WHERE clinic_id = $1 AND doctor_id = $2 AND is_active = true
+         FOR UPDATE`,
         [req.params.id, req.params.doctorId]
       );
+      if (existing.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return error(res, "Active doctor assignment not found", 404, "NOT_FOUND");
+      }
+
+      const removed = await client.query(
+        `UPDATE medorbit.doctor_clinic_assignments
+         SET is_active = false
+         WHERE clinic_id = $1 AND doctor_id = $2 AND is_active = true
+         RETURNING doctor_id, clinic_id, is_primary, consultation_fee_override, is_active`,
+        [req.params.id, req.params.doctorId]
+      );
+      await createAudit({
+        user_id: req.user.sub,
+        user_role: req.user.role,
+        action: 'CLINIC_DOCTOR_REMOVED',
+        entity_type: 'CLINIC_DOCTOR_ASSIGNMENT',
+        old_values: existing.rows[0],
+        new_values: removed.rows[0],
+      }, client);
+      await client.query('COMMIT');
 
       return success(res, null, "Doctor removed from clinic");
     } catch (err) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
       next(err);
+    } finally {
+      client?.release();
     }
   }
 );

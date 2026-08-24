@@ -11,6 +11,7 @@ const {
 } = require("../utils/response");
 
 const db = require("../config/database");
+const { createAudit } = require('../services/audit.service');
 
 
 
@@ -260,49 +261,7 @@ router.put(
 
 
 
-            // Save audit log
-
-            await db.query(
-
-                `
-                INSERT INTO medorbit.audit_logs
-                (
-                    user_id,
-                    user_role,
-                    action,
-                    entity_type,
-                    entity_id,
-                    old_values,
-                    new_values
-                )
-
-                VALUES
-
-                (
-                    $1,
-                    'admin',
-                    'UPDATE',
-                    'system_settings',
-                    $2,
-                    $3,
-                    $4
-                )
-                `,
-
-
-                [
-
-                    req.user.sub,
-
-                    updated.rows[0].id,
-
-                    JSON.stringify(old.rows[0]),
-
-                    JSON.stringify(updated.rows[0])
-
-                ]
-
-            );
+            await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'SYSTEM_SETTING_UPDATED', entity_type: 'SYSTEM_SETTING', entity_id: updated.rows[0].id, old_values: old.rows[0], new_values: updated.rows[0] });
 
 
 
@@ -434,6 +393,9 @@ router.put(
 
 
                 results.push(result.rows[0]);
+                if (result.rows[0]) {
+                    await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'SYSTEM_SETTING_UPDATED', entity_type: 'SYSTEM_SETTING', entity_id: result.rows[0].id, new_values: result.rows[0] }, client);
+                }
 
 
             }
