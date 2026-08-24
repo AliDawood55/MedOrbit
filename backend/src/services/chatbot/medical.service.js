@@ -1,5 +1,6 @@
 const db = require('../../config/database');
 const axios = require('axios');
+const { internalIdentityHeaders } = require('../aiBoundary.service');
 
 const logger = require('../../utils/logger');
 
@@ -37,13 +38,13 @@ class MedicalService {
      * @param {Array<{medication_name_en: string}>} items - Prescription items
      * @returns {Promise<{prescription_safe: boolean, warnings: string[]}>}
      */
-    async checkPrescriptionInteractions(items) {
+    async checkPrescriptionInteractions(items, userId) {
         try {
             const aiUrl = process.env.AI_SERVICE_URL || 'http://localhost:8001';
             const response = await axios.post(
                 `${aiUrl}/prescription-check`,
                 { prescription_items: items },
-                { timeout: 5000 }
+                { timeout: 5000, headers: internalIdentityHeaders({ userId }) }
             );
 
             const result = response.data;

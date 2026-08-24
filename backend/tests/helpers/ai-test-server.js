@@ -28,8 +28,8 @@ const server = http.createServer(async (req, res) => {
             const body = await readJson(req);
             const userId = req.headers['x-medorbit-user-id'] || null;
             const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
-            if (userId && suppliedToken !== getInternalToken()) {
-                return send(res, 403, { detail: 'Invalid internal identity context' });
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
             }
             if ((body.medication_names || []).includes('__UPSTREAM_FAIL__')) {
                 return send(res, 503, { detail: 'Simulated AI outage' });
@@ -42,8 +42,8 @@ const server = http.createServer(async (req, res) => {
 
             const userId = req.headers['x-medorbit-user-id'] || null;
             const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
-            if (userId && suppliedToken !== getInternalToken()) {
-                return send(res, 403, { detail: 'Invalid internal identity context' });
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
             }
             const inserted = await pool.query(
                 `INSERT INTO medorbit.symptom_triage_sessions
@@ -72,6 +72,11 @@ const server = http.createServer(async (req, res) => {
         // the consume path.
         if (req.method === 'POST' && req.url === '/chat') {
             const body = await readJson(req);
+            const userId = req.headers['x-medorbit-user-id'] || null;
+            const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
+            }
             // Sentinel for the failure path. A real AI outage is what the
             // release-on-failure logic exists for, and it cannot be exercised
             // through a stub that always succeeds.

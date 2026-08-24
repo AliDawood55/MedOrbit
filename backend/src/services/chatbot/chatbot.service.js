@@ -96,6 +96,7 @@ class ChatbotService {
             const ai = await aiClient.sendMessage({
                 message,
                 conversationId: convId,
+                userId,
                 latitude,
                 longitude,
                 context: {

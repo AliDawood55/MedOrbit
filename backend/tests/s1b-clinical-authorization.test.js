@@ -297,7 +297,7 @@ async function main() {
         direct = await fetch(`${aiDirect}/drug-interactions`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ medication_names: [] }),
         });
-        check('anonymous stateless AI flow remains available', direct.status === 200);
+        check('direct drug interaction endpoint requires internal identity', direct.status === 403);
         response = await request('POST', '/ai/drug-interactions', null, { medication_names: ['Aspirin', 'Warfarin'] });
         check('backend drug interaction proxy requires authentication', response.status === 401);
         response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin'] });
