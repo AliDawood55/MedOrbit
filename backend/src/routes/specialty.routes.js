@@ -16,6 +16,10 @@ const {
 
 const router = express.Router();
 
+function isNonEmptyString(value, maxLength) {
+    return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength;
+}
+
 
 
 // ======================================
@@ -131,6 +135,16 @@ router.post(
                 icon
 
             } = req.body;
+
+            if (!isNonEmptyString(name_ar, 100) || !isNonEmptyString(name_en, 100)) {
+                return error(res, "Arabic and English specialty names are required", 400, "VALIDATION_ERROR");
+            }
+
+            if ((description_ar !== undefined && typeof description_ar !== 'string')
+                || (description_en !== undefined && typeof description_en !== 'string')
+                || (icon !== undefined && (typeof icon !== 'string' || icon.length > 255))) {
+                return error(res, "Invalid specialty fields", 400, "VALIDATION_ERROR");
+            }
 
 
 

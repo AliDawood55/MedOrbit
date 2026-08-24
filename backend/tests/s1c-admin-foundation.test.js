@@ -88,6 +88,32 @@ async function bootstrap(email, extra = {}) {
     check('batch system-setting update has complete audit snapshots', batchAudit.rowCount === 1
       && batchAudit.rows[0].old_values.setting_value.mode === 'old'
       && batchAudit.rows[0].new_values.setting_value.mode === 'new');
+    check('patient cannot create a specialty', (await request('POST', '/specialties', patientToken, { name_ar: 'قلب', name_en: 'Cardiology' })).status === 403);
+    check('specialty creation validates bilingual names', (await request('POST', '/specialties', ordinaryToken, { name_ar: '   ', name_en: 'Cardiology' })).status === 400);
+    const specialty = await request('POST', '/specialties', ordinaryToken, { name_ar: `تخصص ${run}`, name_en: `Specialty ${run}`, icon: 'heart' });
+    const specialtyId = specialty.body.data?.id;
+    check('admin can create a specialty', specialty.status === 200 && Boolean(specialtyId), JSON.stringify(specialty.body));
+    check('super_admin can update a specialty', (await request('PUT', `/specialties/${specialtyId}`, superToken, { name_en: `Updated specialty ${run}` })).status === 200);
+    check('admin can deactivate a specialty', (await request('DELETE', `/specialties/${specialtyId}`, ordinaryToken)).status === 200);
+    const specialtyAudits = await pool.query(`SELECT action,old_values,new_values FROM medorbit.audit_logs WHERE entity_type='SPECIALTY' AND entity_id=$1 ORDER BY created_at`, [specialtyId]);
+    check('specialty mutations have complete audit events', specialtyAudits.rowCount === 3
+      && specialtyAudits.rows[0].action === 'SPECIALTY_CREATED'
+      && specialtyAudits.rows[1].old_values.name_en === `Specialty ${run}`
+      && specialtyAudits.rows[2].new_values.is_active === false);
+    check('patient cannot create a notification template', (await request('POST', '/admin/notifications/templates', patientToken, { name: `blocked-${run}` })).status === 403);
+    check('notification template creation validates required fields', (await request('POST', '/admin/notifications/templates', ordinaryToken, { name: `invalid-${run}`, type: 'email' })).status === 400);
+    const template = await request('POST', '/admin/notifications/templates', ordinaryToken, {
+      name: `s1c-template-${run}`, type: 'email', subject_en: 'Initial subject', subject_ar: 'عنوان', body_html: '<p>Initial body</p>', variables: { name: 'string' },
+    });
+    const templateId = template.body.data?.id;
+    check('admin can create a notification template', template.status === 200 && Boolean(templateId), JSON.stringify(template.body));
+    check('super_admin can update a notification template', (await request('PUT', `/admin/notifications/templates/${templateId}`, superToken, { subject_en: 'Updated subject' })).status === 200);
+    check('admin can deactivate a notification template', (await request('DELETE', `/admin/notifications/templates/${templateId}`, ordinaryToken)).status === 200);
+    const templateAudits = await pool.query(`SELECT action,old_values,new_values FROM medorbit.audit_logs WHERE entity_type='NOTIFICATION_TEMPLATE' AND entity_id=$1 ORDER BY created_at`, [templateId]);
+    check('notification-template mutations have complete audit events', templateAudits.rowCount === 3
+      && templateAudits.rows[0].action === 'NOTIFICATION_TEMPLATE_CREATED'
+      && templateAudits.rows[1].old_values.subject_en === 'Initial subject'
+      && templateAudits.rows[2].new_values.is_active === false);
     let create = await request('POST', '/admin/invitations', superToken, { email: `s1c_invitee_${run}@medorbit.test` });
     check('super_admin can create invitation', create.status === 201, JSON.stringify(create.body));
     const link = create.body.data.acceptance_url; const raw = new URL(link).searchParams.get('token');

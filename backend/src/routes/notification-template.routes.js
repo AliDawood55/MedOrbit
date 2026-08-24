@@ -16,6 +16,14 @@ const {
 
 const router = express.Router();
 
+function isNonEmptyString(value, maxLength) {
+    return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength;
+}
+
+function isTemplateVariables(value) {
+    return value === undefined || (value !== null && typeof value === 'object' && !Array.isArray(value));
+}
+
 
 
 // GET ALL templates
@@ -146,6 +154,14 @@ router.post(
 
             } = req.body;
 
+            if (!isNonEmptyString(name, 100) || !isNonEmptyString(type, 50)
+                || !isNonEmptyString(subject_en, 255) || !isNonEmptyString(body_html, 100000)
+                || (subject_ar !== undefined && subject_ar !== null && (typeof subject_ar !== 'string' || subject_ar.length > 255))
+                || (body_text !== undefined && body_text !== null && typeof body_text !== 'string')
+                || !isTemplateVariables(variables)) {
+                return error(res, "Invalid notification template fields", 400, "VALIDATION_ERROR");
+            }
+
 
 
             client = await db.getClient();
@@ -242,6 +258,15 @@ router.put(
                 is_active
 
             } = req.body;
+
+            if ((subject_en !== undefined && !isNonEmptyString(subject_en, 255))
+                || (subject_ar !== undefined && subject_ar !== null && (typeof subject_ar !== 'string' || subject_ar.length > 255))
+                || (body_html !== undefined && !isNonEmptyString(body_html, 100000))
+                || (body_text !== undefined && body_text !== null && typeof body_text !== 'string')
+                || (is_active !== undefined && typeof is_active !== 'boolean')
+                || !isTemplateVariables(variables)) {
+                return error(res, "Invalid notification template fields", 400, "VALIDATION_ERROR");
+            }
 
 
 
