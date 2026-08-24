@@ -64,6 +64,30 @@ async function bootstrap(email, extra = {}) {
     check('doctor is denied clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, doctorToken, {})).status === 403);
     check('admin reaches clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, ordinaryToken, {})).status === 404);
     check('super_admin reaches clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, superToken, {})).status === 404);
+    const singleSettingKey = `s1c_single_setting_${run}`;
+    const batchSettingKey = `s1c_batch_setting_${run}`;
+    await pool.query(
+      `INSERT INTO medorbit.system_settings (setting_key, setting_value, description) VALUES ($1,$2,$3),($4,$5,$6)`,
+      [singleSettingKey, JSON.stringify({ enabled: false }), 'S1C single setting', batchSettingKey, JSON.stringify({ mode: 'old' }), 'S1C batch setting']
+    );
+    const singleSetting = await request('PUT', `/admin/system-settings/${singleSettingKey}`, ordinaryToken, { value: { enabled: true }, requires_restart: true });
+    check('admin can update a system setting', singleSetting.status === 200, JSON.stringify(singleSetting.body));
+    const singleAudit = await pool.query(
+      `SELECT old_values,new_values FROM medorbit.audit_logs WHERE action='SYSTEM_SETTING_UPDATED' AND entity_id=$1 ORDER BY created_at DESC LIMIT 1`,
+      [singleSetting.body.data?.id]
+    );
+    check('single system-setting update has complete audit snapshots', singleAudit.rowCount === 1
+      && singleAudit.rows[0].old_values.setting_value.enabled === false
+      && singleAudit.rows[0].new_values.setting_value.enabled === true);
+    const batchSetting = await request('PUT', '/admin/system-settings', superToken, { settings: [{ key: batchSettingKey, value: { mode: 'new' } }] });
+    check('super_admin can batch update system settings', batchSetting.status === 200, JSON.stringify(batchSetting.body));
+    const batchAudit = await pool.query(
+      `SELECT old_values,new_values FROM medorbit.audit_logs WHERE action='SYSTEM_SETTING_UPDATED' AND entity_id=$1 ORDER BY created_at DESC LIMIT 1`,
+      [batchSetting.body.data?.[0]?.id]
+    );
+    check('batch system-setting update has complete audit snapshots', batchAudit.rowCount === 1
+      && batchAudit.rows[0].old_values.setting_value.mode === 'old'
+      && batchAudit.rows[0].new_values.setting_value.mode === 'new');
     let create = await request('POST', '/admin/invitations', superToken, { email: `s1c_invitee_${run}@medorbit.test` });
     check('super_admin can create invitation', create.status === 201, JSON.stringify(create.body));
     const link = create.body.data.acceptance_url; const raw = new URL(link).searchParams.get('token');
