@@ -33,6 +33,7 @@ run_suite "user content" npm run test:user-content
 run_suite "profile communication" npm run test:profile-communication-ux
 run_suite "doctor scheduling" npm run test:doctor-scheduling
 run_suite "analytics" npm run test:analytics
+run_suite "report safety" npm run test:report-safety
 run_suite "global auth gate" npm run test:auth-gate
 run_suite "billing entitlements" npm run test:billing
 run_suite "billing checkout lifecycle" npm run test:billing:checkout
