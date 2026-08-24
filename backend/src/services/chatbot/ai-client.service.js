@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { internalIdentityHeaders } = require('../aiBoundary.service');
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const AI_SERVICE_TIMEOUT_MS = parseInt(process.env.AI_SERVICE_TIMEOUT_MS) || 60000;
@@ -27,10 +28,16 @@ class AIClientService {
                 delete body.conversationId;
             }
 
+            const userId = body.userId;
+            delete body.userId;
+
             const response = await axios.post(
                 `${AI_SERVICE_URL}/chat`,
                 body,
-                { timeout: AI_SERVICE_TIMEOUT_MS }
+                {
+                    timeout: AI_SERVICE_TIMEOUT_MS,
+                    headers: internalIdentityHeaders({ userId }),
+                }
             );
 
             const data = response.data;
