@@ -38,6 +38,7 @@
     "test:virtual-doctor-tts-ui": "node frontend/tests/virtual-doctor-tts-ui.test.js",
     "test:auth-gate:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:auth-gate && npm run test:auth-gate-ui",
     "test:billing:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test ai-service-test && docker compose --profile test exec -T backend-test npm run test:billing",
+    "test:backend:docker:windows": "powershell -ExecutionPolicy Bypass -File scripts/ci/run-backend-integration-tests.ps1",
     "test:admin-rate-notifications:docker": "docker compose --profile test up -d --build --force-recreate --wait backend-test && docker compose --profile test exec -T backend-test npm run test:admin-rate-notifications && npm run test:admin-notifications-ui"
   },
   "devDependencies": {

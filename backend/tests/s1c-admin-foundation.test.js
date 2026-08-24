@@ -52,6 +52,7 @@ async function bootstrap(email, extra = {}) {
       '/admin/audit-logs',
       '/admin/notifications/templates',
       '/admin/system-settings',
+      '/health/events',
     ];
     for (const route of adminAndSuperAdminRoutes) {
       check(`patient is denied ${route}`, (await request('GET', route, patientToken)).status === 403);
@@ -59,6 +60,12 @@ async function bootstrap(email, extra = {}) {
       check(`admin is allowed ${route}`, (await request('GET', route, ordinaryToken)).status === 200);
       check(`super_admin is allowed ${route}`, (await request('GET', route, superToken)).status === 200);
     }
+    const eventHealth = await request('GET', '/health/events', superToken);
+    check('event health exposes aggregate-only pipeline status', eventHealth.status === 200
+      && typeof eventHealth.body.data?.kafkaEnabled === 'boolean'
+      && eventHealth.body.data?.workerMode === 'separate-process'
+      && typeof eventHealth.body.data?.outbox?.pending === 'number'
+      && !JSON.stringify(eventHealth.body.data).includes(ids.bootstrap));
     const unknownClinic = crypto.randomUUID();
     check('patient is denied clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, patientToken, {})).status === 403);
     check('doctor is denied clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, doctorToken, {})).status === 403);
