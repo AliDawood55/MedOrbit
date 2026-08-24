@@ -27,6 +27,7 @@
     "test:profile-communication-ux": "node tests/profile-communication-ux.test.js",
     "test:doctor-scheduling": "node tests/doctor-self-service-scheduling.test.js",
     "test:analytics": "node tests/analytics.test.js",
+    "test:report-safety": "node tests/report-safety.test.js",
     "test:auth-gate": "node tests/global-auth-gate.test.js",
     "test:billing": "node tests/billing-entitlements.test.js",
     "test:billing:checkout": "node tests/billing-checkout-lifecycle.test.js",

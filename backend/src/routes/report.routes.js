@@ -15,6 +15,28 @@ const {
 const service =
     require("../services/report.service");
 
+const fs = require("fs");
+const path = require("path");
+
+const REPORT_TYPES = new Set(["appointments", "medical_records", "prescriptions"]);
+const REPORT_FORMATS = new Set(["json", "csv", "pdf"]);
+
+function resolveStoredReportPath(filePath, format) {
+    if (!filePath || !["csv", "pdf"].includes(format)) return null;
+
+    const reportsDirectory = `${path.resolve(service.REPORTS_DIR)}${path.sep}`;
+    const resolvedFile = path.resolve(filePath);
+
+    if (!resolvedFile.startsWith(reportsDirectory)) return null;
+    if (path.extname(resolvedFile).toLowerCase() !== `.${format}`) return null;
+
+    try {
+        return fs.statSync(resolvedFile).isFile() ? resolvedFile : null;
+    } catch {
+        return null;
+    }
+}
+
 
 
 
@@ -92,6 +114,14 @@ router.post(
             } = req.body;
 
 
+
+            if (!REPORT_TYPES.has(type)) {
+                return error(res, "Unsupported report type", 400, "VALIDATION_ERROR");
+            }
+
+            if (!REPORT_FORMATS.has(format)) {
+                return error(res, "Unsupported report format", 400, "VALIDATION_ERROR");
+            }
 
             const content =
                 await service.generateReport(type);
@@ -346,8 +376,10 @@ WHERE id=$1
 
 
 
-            const file =
-                result.rows[0].file_path;
+            const file = resolveStoredReportPath(
+                result.rows[0].file_path,
+                result.rows[0].format
+            );
 
 
 
@@ -355,16 +387,16 @@ WHERE id=$1
 
                 return error(
                     res,
-                    "No file available",
-                    400,
-                    "NO_FILE"
+                    "Report file is unavailable",
+                    404,
+                    "REPORT_FILE_UNAVAILABLE"
                 );
 
             }
 
 
 
-            res.download(file);
+            res.download(file, path.basename(file));
 
 
 
