@@ -65,19 +65,19 @@ jobs:
         run: docker compose up -d --wait postgres
 
       - name: Bootstrap Base Schema
-        run: |
-          docker compose exec -T postgres sh -c \
-            'psql --no-psqlrc --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set ON_ERROR_STOP=1' \
-            < scripts/ci/base-schema.sql
+        run: docker compose --profile tools run --rm --no-deps db-bootstrap
 
       - name: Apply Database Migrations
-        run: docker compose run --rm --no-deps backend node scripts/migrate.js up
+        run: docker compose --profile tools run --rm --no-deps db-migrate up
 
       - name: Verify Database Bootstrap
         run: |
           docker compose exec -T postgres sh -c \
             'psql --no-psqlrc --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set ON_ERROR_STOP=1' \
             < scripts/ci/verify-bootstrap.sql
+
+      - name: Backend authorization integration tests
+        run: npm run test:s1c:docker
 
       - name: Start Containers
         run: docker compose up -d --wait --wait-timeout 180

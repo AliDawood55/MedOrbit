@@ -25,6 +25,15 @@ const server = http.createServer(async (req, res) => {
     try {
         if (req.method === 'GET' && req.url === '/health') return send(res, 200, { status: 'healthy' });
         if (req.method === 'POST' && req.url === '/drug-interactions') {
+            const body = await readJson(req);
+            const userId = req.headers['x-medorbit-user-id'] || null;
+            const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
+            if (userId && suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Invalid internal identity context' });
+            }
+            if ((body.medication_names || []).includes('__UPSTREAM_FAIL__')) {
+                return send(res, 503, { detail: 'Simulated AI outage' });
+            }
             return send(res, 200, { has_interactions: false, interaction_count: 0, interactions: [], severity_summary: {} });
         }
         if (req.method === 'POST' && req.url === '/triage') {

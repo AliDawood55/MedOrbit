@@ -43,12 +43,21 @@ scripts/        Maintenance/dev scripts, CI bootstrap schema (scripts/ci/)
 
 ```bash
 cp .env.example .env   # fill in real values
-docker compose up --build
+docker compose up -d postgres
+npm run db:initialize
+docker compose up -d --build
 ```
 
 This starts `postgres`, `kafka`, `backend` (+ workers), `ai-service`, and `frontend`.
 
-Apply database migrations (once postgres is healthy):
+For a **fresh, empty** database, initialize the tracked historical baseline
+and then apply migrations (once postgres is healthy):
+
+```bash
+npm run db:initialize
+```
+
+For an existing database that already has the `medorbit` schema, use only:
 
 ```bash
 npm run db:migrate
@@ -68,7 +77,9 @@ npm run dev     # runs ai-service, backend, and frontend together
 ```
 
 Needs, on the host:
-- A local PostgreSQL + PostGIS instance, migrated with `npm run db:migrate`
+- A local PostgreSQL + PostGIS instance. For a fresh database, first apply
+  `psql -U postgres -d medorbit -f scripts/ci/base-schema.sql`, then run
+  `cd backend && node scripts/migrate.js up` with the root `.env` configured.
 - Python 3.12 (not 3.13+ — asyncpg/pydantic have no prebuilt wheels there)
 - Ollama running (`npm run dev:ollama`, or however you already run it)
 
@@ -77,8 +88,8 @@ Needs, on the host:
 - Database: `medorbit`, schema: `medorbit`
 - Host access (dev tools, pgAdmin, psql): `127.0.0.1:5433`
 - Docker-internal access (backend/ai-service containers): `postgres:5432`
-- Canonical, ordered migrations live in [backend/migrations/](backend/migrations/), applied via `backend/scripts/migrate.js` (`npm run db:migrate`, `npm run db:migrate:status`, `npm run db:migrate:dry-run`)
-- `db/` and `database/` are local, gitignored, raw/historical SQL — not required for a normal clean-clone run; see [DOCKER.md](DOCKER.md) for how to get data into a fresh database
+- Canonical, ordered migrations live in [backend/migrations/](backend/migrations/) and are applied via `backend/scripts/migrate.js` (`npm run db:migrate`, `npm run db:migrate:status`, `npm run db:migrate:dry-run`). The tracked historical prerequisite is [scripts/ci/base-schema.sql](scripts/ci/base-schema.sql), run once by `npm run db:bootstrap` for a clean database.
+- `db/` and `database/` are local, gitignored, raw/historical SQL. They are not required for a normal clean-clone schema bootstrap.
 
 ## Environment setup
 
@@ -87,7 +98,8 @@ All configuration is a single root `.env` file, read by the backend, ai-service,
 ## Development workflow
 
 - `npm run dev` — run ai-service, backend, and frontend concurrently on the host
-- `npm run db:migrate` / `db:migrate:status` / `db:migrate:dry-run` — apply/inspect migrations
+- `npm run db:initialize` — bootstrap a fresh Docker database and apply migrations
+- `npm run db:migrate` / `db:migrate:status` / `db:migrate:dry-run` — apply/inspect migrations on an initialized Docker database
 - Docker Compose profiles: `--profile tools` (migrations), `--profile test` (test database + backend-test container)
 
 ## Testing / CI

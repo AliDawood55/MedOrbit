@@ -14,6 +14,10 @@ DECLARE
   missing_tables TEXT;
   application_rows INTEGER;
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    RAISE EXCEPTION 'PostGIS extension is missing from the bootstrap database';
+  END IF;
+
   -- 1. Baseline tables that no migration creates.
   --
   -- These come from the gitignored db/ SQL on a developer machine and from

@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorizeAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -189,7 +189,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
 router.post(
   "/",
   authenticate,
-  authorize("admin"),
+  authorizeAdmin,
   async (req, res, next) => {
     try {
       const {
@@ -218,7 +218,7 @@ router.post(
 router.put(
   "/:id",
   authenticate,
-  authorize("admin"),
+  authorizeAdmin,
   async (req, res, next) => {
     try {
       const { name_ar, name_en, phone } = req.body;
@@ -247,7 +247,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
-  authorize("admin"),
+  authorizeAdmin,
   async (req, res, next) => {
     try {
       const result = await db.query(
@@ -272,7 +272,7 @@ router.delete(
 router.post(
   "/:id/assign-doctor",
   authenticate,
-  authorize("admin"),
+  authorizeAdmin,
   async (req, res, next) => {
     try {
       const clinicId = req.params.id;
@@ -321,7 +321,7 @@ router.post(
 router.delete(
   "/:id/remove-doctor/:doctorId",
   authenticate,
-  authorize("admin"),
+  authorizeAdmin,
   async (req, res, next) => {
     try {
       await db.query(

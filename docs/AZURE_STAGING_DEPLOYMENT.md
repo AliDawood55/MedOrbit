@@ -79,16 +79,34 @@ local dev `.env` secrets.**
 `.env.staging` is gitignored; it never leaves the VM unless you copy it
 yourself.
 
-### Restore the database
+### Initialize a fresh staging database
 
-Staging doesn't auto-seed the database (same as local dev — see
-[`DOCKER.md`](../DOCKER.md)). After `docker compose up` has started postgres
-once:
+The tracked baseline creates the schema only; it does not create application
+users or seed data. Start PostgreSQL, bootstrap the historical baseline, then
+apply migrations:
+
+```bash
+docker compose -f docker-compose.staging.yml --env-file .env.staging up -d postgres
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-bootstrap
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-migrate up
+```
+
+### Restore historical data (optional)
+
+Restore a backup only when staging needs existing data. This replaces schema
+objects and data in the selected database, so do it only after a backup and
+only for an intentional replacement:
 
 ```bash
 docker cp medorbit_backup.backup medorbit-postgres-staging:/tmp/medorbit_backup.backup
 docker compose -f docker-compose.staging.yml exec postgres \
   pg_restore -U <DB_USER> -d <DB_NAME> --clean --if-exists /tmp/medorbit_backup.backup
+```
+
+Then apply any migrations newer than the backup:
+
+```bash
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-migrate up
 ```
 
 ## 6. Start the stack
@@ -102,6 +120,23 @@ Or use the helper script (does the same, plus health polling):
 ```bash
 ./scripts/deploy-staging.sh
 ```
+
+### Persistent uploads and reports
+
+The staging Compose file persists `backend/uploads/` and `backend/storage/` on
+the VM. These files are not part of PostgreSQL backups. Before the first
+deployment of this storage change, recover any files from the old backend
+container before it is recreated:
+
+```bash
+mkdir -p backend/runtime-recovery
+docker cp medorbit-backend-staging:/app/backend/uploads backend/runtime-recovery/uploads
+docker cp medorbit-backend-staging:/app/backend/storage backend/runtime-recovery/storage
+```
+
+Review and merge the recovered files into `backend/uploads/` and
+`backend/storage/`. Restrict access to those host directories and include them
+in the staging backup strategy.
 
 ## 7. Verify
 

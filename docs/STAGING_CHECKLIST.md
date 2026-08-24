@@ -20,11 +20,18 @@ Full details: [`AZURE_STAGING_DEPLOYMENT.md`](AZURE_STAGING_DEPLOYMENT.md).
       `FRONTEND_URL`, `BACKEND_PUBLIC_URL`, `GOOGLE_CLIENT_ID`, `EMAIL_*`
       (all with real values, VM's real public IP, fresh secrets — not local
       dev's)
-- [ ] `medorbit_backup.backup` copied to VM and restored into postgres
+- [ ] Fresh schema initialized with tracked baseline + migrations, or an
+      intentional backup restore completed and followed by migrations
 
 ## Start & verify
+- [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging up -d postgres`
+- [ ] Fresh DB only: `docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-bootstrap`
+- [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-migrate up`
 - [ ] `docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build`
       (or `./scripts/deploy-staging.sh`)
+- [ ] Existing deployment only: runtime uploads/reports recovered from the old
+      backend container before it is recreated, then stored under
+      `backend/uploads/` and `backend/storage/`
 - [ ] `docker compose -f docker-compose.staging.yml ps` — all healthy
 - [ ] `curl http://localhost:3001/api/health` (on VM)
 - [ ] `curl http://localhost:8001/health` (on VM)

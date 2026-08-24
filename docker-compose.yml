@@ -12,12 +12,12 @@
 # everything else (JWT_SECRET, EMAIL_*, GOOGLE_CLIENT_ID, CORS_ORIGIN,
 # FRONTEND_URL, etc.) passes through unchanged from .env.
 #
-# DATABASE SEEDING — deliberately NOT automatic. The db/ and database/ SQL
-# folders are gitignored (see .gitignore's comment: "distributed via
-# medorbit_backup.backup"), so there is no SQL this compose file could reliably
-# auto-run on a fresh clone. See DOCKER.md for the one-time restore step
-# (docker cp + pg_restore) after `docker compose up` starts postgres for the
-# first time.
+# DATABASE BOOTSTRAP — deliberately explicit, never automatic on `up`.
+# Migrations 001+ alter tables from the historical MedOrbit schema, so a fresh
+# database must first receive the tracked schema-only baseline. Run
+# `npm run db:bootstrap` once after postgres is healthy, then `npm run
+# db:migrate`. The bootstrap service is a no-op for an initialized database and
+# refuses a suspicious partial medorbit schema rather than guessing.
 #
 # OLLAMA — deliberately NOT a service here. The model is ~4GB and is meant to
 # run once on the host, shared by everything on that machine, not rebuilt
@@ -111,7 +111,12 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend/uploads:/app/uploads
+      # server.js runs from /app/backend, so both paths must live below that
+      # working directory. Mounting /app/uploads previously left the actual
+      # runtime directories inside the container layer, where rebuilds erased
+      # avatars, record attachments, and generated reports.
+      - ./backend/uploads:/app/backend/uploads
+      - ./backend/storage:/app/backend/storage
     healthcheck:
       test:
         [
@@ -231,6 +236,7 @@ services:
     entrypoint: ["bash", "/usr/local/bin/init-test-database.sh"]
 
   backend-test:
+    image: medorbit-backend-test
     build:
       context: .
       dockerfile: backend/Dockerfile.test
@@ -305,6 +311,25 @@ services:
     entrypoint: ["node", "scripts/migrate.js"]
     command: ["status"]
 
+  db-bootstrap:
+    image: postgis/postgis:18-3.6
+    profiles: ["tools"]
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_NAME}
+      BASELINE_SQL: /bootstrap/base-schema.sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./scripts/bootstrap-database.sh:/usr/local/bin/bootstrap-database.sh:ro
+      - ./scripts/ci/base-schema.sql:/bootstrap/base-schema.sql:ro
+    entrypoint: ["bash", "/usr/local/bin/bootstrap-database.sh"]
+
   ai-service:
     build:
       # Root context: requirements.txt lives at the project root, not inside
@@ -352,6 +377,9 @@ services:
       - medorbit_hf_cache:/root/.cache/huggingface
 
   ai-service-test:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.test
     image: medorbit-backend-test
     profiles: ["test"]
     restart: "no"
