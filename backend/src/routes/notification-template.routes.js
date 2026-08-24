@@ -1,6 +1,7 @@
 const express = require('express');
 
 const db = require('../config/database');
+const { createAudit } = require('../services/audit.service');
 
 const {
     authenticate,
@@ -37,7 +38,6 @@ ORDER BY created_at DESC
 `
 
             );
-
 
             return success(
                 res,
@@ -130,8 +130,7 @@ router.post(
     authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
 
 
@@ -149,7 +148,9 @@ router.post(
 
 
 
-            const result = await db.query(
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const result = await client.query(
 
                 `
 INSERT INTO medorbit.notification_templates
@@ -183,6 +184,16 @@ RETURNING *
 
             );
 
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'NOTIFICATION_TEMPLATE_CREATED',
+                entity_type: 'NOTIFICATION_TEMPLATE',
+                entity_id: result.rows[0].id,
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
+
 
 
             return success(
@@ -194,9 +205,10 @@ RETURNING *
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 
@@ -216,8 +228,7 @@ router.put(
     authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
 
 
@@ -234,7 +245,19 @@ router.put(
 
 
 
-            await db.query(
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const previous = await client.query(
+                `SELECT id, name, type, subject_en, subject_ar, body_html, body_text, variables, is_active
+                 FROM medorbit.notification_templates WHERE id = $1 FOR UPDATE`,
+                [req.params.id]
+            );
+            if (previous.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return error(res, "Template not found", 404, "NOT_FOUND");
+            }
+
+            const result = await client.query(
 
                 `
 
@@ -255,6 +278,7 @@ variables = COALESCE($5,variables),
 is_active = COALESCE($6,is_active)
 
 WHERE id=$7
+RETURNING *
 
 `,
 
@@ -270,6 +294,17 @@ WHERE id=$7
 
             );
 
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'NOTIFICATION_TEMPLATE_UPDATED',
+                entity_type: 'NOTIFICATION_TEMPLATE',
+                entity_id: result.rows[0].id,
+                old_values: previous.rows[0],
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
+
 
 
             return success(
@@ -282,9 +317,10 @@ WHERE id=$7
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
     });
@@ -303,12 +339,21 @@ router.delete(
     authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const previous = await client.query(
+                `SELECT id, name, type, subject_en, subject_ar, body_html, body_text, variables, is_active
+                 FROM medorbit.notification_templates WHERE id = $1 FOR UPDATE`,
+                [req.params.id]
+            );
+            if (previous.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return error(res, "Template not found", 404, "NOT_FOUND");
+            }
 
-
-            const result = await db.query(
+            const result = await client.query(
 
                 `
                 UPDATE medorbit.notification_templates
@@ -329,16 +374,16 @@ router.delete(
             );
 
 
-            if (result.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Template not found",
-                    404,
-                    "NOT_FOUND"
-                );
-
-            }
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'NOTIFICATION_TEMPLATE_DEACTIVATED',
+                entity_type: 'NOTIFICATION_TEMPLATE',
+                entity_id: result.rows[0].id,
+                old_values: previous.rows[0],
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
 
 
             return success(
@@ -351,9 +396,10 @@ router.delete(
         }
 
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 
