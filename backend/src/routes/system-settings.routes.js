@@ -163,6 +163,8 @@ router.put(
     async (req, res, next) => {
 
 
+        let client;
+
         try {
 
 
@@ -186,8 +188,11 @@ router.put(
 
 
 
+            client = await db.getClient();
+            await client.query("BEGIN");
+
             const old =
-                await db.query(
+                await client.query(
 
                     `
                     SELECT *
@@ -195,6 +200,7 @@ router.put(
                     FROM medorbit.system_settings
 
                     WHERE setting_key=$1
+                    FOR UPDATE
                     `,
 
                     [
@@ -206,6 +212,8 @@ router.put(
 
 
             if (!old.rows.length) {
+
+                await client.query("ROLLBACK");
 
                 return error(
                     res,
@@ -221,7 +229,7 @@ router.put(
 
 
             const updated =
-                await db.query(
+                await client.query(
 
                     `
                     UPDATE medorbit.system_settings
@@ -261,7 +269,9 @@ router.put(
 
 
 
-            await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'SYSTEM_SETTING_UPDATED', entity_type: 'SYSTEM_SETTING', entity_id: updated.rows[0].id, old_values: old.rows[0], new_values: updated.rows[0] });
+            await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'SYSTEM_SETTING_UPDATED', entity_type: 'SYSTEM_SETTING', entity_id: updated.rows[0].id, old_values: old.rows[0], new_values: updated.rows[0] }, client);
+
+            await client.query("COMMIT");
 
 
 
@@ -283,7 +293,17 @@ router.put(
 
         catch (e) {
 
+            if (client) {
+                await client.query("ROLLBACK").catch(() => {});
+            }
+
             next(e);
+
+        }
+
+        finally {
+
+            client?.release();
 
         }
 
@@ -354,6 +374,34 @@ router.put(
             for (const item of settings) {
 
 
+                const old =
+                    await client.query(
+
+                        `
+                        SELECT *
+
+                        FROM medorbit.system_settings
+
+                        WHERE setting_key=$1
+
+                        FOR UPDATE
+                        `,
+
+                        [item.key]
+
+                    );
+
+
+                if (!old.rows.length) {
+
+                    const notFound = new Error("Setting not found");
+                    notFound.statusCode = 404;
+                    notFound.code = "NOT_FOUND";
+                    throw notFound;
+
+                }
+
+
                 const result =
                     await client.query(
 
@@ -393,9 +441,7 @@ router.put(
 
 
                 results.push(result.rows[0]);
-                if (result.rows[0]) {
-                    await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'SYSTEM_SETTING_UPDATED', entity_type: 'SYSTEM_SETTING', entity_id: result.rows[0].id, new_values: result.rows[0] }, client);
-                }
+                await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'SYSTEM_SETTING_UPDATED', entity_type: 'SYSTEM_SETTING', entity_id: result.rows[0].id, old_values: old.rows[0], new_values: result.rows[0] }, client);
 
 
             }
