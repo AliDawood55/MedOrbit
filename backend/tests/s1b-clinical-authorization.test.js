@@ -296,6 +296,15 @@ async function main() {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ medication_names: [] }),
         });
         check('anonymous stateless AI flow remains available', direct.status === 200);
+        response = await request('POST', '/ai/drug-interactions', null, { medication_names: ['Aspirin', 'Warfarin'] });
+        check('backend drug interaction proxy requires authentication', response.status === 401);
+        response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin'] });
+        check('backend drug interaction proxy validates medication count', response.status === 400 && response.body.error?.code === 'VALIDATION_ERROR');
+        response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin', 'Warfarin'] });
+        check('backend drug interaction proxy uses the standard envelope',
+            response.status === 200 && response.body.success === true && response.body.data?.has_interactions === false);
+        response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin', '__UPSTREAM_FAIL__'] });
+        check('backend drug interaction proxy masks upstream failures', response.status === 502 && response.body.error?.code === 'AI_SERVICE_ERROR');
         response = await request('POST', '/ai/triage', null, { symptoms: ['headache'], user_id: ids.u2, session_id: `s1b-${run}-anon` }, {
             'X-MedOrbit-Internal-Token': 'browser-spoof', 'X-MedOrbit-User-Id': ids.u2,
         });

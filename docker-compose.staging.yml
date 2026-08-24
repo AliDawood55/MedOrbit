@@ -60,7 +60,11 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./backend/uploads:/app/uploads
+      # Persist clinical attachments and generated reports outside the
+      # backend container layer. The application working directory is
+      # /app/backend, not /app.
+      - ./backend/uploads:/app/backend/uploads
+      - ./backend/storage:/app/backend/storage
     healthcheck:
       test:
         [
@@ -99,6 +103,47 @@ services:
       start_period: 15s
     volumes:
       - medorbit_hf_cache_staging:/root/.cache/huggingface
+
+  db-bootstrap:
+    image: postgis/postgis:18-3.6
+    profiles: ["tools"]
+    restart: "no"
+    env_file:
+      - .env.staging
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: ${DB_USER}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_NAME}
+      BASELINE_SQL: /bootstrap/base-schema.sql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./scripts/bootstrap-database.sh:/usr/local/bin/bootstrap-database.sh:ro
+      - ./scripts/ci/base-schema.sql:/bootstrap/base-schema.sql:ro
+    entrypoint: ["bash", "/usr/local/bin/bootstrap-database.sh"]
+
+  db-migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.test
+    profiles: ["tools"]
+    restart: "no"
+    env_file:
+      - .env.staging
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_SCHEMA: medorbit
+      NODE_ENV: migration
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["node", "scripts/migrate.js"]
+    command: ["status"]
 
   frontend:
     build:

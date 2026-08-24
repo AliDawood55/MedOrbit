@@ -4,7 +4,7 @@ const db = require('../config/database');
 
 const {
     authenticate,
-    authorize
+    authorizeAdmin
 } = require('../middleware/auth');
 
 const {
@@ -21,7 +21,7 @@ const router = express.Router();
 router.get(
     "/",
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -66,7 +66,7 @@ router.get(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -127,7 +127,7 @@ router.post(
     "/",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -213,7 +213,7 @@ router.put(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -300,7 +300,7 @@ router.delete(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 

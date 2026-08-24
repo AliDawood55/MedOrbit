@@ -12,7 +12,22 @@ function check(name, ok, detail = '') { if (ok) { passed++; console.log(`  ✓ $
 function jwt(id, role, version = 1) { return generateAccessToken({ sub: id, role, authorizationVersion: version }); }
 async function request(method, route, token, body) { const headers = token ? { Authorization: `Bearer ${token}` } : {}; if (body !== undefined) headers['Content-Type'] = 'application/json'; const r = await fetch(`${apiBase}${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }); return { status: r.status, body: await r.json() }; }
 async function user(key, role = 'patient', opts = {}) { ids[key] = crypto.randomUUID(); await pool.query(`INSERT INTO medorbit.users (id,email,password_hash,role,is_active,email_verified,authorization_version,deleted_at) VALUES ($1,$2,'test-only',$3,$4,$5,1,$6)`, [ids[key], `s1c_${key}_${run}@medorbit.test`, role, opts.active ?? true, opts.verified ?? true, opts.deleted ? new Date() : null]); return ids[key]; }
-function bootstrap(email, extra = {}) { return spawnSync(process.execPath, ['scripts/bootstrap-super-admin.js'], { cwd: process.cwd(), env: { ...process.env, NODE_ENV: 'test', MEDORBIT_TEST_ISOLATION: 'docker', MEDORBIT_BOOTSTRAP_TEST_MODE: 'true', SUPER_ADMIN_BOOTSTRAP_EMAIL: email, MEDORBIT_EXPECTED_SYSTEM_IDENTIFIER: '7666818136126230567', ...extra }, encoding: 'utf8' }); }
+async function bootstrap(email, extra = {}) {
+  const { rows } = await pool.query(`SELECT (pg_control_system()).system_identifier::text AS system_identifier`);
+  return spawnSync(process.execPath, ['scripts/bootstrap-super-admin.js'], {
+    cwd: process.cwd(),
+    env: {
+      ...process.env,
+      NODE_ENV: 'test',
+      MEDORBIT_TEST_ISOLATION: 'docker',
+      MEDORBIT_BOOTSTRAP_TEST_MODE: 'true',
+      SUPER_ADMIN_BOOTSTRAP_EMAIL: email,
+      MEDORBIT_EXPECTED_SYSTEM_IDENTIFIER: rows[0].system_identifier,
+      ...extra,
+    },
+    encoding: 'utf8',
+  });
+}
 
 (async () => {
   try {
@@ -22,17 +37,33 @@ function bootstrap(email, extra = {}) { return spawnSync(process.execPath, ['scr
     const bootEmail = `s1c_bootstrap_${run}@medorbit.test`;
     await pool.query('UPDATE medorbit.users SET email=$1 WHERE id=$2', [bootEmail, ids.bootstrap]);
     await pool.query(`INSERT INTO medorbit.user_sessions (user_id,refresh_token_hash,expires_at) VALUES ($1,$2,NOW()+INTERVAL '1 day')`, [ids.bootstrap, crypto.createHash('sha256').update(`bootstrap-session-${run}`).digest('hex')]);
-    const oldBootAccess = jwt(ids.bootstrap, 'patient'); const boot = bootstrap(bootEmail);
+    const oldBootAccess = jwt(ids.bootstrap, 'patient'); const boot = await bootstrap(bootEmail);
     check('eligible bootstrap succeeds', boot.status === 0, boot.stderr);
     let row = (await pool.query('SELECT role,authorization_version FROM medorbit.users WHERE id=$1', [ids.bootstrap])).rows[0];
     check('bootstrap grants super_admin and advances version', row.role === 'super_admin' && row.authorization_version === 2);
     check('bootstrap revokes sessions', (await pool.query('SELECT revoked_at FROM medorbit.user_sessions WHERE user_id=$1', [ids.bootstrap])).rows[0].revoked_at !== null);
     check('bootstrap invalidates old access', (await request('GET', '/admin/users', oldBootAccess)).status === 401);
-    check('bootstrap is idempotent', bootstrap(bootEmail).status === 0);
-    check('bootstrap rejects localhost/native configuration', bootstrap(bootEmail, { DB_HOST: 'localhost' }).status !== 0);
+    check('bootstrap is idempotent', (await bootstrap(bootEmail)).status === 0);
+    check('bootstrap rejects localhost/native configuration', (await bootstrap(bootEmail, { DB_HOST: 'localhost' })).status !== 0);
 
-    await user('ordinary', 'admin'); await user('invitee'); await user('wrong');
-    const superToken = jwt(ids.bootstrap, 'super_admin', 2); const ordinaryToken = jwt(ids.ordinary, 'admin');
+    await user('ordinary', 'admin'); await user('doctor', 'doctor'); await user('invitee'); await user('wrong');
+    const superToken = jwt(ids.bootstrap, 'super_admin', 2); const ordinaryToken = jwt(ids.ordinary, 'admin'); const doctorToken = jwt(ids.doctor, 'doctor'); const patientToken = jwt(ids.wrong, 'patient');
+    const adminAndSuperAdminRoutes = [
+      '/admin/audit-logs',
+      '/admin/notifications/templates',
+      '/admin/system-settings',
+    ];
+    for (const route of adminAndSuperAdminRoutes) {
+      check(`patient is denied ${route}`, (await request('GET', route, patientToken)).status === 403);
+      check(`doctor is denied ${route}`, (await request('GET', route, doctorToken)).status === 403);
+      check(`admin is allowed ${route}`, (await request('GET', route, ordinaryToken)).status === 200);
+      check(`super_admin is allowed ${route}`, (await request('GET', route, superToken)).status === 200);
+    }
+    const unknownClinic = crypto.randomUUID();
+    check('patient is denied clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, patientToken, {})).status === 403);
+    check('doctor is denied clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, doctorToken, {})).status === 403);
+    check('admin reaches clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, ordinaryToken, {})).status === 404);
+    check('super_admin reaches clinic administration', (await request('PUT', `/clinics/${unknownClinic}`, superToken, {})).status === 404);
     let create = await request('POST', '/admin/invitations', superToken, { email: `s1c_invitee_${run}@medorbit.test` });
     check('super_admin can create invitation', create.status === 201, JSON.stringify(create.body));
     const link = create.body.data.acceptance_url; const raw = new URL(link).searchParams.get('token');
