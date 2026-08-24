@@ -287,7 +287,72 @@ duplicate handling as a backend follow-up, not a client-only guarantee. This
 is the remaining OMAR-BE-007 product gap; it must be resolved before calling
 the review contract feature-complete.
 
-## 7. Compatibility and change policy
+## 7. SHARED-08 — Virtual Doctor lifecycle
+
+All Virtual Doctor traffic goes through `/api/virtual-doctor`; no Web or
+Mobile client may call the AI service directly. Every endpoint requires an
+access token. The backend derives the user identity from that token and sends
+an internal service credential to the AI service; clients must never send a
+`user_id` field.
+
+### Lifecycle
+
+1. Start/rejoin with `POST /virtual-doctor/start`, body `{ "language": "ar" | "en" }`.
+   Omitted/invalid language defaults to `en`. The response contains the AI
+   session payload plus `resumed` and `entitlement_source`.
+2. Persist the returned `session_id` locally only for the active consultation.
+   After refresh/reconnect, call `GET /virtual-doctor/session/:sessionId` or
+   call `/start` again; the backend reuses an active owned session rather than
+   charging for another consultation.
+3. Send turns through `POST /virtual-doctor/message`:
+   `{ "session_id": "uuid", "message": "text" }`. Render the upstream
+   response in `data`. When `data.phase === "complete"`, the backend ends the
+   consultation automatically.
+4. End deliberately with `POST /virtual-doctor/session/:sessionId/end` when
+   the user leaves. It returns `{ status, next_free_at }` and finalizes an
+   abandoned consultation.
+5. Generate a report with `POST /virtual-doctor/report/:sessionId`. This also
+   finalizes the consultation; response data includes a backend-owned
+   `download_url`. Download through that URL, which is a PDF binary response.
+
+Only the owning account can access a session, send messages, generate a report,
+or download it. A missing, guessed, ended, or other-user session is reported as
+`404 NOT_FOUND`, not as an ownership disclosure.
+
+### Voice assistance
+
+| Operation | Endpoint | Request / response |
+|---|---|---|
+| Speech-to-text | `POST /virtual-doctor/transcribe` | `multipart/form-data`: `audio` (max 10 MiB), `session_id`, optional `language`; JSON envelope response. |
+| Text-to-speech | `POST /virtual-doctor/speak` | JSON `{ session_id, text, language }`; binary `audio/wav`, with `X-TTS-Voice` and `X-TTS-Language` headers. TTS failure must not block text consultation. |
+| Warm model | `POST /virtual-doctor/transcribe/warmup` or `/speak/warmup` | Optional `?language=`; best effort `{ warmed: boolean }`. |
+| Model status | `GET /virtual-doctor/transcribe/status` or `/speak/status` | JSON envelope status. |
+
+Transcription and synthesis require an active owned consultation. UI must keep
+the text path usable if voice features are unavailable. Warm-up is not a
+consultation start and must not be represented as one.
+
+### Entitlements, failure, and abandoned state
+
+The backend enforces quota and fair-use rate limits. Clients render the error
+envelope and use its code, especially:
+
+- `FREE_QUOTA_EXHAUSTED` (403): show the plan/upgrade state.
+- `VOICE_COOLDOWN` (429): show `error.details.next_free_at` when supplied.
+- `ENTITLEMENT_UNAVAILABLE` (403): retry later; do not claim access.
+- `SESSION_STARTING` (409): retry `/start` after a short delay.
+- `SESSION_UNAVAILABLE` (409): clear the local session; its upstream state is
+  gone and the backend has finalized the orphaned grant.
+- `AI_SERVICE_ERROR`, `TTS_UNAVAILABLE`, or `PDF_UNAVAILABLE`: preserve text
+  and allow a safe retry where appropriate.
+
+The server can expire stale grants according to its entitlement policy; there
+is no client-side heartbeat contract. Therefore, clients must explicitly end
+an abandoned session when possible and clear local state after 404/409. A
+report or a completed AI phase is also an end event; do not send more turns
+after either.
+
+## 8. Compatibility and change policy
 
 This is v1. Additive optional fields are allowed. Renaming/removing fields,
 changing authorization, response envelopes, or the clinical visibility rules
