@@ -1,0 +1,12 @@
+# Public MedOrbit entry point. Caddy obtains and renews TLS certificates for
+# MEDORBIT_PUBLIC_HOST automatically; do not use an IP address here.
+{$MEDORBIT_PUBLIC_HOST} {
+	encode zstd gzip
+
+	# API and Socket.IO stay on the same HTTPS origin as the web client.
+	reverse_proxy /api/* backend:3001
+	reverse_proxy /socket.io/* backend:3001
+
+	# The static client is the fallback for every remaining web path.
+	reverse_proxy frontend:8080
+}
