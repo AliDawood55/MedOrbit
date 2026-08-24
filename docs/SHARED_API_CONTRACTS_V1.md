@@ -226,7 +226,68 @@ web application billing route in the system browser, then refresh
 focus. Mobile must not call `POST /billing/checkout`, cancellation, resume,
 plan-change, `/billing/webhook`, or any `/billing/sandbox/*` route in v1.
 
-## 6. Compatibility and change policy
+## 6. SHARED-02 — Admin users and doctor reviews
+
+### Admin user management
+
+All endpoints below require an `admin` or `super_admin` access token.
+
+| Operation | Endpoint | Current contract |
+|---|---|---|
+| List users | `GET /admin/users` | Filters: optional `role`, `active=true|false`, `search`; fixed `created_at DESC` order; returns an array, with no pagination or client-selected sorting in v1. |
+| Deactivate | `PUT /admin/users/:id/deactivate` | No request body; revokes all target sessions and advances authorization version. |
+| Reactivate | `PUT /admin/users/:id/reactivate` | No request body; revokes all target sessions and advances authorization version. |
+| Change role | `PUT /admin/users/:id/role` | Deliberately disabled: always `403 FORBIDDEN`. |
+
+List fields are `id`, `email`, `role`, `is_active`, `email_verified`,
+`authorization_version`, `first_name_en`, `last_name_en`, `phone`, and `city`.
+No password, token, or full profile data is returned.
+
+Guardrails: administrators cannot alter their own security state; no ordinary
+admin route can modify a `super_admin`; only a `super_admin` may modify an
+`admin`. A missing target returns `404 NOT_FOUND`. Every successful state
+change creates an audit record. UI must immediately discard an affected
+target's cached authorization assumptions; the target's existing sessions are
+invalidated by the backend.
+
+Pagination, explicit sort, and role-change workflow are **not available** in
+v1. Ali should implement local display filtering only where necessary and must
+not invent query parameters or a role-edit control.
+
+### Doctor reviews
+
+| Operation | Endpoint | Caller | Success |
+|---|---|---|---|
+| Create review | `POST /doctors/:doctorId/reviews` | Authenticated patient with a completed matching appointment | 201 |
+| List visible reviews | `GET /doctors/:doctorId/reviews` | Authenticated user | 200 |
+
+Create payload:
+
+```json
+{
+  "appointment_id": "uuid",
+  "rating": 1,
+  "review_text": { "ar": "optional", "en": "optional" },
+  "professionalism_rating": 1,
+  "treatment_rating": 1,
+  "communication_rating": 1
+}
+```
+
+For compatibility, `review_text_ar`/`review_text_en` and camelCase forms are
+accepted. The appointment must belong to the authenticated patient's profile,
+the target doctor, and have `status='completed'`; otherwise the response is
+`400 INVALID_APPOINTMENT`. Publicly returned review text has canonical
+`review_text` plus bilingual fields.
+
+**Known v1 limitation:** there is no server-side duplicate-review prevention,
+edit endpoint, delete endpoint, moderation endpoint, or pagination. The
+client should show a single review action per completed appointment and treat
+duplicate handling as a backend follow-up, not a client-only guarantee. This
+is the remaining OMAR-BE-007 product gap; it must be resolved before calling
+the review contract feature-complete.
+
+## 7. Compatibility and change policy
 
 This is v1. Additive optional fields are allowed. Renaming/removing fields,
 changing authorization, response envelopes, or the clinical visibility rules
