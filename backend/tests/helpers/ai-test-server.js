@@ -36,6 +36,34 @@ const server = http.createServer(async (req, res) => {
             }
             return send(res, 200, { has_interactions: false, interaction_count: 0, interactions: [], severity_summary: {} });
         }
+        if (req.method === 'POST' && req.url === '/prescription-check') {
+            const body = await readJson(req);
+            const userId = req.headers['x-medorbit-user-id'] || null;
+            const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
+            }
+            const names = (body.prescription_items || []).map((item) => String(item.medication_name_en || ''));
+            if (names.includes('__PRESCRIPTION_CHECK_UNAVAILABLE__')) {
+                return send(res, 503, { detail: 'Simulated prescription-check outage' });
+            }
+            if (names.includes('__PRESCRIPTION_CHECK_MALFORMED__')) {
+                return send(res, 200, { invalid: true });
+            }
+            if (names.includes('__PRESCRIPTION_CHECK_WARNING__')) {
+                return send(res, 200, {
+                    prescription_safe: false,
+                    interactions: [{
+                        drug_1: { name_en: 'Drug A' },
+                        drug_2: { name_en: 'Drug B' },
+                        severity: 'severe',
+                        description: 'Simulated severe interaction',
+                    }],
+                    warnings: ['[SEVERE] Drug A + Drug B: Simulated severe interaction'],
+                });
+            }
+            return send(res, 200, { prescription_safe: true, interactions: [], warnings: [] });
+        }
         if (req.method === 'POST' && req.url === '/triage') {
             const body = await readJson(req);
             if (body.user_id || body.record_id) return send(res, 403, { detail: 'Client-supplied identity is not accepted' });

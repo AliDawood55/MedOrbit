@@ -106,9 +106,24 @@ active care relationship is required.
 ```
 
 Detail data is `{ "prescription": { ... }, "items": [ ... ] }`. PDF is
-served as `application/pdf` with an attachment disposition. Prescription
-safety warnings are **not yet part of this contract**; UI must not assume a
-`warnings` field until the Phase 5 contract amendment is published.
+served as `application/pdf` with an attachment disposition. Create data keeps
+all prescription fields and additionally returns the following advisory field:
+
+```json
+"safety_check": {
+  "status": "clear | warning | unavailable",
+  "prescription_safe": true,
+  "warnings": ["human-readable warning"],
+  "interactions": [{ "drug_1": {}, "drug_2": {}, "severity": "severe", "description": "..." }]
+}
+```
+
+`warning` is informational: the backend saves precisely the clinician's
+submitted prescription and does not make AI-generated edits. `unavailable`
+means the prescription was still saved but no safety conclusion was obtained;
+clients must not display it as a clear result. Phase 5 has no acknowledgement
+or blocking workflow; a warning result is recorded in the audit log without
+copying clinical warning text there.
 
 ## 3. SHARED-05 — Public-page and crawler policy
 
@@ -406,4 +421,4 @@ This is v1. Additive optional fields are allowed. Renaming/removing fields,
 changing authorization, response envelopes, auth storage, public-page policy,
 or the clinical visibility rules requires a new documented version and
 coordinated client release. SHARED-01 through SHARED-08 are frozen by this
-document; prescription safety warnings remain a planned Phase 5 amendment.
+document, including the Phase 5 prescription safety response.

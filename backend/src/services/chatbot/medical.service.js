@@ -36,7 +36,11 @@ class MedicalService {
      * Fail-open: logs warnings but does NOT block prescription creation.
      *
      * @param {Array<{medication_name_en: string}>} items - Prescription items
-     * @returns {Promise<{prescription_safe: boolean, warnings: string[]}>}
+     * The result is deliberately advisory.  A clinician's submitted items are
+     * never changed and an unavailable checker must never be represented as a
+     * clear result.
+     *
+     * @returns {Promise<{status: 'clear'|'warning'|'unavailable', prescription_safe: boolean|null, warnings: string[], interactions: object[]}>}
      */
     async checkPrescriptionInteractions(items, userId) {
         try {
@@ -48,10 +52,19 @@ class MedicalService {
             );
 
             const result = response.data;
+            if (!result || typeof result !== 'object'
+                || typeof result.prescription_safe !== 'boolean'
+                || !Array.isArray(result.warnings)
+                || !Array.isArray(result.interactions)) {
+                throw new Error('AI prescription-check returned an invalid response');
+            }
 
-            if (result.warnings && result.warnings.length > 0) {
+            const warnings = result.warnings.filter((warning) => typeof warning === 'string');
+            const interactions = result.interactions.filter((interaction) => interaction && typeof interaction === 'object');
+
+            if (warnings.length > 0) {
                 logger.warn(
-                    `[T-049] Prescription interaction warnings:\n${result.warnings.join('\n')}`
+                    `[T-049] Prescription interaction warnings:\n${warnings.join('\n')}`
                 );
             }
 
@@ -60,8 +73,10 @@ class MedicalService {
             }
 
             return {
-                prescription_safe: result.prescription_safe !== false,
-                warnings: result.warnings || []
+                status: warnings.length || result.prescription_safe === false ? 'warning' : 'clear',
+                prescription_safe: result.prescription_safe,
+                warnings,
+                interactions,
             };
 
         } catch (error) {
@@ -70,8 +85,10 @@ class MedicalService {
                 `[T-049] Failed to check prescription interactions: ${error.message || error}`
             );
             return {
-                prescription_safe: true,
-                warnings: []
+                status: 'unavailable',
+                prescription_safe: null,
+                warnings: [],
+                interactions: [],
             };
         }
     }
