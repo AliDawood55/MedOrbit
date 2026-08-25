@@ -1,11 +1,9 @@
 /**
  * MedOrbit v2 - Drug Interaction Checker
- * Calls the AI service directly: POST <current-host>:8001/drug-interactions
- * (open CORS, no auth — this is not the Node backend on :3001).
+ * Uses the authenticated backend gateway: POST /api/ai/drug-interactions.
+ * The browser never receives the AI service address or internal credential.
  */
 const DrugChecker = (() => {
-
-    const AI_BASE = API.getAiOrigin();
 
     // The actual seeded medorbit.medications rows — quick-add chips that
     // reliably match real medication records (Aspirin + Warfarin has a
@@ -104,19 +102,10 @@ const DrugChecker = (() => {
         showLoading();
 
         try {
-            const res = await fetch(AI_BASE + '/drug-interactions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ medication_names: medications })
+            const response = await API.post('/ai/drug-interactions', {
+                medication_names: medications
             });
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.detail || 'Request failed');
-            }
-
-            showResult(data);
+            showResult(response?.data || response);
 
         } catch (err) {
             console.error('DrugChecker: request failed', err);
