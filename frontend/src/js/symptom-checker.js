@@ -1,7 +1,6 @@
 /**
  * MedOrbit v2 - Symptom Checker
- * Calls the AI service directly: POST <current-host>:8001/triage
- * (open CORS, no auth — this is not the Node backend on :3001).
+ * Uses the authenticated backend gateway: POST /api/ai/triage.
  */
 const SymptomChecker = (() => {
 

@@ -528,10 +528,6 @@ const API = (() => {
         return API_ORIGIN + '/' + source.replace(/^\/+/, '');
     }
 
-    function getAiOrigin() {
-        return resolveServiceOrigin(8001, window.MEDORBIT_AI_URL);
-    }
-
     // Platform feedback (feedback.html) — POST /api/feedback,
     // backend/src/routes/feedback.routes.js. Any authenticated user
     // (patient or doctor), user_id resolved server-side from the JWT.
@@ -620,7 +616,7 @@ const API = (() => {
         request, get, post, put, del, patch, uploadFile,
         sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
-        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
+        setSession, clearSession, requireAuth, logout, getOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
 
 })();
