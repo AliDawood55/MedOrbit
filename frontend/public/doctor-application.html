@@ -40,24 +40,27 @@
         <section class="application-hero">
             <div>
                 <h1>طلب الانضمام كطبيب / Apply as a Doctor</h1>
-                <p class="text-muted">قدّم بياناتك المهنية للمراجعة الإدارية. تبقى صلاحياتك كمريض حتى الموافقة.</p>
+                <p class="text-muted">قدّم بياناتك المهنية للمراجعة الإدارية. تبقى صلاحياتك كمريض حتى الموافقة، ولا تُمنح صلاحية الطبيب تلقائياً.</p>
             </div>
             <a class="btn btn-secondary" href="profile.html"><i class="fas fa-arrow-right"></i> الحساب</a>
         </section>
-        <div id="applicationAlert" class="alert"></div>
+        <div id="applicationAlert" class="alert" role="alert" aria-live="assertive"></div>
         <div id="applicationLoading" class="loading-state"><div class="spinner spinner-lg"></div></div>
         <section id="applicationState" class="card application-card hidden"></section>
         <section id="applicationFormCard" class="card application-card hidden">
             <h2>البيانات المهنية / Professional information</h2>
+            <p class="application-form-intro">املأ الحقول المعلَّمة بـ <strong>*</strong> كما تظهر في رخصتك الطبية. يمكنك إضافة مؤهلاتك وشهاداتك في أسطر منفصلة.</p>
             <form id="doctorApplicationForm" novalidate>
                 <div class="application-grid">
                     <div class="form-group">
                         <label for="specialtyId">التخصص / Specialty *</label>
-                        <select id="specialtyId" required><option value="">اختر التخصص</option></select>
+                        <select id="specialtyId" required aria-describedby="specialtyHint"><option value="">اختر التخصص</option></select>
+                        <small id="specialtyHint" class="field-hint">اختر التخصص الرئيسي الذي ستراجعه الإدارة.</small>
                     </div>
                     <div class="form-group">
                         <label for="licenseNumber">رقم الترخيص الطبي / Medical license *</label>
-                        <input id="licenseNumber" required maxlength="255">
+                        <input id="licenseNumber" required maxlength="255" autocomplete="off" aria-describedby="licenseHint" placeholder="MO-12345">
+                        <small id="licenseHint" class="field-hint">اكتب الرقم الرسمي كما هو في الترخيص.</small>
                     </div>
                     <div class="form-group">
                         <label for="subSpecialty">التخصص الدقيق / Sub-specialty</label>
@@ -65,23 +68,25 @@
                     </div>
                     <div class="form-group">
                         <label for="experience">سنوات الخبرة / Years of experience</label>
-                        <input id="experience" type="number" min="0" max="80">
+                        <input id="experience" type="number" min="0" max="80" inputmode="numeric" aria-describedby="experienceHint">
+                        <small id="experienceHint" class="field-hint">اختياري، من 0 إلى 80 سنة.</small>
                     </div>
                     <div class="form-group full">
                         <label for="education">التعليم / Education <small>(سطر لكل مؤهل)</small></label>
-                        <textarea id="education" rows="3"></textarea>
+                        <textarea id="education" rows="3" placeholder="MD — University name&#10;Residency — Hospital name"></textarea>
                     </div>
                     <div class="form-group full">
                         <label for="certifications">الشهادات / Certifications <small>(سطر لكل شهادة)</small></label>
-                        <textarea id="certifications" rows="3"></textarea>
+                        <textarea id="certifications" rows="3" placeholder="Board certification&#10;Professional course"></textarea>
                     </div>
                     <div class="form-group full">
-                        <label for="bio" data-i18n="doctorApplication.bio">النبذة المهنية</label>
+                        <label for="bio" data-i18n="doctorApplication.bio">النبذة المهنية <small>(اختياري / Optional)</small></label>
                         <textarea id="bio" rows="4" dir="auto"
                                   data-i18n-placeholder="doctorApplication.bioPlaceholder"
                                   placeholder="اكتب نبذتك المهنية بالعربية أو الإنجليزية أو كليهما"></textarea>
                     </div>
                 </div>
+                <p class="application-privacy-note"><i class="fas fa-shield-heart" aria-hidden="true"></i> لا تضع كلمات مرور أو بيانات مرضى أو مستندات حساسة في هذا النموذج.</p>
                 <div class="application-actions">
                     <button id="submitApplication" class="btn btn-primary" type="submit">
                         <i class="fas fa-paper-plane"></i> إرسال الطلب / Submit
