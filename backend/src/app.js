@@ -43,6 +43,14 @@ const { policy: billingPolicy } = require('./config/billing');
 
 const app = express();
 
+// Staging is behind exactly one Caddy reverse-proxy hop. This restores the
+// real visitor IP for login and anonymous rate limits without trusting
+// attacker-controlled X-Forwarded-* headers in direct local development.
+const trustProxy = String(process.env.TRUST_PROXY || '').trim().toLowerCase();
+if (trustProxy === '1' || trustProxy === 'true') {
+  app.set('trust proxy', 1);
+}
+
 // =============================
 // SECURITY MIDDLEWARE
 // =============================
