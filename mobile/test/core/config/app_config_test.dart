@@ -3,13 +3,15 @@ import 'package:mobile/core/config/app_config.dart';
 
 /// `String.fromEnvironment` is resolved at compile time, so a test cannot vary
 /// the `--dart-define` values. These cover the pure resolution logic the
-/// overrides feed into, plus the compiled-in development defaults.
+/// overrides feed into. A build without an explicit origin must not silently
+/// target a developer machine.
 void main() {
   group('backend base URL', () {
-    test('defaults to the LAN host and always carries the /api prefix', () {
-      expect(AppConfig.baseUrl, 'http://192.168.0.105:3001/api');
-      expect(AppConfig.baseUrl, endsWith('/api'));
+    test('has no implicit developer-LAN backend target', () {
+      expect(AppConfig.baseUrl, isEmpty);
       expect(AppConfig.hasApiOverride, isFalse);
+      expect(AppConfig.baseUrlCandidates, isEmpty);
+      expect(AppConfig.missingApiUrlMessage, contains('MEDORBIT_API_URL'));
     });
 
     test('normalizeApiBase appends /api exactly once and is idempotent', () {
@@ -30,17 +32,17 @@ void main() {
   });
 
   group('AI base URL', () {
-    test('is derived from the resolved API host on port 8001 without /api', () {
-      final aiBase = AppConfig.aiBaseFrom(AppConfig.baseUrl);
+    test('is derived from a configured API host on port 8001 without /api', () {
+      final aiBase = AppConfig.aiBaseFrom('https://staging.example/api');
 
-      expect(aiBase, 'http://192.168.0.105:8001');
+      expect(aiBase, 'https://staging.example:8001');
       expect(aiBase, isNot(contains('/api')));
       expect(aiBase, isNot(endsWith('/')));
     });
 
     test('follows whichever host the API resolver settled on', () {
-      expect(AppConfig.aiBaseFrom(AppConfig.emulatorBaseUrl), 'http://10.0.2.2:8001');
-      expect(AppConfig.aiBaseFrom(AppConfig.localhostBaseUrl), 'http://localhost:8001');
+      expect(AppConfig.aiBaseFrom('http://10.0.2.2:3001/api'), 'http://10.0.2.2:8001');
+      expect(AppConfig.aiBaseFrom('http://localhost:3001/api'), 'http://localhost:8001');
     });
 
     test('normalizeAiBase strips any /api prefix and trailing slash', () {
@@ -51,22 +53,18 @@ void main() {
     });
 
     test('backend and AI bases stay separate', () {
-      expect(AppConfig.baseUrl, contains(':3001'));
-      expect(AppConfig.aiBaseFrom(AppConfig.baseUrl), contains(':8001'));
+      const apiBase = 'https://staging.example:3001/api';
+      expect(apiBase, contains(':3001'));
+      expect(AppConfig.aiBaseFrom(apiBase), contains(':8001'));
       expect(AppConfig.aiServicePort, 8001);
     });
   });
 
   group('host candidates', () {
-    test('without an override, probes LAN first then emulator and localhost', () {
+    test('without an override, does not probe any fallback machine', () {
       final candidates = AppConfig.candidatesFor('');
 
-      expect(candidates, [
-        AppConfig.devLanBaseUrl,
-        AppConfig.emulatorBaseUrl,
-        AppConfig.localhostBaseUrl,
-      ]);
-      expect(candidates.first, AppConfig.devLanBaseUrl);
+      expect(candidates, isEmpty);
       expect(AppConfig.baseUrlCandidates, candidates);
     });
 

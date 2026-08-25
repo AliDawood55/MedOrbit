@@ -1,46 +1,21 @@
 /// Centralized environment configuration for the MedOrbit mobile app.
 ///
-/// The backend runs on the developer's LAN, not localhost — a physical
-/// test device reaches it over Wi-Fi, so `localhost`/`127.0.0.1` would only
-/// resolve to the phone itself.
-///
 /// ## Environments
 ///
-/// The LAN defaults below are **development only**. A build targets any other
-/// environment through `--dart-define`, with no source edit:
+/// Every build receives its backend origin through `--dart-define`; source
+/// code never names a developer machine. A debug build may use a local HTTP
+/// origin explicitly, while a release build must use HTTPS:
 ///
 /// ```
 /// flutter build apk \
-///   --dart-define=MEDORBIT_API_URL=https://api.medorbit.example \
-///   --dart-define=MEDORBIT_AI_URL=https://ai.medorbit.example
+///   --dart-define=MEDORBIT_API_URL=https://staging.example/api
 /// ```
-///
-/// TODO(production): production must terminate TLS. Serve both the backend and
-/// the AI service over HTTPS behind a reverse proxy and pass those origins via
-/// the defines above — the plain-HTTP defaults here will not work once
-/// Android's network security config (see
-/// `android/app/src/main/res/xml/network_security_config.xml`) stops
-/// allowlisting the dev hosts, and iOS ATS blocks cleartext outright.
-///
-/// TODO(production): the AI service currently has no authentication and
-/// wildcard CORS. It must sit behind an authenticated gateway before it is
-/// reachable from anything wider than the development LAN.
 class AppConfig {
   AppConfig._();
 
   /// Build-time overrides. Empty unless supplied via `--dart-define`.
   static const String _apiUrlOverride = String.fromEnvironment('MEDORBIT_API_URL');
   static const String _aiUrlOverride = String.fromEnvironment('MEDORBIT_AI_URL');
-
-  /// Development default: the dev laptop's Wi-Fi LAN IP. This is the only
-  /// entry that can work from a physical device.
-  static const String devLanBaseUrl = 'http://192.168.0.105:3001/api';
-
-  /// Android emulator's alias for the host machine's loopback.
-  static const String emulatorBaseUrl = 'http://10.0.2.2:3001/api';
-
-  /// Desktop/web debug builds running on the host machine itself.
-  static const String localhostBaseUrl = 'http://localhost:3001/api';
 
   /// True when this build was given an explicit backend origin.
   static bool get hasApiOverride => _apiUrlOverride.isNotEmpty;
@@ -49,18 +24,19 @@ class AppConfig {
   static bool get hasAiOverride => _aiUrlOverride.isNotEmpty;
 
   /// The configured backend base URL — always ending in exactly one `/api`.
-  static String get baseUrl => hasApiOverride ? normalizeApiBase(_apiUrlOverride) : devLanBaseUrl;
+  /// Empty means startup must show the configuration error before any request.
+  static String get baseUrl => hasApiOverride ? normalizeApiBase(_apiUrlOverride) : '';
 
-  /// Probed in order at startup by `ApiHostResolver`; the first host that
-  /// answers `GET /health` wins.
-  ///
-  /// Without an override the emulator/localhost entries only ever succeed on
-  /// an emulator or a desktop/web build — from a real phone they resolve to
-  /// the phone itself and always fail. They're here so the same build works
-  /// across all three targets, not as a recovery path for a device outage.
-  ///
-  /// With an explicit override they are dropped entirely: a configured host is
-  /// the only host that build is allowed to talk to.
+  static bool get hasValidReleaseApiUrl =>
+      hasApiOverride && normalizeApiBase(_apiUrlOverride).startsWith('https://');
+
+  static String get missingApiUrlMessage =>
+      'MEDORBIT_API_URL is required. For local debug use '
+      '--dart-define=MEDORBIT_API_URL=http://YOUR_LAN_IP:3001/api.';
+
+  /// Probed at startup by `ApiHostResolver`. A configured build contacts only
+  /// its explicitly supplied backend — it never falls back to localhost or a
+  /// developer LAN address.
   static List<String> get baseUrlCandidates => candidatesFor(_apiUrlOverride);
 
   /// Candidate list for a given override value. Split out from
@@ -70,7 +46,7 @@ class AppConfig {
     if (apiUrlOverride.isNotEmpty) {
       return <String>[normalizeApiBase(apiUrlOverride)];
     }
-    return const <String>[devLanBaseUrl, emulatorBaseUrl, localhostBaseUrl];
+    return const <String>[];
   }
 
   /// Forces a backend origin to end in exactly one `/api`, matching the web
