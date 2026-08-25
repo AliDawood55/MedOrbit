@@ -77,8 +77,11 @@ const GoogleSignIn = (() => {
             showAlert(isAr() ? 'تم تسجيل الدخول بنجاح!' : 'Logged in successfully!', 'success');
 
             const redirect = safeRedirect();
+            const landing = typeof AuthGate !== 'undefined'
+                ? AuthGate.defaultLandingPage(res?.data?.user)
+                : 'dashboard.html';
             setTimeout(() => {
-                window.location.href = redirect || 'index.html';
+                window.location.href = redirect || landing;
             }, 400);
         } catch (err) {
             const message = err?.status === 429

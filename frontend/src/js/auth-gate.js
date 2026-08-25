@@ -259,9 +259,32 @@ const AuthGate = (() => {
         }
     }
 
-    /** Where an authenticated user lands when there is no intended destination. */
-    function defaultLandingPage() {
-        return 'dashboard.html';
+    /**
+     * Where an authenticated user lands when there is no safe intended
+     * destination. Authentication is shared by every account type; the role
+     * changes only the useful first page, never what the account may access.
+     */
+    function isDoctorApplicationIntent() {
+        return new URLSearchParams(window.location.search).get('intent') === 'doctor';
+    }
+
+    function defaultLandingPage(user) {
+        // Public registration deliberately creates a patient account. This
+        // explicit sign-up intent is the only client-side convenience: the
+        // protected application route and server still decide eligibility.
+        if (user?.role === 'patient' && isDoctorApplicationIntent()) {
+            return 'doctor-application.html';
+        }
+        switch (user?.role) {
+            case 'doctor':
+                return 'my-schedule.html';
+            case 'admin':
+                return 'analytics.html';
+            case 'super_admin':
+                return 'admin-invitations.html';
+            default:
+                return 'dashboard.html';
+        }
     }
 
     // ================= PAGE STATE =================
@@ -951,6 +974,7 @@ const AuthGate = (() => {
         rememberIntendedDestination: rememberIntendedDestination,
         clearIntendedDestination: clearIntendedDestination,
         defaultLandingPage: defaultLandingPage,
+        isDoctorApplicationIntent: isDoctorApplicationIntent,
         // session
         verifySession: verifySession,
         getVerifiedUser: () => verifiedUser,

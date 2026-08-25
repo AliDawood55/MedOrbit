@@ -126,6 +126,10 @@ const I18n = (() => {
             'auth.submitReset': 'تعيين كلمة المرور الجديدة',
             'auth.noAccount': 'ليس لديك حساب؟',
             'auth.haveAccount': 'لديك حساب بالفعل؟',
+            'auth.patientSignUp': 'إنشاء حساب مريض',
+            'auth.doctorSignUp': 'التقديم كطبيب',
+            'auth.doctorRegisterTitle': 'التقديم للانضمام كطبيب',
+            'auth.doctorRegisterDesc': 'أنشئ حسابك أولاً، ثم فعّل بريدك وسجّل الدخول لإرسال بياناتك المهنية للمراجعة.',
             'auth.forgotPassword': 'نسيت كلمة المرور؟',
             'auth.backToLogin': 'العودة لتسجيل الدخول',
             'auth.verify.checking': 'جارِ التحقق من بريدك الإلكتروني...',
@@ -910,6 +914,10 @@ const I18n = (() => {
             'auth.submitReset': 'Set new password',
             'auth.noAccount': "Don't have an account?",
             'auth.haveAccount': 'Already have an account?',
+            'auth.patientSignUp': 'Create patient account',
+            'auth.doctorSignUp': 'Apply as a doctor',
+            'auth.doctorRegisterTitle': 'Apply to join as a doctor',
+            'auth.doctorRegisterDesc': 'Create your account first, then verify your email and sign in to submit your professional details for review.',
             'auth.forgotPassword': 'Forgot password?',
             'auth.backToLogin': 'Back to login',
             'auth.verify.checking': 'Verifying your email...',
@@ -1596,8 +1604,11 @@ const I18n = (() => {
         // Keep icon-only controls understandable to both pointer users and
         // assistive technology in every language.
         document.querySelectorAll('[data-i18n-title]').forEach(el => {
-            const text = t(el.getAttribute('data-i18n-title'));
-            if (!text) return;
+            const key = el.getAttribute('data-i18n-title');
+            const text = t(key);
+            // HTML provides a readable fallback.  Do not replace it with a
+            // missing dictionary key when a browser has a stale JS response.
+            if (!text || text === key) return;
             el.title = text;
             el.setAttribute('aria-label', text);
         });
@@ -1606,19 +1617,20 @@ const I18n = (() => {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const text = t(key);
-            if (text) el.textContent = text;
+            if (text && text !== key) el.textContent = text;
         });
 
         // Translate placeholders
         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
             const key = el.getAttribute('data-i18n-placeholder');
             const text = t(key);
-            if (text) el.placeholder = text;
+            if (text && text !== key) el.placeholder = text;
         });
 
         document.querySelectorAll('[data-i18n-aria]').forEach(el => {
-            const text = t(el.getAttribute('data-i18n-aria'));
-            if (text) el.setAttribute('aria-label', text);
+            const key = el.getAttribute('data-i18n-aria');
+            const text = t(key);
+            if (text && text !== key) el.setAttribute('aria-label', text);
         });
 
         // Translate rich-text elements (dictionary value may contain inline markup,
@@ -1626,7 +1638,7 @@ const I18n = (() => {
         document.querySelectorAll('[data-i18n-html]').forEach(el => {
             const key = el.getAttribute('data-i18n-html');
             const html = t(key);
-            if (html) el.innerHTML = html;
+            if (html && html !== key) el.innerHTML = html;
         });
 
         const langLabel = document.getElementById('langLabel');

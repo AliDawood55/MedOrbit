@@ -74,7 +74,13 @@
     /** Carries the intended destination across an auth-flow page hop. */
     function authFlowUrl(page) {
         const next = intendedDestination();
-        return next ? page + '?redirect=' + encodeURIComponent(next) : page;
+        const params = new URLSearchParams();
+        if (next) params.set('redirect', next);
+        if (typeof AuthGate !== 'undefined' && AuthGate.isDoctorApplicationIntent()) {
+            params.set('intent', 'doctor');
+        }
+        const query = params.toString();
+        return query ? page + '?' + query : page;
     }
 
     // ================= LOGIN =================
@@ -97,9 +103,12 @@
             showAlert(isAr() ? 'تم تسجيل الدخول بنجاح!' : 'Logged in successfully!', 'success');
 
             const redirect = intendedDestination();
+            const landing = typeof AuthGate !== 'undefined'
+                ? AuthGate.defaultLandingPage(res?.data?.user)
+                : 'dashboard.html';
             if (typeof AuthGate !== 'undefined') AuthGate.clearIntendedDestination();
             setTimeout(() => {
-                window.location.href = redirect || 'index.html';
+                window.location.href = redirect || landing;
             }, 500);
         } catch (err) {
             alertForError(err);
