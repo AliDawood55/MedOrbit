@@ -19,12 +19,18 @@ const API = (() => {
             throw new Error(`Cannot resolve MedOrbit service on port ${port} without an HTTP(S) hostname`);
         }
 
-        const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-        return `${protocol}//${window.location.hostname}:${port}`;
+        // HTTPS deployments are served behind the public reverse proxy. The
+        // browser must use its own origin so Caddy can forward /api to the
+        // private backend; :3001 is intentionally not public in staging.
+        if (window.location.protocol === 'https:') {
+            return window.location.origin;
+        }
+
+        return `http://${window.location.hostname}:${port}`;
     }
 
-    // Derive service hosts from wherever the page was actually opened from so
-    // localhost, loopback, and LAN IP access all call the matching backend.
+    // HTTP development uses the matching backend port. HTTPS deployments use
+    // Caddy's same-origin /api proxy unless an explicit override is supplied.
     const API_ORIGIN = resolveServiceOrigin(3001, window.MEDORBIT_API_URL).replace(/\/api\/?$/, '');
     const BASE_URL = API_ORIGIN + '/api';
 

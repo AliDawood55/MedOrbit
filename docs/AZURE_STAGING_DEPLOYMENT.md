@@ -206,8 +206,9 @@ No cleartext exception is needed for HTTPS.
 ## 10. Web verification from another device
 
 Open `https://<MEDORBIT_PUBLIC_HOST>` in a browser on a different network.
-The final client must call the backend on the same HTTPS origin and must never
-derive or call an AI origin.
+The web client calls the backend through the same HTTPS origin at `/api`; do
+not expose or configure port `3001` in the browser. The final client must
+never derive or call an AI origin.
 
 ## 11. Cost safety
 

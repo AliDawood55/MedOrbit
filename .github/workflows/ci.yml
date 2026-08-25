@@ -5,6 +5,16 @@ on:
   pull_request:
 
 jobs:
+  frontend-auth-contract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify HTTPS same-origin authentication routing
+        run: node frontend/tests/api-origin.test.js
+
   backend-integration:
     runs-on: ubuntu-latest
 
