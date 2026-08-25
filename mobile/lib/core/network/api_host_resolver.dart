@@ -28,6 +28,15 @@ class ApiHostResolver {
   Future<String> resolve() async {
     if (_resolved) return activeBaseUrl;
 
+    if (!AppConfig.hasApiOverride) {
+      throw ApiConfigurationException(AppConfig.missingApiUrlMessage);
+    }
+    if (kReleaseMode && !AppConfig.hasValidReleaseApiUrl) {
+      throw const ApiConfigurationException(
+        'Release builds require an HTTPS MEDORBIT_API_URL.',
+      );
+    }
+
     for (final candidate in AppConfig.baseUrlCandidates) {
       if (await _probe(candidate)) {
         _apply(candidate);
@@ -71,4 +80,13 @@ class ApiHostResolver {
       probe.close(force: true);
     }
   }
+}
+
+class ApiConfigurationException implements Exception {
+  const ApiConfigurationException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

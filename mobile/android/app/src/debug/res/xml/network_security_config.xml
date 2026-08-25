@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only overlay. Local development may use an explicitly supplied
+     HTTP MEDORBIT_API_URL; release builds use the TLS-only main resource. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

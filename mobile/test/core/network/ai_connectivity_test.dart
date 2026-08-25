@@ -114,7 +114,7 @@ void main() {
         body: {
           'model': 'qwen2:7b',
           'device': 'cuda',
-          'host': '192.168.0.105',
+          'host': '192.0.2.1',
           'sessions': ['private-session-id'],
         },
       );
@@ -148,7 +148,7 @@ void main() {
 class _FakeAiDio {
   _FakeAiDio._(void Function(RequestOptions, RequestInterceptorHandler) onRequest)
       : dio = Dio(BaseOptions(
-          baseUrl: 'http://192.168.0.105:8001',
+          baseUrl: 'http://192.0.2.1:8001',
           // Mirrors aiDioProvider: a long budget the probe must override.
           connectTimeout: AppConfig.connectTimeout,
           receiveTimeout: AppConfig.aiMessageTimeout,
