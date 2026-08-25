@@ -148,6 +148,62 @@
     vertical-align: middle;
 }
 
+/* A compact guidance panel: it reuses the existing card, text and brand
+   tokens rather than introducing a second login design for doctors. */
+.auth-role-help {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 20px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-soft);
+    color: var(--text-soft);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.auth-role-help > i {
+    color: var(--primary);
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+.auth-role-help strong,
+.auth-role-help p {
+    display: block;
+    margin: 0;
+}
+
+.auth-role-help strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.auth-role-help a {
+    font-weight: 700;
+}
+
+.auth-doctor-signup {
+    white-space: nowrap;
+}
+
+.auth-doctor-signup i {
+    margin-inline-end: 4px;
+}
+
+.auth-links-stacked {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.auth-links-stacked .auth-sep {
+    display: none;
+}
+
 /* === Status page (verify-email) === */
 .auth-status {
     text-align: center;

@@ -229,8 +229,12 @@ check('ROLE_RESTRICTED is never consulted to allow or deny a page',
     !/in\s+ROLE_RESTRICTED/.test(gateSourceForRoles) &&
     !/ROLE_RESTRICTED\.\w/.test(gateSourceForRoles),
     'the gate defines and exports the map, and must never read it');
-check('the gate makes no role decision at all',
-    !/\.role\s*===|\.role\s*!==|includes\(.*\.role/.test(frontendFile('src/js/auth-gate.js')));
+// Landing after a successful login is navigation convenience, not an access
+// decision.  The backend and each protected page remain responsible for
+// authorization. Keep this guard focused on the gate's route classification.
+const gateClassificationSource = gateSourceForRoles.slice(0, gateSourceForRoles.indexOf('function defaultLandingPage'));
+check('the gate makes no role decision while classifying a requested page',
+    !/\.role\s*===|\.role\s*!==|includes\(.*\.role/.test(gateClassificationSource));
 
 // --- Fail-closed shell: the gate can only hide what actually loads ---------
 // auth-gate.js is an external file, so it can 404, be blocked, or be cut off
@@ -521,15 +525,36 @@ const REQUIRED_KEYS = [
     'authModal.title', 'authModal.desc', 'authModal.createAccount',
     'authModal.haveAccount', 'authModal.signIn', 'authModal.close',
     'authGate.checking', 'authGate.offlineTitle', 'authGate.offlineDesc',
-    'authGate.retry', 'authGate.backHome', 'authGate.expired'
+    'authGate.retry', 'authGate.backHome', 'authGate.expired',
+    'auth.patientSignUp', 'auth.doctorSignUp',
+    'auth.doctorRegisterTitle', 'auth.doctorRegisterDesc'
 ];
 REQUIRED_KEYS.forEach((key) => {
     check(`i18n defines ${key} in both languages`,
         (i18nSource.match(new RegExp(`'${key.replace('.', '\\.')}':`, 'g')) || []).length === 2);
 });
+check('a missing translation preserves the HTML fallback instead of printing its key',
+    /if \(text && text !== key\) el\.textContent = text;/.test(i18nSource));
 check('the modal renders its copy from i18n, not hardcoded Arabic',
     /data-i18n="authModal\.title"/.test(gateSource) &&
     /data-i18n="authModal\.createAccount"/.test(gateSource));
+
+const loginHtml = frontendFile('public/login.html');
+const registerHtml = frontendFile('public/register.html');
+check('the doctor option appears in the sign-up area',
+    /href="register\.html\?intent=doctor"/.test(loginHtml) &&
+    /data-i18n="auth\.doctorSignUp"/.test(loginHtml));
+check('the doctor sign-up intent explains the protected application next step',
+    /id="doctorApplicationIntro"/.test(registerHtml) &&
+    /get\('intent'\) === 'doctor'/.test(registerHtml));
+check('role-specific landing pages are selected only after a shared login',
+    /case 'doctor':[\s\S]{0,100}'my-schedule\.html'/.test(gateSource) &&
+    /case 'admin':[\s\S]{0,100}'analytics\.html'/.test(gateSource) &&
+    /case 'super_admin':[\s\S]{0,100}'admin-invitations\.html'/.test(gateSource) &&
+    /isDoctorApplicationIntent/.test(gateSource) &&
+    /'doctor-application\.html'/.test(gateSource) &&
+    /AuthGate\.defaultLandingPage\(res\?\.data\?\.user\)/.test(authSource) &&
+    /AuthGate\.defaultLandingPage\(res\?\.data\?\.user\)/.test(googleSource));
 
 // RTL/dark-mode surfaces live in the shared stylesheet, on tokens.
 const componentsCss = frontendFile('src/css/components.css');
