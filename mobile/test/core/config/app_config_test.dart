@@ -31,35 +31,6 @@ void main() {
     });
   });
 
-  group('AI base URL', () {
-    test('is derived from a configured API host on port 8001 without /api', () {
-      final aiBase = AppConfig.aiBaseFrom('https://staging.example/api');
-
-      expect(aiBase, 'https://staging.example:8001');
-      expect(aiBase, isNot(contains('/api')));
-      expect(aiBase, isNot(endsWith('/')));
-    });
-
-    test('follows whichever host the API resolver settled on', () {
-      expect(AppConfig.aiBaseFrom('http://10.0.2.2:3001/api'), 'http://10.0.2.2:8001');
-      expect(AppConfig.aiBaseFrom('http://localhost:3001/api'), 'http://localhost:8001');
-    });
-
-    test('normalizeAiBase strips any /api prefix and trailing slash', () {
-      expect(AppConfig.normalizeAiBase('https://ai.example/api'), 'https://ai.example');
-      expect(AppConfig.normalizeAiBase('https://ai.example/api/'), 'https://ai.example');
-      expect(AppConfig.normalizeAiBase('https://ai.example/'), 'https://ai.example');
-      expect(AppConfig.normalizeAiBase('https://ai.example'), 'https://ai.example');
-    });
-
-    test('backend and AI bases stay separate', () {
-      const apiBase = 'https://staging.example:3001/api';
-      expect(apiBase, contains(':3001'));
-      expect(AppConfig.aiBaseFrom(apiBase), contains(':8001'));
-      expect(AppConfig.aiServicePort, 8001);
-    });
-  });
-
   group('host candidates', () {
     test('without an override, does not probe any fallback machine', () {
       final candidates = AppConfig.candidatesFor('');

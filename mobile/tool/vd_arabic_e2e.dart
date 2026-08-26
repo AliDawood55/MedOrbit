@@ -1,5 +1,5 @@
-// Pre-flight for the Arabic Virtual Doctor flow, run headless against the
-// live AI service using the app's real `VirtualDoctorApi`.
+// Pre-flight for the Arabic Virtual Doctor flow, run through the
+// authenticated backend gateway using the app's real `VirtualDoctorApi`.
 //
 // Covers the service-side half of the device checklist so that an on-device
 // run only has to prove the device-specific parts (mic capture, audio output,
@@ -38,20 +38,27 @@ const _answers = <String>[
 ];
 
 Future<void> main() async {
-  final aiBase = AppConfig.aiBaseFrom(AppConfig.baseUrl);
-  stdout.writeln('AI base: $aiBase\n');
+  final accessToken = Platform.environment['MEDORBIT_ACCESS_TOKEN']?.trim();
+  if (accessToken == null || accessToken.isEmpty) {
+    stderr.writeln('Set MEDORBIT_ACCESS_TOKEN to a signed-in patient access token.');
+    exitCode = 64;
+    return;
+  }
+  stdout.writeln('API base: ${AppConfig.baseUrl}\n');
 
   final dio = Dio(
     BaseOptions(
-      baseUrl: aiBase,
+      baseUrl: AppConfig.baseUrl,
       connectTimeout: AppConfig.connectTimeout,
       receiveTimeout: AppConfig.aiMessageTimeout,
       sendTimeout: AppConfig.aiMessageTimeout,
-      headers: {'Accept': 'application/json'},
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $accessToken'},
     ),
   );
   final api = VirtualDoctorApi(dio);
   var failures = 0;
+  final sessionId = (await api.start(language: 'ar')).sessionId;
+  stdout.writeln('Started authenticated session: $sessionId\n');
 
   // ---- 1. Whisper transcription, via a TTS -> STT round trip -------------
   // Synthetic speech is easier than a real voice through a phone mic, so this
@@ -59,12 +66,12 @@ Future<void> main() async {
   stdout.writeln('=== 1. Whisper transcription (Arabic TTS -> STT) ===');
   const spoken = 'عندي صداع شديد منذ يومين';
   try {
-    final wav = await api.speak(text: spoken, language: 'ar');
+    final wav = await api.speak(text: spoken, language: 'ar', sessionId: sessionId);
     final tmp = File('${Directory.systemTemp.path}/vd_ar_probe.wav');
     await tmp.writeAsBytes(wav, flush: true);
     stdout.writeln('  synthesized ${wav.length} bytes');
 
-    final transcription = await api.transcribe(filePath: tmp.path, language: 'ar');
+    final transcription = await api.transcribe(filePath: tmp.path, language: 'ar', sessionId: sessionId);
     stdout.writeln('  spoken     : $spoken');
     stdout.writeln('  transcribed: ${transcription.text}');
     stdout.writeln('  timed_out  : ${transcription.timedOut}');
@@ -83,14 +90,11 @@ Future<void> main() async {
 
   // ---- 2. Full Arabic consultation --------------------------------------
   stdout.writeln('=== 2. Arabic consultation (planner) ===');
-  String? sessionId;
   var completed = false;
   try {
-    final start = await api.start(language: 'ar');
-    sessionId = start.sessionId;
-    stdout.writeln('  session  : ${start.sessionId}');
-    stdout.writeln('  language : ${start.language}');
-    stdout.writeln('  D: ${start.reply}');
+    final restored = await api.getSession(sessionId);
+    stdout.writeln('  session  : ${restored.sessionId}');
+    stdout.writeln('  language : ${restored.language}');
 
     for (var turn = 0; turn < 16 && !completed; turn++) {
       final answer = _answers[turn % _answers.length];
@@ -115,9 +119,7 @@ Future<void> main() async {
 
   // ---- 3. PDF report -----------------------------------------------------
   stdout.writeln('=== 3. PDF report ===');
-  if (sessionId == null) {
-    stdout.writeln('  SKIP: no session\n');
-  } else {
+  {
     try {
       final report = await api.createReport(sessionId);
       stdout.writeln('  report_id   : ${report.reportId}');
