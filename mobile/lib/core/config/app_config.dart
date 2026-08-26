@@ -15,13 +15,9 @@ class AppConfig {
 
   /// Build-time overrides. Empty unless supplied via `--dart-define`.
   static const String _apiUrlOverride = String.fromEnvironment('MEDORBIT_API_URL');
-  static const String _aiUrlOverride = String.fromEnvironment('MEDORBIT_AI_URL');
 
   /// True when this build was given an explicit backend origin.
   static bool get hasApiOverride => _apiUrlOverride.isNotEmpty;
-
-  /// True when this build was given an explicit AI service origin.
-  static bool get hasAiOverride => _aiUrlOverride.isNotEmpty;
 
   /// The configured backend base URL — always ending in exactly one `/api`.
   /// Empty means startup must show the configuration error before any request.
@@ -58,29 +54,8 @@ class AppConfig {
     return trimmed.endsWith('/api') ? trimmed : '$trimmed/api';
   }
 
-  /// Forces an AI origin to carry **no** `/api` prefix and no trailing slash —
-  /// the AI service mounts its routes at the root.
-  static String normalizeAiBase(String raw) {
-    return _stripTrailingSlash(raw.trim().replaceFirst(RegExp(r'/api/?$'), ''));
-  }
-
   static String _stripTrailingSlash(String value) {
     return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
-  }
-
-  /// The Python AI service is a **separate** process on its own port with no
-  /// `/api` prefix and no JWT — the web app calls it directly the same way
-  /// (`AI_BASE` in `frontend/src/js/virtual-doctor-stt.js`).
-  static const int aiServicePort = 8001;
-
-  /// Derives the AI service origin from whichever API host resolved, so both
-  /// stay on the same machine (LAN / emulator / localhost). An explicit
-  /// `MEDORBIT_AI_URL` wins, because in production the two services can live
-  /// behind different hostnames rather than two ports on one box.
-  static String aiBaseFrom(String apiBaseUrl) {
-    if (hasAiOverride) return normalizeAiBase(_aiUrlOverride);
-    final uri = Uri.parse(apiBaseUrl);
-    return Uri(scheme: uri.scheme, host: uri.host, port: aiServicePort).toString();
   }
 
   /// Whisper decode + upload.

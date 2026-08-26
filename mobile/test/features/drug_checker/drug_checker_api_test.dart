@@ -16,7 +16,7 @@ Future<DioException> _captureDioException(Future<Object?> future) async {
 }
 
 void main() {
-  test('checkInteractions() POSTs /drug-interactions with exactly { medication_names }', () async {
+  test('checkInteractions() POSTs the authenticated backend gateway with exactly { medication_names }', () async {
     final fake = _FakeDio([
       _ok({
         'has_interactions': true,
@@ -37,7 +37,7 @@ void main() {
     final result = await api.checkInteractions(['Aspirin', 'Warfarin']);
 
     expect(fake.requests.single.method, 'POST');
-    expect(fake.requests.single.path, '/drug-interactions');
+    expect(fake.requests.single.path, '/ai/drug-interactions');
     expect(fake.requests.single.data, {
       'medication_names': ['Aspirin', 'Warfarin'],
     });
@@ -160,7 +160,10 @@ class _QueuedResponse {
   final DioException Function(RequestOptions options)? error;
 }
 
-_QueuedResponse _ok(Map<String, dynamic> body) => _QueuedResponse.ok(body);
+_QueuedResponse _ok(Map<String, dynamic> body) => _QueuedResponse.ok({
+      'success': true,
+      'data': body,
+    });
 
 _QueuedResponse _httpError({required int statusCode, required Map<String, dynamic> body}) {
   return _QueuedResponse.error(

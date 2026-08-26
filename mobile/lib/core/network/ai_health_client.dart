@@ -2,7 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
 
-/// Outcome of an AI service reachability probe.
+/// Outcome of a backend AI-feature reachability probe.
 ///
 /// Deliberately coarse: this exists to pick a safe, non-technical message and
 /// to decide whether an AI flow may start at all. Nothing here is shown to a
@@ -21,14 +21,10 @@ enum AiHealthStatus {
   unhealthy,
 }
 
-/// Lightweight preflight against the AI service's `GET /health`.
+/// Lightweight preflight against the backend API health endpoint.
 ///
-/// The AI service is a separate process on its own port with no `/api` prefix
-/// and no JWT, so this deliberately does not go through the backend REST
-/// client. It exists so an unreachable AI host produces an honest "service
-/// unavailable" message immediately, instead of a `connectionTimeout` surfacing
-/// 15s into `/virtual-doctor/start` — after the patient has already been asked
-/// for microphone access.
+/// The mobile app never probes the internal AI service. The backend is the
+/// only public contract and keeps AI topology and credentials private.
 ///
 /// Not a substitute for the real request: a passing probe only means the
 /// service answered, so callers still handle failures from the actual call.

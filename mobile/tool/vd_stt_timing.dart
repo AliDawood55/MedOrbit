@@ -14,30 +14,28 @@ import 'package:mobile/core/config/app_config.dart';
 import 'package:mobile/features/virtual_doctor/data/virtual_doctor_api.dart';
 
 Future<void> main() async {
-  final aiBase = AppConfig.aiBaseFrom(AppConfig.baseUrl);
+  final accessToken = Platform.environment['MEDORBIT_ACCESS_TOKEN']?.trim();
+  if (accessToken == null || accessToken.isEmpty) {
+    stderr.writeln('Set MEDORBIT_ACCESS_TOKEN to a signed-in patient access token.');
+    exitCode = 64;
+    return;
+  }
   final dio = Dio(
     BaseOptions(
-      baseUrl: aiBase,
+      baseUrl: AppConfig.baseUrl,
       connectTimeout: AppConfig.connectTimeout,
       receiveTimeout: AppConfig.aiMessageTimeout,
       sendTimeout: AppConfig.aiMessageTimeout,
-      headers: {'Accept': 'application/json'},
+      headers: {'Accept': 'application/json', 'Authorization': 'Bearer $accessToken'},
     ),
   );
   final api = VirtualDoctorApi(dio);
-
-  Future<void> status(String label) async {
-    final res = await dio.get<Map<String, dynamic>>('/virtual-doctor/transcribe/status');
-    final d = res.data!;
-    stdout.writeln('$label loaded=${d['loaded']} models_loaded=${d['models_loaded']} '
-        'device=${d['device']} timeout_s=${d['timeout_seconds']}');
-  }
-
-  await status('before :');
+  final sessionId = (await api.start(language: 'ar')).sessionId;
+  stdout.writeln('session: $sessionId');
 
   // Prepare a real Arabic clip via TTS.
   const spoken = 'عندي صداع شديد منذ يومين';
-  final wav = await api.speak(text: spoken, language: 'ar');
+  final wav = await api.speak(text: spoken, language: 'ar', sessionId: sessionId);
   final clip = File('${Directory.systemTemp.path}/vd_stt_timing.wav');
   await clip.writeAsBytes(wav, flush: true);
   stdout.writeln('clip: ${wav.length} bytes\n');
@@ -52,6 +50,7 @@ Future<void> main() async {
         data: FormData.fromMap({
           'audio': await MultipartFile.fromFile(clip.path, filename: 'utterance.wav'),
           'language': 'ar',
+          'session_id': sessionId,
         }),
         options: Options(receiveTimeout: const Duration(seconds: 180)),
       );
@@ -65,13 +64,10 @@ Future<void> main() async {
   }
 
   await attempt('cold transcribe :');
-  await status('after cold :');
-
   final sw = Stopwatch()..start();
   await api.warmup('ar');
   sw.stop();
   stdout.writeln('warmup: ${sw.elapsedMilliseconds}ms');
-  await status('after warmup:');
 
   await attempt('warm transcribe :');
   await attempt('warm transcribe :');
