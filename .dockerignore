@@ -1,4 +1,4 @@
-# Root .dockerignore — the single ignore file for every image build in this
+# Root .dockerignore â€” the single ignore file for every image build in this
 # repo (ai-service, backend, backend test, frontend), all of which use the
 # repository root as their build context.
 #
@@ -29,9 +29,7 @@ db
 database
 docs
 
-# ai-service/data/ is one-off data-collection tooling with no runtime import
-# from chatbot.main:app. Some scratch scripts contain a hardcoded local DB
-# password, so it is excluded from the build context entirely.
+# Data-collection/training tooling is not required in runtime images.
 ai-service/data
 ai-service/tests
 
