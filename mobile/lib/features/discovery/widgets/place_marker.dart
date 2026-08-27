@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 
 enum DiscoveryPlaceType {
@@ -42,11 +43,12 @@ class PlaceMarker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings(Directionality.of(context) == TextDirection.rtl);
     final color = isUserLocation ? AppTheme.primary : _colorFor(type, context);
     final icon = isUserLocation ? Icons.my_location_rounded : _iconFor(type);
 
     return Semantics(
-      label: semanticLabel ?? (isUserLocation ? 'User location marker' : '${type.name} marker'),
+      label: semanticLabel ?? (isUserLocation ? strings.mapUserLocationMarkerLabel : _typeLabel(type, strings)),
       child: Container(
         key: ValueKey(isUserLocation ? 'user-location-marker' : 'place-marker-${type.name}'),
         width: 44,
@@ -89,4 +91,12 @@ class PlaceMarker extends StatelessWidget {
       DiscoveryPlaceType.unknown => Theme.of(context).colorScheme.onSurfaceVariant,
     };
   }
+}
+
+String _typeLabel(DiscoveryPlaceType type, AppStrings strings) {
+  return switch (type) {
+    DiscoveryPlaceType.doctor => strings.mapDoctorMarkerLabel,
+    DiscoveryPlaceType.unknown => strings.mapUnknownMarkerLabel,
+    _ => strings.mapPlaceMarkerLabel(strings.clinicTypeLabelFor(type.name)),
+  };
 }

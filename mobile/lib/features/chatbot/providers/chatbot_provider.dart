@@ -28,6 +28,31 @@ enum ChatFailureKind {
   /// The backend answered with an error (HTTP status or `success: false`).
   backend,
 
+  /// The free-tier message quota for this window is used up
+  /// (`FREE_QUOTA_EXHAUSTED`). Not a network fault — retrying immediately
+  /// cannot succeed, since the backend enforces the same window server-side.
+  freeQuotaExhausted,
+
+  /// A prior identical message is still being processed
+  /// (`DUPLICATE_IN_FLIGHT`). Genuinely temporary: the in-flight request will
+  /// settle shortly, so a later retry can succeed.
+  duplicateInFlight,
+
+  /// Entitlement could not be determined right now (`ENTITLEMENT_UNAVAILABLE`).
+  /// Distinct from [freeQuotaExhausted]: this is the billing subsystem being
+  /// unavailable, not the user having used up their quota.
+  entitlementUnavailable,
+
+  /// This feature requires an active Pro subscription (`SUBSCRIPTION_REQUIRED`).
+  /// Not currently returned by the chatbot route, but handled defensively
+  /// since it is part of the shared billing error vocabulary.
+  subscriptionRequired,
+
+  /// The caller's subscription exists but is not active
+  /// (`SUBSCRIPTION_INACTIVE`). Same defensive handling as
+  /// [subscriptionRequired].
+  subscriptionInactive,
+
   /// Anything not otherwise classified.
   unknown,
 }
@@ -45,9 +70,21 @@ class ChatbotError {
   final ChatFailureKind kind;
   final int? statusCode;
 
-  /// Every current failure mode is worth one manual retry. Retries are always
-  /// user-initiated — a medical question is never resent automatically.
-  bool get retryable => true;
+  /// Whether another attempt could reasonably succeed.
+  ///
+  /// False for the entitlement failures the backend enforces server-side
+  /// (quota window, subscription state) — an immediate retry hits the exact
+  /// same denial and just spends another round trip. True for everything
+  /// else, including [ChatFailureKind.duplicateInFlight] and
+  /// [ChatFailureKind.entitlementUnavailable], which are genuinely transient.
+  /// Retries are always user-initiated regardless — a medical question is
+  /// never resent automatically.
+  bool get retryable => switch (kind) {
+    ChatFailureKind.freeQuotaExhausted ||
+    ChatFailureKind.subscriptionRequired ||
+    ChatFailureKind.subscriptionInactive => false,
+    _ => true,
+  };
 
   /// True only for a genuine timeout, so "took longer than expected" copy
   /// cannot leak onto an unreachable-service failure.
@@ -304,6 +341,14 @@ class ChatbotController extends StateNotifier<ChatbotState> {
 
   static ChatFailureKind _kindOf(ApiException api) {
     return switch (api.code) {
+      // Billing/entitlement codes checked first: they carry an HTTP status
+      // (429/403/409) that would otherwise fall into the generic `backend`
+      // bucket below and lose their semantic meaning.
+      ApiException.codeFreeQuotaExhausted => ChatFailureKind.freeQuotaExhausted,
+      ApiException.codeDuplicateInFlight => ChatFailureKind.duplicateInFlight,
+      ApiException.codeEntitlementUnavailable => ChatFailureKind.entitlementUnavailable,
+      ApiException.codeSubscriptionRequired => ChatFailureKind.subscriptionRequired,
+      ApiException.codeSubscriptionInactive => ChatFailureKind.subscriptionInactive,
       ApiException.codeConnectTimeout => ChatFailureKind.connectTimeout,
       ApiException.codeReceiveTimeout || ApiException.codeSendTimeout => ChatFailureKind.receiveTimeout,
       ApiException.codeServiceUnavailable => ChatFailureKind.unavailable,

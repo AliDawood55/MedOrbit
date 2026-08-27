@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../models/clinic_models.dart';
 
-String clinicDisplayName(Clinic clinic, TextDirection direction) {
+String clinicDisplayName(Clinic clinic, TextDirection direction, AppStrings strings) {
   final rtl = direction == TextDirection.rtl;
   final primary = rtl ? clinic.nameAr : clinic.nameEn;
   final fallback = rtl ? clinic.nameEn : clinic.nameAr;
-  return _clean(primary) ?? _clean(fallback) ?? 'Healthcare facility';
+  return _clean(primary) ?? _clean(fallback) ?? strings.healthcareFacilityFallbackName;
 }
 
 String? clinicDisplayAddress(Clinic clinic, TextDirection direction) {
@@ -19,31 +21,20 @@ String? clinicDisplayAddress(Clinic clinic, TextDirection direction) {
       _clean(rtl ? clinic.addressEn : clinic.addressAr);
 }
 
-String clinicTypeLabel(String? type) {
-  return switch ((type ?? '').trim().toLowerCase()) {
-    'clinic' => 'Clinic',
-    'pharmacy' => 'Pharmacy',
-    'hospital' => 'Hospital',
-    'laboratory' => 'Laboratory',
-    'dental' => 'Dental',
-    'radiology' => 'Radiology',
-    'emergency' => 'Emergency',
-    _ => 'Facility',
-  };
-}
+String clinicTypeLabel(String? type, AppStrings strings) => strings.clinicTypeLabelFor(type);
 
-(String, Color) clinicVerificationVisual(Clinic clinic) {
+(String, Color) clinicVerificationVisual(Clinic clinic, AppStrings strings) {
   return switch (clinic.verificationStatus) {
-    ClinicVerificationStatus.verified => ('Verified', AppTheme.success),
-    ClinicVerificationStatus.pending => ('Pending verification', AppTheme.warning),
+    ClinicVerificationStatus.verified => (strings.clinicVerifiedLabel, AppTheme.success),
+    ClinicVerificationStatus.pending => (strings.clinicPendingVerificationLabel, AppTheme.warning),
     ClinicVerificationStatus.rejected ||
     ClinicVerificationStatus.suspended ||
     ClinicVerificationStatus.unknown =>
-      ('Unverified / unknown', AppTheme.info),
+      (strings.clinicUnverifiedLabel, AppTheme.info),
   };
 }
 
-class ClinicResultCard extends StatelessWidget {
+class ClinicResultCard extends ConsumerWidget {
   const ClinicResultCard({
     super.key,
     required this.clinic,
@@ -56,10 +47,11 @@ class ClinicResultCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final theme = Theme.of(context);
     final direction = Directionality.of(context);
-    final name = clinicDisplayName(clinic, direction);
+    final name = clinicDisplayName(clinic, direction, strings);
     final address = clinicDisplayAddress(clinic, direction);
     final location = [
       _clean(address),
@@ -69,7 +61,7 @@ class ClinicResultCard extends StatelessWidget {
     final phone = _clean(clinic.phone);
     final rating = clinic.averageRating ?? clinic.rating;
     final distanceKm = clinic.distanceKm;
-    final (verificationLabel, verificationColor) = clinicVerificationVisual(clinic);
+    final (verificationLabel, verificationColor) = clinicVerificationVisual(clinic, strings);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -86,7 +78,7 @@ class ClinicResultCard extends StatelessWidget {
                 runSpacing: AppTheme.spaceSm,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  StatusBadge(label: clinicTypeLabel(clinic.type), color: theme.colorScheme.primary),
+                  StatusBadge(label: clinicTypeLabel(clinic.type, strings), color: theme.colorScheme.primary),
                   StatusBadge(label: verificationLabel, color: verificationColor),
                 ],
               ),
@@ -120,7 +112,7 @@ class ClinicResultCard extends StatelessWidget {
                     if (nearbyMode && distanceKm != null)
                       Directionality(
                         textDirection: TextDirection.ltr,
-                        child: _IconText(icon: Icons.near_me_outlined, text: '${distanceKm.toStringAsFixed(1)} km'),
+                        child: _IconText(icon: Icons.near_me_outlined, text: strings.radiusKmValue(distanceKm.toStringAsFixed(1))),
                       ),
                   ],
                 ),
@@ -140,7 +132,7 @@ class ClinicResultCard extends StatelessWidget {
                   onPressed: onTap ?? () => context.push(RoutePaths.clinicDetailPath(clinic.id)),
                   iconAlignment: IconAlignment.end,
                   icon: Icon(AppTheme.directionalForwardIconOf(context), size: AppTheme.iconSm),
-                  label: const Text('Details'),
+                  label: Text(strings.discoveryDetailsAction),
                 ),
               ),
             ],

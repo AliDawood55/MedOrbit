@@ -880,6 +880,14 @@ class _QuickActions extends StatelessWidget {
             path: RoutePaths.appointments,
           ),
           _QuickAction(
+            label: strings.myDoctorTitle,
+            description: strings.quickMyDoctorDescription,
+            icon: Icons.favorite_outline_rounded,
+            color: AppTheme.danger,
+            path: RoutePaths.myDoctor,
+            push: true,
+          ),
+          _QuickAction(
             label: strings.navNotifications,
             description:
                 notificationsUnreadCount == null ||

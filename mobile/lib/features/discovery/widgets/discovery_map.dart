@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/location_models.dart';
 import 'place_marker.dart';
@@ -49,6 +50,14 @@ class DiscoveryMap extends StatefulWidget {
   State<DiscoveryMap> createState() => _DiscoveryMapState();
 }
 
+/// Deliberately reads locale from [Directionality] (`AppStrings(isArabic)`)
+/// rather than `ref.watch(appStringsProvider)`. This widget — and
+/// [PlaceMarker] — are also embedded outside `discovery/` (e.g. the chatbot
+/// map results view) in isolated widget tests that don't wrap a
+/// `ProviderScope`. Directionality is always available and already mirrors
+/// the app's locale (the root `MaterialApp` sets it from
+/// `localeControllerProvider`), so this keeps both real usage and those
+/// standalone tests working without requiring Riverpod here.
 class _DiscoveryMapState extends State<DiscoveryMap> {
   late final MapController _controller;
 
@@ -66,6 +75,7 @@ class _DiscoveryMapState extends State<DiscoveryMap> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings(Directionality.of(context) == TextDirection.rtl);
     final theme = Theme.of(context);
     final userLocation = widget.userLocation;
     final userPoint = userLocation == null
@@ -84,7 +94,7 @@ class _DiscoveryMapState extends State<DiscoveryMap> {
             onTap: () => widget.onPlaceTap?.call(place),
             child: PlaceMarker(
               type: place.type,
-              semanticLabel: place.label == null ? null : '${place.label} marker',
+              semanticLabel: place.label == null ? null : strings.mapPlaceMarkerLabel(place.label!),
             ),
           ),
         ),
@@ -167,6 +177,7 @@ class _DiscoveryMapState extends State<DiscoveryMap> {
               top: AppTheme.spaceMd,
               end: AppTheme.spaceMd,
               child: _MapControls(
+                strings: strings,
                 onFitMarkers: allCoordinates.isEmpty ? null : _fitMarkers,
                 onRecenter: userPoint == null ? null : () => _controller.move(userPoint, 15),
               ),
@@ -230,10 +241,12 @@ class _OsmAttribution extends StatelessWidget {
 
 class _MapControls extends StatelessWidget {
   const _MapControls({
+    required this.strings,
     required this.onFitMarkers,
     required this.onRecenter,
   });
 
+  final AppStrings strings;
   final VoidCallback? onFitMarkers;
   final VoidCallback? onRecenter;
 
@@ -249,13 +262,13 @@ class _MapControls extends StatelessWidget {
         children: [
           IconButton(
             key: const ValueKey('fit-map-markers-button'),
-            tooltip: 'Fit markers',
+            tooltip: strings.mapFitMarkersTooltip,
             onPressed: onFitMarkers,
             icon: const Icon(Icons.center_focus_strong_rounded),
           ),
           IconButton(
             key: const ValueKey('recenter-user-location-button'),
-            tooltip: 'Recenter to your location',
+            tooltip: strings.mapRecenterTooltip,
             onPressed: onRecenter,
             icon: const Icon(Icons.my_location_rounded),
           ),

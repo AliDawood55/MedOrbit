@@ -89,12 +89,71 @@ void main() {
     final response = NearbyClinicResponse.fromJson({
       'data': {
         'clinics': [
-          {'id': 7, 'distanceKm': '0.8'},
+          {'id': 'clinic-7', 'distanceKm': '0.8'},
         ],
       },
     });
 
-    expect(response.clinics.single.id, '7');
+    expect(response.clinics.single.id, 'clinic-7');
     expect(response.clinics.single.distanceKm, 0.8);
+  });
+
+  test('a clinic with a missing or blank id throws instead of silently becoming empty', () {
+    expect(
+      () => ClinicListResponse.fromJson({
+        'data': {
+          'clinics': [
+            {'name_en': 'No id clinic'},
+          ],
+        },
+      }),
+      throwsFormatException,
+    );
+
+    expect(
+      () => ClinicListResponse.fromJson({
+        'data': {
+          'clinics': [
+            {'id': '', 'name_en': 'Blank id clinic'},
+          ],
+        },
+      }),
+      throwsFormatException,
+    );
+
+    expect(
+      () => ClinicDetailResponse.fromJson({
+        'data': {
+          'clinic': {'id': 'clinic-3'},
+          'doctors': [
+            {'name_en': 'No id doctor'},
+          ],
+        },
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('a non-object entry in a clinics/doctors list throws instead of being silently dropped', () {
+    expect(
+      () => ClinicListResponse.fromJson({
+        'data': {
+          'clinics': ['not-an-object'],
+        },
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('a numeric or boolean id is rejected — ids are UUID strings, never numbers', () {
+    expect(
+      () => Clinic.fromJson({'id': 7, 'name_en': 'Numeric id clinic'}),
+      throwsFormatException,
+    );
+
+    expect(
+      () => Clinic.fromJson({'id': false, 'name_en': 'Boolean id clinic'}),
+      throwsFormatException,
+    );
   });
 }

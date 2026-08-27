@@ -94,7 +94,7 @@ void main() {
       final detail = DoctorDetailResponse.fromJson({
         'data': {
           'doctor': {
-            'id': 9,
+            'id': 'doctor-9',
             'userId': 'user-9',
             'medicalLicenseNumber': 'WB-999',
             'yearsOfExperience': 8,
@@ -134,7 +134,7 @@ void main() {
         },
       });
 
-      expect(detail.doctor?.id, '9');
+      expect(detail.doctor?.id, 'doctor-9');
       expect(detail.doctor?.medicalLicenseNumber, 'WB-999');
       expect(detail.doctor?.specialtyEn, 'Dermatology');
       expect(detail.clinics.single.latitude, 32.2);
@@ -179,6 +179,68 @@ void main() {
       (json['future_payload'] as Map)['nested'] = 'changed';
 
       expect(doctor.extra['future_payload'], {'nested': 'kept'});
+    },
+  );
+
+  test(
+    'a doctor with a missing or blank id throws instead of silently becoming empty',
+    () {
+      expect(
+        () => DoctorListResponse.fromJson({
+          'data': {
+            'doctors': [
+              {'first_name_en': 'No id doctor'},
+            ],
+          },
+        }),
+        throwsFormatException,
+      );
+
+      expect(
+        () => Doctor.fromJson({'id': '', 'first_name_en': 'Blank id doctor'}),
+        throwsFormatException,
+      );
+
+      expect(
+        () => DoctorDetailResponse.fromJson({
+          'data': {
+            'doctor': {'id': 'doctor-3'},
+            'clinics': [
+              {'name_en': 'No id clinic'},
+            ],
+          },
+        }),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
+    'a non-object entry in a doctors/clinics/availability/reviews list throws instead of being silently dropped',
+    () {
+      expect(
+        () => DoctorListResponse.fromJson({
+          'data': {
+            'doctors': ['not-an-object'],
+          },
+        }),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
+    'a numeric or boolean id is rejected — ids are UUID strings, never numbers',
+    () {
+      expect(
+        () => Doctor.fromJson({'id': 9, 'first_name_en': 'Numeric id doctor'}),
+        throwsFormatException,
+      );
+
+      expect(
+        () => Doctor.fromJson({'id': true, 'first_name_en': 'Boolean id doctor'}),
+        throwsFormatException,
+      );
     },
   );
 }
