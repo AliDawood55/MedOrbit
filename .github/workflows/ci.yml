@@ -62,7 +62,13 @@ jobs:
           EOF
 
       - name: Build Docker Images
-        run: docker compose build
+        # Profile-only services are not built by a plain `docker compose
+        # build`.  The integration suite starts backend-test and
+        # ai-service-test with --no-build, so build that profile explicitly
+        # before the suite starts.
+        run: |
+          docker compose build
+          docker compose --profile test build
 
       - name: Start Fresh Database
         run: docker compose up -d --wait postgres
@@ -155,4 +161,8 @@ jobs:
         working-directory: ai-service
         run: |
           export PYTHONPATH=".:data/ml/nablus_facility_type${PYTHONPATH:+:$PYTHONPATH}"
-          find tests -name 'test_*.py' -type f -print | sort | xargs -r -n 1 python
+          # Most legacy suites are executable unittest modules.  The internal
+          # identity-boundary suite uses pytest fixtures and must be collected
+          # by pytest rather than executed as a plain Python file.
+          find tests -name 'test_*.py' -type f ! -name 'test_virtual_doctor_entitlement_boundary.py' -print | sort | xargs -r -n 1 python
+          python -m pytest -q tests/test_virtual_doctor_entitlement_boundary.py
