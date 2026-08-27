@@ -73,13 +73,17 @@ async function createDoctor(key, withPatientPersona = true) {
 
 async function appointment(key, patientId, doctorId, status, createdOffset = '0 seconds') {
     const id = crypto.randomUUID(); ids[key] = id;
-    const appointmentNumber = `${marker}-${String(++appointmentSequence).padStart(2, '0')}`;
+    const slot = appointmentSequence++;
+    const appointmentNumber = `${marker}-${String(slot + 1).padStart(2, '0')}`;
+    const timeForMinutes = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+    const startTime = timeForMinutes((9 * 60) + (slot * 30));
+    const endTime = timeForMinutes((9 * 60) + ((slot + 1) * 30));
     await pool.query(
         `INSERT INTO medorbit.appointments
            (id,appointment_number,patient_id,doctor_id,scheduled_date,start_time,end_time,
             duration_minutes,status,created_at)
-         VALUES ($1,$2,$3,$4,CURRENT_DATE + 7,'10:00','10:30',30,$5,NOW()+$6::interval)`,
-        [id, appointmentNumber, patientId, doctorId, status, createdOffset]
+         VALUES ($1,$2,$3,$4,CURRENT_DATE + 7,$5,$6,30,$7,NOW()+$8::interval)`,
+        [id, appointmentNumber, patientId, doctorId, startTime, endTime, status, createdOffset]
     );
     return id;
 }

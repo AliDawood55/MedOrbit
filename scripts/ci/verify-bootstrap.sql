@@ -14,6 +14,10 @@ DECLARE
   missing_tables TEXT;
   application_rows INTEGER;
 BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'postgis') THEN
+    RAISE EXCEPTION 'PostGIS extension is missing from the bootstrap database';
+  END IF;
+
   -- 1. Baseline tables that no migration creates.
   --
   -- These come from the gitignored db/ SQL on a developer machine and from
@@ -25,7 +29,17 @@ BEGIN
   FROM unnest(ARRAY[
     'users', 'user_sessions', 'email_queue', 'specialties', 'clinics',
     'user_profiles', 'patients', 'doctors', 'doctor_availability',
-    'appointments', 'doctor_posts',
+    'appointments', 'doctor_posts', 'doctor_reviews',
+    'medical_records', 'medical_record_attachments',
+    'prescriptions', 'prescription_items',
+    'notification_templates', 'notifications', 'system_settings', 'feedback',
+    'chatbot_conversations', 'chatbot_context', 'chatbot_messages',
+    'saved_places', 'report_summarizations',
+    'email_verification_tokens', 'password_reset_tokens', 'contact_messages',
+    'appointment_status_history', 'audit_logs', 'clinics_backup_20260721',
+    'conversation_titles', 'doctor_clinic_assignments', 'generated_reports',
+    'medical_knowledge', 'medications', 'nablus_regions',
+    'symptom_specialty_mappings', 'symptom_triage_sessions', 'user_chat_preferences',
     'virtual_doctor_sessions', 'virtual_doctor_messages', 'virtual_doctor_reports'
   ]) AS t
   WHERE to_regclass('medorbit.' || t) IS NULL;
@@ -74,8 +88,8 @@ BEGIN
       latest_version, missing_versions;
   END IF;
 
-  IF latest_version < '015' THEN
-    RAISE EXCEPTION 'expected migrations through 015, newest applied is %', latest_version;
+  IF latest_version < '021' THEN
+    RAISE EXCEPTION 'expected migrations through 021, newest applied is %', latest_version;
   END IF;
 
   -- 4. No application data. A CI database that has users has been seeded by

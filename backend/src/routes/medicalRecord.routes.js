@@ -13,6 +13,11 @@ const {
     findAuthorizedMedicalRecord,
 } = require('../services/clinicalAuthorization.service');
 const { success, error } = require('../utils/response');
+const { createAudit } = require('../services/audit.service');
+
+function auditRecord(record) {
+    return { id: record.id, patient_id: record.patient_id, doctor_id: record.doctor_id, appointment_id: record.appointment_id, record_type: record.record_type, is_draft: record.is_draft };
+}
 
 function patientRecordDto(record) {
     return {
@@ -65,6 +70,7 @@ async function requireRecordMutation(req, res, next) {
 }
 
 router.post('/', authenticate, authorize('doctor'), async (req, res, next) => {
+    let client;
     try {
         const doctor = await resolveDoctorForUser(req.user.sub);
         if (!doctor) return error(res, 'Appointment not found', 404, 'NOT_FOUND');
@@ -80,14 +86,20 @@ router.post('/', authenticate, authorize('doctor'), async (req, res, next) => {
             return error(res, 'Patient not found', 404, 'NOT_FOUND');
         }
 
+        client = await db.getClient();
+        await client.query('BEGIN');
         const record = await service.create({
             ...req.body,
             patient_id: appointment.rows[0].patient_id,
             doctor_id: doctor.id,
-        });
+        }, client);
+        await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'MEDICAL_RECORD_CREATED', entity_type: 'MEDICAL_RECORD', entity_id: record.id, new_values: auditRecord(record) }, client);
+        await client.query('COMMIT');
         return success(res, record, 'Medical record created', 201);
     } catch (err) {
+        await client?.query('ROLLBACK').catch(() => {});
         return next(err);
+    } finally { client?.release();
     }
 });
 
@@ -135,22 +147,32 @@ router.get('/:id', authenticate, requireRecordRead, (req, res) => {
 });
 
 router.put('/:id', authenticate, authorize('doctor'), requireRecordMutation, async (req, res, next) => {
+    let client;
     try {
-        const data = await service.update(req.params.id, req.body);
+        client = await db.getClient(); await client.query('BEGIN');
+        const data = await service.update(req.params.id, req.body, client);
         if (!data) return error(res, 'Record not found', 404, 'NOT_FOUND');
+        await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'MEDICAL_RECORD_UPDATED', entity_type: 'MEDICAL_RECORD', entity_id: data.id, old_values: auditRecord(req.medicalRecord), new_values: auditRecord(data) }, client);
+        await client.query('COMMIT');
         return success(res, data, 'Updated');
     } catch (err) {
+        await client?.query('ROLLBACK').catch(() => {});
         return next(err);
-    }
+    } finally { client?.release(); }
 });
 
 router.delete('/:id', authenticate, authorize('doctor'), requireRecordMutation, async (req, res, next) => {
+    let client;
     try {
-        await service.remove(req.params.id);
+        client = await db.getClient(); await client.query('BEGIN');
+        await service.remove(req.params.id, client);
+        await createAudit({ user_id: req.user.sub, user_role: req.user.role, action: 'MEDICAL_RECORD_DELETED', entity_type: 'MEDICAL_RECORD', entity_id: req.params.id, old_values: auditRecord(req.medicalRecord), new_values: { deleted: true } }, client);
+        await client.query('COMMIT');
         return success(res, null, 'Deleted');
     } catch (err) {
+        await client?.query('ROLLBACK').catch(() => {});
         return next(err);
-    }
+    } finally { client?.release(); }
 });
 
 router.post(

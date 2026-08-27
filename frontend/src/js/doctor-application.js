@@ -12,6 +12,12 @@ const DoctorApplication = (() => {
             ? I18n.localizedContent(arValue, enValue)
             : (arValue || enValue || '')
     );
+    const statusCopy = {
+        pending: { label: 'قيد المراجعة / Under review', detail: 'سيراجع فريق الإدارة طلبك. يمكنك سحبه ما دام قيد المراجعة.' },
+        approved: { label: 'تمت الموافقة / Approved', detail: 'تمت الموافقة على طلبك. سجّل الدخول مجدداً لتحميل صلاحية الطبيب.' },
+        rejected: { label: 'بحاجة إلى تعديل / Needs changes', detail: 'راجع سبب الرفض ثم يمكنك تقديم طلب جديد بعد التعديل.' },
+        withdrawn: { label: 'تم سحب الطلب / Withdrawn', detail: 'يمكنك بدء طلب جديد عندما تكون مستعداً.' },
+    };
 
     function showAlert(message, type = 'error') {
         const element = byId('applicationAlert');
@@ -27,16 +33,17 @@ const DoctorApplication = (() => {
 
     function statusCard(latest) {
         if (!latest) return '';
+        const status = statusCopy[latest.status] || { label: latest.status, detail: '' };
         const reason = latest.status === 'rejected' && latest.rejection_reason
             ? `<div class="application-note"><strong>سبب الرفض / Reason</strong><p>${escapeHtml(latest.rejection_reason)}</p></div>`
             : '';
         const relogin = latest.status === 'approved'
-            ? '<p>تمت الموافقة. سجّل الدخول مجدداً لتحميل صلاحية الطبيب الجديدة.</p><button id="reloginBtn" class="btn btn-primary">تسجيل الدخول مجدداً / Sign in again</button>'
+            ? '<button id="reloginBtn" class="btn btn-primary">تسجيل الدخول مجدداً / Sign in again</button>'
             : '';
         const withdraw = latest.status === 'pending'
             ? `<button id="withdrawBtn" class="btn btn-secondary" data-id="${escapeHtml(latest.id)}">سحب الطلب / Withdraw</button>`
             : '';
-        return `<div class="application-hero"><div><h2>حالة الطلب / Application status</h2><span class="application-status ${escapeHtml(latest.status)}">${escapeHtml(latest.status)}</span></div></div><p>تاريخ التقديم: ${new Date(latest.submitted_at).toLocaleDateString()}</p>${reason}${relogin}<div class="application-actions">${withdraw}</div>`;
+        return `<div class="application-hero"><div><h2>حالة الطلب / Application status</h2><span class="application-status ${escapeHtml(latest.status)}">${escapeHtml(status.label)}</span></div></div><p class="application-status-detail">${escapeHtml(status.detail)}</p><p>تاريخ التقديم: ${new Date(latest.submitted_at).toLocaleDateString()}</p>${reason}${relogin}<div class="application-actions">${withdraw}</div>`;
     }
 
     function render() {
@@ -55,7 +62,7 @@ const DoctorApplication = (() => {
         byId('applicationHistory').innerHTML = applications.map((application) => (
             `<div class="application-history-item"><div><strong>${escapeHtml(application.medical_license_number)}</strong>` +
             `<div class="text-muted">${new Date(application.submitted_at).toLocaleDateString()}</div></div>` +
-            `<span class="application-status ${escapeHtml(application.status)}">${escapeHtml(application.status)}</span></div>`
+            `<span class="application-status ${escapeHtml(application.status)}">${escapeHtml(statusCopy[application.status]?.label || application.status)}</span></div>`
         )).join('');
         byId('withdrawBtn')?.addEventListener('click', withdraw);
         byId('reloginBtn')?.addEventListener('click', () => {
@@ -98,6 +105,18 @@ const DoctorApplication = (() => {
     async function submit(event) {
         event.preventDefault();
         clearAlert();
+        const requiredFields = [
+            [byId('specialtyId'), 'اختر التخصص / Select a specialty'],
+            [byId('licenseNumber'), 'أدخل رقم الترخيص الطبي / Enter the medical license number'],
+        ];
+        const invalid = requiredFields.find(([field]) => !field.value.trim());
+        if (invalid) {
+            const [field, message] = invalid;
+            field.setAttribute('aria-invalid', 'true');
+            field.focus();
+            showAlert(message);
+            return;
+        }
         const button = byId('submitApplication');
         button.disabled = true;
         try {
@@ -136,6 +155,9 @@ const DoctorApplication = (() => {
 
     function init() {
         byId('doctorApplicationForm').addEventListener('submit', submit);
+        ['specialtyId', 'licenseNumber'].forEach((id) => byId(id).addEventListener('input', () => {
+            if (byId(id).value.trim()) byId(id).removeAttribute('aria-invalid');
+        }));
         load();
     }
 

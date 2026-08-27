@@ -93,8 +93,8 @@ check(
 );
 check(
     'public feed retains locale-first historical title fallback and HTML escaping',
-    /title\s*=\s*isAr\(\)\s*\?\s*\(p\.title_ar\s*\|\|\s*p\.title_en\)\s*:\s*\(p\.title_en\s*\|\|\s*p\.title_ar\)/.test(feed) &&
-    /esc\(title\)/.test(feed)
+/title\s*=\s*isAr\(\)\s*\?\s*\(?p\.title_ar\s*\|\|\s*p\.title_en\)?\s*:\s*\(?p\.title_en\s*\|\|\s*p\.title_ar\)?/.test(feed) &&
+/<h2 class="feed-title">\$\{esc\(title\)\}<\/h2>/.test(feed)
 );
 check(
     'doctor profile retains locale-first fallbacks for bios and reviews',
@@ -108,7 +108,8 @@ check(
 );
 check(
     'canonical backend content is copied without translation or language detection',
-    /ar: canonical/.test(backendAdapter) && /en: canonical/.test(backendAdapter) &&
+    /const ar = isBilingualObject \? normalizeText\(supplied\.ar\) : normalizeText\(supplied\);/.test(backendAdapter) &&
+    /const en = isBilingualObject \? normalizeText\(supplied\.en\) : normalizeText\(supplied\);/.test(backendAdapter) &&
     !/translate|detectLanguage|languageDetector/i.test(backendAdapter)
 );
 check(

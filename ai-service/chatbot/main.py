@@ -42,7 +42,7 @@ from chatbot.medical.symptom_engine import SymptomSpecialtyEngine
 from chatbot.medical.drug_interaction_matcher import DrugInteractionMatcher
 from chatbot.medical.document_extractor import DocumentExtractor
 from chatbot.medical.report_summarizer_llm import ReportSummarizerLLM
-from identity_boundary import resolve_internal_identity
+from identity_boundary import require_internal_identity, resolve_internal_identity
 
 # === Virtual Doctor (new, additive, isolated module) ===
 from virtual_doctor.router import router as virtual_doctor_router
@@ -95,7 +95,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # The AI service is an internal backend dependency, never a browser API.
+    # Keep CORS closed even while local Docker temporarily exposes port 8001
+    # during the client-migration window.
+    allow_origins=[],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -213,8 +216,8 @@ async def triage(
     Persists session to symptom_triage_sessions table.
     """
     try:
-        resolved_user_id, _ = resolve_internal_identity(
-            req.user_id, None, x_medorbit_internal_token, x_medorbit_user_id, None
+        resolved_user_id = require_internal_identity(
+            req.user_id, x_medorbit_internal_token, x_medorbit_user_id
         )
 
         # 1) Run the mapping engine
@@ -269,6 +272,8 @@ async def triage(
             follow_up_action=result["follow_up_action"],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Triage error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Triage failed")
@@ -278,12 +283,17 @@ async def triage(
 # T-048: DRUG INTERACTIONS ENDPOINT
 # =========================================================
 @app.post("/drug-interactions", response_model=DrugCheckResponse)
-async def drug_interactions(req: DrugCheckRequest):
+async def drug_interactions(
+    req: DrugCheckRequest,
+    x_medorbit_internal_token: Optional[str] = Header(None),
+    x_medorbit_user_id: Optional[str] = Header(None),
+):
     """
     Check drug interactions using DB medications.known_interactions JSONB.
     Accepts medication IDs or names.
     """
     try:
+        require_internal_identity(None, x_medorbit_internal_token, x_medorbit_user_id)
         interactions = await drug_matcher.check(
             medication_ids=req.medication_ids,
             medication_names=req.medication_names,
@@ -301,6 +311,8 @@ async def drug_interactions(req: DrugCheckRequest):
             severity_summary=severity_summary,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Drug interaction check error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Drug check failed: {str(e)}")
@@ -310,13 +322,18 @@ async def drug_interactions(req: DrugCheckRequest):
 # T-049: PRESCRIPTION AUTO-CHECK ENDPOINT
 # =========================================================
 @app.post("/prescription-check", response_model=PrescriptionCheckResponse)
-async def prescription_check(req: PrescriptionCheckRequest):
+async def prescription_check(
+    req: PrescriptionCheckRequest,
+    x_medorbit_internal_token: Optional[str] = Header(None),
+    x_medorbit_user_id: Optional[str] = Header(None),
+):
     """
     Auto-check drug interactions when creating a prescription.
     Takes prescription_items (each with medication_name_en),
     queries DB for known_interactions, returns warnings.
     """
     try:
+        require_internal_identity(None, x_medorbit_internal_token, x_medorbit_user_id)
         med_names = [
             item.get("medication_name_en", "")
             for item in req.prescription_items
@@ -348,6 +365,8 @@ async def prescription_check(req: PrescriptionCheckRequest):
             warnings=warnings,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Prescription check error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Prescription check failed: {str(e)}")
@@ -381,6 +400,8 @@ async def summarize(
             x_medorbit_user_id,
             x_medorbit_record_id,
         )
+        if not resolved_user_id:
+            raise HTTPException(status_code=403, detail="Internal identity context is required")
 
         extracted_text = ""
         source_file_name = None
@@ -449,11 +470,16 @@ async def summarize(
 # CHAT ENDPOINT (existing, enhanced)
 # =========================================================
 @app.post("/chat")
-async def chat(req: ChatRequest):
+async def chat(
+    req: ChatRequest,
+    x_medorbit_internal_token: Optional[str] = Header(None),
+    x_medorbit_user_id: Optional[str] = Header(None),
+):
     pipeline_start = time.time()
     pipeline_log = []
 
     try:
+        require_internal_identity(None, x_medorbit_internal_token, x_medorbit_user_id)
 
         # ============================================
         # SPECIAL FLOWS

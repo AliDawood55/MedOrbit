@@ -67,7 +67,7 @@ async function findByPatientId(patientId, { limit = 20, offset = 0 } = {}) {
     const result = await db.query(
         `SELECT
              p.id, p.prescription_number, p.prescription_date, p.valid_until,
-             p.status, p.diagnosis, p.instructions, p.doctor_notes,
+             p.status, p.diagnosis, p.instructions,
              COALESCE(
                  json_agg(
                      json_build_object(
@@ -99,7 +99,7 @@ async function findByPatientId(patientId, { limit = 20, offset = 0 } = {}) {
 async function findByIdForPatient(id, patientId) {
     const prescription = await db.query(
         `SELECT id, prescription_number, prescription_date, valid_until, status,
-                diagnosis, instructions, doctor_notes
+                diagnosis, instructions
          FROM medorbit.prescriptions
          WHERE id = $1 AND patient_id = $2`,
         [id, patientId]

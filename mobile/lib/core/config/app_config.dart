@@ -2,88 +2,43 @@ import 'package:flutter/foundation.dart';
 
 /// Centralized environment configuration for the MedOrbit mobile app.
 ///
-/// The backend runs on the developer's LAN, not localhost — a physical
-/// test device reaches it over Wi-Fi, so `localhost`/`127.0.0.1` would only
-/// resolve to the phone itself.
-///
 /// ## Environments
 ///
-/// The LAN defaults below are **debug builds only** (`kDebugMode`). A
-/// release or profile build without an explicit override throws instead of
-/// silently pointing at the developer's LAN IP. A build targets any other
-/// environment through `--dart-define`, with no source edit:
+/// Every build receives its backend origin through `--dart-define`; source
+/// code never names a developer machine. A debug build may use a local HTTP
+/// origin explicitly, while a release build must use HTTPS:
 ///
 /// ```
 /// flutter build apk \
-///   --dart-define=MEDORBIT_API_URL=https://api.medorbit.example \
-///   --dart-define=MEDORBIT_AI_URL=https://ai.medorbit.example
+///   --dart-define=MEDORBIT_API_URL=https://staging.example/api
 /// ```
-///
-/// TODO(production): production must terminate TLS. Serve both the backend and
-/// the AI service over HTTPS behind a reverse proxy and pass those origins via
-/// the defines above — the plain-HTTP defaults here will not work once
-/// Android's network security config (see
-/// `android/app/src/main/res/xml/network_security_config.xml`) stops
-/// allowlisting the dev hosts, and iOS ATS blocks cleartext outright.
-///
-/// TODO(production): the AI service currently has no authentication and
-/// wildcard CORS. It must sit behind an authenticated gateway before it is
-/// reachable from anything wider than the development LAN.
 class AppConfig {
   AppConfig._();
 
   /// Build-time overrides. Empty unless supplied via `--dart-define`.
   static const String _apiUrlOverride = String.fromEnvironment('MEDORBIT_API_URL');
-  static const String _aiUrlOverride = String.fromEnvironment('MEDORBIT_AI_URL');
-
-  /// Development default: the dev laptop's Wi-Fi LAN IP. This is the only
-  /// entry that can work from a physical device.
-  static const String devLanBaseUrl = 'http://192.168.0.105:3001/api';
-
-  /// Android emulator's alias for the host machine's loopback.
-  static const String emulatorBaseUrl = 'http://10.0.2.2:3001/api';
-
-  /// Desktop/web debug builds running on the host machine itself.
-  static const String localhostBaseUrl = 'http://localhost:3001/api';
 
   /// True when this build was given an explicit backend origin.
   static bool get hasApiOverride => _apiUrlOverride.isNotEmpty;
 
-  /// True when this build was given an explicit AI service origin.
-  static bool get hasAiOverride => _aiUrlOverride.isNotEmpty;
-
   /// The configured backend base URL — always ending in exactly one `/api`.
-  ///
-  /// Outside a debug build, a missing override throws rather than silently
-  /// falling back to the developer's LAN IP.
-  static String get baseUrl => resolveBaseUrl(debug: kDebugMode, apiUrlOverride: _apiUrlOverride);
+  /// The configured backend base URL — always ending in exactly one `/api`.
+  /// Empty means startup must show the configuration error before any request.
+  static String get baseUrl =>
+      hasApiOverride ? normalizeApiBase(_apiUrlOverride) : '';
 
-  /// Pure resolution logic behind [baseUrl]. Split out because `kDebugMode`
-  /// and `String.fromEnvironment` are both compile-time and cannot be varied
-  /// from a test otherwise.
-  static String resolveBaseUrl({required bool debug, required String apiUrlOverride}) {
-    if (apiUrlOverride.isNotEmpty) return normalizeApiBase(apiUrlOverride);
-    if (debug) return devLanBaseUrl;
-    throw StateError(
-      'MEDORBIT_API_URL must be set outside debug builds — pass '
-      '--dart-define=MEDORBIT_API_URL=<backend origin>. The developer LAN '
-      'default ($devLanBaseUrl) is never used for release/profile builds.',
-    );
-  }
+  static bool get hasValidReleaseApiUrl =>
+      hasApiOverride && normalizeApiBase(_apiUrlOverride).startsWith('https://');
 
-  /// Probed in order at startup by `ApiHostResolver`; the first host that
-  /// answers `GET /health` wins.
-  ///
-  /// Without an override the emulator/localhost entries only ever succeed on
-  /// an emulator or a desktop/web build — from a real phone they resolve to
-  /// the phone itself and always fail. They're here so the same build works
-  /// across all three targets, not as a recovery path for a device outage.
-  ///
-  /// With an explicit override they are dropped entirely: a configured host is
-  /// the only host that build is allowed to talk to. Outside a debug build,
-  /// a missing override throws — see [resolveBaseUrl].
+  static String get missingApiUrlMessage =>
+      'MEDORBIT_API_URL is required. For local debug use '
+      '--dart-define=MEDORBIT_API_URL=http://YOUR_LAN_IP:3001/api.';
+
+  /// Probed at startup by `ApiHostResolver`. A configured build contacts only
+  /// its explicitly supplied backend — it never falls back to localhost or a
+  /// developer LAN address.
   static List<String> get baseUrlCandidates => candidatesFor(_apiUrlOverride);
-
+  
   /// Candidate list for a given override value. Split out from
   /// [baseUrlCandidates] because `String.fromEnvironment` is resolved at
   /// compile time and cannot be varied from a test. `debug` defaults to
@@ -92,6 +47,7 @@ class AppConfig {
     if (apiUrlOverride.isNotEmpty) {
       return <String>[normalizeApiBase(apiUrlOverride)];
     }
+
     if (!debug) {
       throw StateError(
         'MEDORBIT_API_URL must be set outside debug builds — pass '
@@ -100,6 +56,18 @@ class AppConfig {
       );
     }
     return const <String>[devLanBaseUrl, emulatorBaseUrl, localhostBaseUrl];
+
+      static List<String> candidatesFor(
+    String apiUrlOverride, {
+    bool debug = kDebugMode,
+  }) {
+    if (apiUrlOverride.isNotEmpty) {
+      return <String>[normalizeApiBase(apiUrlOverride)];
+    }
+
+    return const <String>[];
+  }
+
   }
 
   /// Forces a backend origin to end in exactly one `/api`, matching the web
@@ -111,29 +79,8 @@ class AppConfig {
     return trimmed.endsWith('/api') ? trimmed : '$trimmed/api';
   }
 
-  /// Forces an AI origin to carry **no** `/api` prefix and no trailing slash —
-  /// the AI service mounts its routes at the root.
-  static String normalizeAiBase(String raw) {
-    return _stripTrailingSlash(raw.trim().replaceFirst(RegExp(r'/api/?$'), ''));
-  }
-
   static String _stripTrailingSlash(String value) {
     return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
-  }
-
-  /// The Python AI service is a **separate** process on its own port with no
-  /// `/api` prefix and no JWT — the web app calls it directly the same way
-  /// (`AI_BASE` in `frontend/src/js/virtual-doctor-stt.js`).
-  static const int aiServicePort = 8001;
-
-  /// Derives the AI service origin from whichever API host resolved, so both
-  /// stay on the same machine (LAN / emulator / localhost). An explicit
-  /// `MEDORBIT_AI_URL` wins, because in production the two services can live
-  /// behind different hostnames rather than two ports on one box.
-  static String aiBaseFrom(String apiBaseUrl) {
-    if (hasAiOverride) return normalizeAiBase(_aiUrlOverride);
-    final uri = Uri.parse(apiBaseUrl);
-    return Uri(scheme: uri.scheme, host: uri.host, port: aiServicePort).toString();
   }
 
   /// Whisper decode + upload.

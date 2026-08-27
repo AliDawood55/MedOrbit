@@ -1,8 +1,9 @@
 # Azure VM Staging Deployment
 
-Staging deployment guide for MedOrbit: one Ubuntu Azure VM running the existing
-Docker Compose stack over plain HTTP/public IP, so web and mobile can be
-tested from any network. **This is staging, not production** — see
+Staging deployment guide for MedOrbit: one Ubuntu Azure VM running the Docker
+Compose stack behind Caddy-managed HTTPS. Only ports 80 and 443 are public;
+backend, AI, PostgreSQL, Kafka, and workers stay inside Docker or on VM
+loopback. **This is staging, not production** — see
 [Security limitations](#security-limitations) before pointing real users at it.
 
 Related: [`docker-compose.staging.yml`](../docker-compose.staging.yml),
@@ -27,10 +28,8 @@ Related: [`docker-compose.staging.yml`](../docker-compose.staging.yml),
 | Port | Purpose | Source |
 |---|---|---|
 | 22 | SSH | Restrict to your IP if possible |
-| 80 | HTTP via nginx reverse proxy | Only if/when you add one (not part of this initial staging setup) |
-| 8080 | Frontend (direct) | Any (staging only) |
-| 3001 | Backend API (temporary direct testing) | Any (staging only) |
-| 8001 | AI service (temporary direct testing) | Any (staging only) |
+| 80 | HTTP-to-HTTPS redirect / certificate issuance | Any |
+| 443 | Caddy TLS proxy (web, API, Socket.IO) | Any |
 | 5432 | Postgres | **Never open** — `docker-compose.staging.yml` doesn't even publish this port to the host |
 
 ## 3. Install Docker on the VM
@@ -71,19 +70,32 @@ nano .env.staging   # fill in DB_PASSWORD, JWT_SECRET, CORS_ORIGIN, FRONTEND_URL
                      # BACKEND_PUBLIC_URL, EMAIL_*, GOOGLE_CLIENT_ID with real values
 ```
 
-Use the VM's actual public IP (from the Azure portal) for `CORS_ORIGIN`,
-`FRONTEND_URL`, and `BACKEND_PUBLIC_URL`. Generate a fresh `JWT_SECRET` (e.g.
+Create a DNS A/AAAA record for `MEDORBIT_PUBLIC_HOST` before deployment. Use
+that exact HTTPS origin for `CORS_ORIGIN`, `FRONTEND_URL`, and
+`BACKEND_PUBLIC_URL`. Generate a fresh `JWT_SECRET` (e.g.
 `openssl rand -base64 48`) and a fresh DB password — **do not reuse your
 local dev `.env` secrets.**
 
 `.env.staging` is gitignored; it never leaves the VM unless you copy it
 yourself.
 
-### Restore the database
+### Initialize a fresh staging database
 
-Staging doesn't auto-seed the database (same as local dev — see
-[`DOCKER.md`](../DOCKER.md)). After `docker compose up` has started postgres
-once:
+The tracked baseline creates the schema only; it does not create application
+users or seed data. Start PostgreSQL, bootstrap the historical baseline, then
+apply migrations:
+
+```bash
+docker compose -f docker-compose.staging.yml --env-file .env.staging up -d postgres
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-bootstrap
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-migrate up
+```
+
+### Restore historical data (optional)
+
+Restore a backup only when staging needs existing data. This replaces schema
+objects and data in the selected database, so do it only after a backup and
+only for an intentional replacement:
 
 ```bash
 docker cp medorbit_backup.backup medorbit-postgres-staging:/tmp/medorbit_backup.backup
@@ -91,10 +103,16 @@ docker compose -f docker-compose.staging.yml exec postgres \
   pg_restore -U <DB_USER> -d <DB_NAME> --clean --if-exists /tmp/medorbit_backup.backup
 ```
 
+Then apply any migrations newer than the backup:
+
+```bash
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tools run --rm --no-deps db-migrate up
+```
+
 ## 6. Start the stack
 
 ```bash
-docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --build
+docker compose -f docker-compose.staging.yml --env-file .env.staging --profile tls up -d --build
 ```
 
 Or use the helper script (does the same, plus health polling):
@@ -103,6 +121,49 @@ Or use the helper script (does the same, plus health polling):
 ./scripts/deploy-staging.sh
 ```
 
+### Backup and restore verification
+
+Run a backup/restore verification before each staging release and after a
+PostgreSQL or PostGIS upgrade. It creates a fresh custom-format backup,
+restores it only into the explicitly named disposable database, and verifies
+PostGIS, the migration ledger, core tables, and a data query. It refuses to
+use the canonical `DB_NAME` as its restore target.
+
+```bash
+VERIFY_DB_NAME=medorbit_restore_verify_$(date +%Y%m%d) \
+  ./scripts/verify-backup-restore.sh
+```
+
+The verified database is retained for inspection. When disk space matters,
+remove it only after reviewing the successful output:
+
+```bash
+KEEP_RESTORE_DATABASE=false \
+VERIFY_DB_NAME=medorbit_restore_verify_$(date +%Y%m%d) \
+  ./scripts/verify-backup-restore.sh
+```
+
+Database backups do not contain `backend/uploads/` or `backend/storage/`.
+Back up those runtime directories separately, with restricted permissions,
+on the same schedule.
+
+### Persistent uploads and reports
+
+The staging Compose file persists `backend/uploads/` and `backend/storage/` on
+the VM. These files are not part of PostgreSQL backups. Before the first
+deployment of this storage change, recover any files from the old backend
+container before it is recreated:
+
+```bash
+mkdir -p backend/runtime-recovery
+docker cp medorbit-backend-staging:/app/backend/uploads backend/runtime-recovery/uploads
+docker cp medorbit-backend-staging:/app/backend/storage backend/runtime-recovery/storage
+```
+
+Review and merge the recovered files into `backend/uploads/` and
+`backend/storage/`. Restrict access to those host directories and include them
+in the staging backup strategy.
+
 ## 7. Verify
 
 Locally on the VM:
@@ -110,60 +171,44 @@ Locally on the VM:
 ```bash
 docker compose -f docker-compose.staging.yml ps
 curl http://localhost:3001/api/health
-curl http://localhost:8001/health
+docker compose -f docker-compose.staging.yml --env-file .env.staging exec -T ai-service \
+  python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"
 ```
 
-From your own machine, against the VM's public IP:
+From your own machine, against the public DNS hostname:
 
 ```bash
-curl http://<VM_PUBLIC_IP>:3001/api/health
-curl http://<VM_PUBLIC_IP>:8001/health
+curl https://<MEDORBIT_PUBLIC_HOST>/api/health
 ```
 
 ## 8. Mobile staging — run
 
-Android's `network_security_config.xml` and iOS's App Transport Security
-both block plaintext HTTP to arbitrary hosts by default. A temporary,
-clearly-labeled staging exception has been added to both — **you must
-uncomment it and fill in the VM's real IP locally** before this will work on
-a device (the real IP is never committed):
-
-- Android: edit `mobile/android/app/src/main/res/xml/network_security_config.xml`,
-  uncomment the `STAGING (temporary)` domain block, replace the placeholder
-  with your VM's IP.
-- iOS: edit `mobile/ios/Runner/Info.plist`, uncomment the
-  `STAGING (temporary)` `NSAppTransportSecurity` block, replace the
-  placeholder with your VM's IP.
-
-Then:
+Use only the HTTPS backend origin. Do not add plaintext Android/iOS network
+exceptions and do not set `MEDORBIT_AI_URL`: the AI service is internal-only.
 
 ```bash
 flutter run -d RFCY806MHLV \
-  --dart-define=MEDORBIT_API_URL=http://<VM_PUBLIC_IP>:3001/api \
-  --dart-define=MEDORBIT_AI_URL=http://<VM_PUBLIC_IP>:8001
+  --dart-define=MEDORBIT_API_URL=https://<MEDORBIT_PUBLIC_HOST>/api
 ```
 
-**Revert both edits** (re-comment, or `git checkout` the files) before
-committing or building a release — do not ship the cleartext exception.
+Ali must complete the remaining client-to-backend AI repoints before mobile AI
+features can use this topology.
 
 ## 9. Mobile staging — release build
 
 ```bash
 flutter build apk --release \
-  --dart-define=MEDORBIT_API_URL=http://<VM_PUBLIC_IP>:3001/api \
-  --dart-define=MEDORBIT_AI_URL=http://<VM_PUBLIC_IP>:8001
+  --dart-define=MEDORBIT_API_URL=https://<MEDORBIT_PUBLIC_HOST>/api
 ```
 
-Same caveat: the Android network security exception must be uncommented
-locally for this build to reach the VM, and reverted afterward.
+No cleartext exception is needed for HTTPS.
 
 ## 10. Web verification from another device
 
-Open `http://<VM_PUBLIC_IP>:8080` in a browser on a different network (e.g.
-your phone on cellular data). The frontend self-derives its API/AI origin
-from the browser's URL (`window.location.hostname`), so no frontend config
-changes are needed — it will call `http://<VM_PUBLIC_IP>:3001` and `:8001`
-automatically.
+Open `https://<MEDORBIT_PUBLIC_HOST>` in a browser on a different network.
+The web client calls the backend through the same HTTPS origin at `/api`; do
+not expose or configure port `3001` in the browser. The final client must
+never derive or call an AI origin.
 
 ## 11. Cost safety
 
@@ -177,14 +222,16 @@ automatically.
 
 This setup is **staging only**, not production-ready:
 
-- Traffic is plain HTTP — credentials and data are not encrypted in transit.
-- Backend/AI service ports are directly exposed rather than behind a reverse
-  proxy.
+- TLS is terminated by Caddy; certificate issuance requires a real DNS name,
+  inbound 80/443 access, and a reachable VM.
+- Existing legacy web/mobile code still has direct AI paths. Do not expose it
+  publicly after enabling this topology; Ali's backend-repoint work is a
+  release dependency.
 - The Android/iOS cleartext exceptions are a deliberate, temporary hole in
   otherwise-correct security config — revert them outside of active staging
   testing.
-- ai-service's CORS is wide open (`allow_origins=["*"]`, pre-existing, not
-  changed by this staging setup) and has no authentication layer.
+- AI CORS is closed and the AI service is reachable only from the Docker
+  network.
 - Use strong, unique secrets in `.env.staging` (never the local dev ones).
 - Postgres is never exposed publicly — keep it that way.
 
@@ -199,10 +246,8 @@ listed under [remaining production hardening](#remaining-production-hardening).
 
 ## Remaining production hardening
 
-- Add a domain name and HTTPS (Let's Encrypt via an nginx/Caddy reverse
-  proxy), then drop the direct 3001/8001 exposure in favor of proxied paths.
-- Remove the mobile cleartext exceptions once HTTPS is in place.
-- Add authentication and a scoped CORS allowlist to ai-service.
+- Complete the web/mobile backend AI proxy repoints before publicly releasing
+  the TLS topology.
 - Decide whether/how to run Ollama on staging (or point staging at a shared
   Ollama instance) if AI-chat features need to be tested end-to-end.
 - Consider a container registry (ACR/GHCR) instead of building on the VM,

@@ -44,34 +44,27 @@ features that call the LLM will work.** The stack will still start and the
 health checks will still pass without it — only those specific features will
 fail at request time until Ollama is up.
 
-## Database: two options, and which one to use
+## Database bootstrap and optional data restore
 
-`db/` and `database/` (the raw SQL) are gitignored — per the existing
-`.gitignore` comment, the project is distributed via a `pg_dump` custom-format
-backup file, `medorbit_backup.backup`, kept locally rather than committed.
-Because of that, this compose file **cannot** auto-seed the database on first
-start; there's no SQL guaranteed to exist in a fresh clone.
+The tracked baseline at `scripts/ci/base-schema.sql` creates the historical
+schema required before numbered migration `001`; it creates no application
+users or sample data. Bootstrap is explicit so `docker compose up` never
+modifies an existing database merely because a container starts.
 
-Two ways to get data into the `postgres` container:
+For a fresh empty database:
 
-**(a) Restore from `medorbit_backup.backup` — recommended, use this one.**
-Self-contained: works from a fresh clone plus just the one backup file,
-independent of whether you happen to have the gitignored `db/`/`database/`
-folders checked out locally. This matches how the project is already meant
-to be distributed.
+```bash
+docker compose up -d postgres
+npm run db:initialize
+```
 
-**(b) Point the compose stack at an existing local Postgres instead.**
-Skip the `postgres` service, set `DB_HOST` to wherever that instance is
-reachable from inside a container (e.g. `host.docker.internal` if it runs on
-your host). Only worth it if you already have a fully-seeded Postgres running
-and don't want a second copy of the data — but it re-introduces exactly the
-container-to-host networking complexity that having `postgres` as a service
-was meant to avoid, and two people on the same team can no longer assume "just
-run `docker compose up`" gives them the same DB state. Not recommended as the
-default.
+`npm run db:initialize` first runs the safe `db-bootstrap` service, then
+applies migrations. Bootstrap skips a database that already has
+`medorbit.users` and refuses a partial `medorbit` schema.
 
-**This project uses (a).** Steps, after `docker compose up` has started the
-`postgres` service at least once:
+Restoring a `pg_dump` backup remains optional when you need historical data,
+not when you only need a runnable schema. Restore it only into a database you
+intend to replace. After `docker compose up` has started `postgres`:
 
 ```bash
 # 1. Copy the backup file into the running container
@@ -86,8 +79,9 @@ docker exec -it medorbit-postgres pg_restore \
 docker exec medorbit-postgres rm /tmp/medorbit_backup.backup
 ```
 
-`--clean --if-exists` makes this safe to re-run against an already-seeded
-database (drops existing objects first instead of erroring on conflicts).
+`--clean --if-exists` drops existing objects. Use it only for an intentional
+restore into a disposable or explicitly replaced database. After a restore,
+run `npm run db:migrate` to apply migrations newer than the backup.
 
 ## First-time setup
 
@@ -95,8 +89,10 @@ database (drops existing objects first instead of erroring on conflicts).
 # 1. Create your .env from the template and fill in real values
 cp .env.example .env
 
-# 2. Build and start everything
-docker compose up --build
+# 2. Start PostgreSQL, initialize a fresh schema, then start the stack
+docker compose up -d postgres
+npm run db:initialize
+docker compose up -d --build
 ```
 
 ### What to expect on first run
@@ -118,8 +114,36 @@ docker compose up --build
   before `postgres` reports healthy — this is expected; `depends_on:
   condition: service_healthy` holds them back, but the first health check
   itself takes `start_period` seconds to run.
-- The database will be **empty** on first start — see the restore steps
-  above. Nothing in this stack seeds it for you.
+- The database has a complete **schema but no application data** after
+  `npm run db:initialize`. Restore a backup only when historical data is
+  required.
+
+### Persistent clinical files
+
+PostgreSQL backups do **not** contain uploaded files or generated PDFs. The
+backend mounts both runtime directories from the project host:
+
+| Host directory | Container directory | Contents |
+|---|---|---|
+| `backend/uploads/` | `/app/backend/uploads/` | Avatars and general uploads |
+| `backend/storage/` | `/app/backend/storage/` | Medical-record attachments and generated reports |
+
+Before first deploying this Compose change over an existing backend container,
+copy any runtime files that may still be inside that old container. Its
+previous mount targeted `/app/uploads`, while the application actually writes
+under `/app/backend`.
+
+```bash
+# Run before recreating/removing the old backend container.
+mkdir -p backend/runtime-recovery
+docker cp medorbit-backend:/app/backend/uploads backend/runtime-recovery/uploads
+docker cp medorbit-backend:/app/backend/storage backend/runtime-recovery/storage
+```
+
+Review and merge the recovered directories into `backend/uploads/` and
+`backend/storage/` before recreating the backend. Treat both directories as
+sensitive patient data: restrict host access and include them in operational
+backup/restore procedures.
 
 ## Verifying everything is healthy
 

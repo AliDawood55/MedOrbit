@@ -4,6 +4,8 @@ const { Parser } = require("json2csv");
 const fs = require("fs");
 const path = require("path");
 
+const REPORTS_DIR = path.resolve(process.cwd(), "storage", "reports");
+
 // Shared trailing window for the two time-series analytics charts (appointments,
 // AI conversations) so both cover the same span and a single constant documents
 // the choice: 12 weeks gives a quarter-ish trend without downloading raw rows
@@ -412,12 +414,7 @@ async function saveReport(data) {
 
 async function generateCSV(rows, filename) {
 
-    const reportsDir =
-        path.join(
-            process.cwd(),
-            "storage",
-            "reports"
-        );
+    const reportsDir = REPORTS_DIR;
 
 
     if (!fs.existsSync(reportsDir)) {
@@ -466,12 +463,7 @@ async function generateCSV(rows, filename) {
 
 async function generatePDF(rows, filename) {
 
-    const reportsDir =
-        path.join(
-            process.cwd(),
-            "storage",
-            "reports"
-        );
+    const reportsDir = REPORTS_DIR;
 
 
     if (!fs.existsSync(reportsDir)) {
@@ -573,6 +565,7 @@ module.exports = {
     generateReport,
     saveReport,
     generateCSV,
-    generatePDF
+    generatePDF,
+    REPORTS_DIR
 
 };

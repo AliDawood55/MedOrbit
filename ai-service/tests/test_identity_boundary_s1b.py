@@ -7,7 +7,11 @@ from pathlib import Path
 from fastapi import HTTPException
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from identity_boundary import expected_internal_token, resolve_internal_identity
+from identity_boundary import (
+    expected_internal_token,
+    require_internal_identity,
+    resolve_internal_identity,
+)
 
 
 class IdentityBoundaryTests(unittest.TestCase):
@@ -44,8 +48,10 @@ class IdentityBoundaryTests(unittest.TestCase):
             (user_id, record_id),
         )
 
-    def test_anonymous_context_remains_available(self):
-        self.assertEqual(resolve_internal_identity(None, None, None, None, None), (None, None))
+    def test_missing_internal_context_is_rejected_for_protected_endpoints(self):
+        with self.assertRaises(HTTPException) as caught:
+            require_internal_identity(None, None, None)
+        self.assertEqual(caught.exception.status_code, 403)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,8 @@ import '../../appointments/models/enriched_appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../appointments/utils/appointment_filters.dart';
 import '../../appointments/widgets/appointment_card.dart';
+import '../../admin/dashboard/models/admin_dashboard_stats.dart';
+import '../../admin/dashboard/providers/admin_dashboard_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../notifications/providers/notifications_provider.dart';
 import '../../prescriptions/models/prescription_model.dart';
@@ -57,6 +59,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     }
 
+    final role = ref.read(authControllerProvider).user?.role.toLowerCase();
+    if (role == 'admin' || role == 'super_admin') {
+      await Future.wait([
+        ignoreFailure(() async {
+          final _ = await ref.refresh(currentUserProfileProvider.future);
+        }),
+        ignoreFailure(() async {
+          final _ = await ref.refresh(adminDashboardStatsProvider.future);
+        }),
+      ]);
+      return;
+    }
+
     await Future.wait([
       ignoreFailure(() async {
         final _ = await ref.refresh(currentUserProfileProvider.future);
@@ -87,7 +102,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.build(context);
     final strings = ref.watch(appStringsProvider);
     final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
+    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
+    final isAdmin = role == 'admin' || role == 'super_admin';
     final profileAsync = ref.watch(currentUserProfileProvider);
+
+    if (isAdmin) {
+      final statsAsync = ref.watch(adminDashboardStatsProvider);
+      return _AdminHomeScreen(
+        profileAsync: profileAsync,
+        statsAsync: statsAsync,
+        isArabic: isArabic,
+        strings: strings,
+        origin: ref.watch(activeOriginProvider),
+        onRefresh: _refreshDashboard,
+        onRetry: () => ref.invalidate(currentUserProfileProvider),
+        onRetryStats: () => ref.invalidate(adminDashboardStatsProvider),
+      );
+    }
+
     final appointmentsAsync = ref.watch(appointmentsControllerProvider);
     final prescriptionsAsync = ref.watch(prescriptionsListProvider);
     final recordsAsync = ref.watch(recordsTimelineProvider);
@@ -237,6 +269,213 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       ),
     );
   }
+}
+
+/// Operational accounts must not be shown patient records, prescriptions,
+/// care data, AI tools, or contact submission actions. Admin management is
+/// currently web-first; this deliberately provides a clear, safe mobile home
+/// rather than pretending patient-only routes belong to an administrator.
+class _AdminHomeScreen extends ConsumerWidget {
+  const _AdminHomeScreen({
+    required this.profileAsync,
+    required this.statsAsync,
+    required this.isArabic,
+    required this.strings,
+    required this.origin,
+    required this.onRefresh,
+    required this.onRetry,
+    required this.onRetryStats,
+  });
+
+  final AsyncValue<UserProfileModel> profileAsync;
+  final AsyncValue<AdminDashboardStats> statsAsync;
+  final bool isArabic;
+  final AppStrings strings;
+  final String origin;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onRetry;
+  final VoidCallback onRetryStats;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppScaffold(
+      appBar: AppBar(
+        title: Text(strings.appName),
+        actions: [
+          IconButton(
+            tooltip: strings.languageToggleTooltip,
+            icon: const Icon(Icons.translate_rounded),
+            onPressed: () =>
+                ref.read(localeControllerProvider.notifier).toggle(),
+          ),
+          IconButton(
+            tooltip: strings.logoutTooltip,
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () async {
+              await ref.read(authControllerProvider.notifier).logout();
+              if (context.mounted) context.go(RoutePaths.login);
+            },
+          ),
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          onRefresh: onRefresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceLg),
+            children: [
+              ResponsiveContent(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _ProfileSection(
+                      profileAsync: profileAsync,
+                      isArabic: isArabic,
+                      strings: strings,
+                      origin: origin,
+                      onRetry: onRetry,
+                    ),
+                    const SizedBox(height: AppTheme.spaceXl),
+                    SectionHeader(
+                      title: strings.adminMobileDashboardTitle,
+                      subtitle: strings.adminDashboardSubtitle,
+                    ),
+                    const SizedBox(height: AppTheme.spaceMd),
+                    _AdminStatisticsGrid(
+                      statsAsync: statsAsync,
+                      strings: strings,
+                      onRetry: onRetryStats,
+                    ),
+                    const SizedBox(height: AppTheme.spaceXl),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppTheme.spaceXl),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.admin_panel_settings_outlined,
+                              color: AppTheme.accent,
+                              size: AppTheme.iconXl,
+                            ),
+                            const SizedBox(height: AppTheme.spaceMd),
+                            Text(
+                              strings.adminMobileDashboardHint,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: AppTheme.spaceLg),
+                            Wrap(
+                              spacing: AppTheme.spaceSm,
+                              runSpacing: AppTheme.spaceSm,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () =>
+                                      context.push(RoutePaths.notifications),
+                                  icon: const Icon(
+                                    Icons.notifications_outlined,
+                                  ),
+                                  label: Text(strings.navNotifications),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () =>
+                                      context.push(RoutePaths.profile),
+                                  icon: const Icon(
+                                    Icons.person_outline_rounded,
+                                  ),
+                                  label: Text(strings.navProfile),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminStatisticsGrid extends StatelessWidget {
+  const _AdminStatisticsGrid({
+    required this.statsAsync,
+    required this.strings,
+    required this.onRetry,
+  });
+
+  final AsyncValue<AdminDashboardStats> statsAsync;
+  final AppStrings strings;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return statsAsync.when(
+      loading: () => const Center(child: Padding(
+        padding: EdgeInsets.all(AppTheme.spaceLg),
+        child: CircularProgressIndicator(),
+      )),
+      error: (error, stackTrace) => FeatureCard(
+        title: strings.adminMobileDashboardTitle,
+        subtitle: strings.statLoadError,
+        icon: Icons.refresh_rounded,
+        color: Theme.of(context).colorScheme.error,
+        onTap: onRetry,
+        semanticLabel: '${strings.retry}: ${strings.adminMobileDashboardTitle}',
+      ),
+      data: (stats) {
+        final tiles = <_AdminStatData>[
+          _AdminStatData(stats.usersTotal, strings.adminStatsUsers, Icons.groups_outlined, AppTheme.primary),
+          _AdminStatData(stats.patients, strings.adminStatsPatients, Icons.person_outline_rounded, AppTheme.secondary),
+          _AdminStatData(stats.doctors, strings.adminStatsDoctors, Icons.medical_services_outlined, AppTheme.accent),
+          _AdminStatData(stats.appointmentsTotal, strings.adminStatsAppointments, Icons.event_available_outlined, AppTheme.violet),
+          _AdminStatData(stats.recordsTotal, strings.adminStatsRecords, Icons.description_outlined, AppTheme.primary),
+          _AdminStatData(stats.prescriptionsTotal, strings.adminStatsPrescriptions, Icons.medication_outlined, AppTheme.secondary),
+          if (stats.averageRating != null)
+            _AdminStatData(stats.averageRating!.toStringAsFixed(1), strings.adminStatsRating, Icons.star_outline_rounded, AppTheme.accent),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= AppTheme.compactBreakpoint ? 2 : 1;
+            final gap = AppTheme.spaceMd;
+            final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final tile in tiles)
+                  SizedBox(
+                    width: width,
+                    child: StatTile(
+                      value: '\u2066${tile.value}\u2069',
+                      label: tile.label,
+                      icon: tile.icon,
+                      color: tile.color,
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _AdminStatData {
+  const _AdminStatData(this.value, this.label, this.icon, this.color);
+
+  final Object value;
+  final String label;
+  final IconData icon;
+  final Color color;
 }
 
 List<EnrichedAppointment> _upcomingAppointments(
@@ -446,7 +685,7 @@ class _ProfileHeader extends StatelessWidget {
 (String, Color) _roleVisual(String role, AppStrings strings) {
   return switch (role.toLowerCase()) {
     'doctor' => (strings.roleDoctor, AppTheme.secondary),
-    'admin' => (strings.roleAdmin, AppTheme.accent),
+    'admin' || 'super_admin' => (strings.roleAdmin, AppTheme.accent),
     _ => (strings.rolePatient, AppTheme.primary),
   };
 }
@@ -454,7 +693,7 @@ class _ProfileHeader extends StatelessWidget {
 String _roleSubtitle(String role, AppStrings strings) {
   return switch (role.toLowerCase()) {
     'doctor' => strings.doctorDashboardSubtitle,
-    'admin' => strings.adminDashboardSubtitle,
+    'admin' || 'super_admin' => strings.adminDashboardSubtitle,
     _ => strings.patientDashboardSubtitle,
   };
 }
@@ -609,27 +848,25 @@ class _QuickActions extends StatelessWidget {
         title: strings.quickGroupCare,
         icon: Icons.medical_services_outlined,
         actions: [
-          const _QuickAction(
-            label: 'Clinics nearby',
-            description:
-                'Find clinics and healthcare facilities around Nablus.',
+          _QuickAction(
+            label: strings.quickClinicsNearbyLabel,
+            description: strings.quickClinicsNearbyDescription,
             icon: Icons.local_hospital_outlined,
             color: AppTheme.secondary,
             path: RoutePaths.clinics,
             push: true,
           ),
-          const _QuickAction(
-            label: 'Find a doctor',
-            description: 'Browse doctors listed by healthcare facilities.',
+          _QuickAction(
+            label: strings.quickFindDoctorLabel,
+            description: strings.quickFindDoctorDescription,
             icon: Icons.person_search_outlined,
             color: AppTheme.primary,
             path: RoutePaths.doctors,
             push: true,
           ),
-          const _QuickAction(
-            label: 'Medical chat',
-            description:
-                'Get general medical guidance and nearby care results.',
+          _QuickAction(
+            label: strings.quickMedicalChatLabel,
+            description: strings.quickMedicalChatDescription,
             icon: Icons.chat_bubble_outline_rounded,
             color: AppTheme.violet,
             path: RoutePaths.chatbot,
@@ -703,6 +940,22 @@ class _QuickActions extends StatelessWidget {
         icon: Icons.folder_shared_outlined,
         actions: [
           _QuickAction(
+            label: strings.myDoctorsTitle,
+            description: strings.quickMyDoctorsDescription,
+            icon: Icons.health_and_safety_outlined,
+            color: AppTheme.secondary,
+            path: RoutePaths.myDoctors,
+            push: true,
+          ),
+          _QuickAction(
+            label: strings.savedPlacesTitle,
+            description: strings.quickSavedPlacesDescription,
+            icon: Icons.bookmark_outline_rounded,
+            color: AppTheme.accent,
+            path: RoutePaths.savedPlaces,
+            push: true,
+          ),
+          _QuickAction(
             label: strings.navPrescriptions,
             description: strings.quickPrescriptionsDescription,
             icon: Icons.medication_outlined,
@@ -736,6 +989,14 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.comment_outlined,
             color: AppTheme.violet,
             path: RoutePaths.feedback,
+          ),
+          _QuickAction(
+            label: strings.contactTitle,
+            description: strings.quickContactDescription,
+            icon: Icons.support_agent_outlined,
+            color: AppTheme.violet,
+            path: RoutePaths.contact,
+            push: true,
           ),
           _QuickAction(
             label: strings.navProfile,

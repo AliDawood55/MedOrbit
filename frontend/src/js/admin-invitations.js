@@ -10,7 +10,7 @@ const AdminInvitations = (() => {
         byId('invitationEmailLabel').textContent = copy('البريد الإلكتروني للحساب', 'Account email');
         byId('sendInvitationLabel').textContent = copy('إرسال الدعوة', 'Send invitation');
         byId('manualInvitationTitle').textContent = copy('رابط التسليم اليدوي', 'Manual delivery link');
-        byId('invitationListTitle').textContent = copy('سجل الدعوات', 'Invitation history');
+        byId('invitationListTitle').textContent = copy('الدعوات المعلقة', 'Pending invitations');
         render();
     }
 
@@ -23,14 +23,15 @@ const AdminInvitations = (() => {
     function render() {
         const root = byId('invitationList');
         root.textContent = '';
-        if (!invitations.length) {
+        const pending = invitations.filter((invitation) => invitation.status === 'pending');
+        if (!pending.length) {
             const empty = document.createElement('div');
             empty.className = 'profile-compact-empty';
-            empty.textContent = copy('لا توجد دعوات بعد.', 'No invitations yet.');
+            empty.textContent = copy('لا توجد دعوات معلقة.', 'No pending invitations.');
             root.appendChild(empty);
             return;
         }
-        invitations.forEach((invitation) => {
+        pending.forEach((invitation) => {
             const item = document.createElement('div');
             item.className = 'application-history-item';
             const detail = document.createElement('div');
@@ -74,13 +75,18 @@ const AdminInvitations = (() => {
             const response = await API.adminInvitations.create(byId('invitationEmail').value.trim());
             byId('adminInvitationForm').reset();
             const url = response?.data?.acceptance_url;
+            const delivered = response?.data?.delivery === 'sent';
             if (url) {
-                byId('manualInvitationHint').textContent = copy('لم يُرسل البريد في هذه البيئة. سلّم هذا الرابط بأمان مرة واحدة.', 'Email is not configured in this environment. Deliver this link securely once.');
+                byId('manualInvitationHint').textContent = delivered
+                    ? copy('أفاد خادم البريد بإرسال الدعوة. هذا رابط احتياطي آمن لمرة واحدة إذا تأخر البريد أو انتقل إلى الرسائل غير المرغوب فيها. أرسله فقط إلى البريد المدعو.', 'The mail server reports that the invitation was sent. This is a one-time secure backup link if email is delayed or filtered; send it only to the invited email address.')
+                    : copy('تعذر تسليم البريد تلقائياً. أرسل هذا الرابط الآمن لمرة واحدة إلى البريد المدعو فقط؛ يجب أن يسجل دخوله بالحساب المدعو ثم يقبل الدعوة.', 'The email could not be delivered automatically. Send this one-time secure link only to the invited email address; they must sign in to that account and accept it.');
                 byId('manualInvitationLink').href = url;
                 byId('manualInvitationLink').textContent = url;
                 byId('manualInvitation').classList.remove('hidden');
             }
-            feedback(copy('تم إنشاء الدعوة.', 'Invitation created.'), 'success');
+            feedback(delivered
+                ? copy('تم إنشاء الدعوة وإرسال البريد. يظهر الرابط الاحتياطي أدناه.', 'Invitation created and email sent. A backup link is shown below.')
+                : copy('تم إنشاء الدعوة، لكن يلزم تسليم الرابط يدوياً.', 'Invitation created, but the link needs manual delivery.'), 'success');
             await load();
         } catch (err) {
             feedback(err.message || copy('تعذر إنشاء الدعوة.', 'Unable to create invitation.'));
@@ -94,8 +100,11 @@ const AdminInvitations = (() => {
         button.disabled = true;
         try {
             await API.adminInvitations.revoke(id);
+            // Remove it immediately; a later refresh remains available for
+            // reconciliation, but cancellation should never look stuck.
+            invitations = invitations.filter((invitation) => invitation.id !== id);
+            render();
             feedback(copy('تم إلغاء الدعوة.', 'Invitation revoked.'), 'success');
-            await load();
         } catch (err) {
             button.disabled = false;
             feedback(err.message || copy('تعذر إلغاء الدعوة.', 'Unable to revoke invitation.'));
@@ -117,7 +126,20 @@ const AdminInvitations = (() => {
             localize();
             window.addEventListener('languageChanged', localize);
             byId('adminInvitationForm').addEventListener('submit', submit);
-            byId('refreshInvitations').addEventListener('click', () => load().catch((err) => feedback(err.message)));
+            byId('refreshInvitations').addEventListener('click', async () => {
+                const button = byId('refreshInvitations');
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+                try {
+                    await load();
+                    feedback(copy('تم تحديث الدعوات المعلقة.', 'Pending invitations refreshed.'), 'success');
+                } catch (err) {
+                    feedback(err.message || copy('تعذر تحديث الدعوات.', 'Could not refresh invitations.'));
+                } finally {
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                }
+            });
             await load();
         } catch (err) {
             feedback(err.message || copy('تعذر تحميل الدعوات.', 'Unable to load invitations.'));

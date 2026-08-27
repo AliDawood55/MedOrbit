@@ -19,12 +19,18 @@ const API = (() => {
             throw new Error(`Cannot resolve MedOrbit service on port ${port} without an HTTP(S) hostname`);
         }
 
-        const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
-        return `${protocol}//${window.location.hostname}:${port}`;
+        // HTTPS deployments are served behind the public reverse proxy. The
+        // browser must use its own origin so Caddy can forward /api to the
+        // private backend; :3001 is intentionally not public in staging.
+        if (window.location.protocol === 'https:') {
+            return window.location.origin;
+        }
+
+        return `http://${window.location.hostname}:${port}`;
     }
 
-    // Derive service hosts from wherever the page was actually opened from so
-    // localhost, loopback, and LAN IP access all call the matching backend.
+    // HTTP development uses the matching backend port. HTTPS deployments use
+    // Caddy's same-origin /api proxy unless an explicit override is supplied.
     const API_ORIGIN = resolveServiceOrigin(3001, window.MEDORBIT_API_URL).replace(/\/api\/?$/, '');
     const BASE_URL = API_ORIGIN + '/api';
 
@@ -472,26 +478,29 @@ const API = (() => {
         // (my-patients.html, patient-detail.html)
         myPatients: (query, options) => get('/doctors/me/patients', query, options),
         patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
-        // Canonical medical-record creation (backend/src/routes/medicalRecord.routes.js)
-        // — requires appointment_id; patient_id/doctor_id are derived server-side
-        // from that appointment, never taken from the request body.
-        createMedicalRecord: (body, options) => post('/medical-records', body, options),
-        // Canonical medical-record read/update/delete (same file). GET returns
-        // the full row for a doctor (not the patient-facing DTO) and is the
-        // required source of truth before an edit — the patient-detail
-        // timeline's notes list omits fields like vitals. PUT is full-field:
-        // it always overwrites diagnosis/treatment_plan/clinical_notes/
-        // doctor_notes/vitals/is_draft from the body, so omitted fields would
-        // be persisted as NULL — never send this without first loading the
-        // canonical record. DELETE is a hard delete; both PUT and DELETE are
-        // scoped server-side to records owned by the calling doctor.
-        getMedicalRecord: (id, options) => get(`/medical-records/${id}`, null, options),
-        updateMedicalRecord: (id, body, options) => put(`/medical-records/${id}`, body, options),
-        deleteMedicalRecord: (id, options) => del(`/medical-records/${id}`, options),
-        // Canonical prescription creation (backend/src/routes/prescription.routes.js)
-        // — requires appointment_id + patient_id + at least one item; the
-        // backend re-verifies the appointment belongs to this doctor/patient
-        // pair and the care relationship is active before writing anything.
+        // Legacy doctor note route used by the existing patient-detail page.
+        addPatientNote: (patientId, body, options) =>
+            post(`/doctors/me/patients/${patientId}/notes`, body, options),
+
+        // Canonical medical-record endpoints. The backend derives the doctor
+        // and patient from the authorized appointment; client input cannot
+        // choose another clinician or patient.
+        createMedicalRecord: (body, options) =>
+            post('/medical-records', body, options),
+
+        // Doctor-scoped record management. Load the canonical record before
+        // updating because the backend treats PUT as a full replacement.
+        getMedicalRecord: (id, options) =>
+            get(`/medical-records/${id}`, null, options),
+
+        updateMedicalRecord: (id, body, options) =>
+            put(`/medical-records/${id}`, body, options),
+
+        deleteMedicalRecord: (id, options) =>
+            del(`/medical-records/${id}`, options),
+
+        // Prescription creation requires an appointment, patient, and at
+        // least one medication. The backend re-verifies authorization.
         createPrescription: (body, options) => post('/prescriptions', body, options),
         // Patient's view of their own doctor(s) + notes a doctor explicitly
         // shared (visible_to_patient=true) — my-doctor.html
@@ -548,10 +557,6 @@ const API = (() => {
         if (!source) return '';
         if (/^(?:https?:|data:|blob:)/i.test(source)) return source;
         return API_ORIGIN + '/' + source.replace(/^\/+/, '');
-    }
-
-    function getAiOrigin() {
-        return resolveServiceOrigin(8001, window.MEDORBIT_AI_URL);
     }
 
     // Platform feedback (feedback.html) — POST /api/feedback,
@@ -648,7 +653,7 @@ const API = (() => {
         request, get, post, put, del, patch, uploadFile,
         sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
-        setSession, clearSession, requireAuth, logout, getOrigin, getAiOrigin, assetUrl, resolveServiceOrigin, clearCache
+        setSession, clearSession, requireAuth, logout, getOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
 
 })();

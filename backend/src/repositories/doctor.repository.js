@@ -142,22 +142,6 @@ class DoctorRepository {
         );
     }
 
-    // ==================== CLINICS ====================
-
-    async findClinicsByDoctorId(doctorId) {
-        const result = await db.query(
-            `SELECT 
-                c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
-                c.city, c.region, c.latitude, c.longitude, c.phone,
-                dca.consultation_fee_override, dca.is_primary
-            FROM medorbit.doctor_clinic_assignments dca
-            JOIN medorbit.clinics c ON c.id = dca.clinic_id
-            WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
-            [doctorId]
-        );
-        return result.rows;
-    }
-
     // ==================== AVAILABILITY ====================
 
     async findAvailability(doctorId, date) {

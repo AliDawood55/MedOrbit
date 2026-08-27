@@ -11,12 +11,27 @@ router.post('/', authenticate, authorizeSuperAdmin, async (req, res, next) => {
         const url = `${String(process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/$/, '')}/admin-invitation-accept.html?token=${encodeURIComponent(created.token)}`;
         const template = adminInvitationTemplate(url, created.invitation.expires_at);
         let delivered = false;
-        if (process.env.NODE_ENV !== 'test' && process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.EMAIL_FROM) {
-            await sendEmail(created.invitation.email, 'MedOrbit administrative invitation', template.html, template.text);
-            delivered = true;
+        const smtpConfigured = process.env.NODE_ENV !== 'test' && process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS && process.env.EMAIL_FROM;
+        if (smtpConfigured) {
+            try {
+                await sendEmail(created.invitation.email, 'MedOrbit administrative invitation', template.html, template.text);
+                delivered = true;
+            } catch (sendError) {
+                // The invitation is already safely stored. Do not make the
+                // super-admin believe it was delivered when SMTP rejects it;
+                // return the existing one-time handoff URL instead.
+                console.error('Admin invitation email delivery failed:', sendError.message);
+            }
         }
-        // A development-only one-time handoff avoids persisting the raw token in email_queue.
-        return success(res, { invitation: created.invitation, ...(delivered ? { delivery: 'sent' } : { delivery: 'manual', acceptance_url: url }) }, 'Admin invitation created', 201);
+        // The one-time URL is deliberately returned only in this creation
+        // response to the super-admin who created the invitation. It is never
+        // stored or returned by the list endpoint, but lets the sender safely
+        // recover when a recipient's mail provider delays or filters mail.
+        return success(res, {
+            invitation: created.invitation,
+            delivery: delivered ? 'sent' : 'manual',
+            acceptance_url: url,
+        }, 'Admin invitation created', 201);
     } catch (err) { return next(err); }
 });
 

@@ -143,8 +143,7 @@ class VirtualDoctorState {
 ///
 /// The Virtual Doctor endpoints now live behind the MedOrbit backend, which
 /// authenticates the user, checks entitlement, and only then talks to the AI
-/// service over an internal credential. Using [aiDioProvider] here would send
-/// unauthenticated requests straight at the AI service, which now rejects them.
+/// service over an internal credential. The app has no direct-AI client.
 final virtualDoctorApiProvider = Provider<VirtualDoctorApi>((ref) => VirtualDoctorApi(ref.watch(dioProvider)));
 
 class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
@@ -192,10 +191,9 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
   }
 
   Future<void> _start(String language) async {
-    // Reachability first, deliberately ahead of the permission prompt. The AI
-    // service is a separate process on its own port, so when it is down the
-    // real failure is a connection timeout 15s into `/start` — after the
-    // patient has already been asked for the microphone for nothing.
+    // Reachability first, deliberately ahead of the permission prompt. The
+    // backend gateway may be unavailable, and a fast health check avoids a
+    // needless microphone prompt before `/virtual-doctor/start` can begin.
     if (await _health.check() != AiHealthStatus.available) {
       _set(state.copyWith(state: ConsultState.error, errorMessage: 'ai_unavailable'));
       return;

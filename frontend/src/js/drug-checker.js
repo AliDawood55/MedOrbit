@@ -1,11 +1,9 @@
 /**
  * MedOrbit v2 - Drug Interaction Checker
- * Calls the AI service directly: POST <current-host>:8001/drug-interactions
- * (open CORS, no auth — this is not the Node backend on :3001).
+ * Uses the authenticated backend gateway: POST /api/ai/drug-interactions.
+ * The browser never receives the AI service address or internal credential.
  */
 const DrugChecker = (() => {
-
-    const AI_BASE = API.getAiOrigin();
 
     // The actual seeded medorbit.medications rows — quick-add chips that
     // reliably match real medication records (Aspirin + Warfarin has a
@@ -56,6 +54,17 @@ const DrugChecker = (() => {
         return (isAr() ? drug.name_ar : drug.name_en) || drug.name_en || drug.name_ar || '';
     }
 
+    function interactionDescription(interaction) {
+        const description = interaction.description || '';
+        // The curated aspirin/warfarin safety record is translated here for
+        // the legacy web client. Other server-provided clinical prose remains
+        // unchanged until the reference-data format carries both languages.
+        if (/^Severe - increased bleeding risk\./i.test(description)) {
+            return t('drugChecker.bleedingRiskWarning');
+        }
+        return description;
+    }
+
     // ================= QUICK CHIPS =================
 
     function renderQuickChips() {
@@ -92,19 +101,10 @@ const DrugChecker = (() => {
         showLoading();
 
         try {
-            const res = await fetch(AI_BASE + '/drug-interactions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ medication_names: medications })
+            const response = await API.post('/ai/drug-interactions', {
+                medication_names: medications
             });
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.detail || 'Request failed');
-            }
-
-            showResult(data);
+            showResult(response?.data || response);
 
         } catch (err) {
             console.error('DrugChecker: request failed', err);
@@ -175,7 +175,7 @@ const DrugChecker = (() => {
                         '<div class="interaction-card-icon"><i class="fas ' + meta.icon + '"></i></div>' +
                         '<div>' +
                             '<div class="interaction-card-title">' + escapeHtml(d1) + ' + ' + escapeHtml(d2) + '</div>' +
-                            (ix.description ? '<div class="interaction-card-desc">' + escapeHtml(ix.description) + '</div>' : '') +
+                            (ix.description ? '<div class="interaction-card-desc">' + escapeHtml(interactionDescription(ix)) + '</div>' : '') +
                         '</div>' +
                     '</div>';
                 });

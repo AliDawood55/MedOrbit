@@ -188,7 +188,16 @@ async function residualCounts() {
         check('rollback commits no approval audit/notification', Number((await pool.query("SELECT count(*) FROM medorbit.audit_logs WHERE entity_id=$1 AND action='DOCTOR_APPLICATION_APPROVED'",[rollbackId])).rows[0].count) === 0 && Number((await pool.query("SELECT count(*) FROM medorbit.notifications WHERE reference_id=$1 AND notification_type='DOCTOR_APPLICATION_APPROVED'",[rollbackId])).rows[0].count) === 0);
         await pool.query('DROP TRIGGER s2_test_force_approval_failure ON medorbit.audit_logs'); await pool.query('DROP FUNCTION medorbit.s2_test_force_approval_failure()');
 
-        const availabilityId = crypto.randomUUID(); ids.availabilityId=availabilityId; const date='2030-01-15';
+        // Keep this fixture inside the server's 21-day booking horizon. A fixed
+        // calendar date turns a valid lifecycle test into a false failure over
+        // time, before it reaches the suspension assertions below.
+        const availabilityId = crypto.randomUUID(); ids.availabilityId=availabilityId;
+        const availabilityDate = new Date(); availabilityDate.setUTCDate(availabilityDate.getUTCDate() + 7);
+        const date = availabilityDate.toISOString().slice(0, 10);
+        await pool.query(
+            'INSERT INTO medorbit.doctor_clinic_assignments(doctor_id,clinic_id,is_active) VALUES($1,$2,true)',
+            [existingDoctor.doctorId, ids.clinic]
+        );
         await pool.query(`INSERT INTO medorbit.doctor_availability(id,doctor_id,clinic_id,specific_date,start_time,end_time,slot_duration,is_active) VALUES($1,$2,$3,$4,'10:00','10:30',30,true)`,[availabilityId,existingDoctor.doctorId,ids.clinic,date]);
         const doctorToken = access(existingDoctor);
         check('approved doctor central capability works', (await request('GET','/doctors/me/patients',doctorToken)).status === 200);

@@ -20,6 +20,8 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(appStringsProvider);
+    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
+    final isAdmin = role == 'admin' || role == 'super_admin';
     final width = MediaQuery.sizeOf(context).width;
     final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
     final compactNavigation =
@@ -55,47 +57,49 @@ class MainShell extends ConsumerWidget {
             ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: NavigationBar(
-          height: navigationHeight,
-          selectedIndex: navigationShell.currentIndex,
-          labelBehavior: compactNavigation
-              ? NavigationDestinationLabelBehavior.onlyShowSelected
-              : NavigationDestinationLabelBehavior.alwaysShow,
-          onDestinationSelected: (index) => navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          ),
-          destinations: [
-            _destination(
-              icon: Icons.home_outlined,
-              selectedIcon: Icons.home_rounded,
-              label: strings.navHome,
+      bottomNavigationBar: isAdmin
+          ? null
+          : SafeArea(
+              top: false,
+              child: NavigationBar(
+                height: navigationHeight,
+                selectedIndex: navigationShell.currentIndex,
+                labelBehavior: compactNavigation
+                    ? NavigationDestinationLabelBehavior.onlyShowSelected
+                    : NavigationDestinationLabelBehavior.alwaysShow,
+                onDestinationSelected: (index) => navigationShell.goBranch(
+                  index,
+                  initialLocation: index == navigationShell.currentIndex,
+                ),
+                destinations: [
+                  _destination(
+                    icon: Icons.home_outlined,
+                    selectedIcon: Icons.home_rounded,
+                    label: strings.navHome,
+                  ),
+                  _destination(
+                    icon: Icons.description_outlined,
+                    selectedIcon: Icons.description_rounded,
+                    label: strings.navRecords,
+                  ),
+                  _destination(
+                    icon: Icons.medication_outlined,
+                    selectedIcon: Icons.medication_rounded,
+                    label: strings.navPrescriptions,
+                  ),
+                  _destination(
+                    icon: Icons.event_available_outlined,
+                    selectedIcon: Icons.event_available_rounded,
+                    label: strings.navAppointments,
+                  ),
+                  _destination(
+                    icon: Icons.comment_outlined,
+                    selectedIcon: Icons.comment_rounded,
+                    label: strings.navFeedback,
+                  ),
+                ],
+              ),
             ),
-            _destination(
-              icon: Icons.description_outlined,
-              selectedIcon: Icons.description_rounded,
-              label: strings.navRecords,
-            ),
-            _destination(
-              icon: Icons.medication_outlined,
-              selectedIcon: Icons.medication_rounded,
-              label: strings.navPrescriptions,
-            ),
-            _destination(
-              icon: Icons.event_available_outlined,
-              selectedIcon: Icons.event_available_rounded,
-              label: strings.navAppointments,
-            ),
-            _destination(
-              icon: Icons.comment_outlined,
-              selectedIcon: Icons.comment_rounded,
-              label: strings.navFeedback,
-            ),
-          ],
-        ),
-      ),
     );
   }
 

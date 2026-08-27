@@ -40,7 +40,17 @@
         <div class="page-feedback hidden" id="invitationFeedback"></div>
         <div class="application-note hidden" id="manualInvitation"><strong id="manualInvitationTitle">Manual delivery link</strong><p id="manualInvitationHint"></p><a id="manualInvitationLink" href="#" target="_blank" rel="noopener"></a></div>
     </section>
-    <section class="experience-card admin-invitations-list-card"><div class="application-hero"><h2 id="invitationListTitle">Invitation history</h2><button class="btn btn-ghost btn-sm" id="refreshInvitations" type="button" aria-label="Refresh invitations"><i class="fas fa-rotate"></i></button></div><div class="application-history" id="invitationList"><div class="profile-compact-empty">Loading…</div></div></section>
+<section class="experience-card admin-invitations-list-card" style="margin-top:18px">
+    <div class="application-hero">
+        <h2 id="invitationListTitle">Pending invitations</h2>
+        <button class="btn btn-ghost btn-sm" id="refreshInvitations" type="button" aria-label="Refresh pending invitations" title="Refresh">
+            <i class="fas fa-rotate"></i>
+        </button>
+    </div>
+    <div class="application-history" id="invitationList">
+        <div class="profile-compact-empty">Loading…</div>
+    </div>
+</section>
 </main>
 <footer class="site-footer" id="siteFooter"></footer><div class="toast-container" id="toastContainer"></div>
 <script src="../src/utils/store.js"></script><script src="../src/js/api.js"></script><script src="../src/js/i18n.js"></script><script src="../src/js/theme.js"></script><script src="../src/js/toast.js"></script><script src="../src/js/layout.js"></script><script src="../src/js/admin-invitations.js"></script><script>document.addEventListener('DOMContentLoaded',()=>{Layout.init();AdminInvitations.init();});</script>

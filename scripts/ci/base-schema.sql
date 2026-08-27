@@ -21,6 +21,9 @@ BEGIN;
 CREATE SCHEMA IF NOT EXISTS medorbit;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- Clinic/discovery queries rely on PostGIS. The postgis/postgis image makes
+-- this available, but the extension must be enabled in each fresh database.
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 SET search_path TO medorbit, public;
 

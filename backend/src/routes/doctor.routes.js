@@ -30,6 +30,24 @@ async function resolveDoctorId(userId) {
   return result.rows[0]?.id || null;
 }
 
+// One authoritative assignment query for both public doctor projections.
+// Keep the compact /:id/clinics endpoint for client compatibility, but derive
+// it from the same data as the doctor-detail response so its eligibility rules
+// cannot drift from the profile view.
+async function findActiveClinicsByDoctorId(doctorId) {
+  const result = await db.query(
+    `SELECT
+      c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
+      c.city, c.region, c.latitude, c.longitude, c.phone,
+      dca.consultation_fee_override, dca.is_primary
+    FROM medorbit.doctor_clinic_assignments dca
+    JOIN medorbit.clinics c ON c.id = dca.clinic_id
+    WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
+    [doctorId]
+  );
+  return result.rows;
+}
+
 // A doctor may only act on a patient they have (or had) at least one
 // appointment with — there's no dedicated relationship table. Returns a
 // boolean rather than throwing so callers can turn a "no" into a 404 (not
@@ -733,17 +751,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     doctor.is_owner = Boolean(req.user && doctor.user_id === req.user.sub);
     delete doctor.user_id;
 
-    // Clinics
-    const clinicsResult = await db.query(
-      `SELECT
-        c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
-        c.city, c.region, c.latitude, c.longitude, c.phone,
-        dca.consultation_fee_override, dca.is_primary
-      FROM medorbit.doctor_clinic_assignments dca
-      JOIN medorbit.clinics c ON c.id = dca.clinic_id
-      WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
-      [id]
-    );
+    const clinics = await findActiveClinicsByDoctorId(id);
 
     // Availability
     const availabilityResult = await db.query(
@@ -779,7 +787,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
 
     return success(res, {
       doctor,
-      clinics: clinicsResult.rows,
+      clinics,
       availability: availabilityResult.rows,
       reviews: reviewsResult.rows.map((review) => (
         withCanonicalContent(review, 'review_text', 'review_text_ar', 'review_text_en')
@@ -907,18 +915,9 @@ router.put('/:id', authenticate, authorize('doctor'), async (req, res, next) => 
 // GET /api/doctors/:id/clinics - Clinics this doctor is assigned to
 router.get('/:id/clinics', authenticate, async (req, res, next) => {
   try {
-    const result = await db.query(
-      `SELECT
-        c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
-        c.city, c.phone,
-        dca.is_primary, dca.consultation_fee_override
-      FROM medorbit.doctor_clinic_assignments dca
-      JOIN medorbit.clinics c ON c.id = dca.clinic_id
-      WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
-      [req.params.id]
-    );
-
-    return success(res, result.rows, "Doctor clinics retrieved");
+    const clinics = await findActiveClinicsByDoctorId(req.params.id);
+    const compactClinics = clinics.map(({ region, latitude, longitude, ...clinic }) => clinic);
+    return success(res, compactClinics, "Doctor clinics retrieved");
   } catch (err) {
     next(err);
   }
