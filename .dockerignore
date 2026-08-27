@@ -1,4 +1,4 @@
-# Root .dockerignore â€” the single ignore file for every image build in this
+# Root .dockerignore — the single ignore file for every image build in this
 # repo (ai-service, backend, backend test, frontend), all of which use the
 # repository root as their build context.
 #
