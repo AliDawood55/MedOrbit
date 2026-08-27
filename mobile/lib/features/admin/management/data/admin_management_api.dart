@@ -30,6 +30,16 @@ class AdminManagementApi {
       );
   Future<List<AdminInvitation>> invitations() async =>
       _list('/admin/invitations', AdminInvitation.fromJson);
+  Future<List<AdminActivityItem>> activity(String kind) {
+    const allowed = {'appointments', 'records', 'prescriptions', 'reviews'};
+    if (!allowed.contains(kind)) {
+      throw const ApiException(
+        message: 'Unsupported activity type.',
+        code: 'VALIDATION_ERROR',
+      );
+    }
+    return _list('/admin/activity/$kind', AdminActivityItem.fromJson);
+  }
 
   /// Returns the one-time handoff URL only when the server could not deliver
   /// the invitation by email. It is intentionally never available in lists.

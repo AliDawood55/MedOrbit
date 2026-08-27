@@ -224,8 +224,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.adminManagement,
-        builder: (context, state) =>
-            AdminManagementScreen(initialTab: state.uri.queryParameters['tab']),
+        builder: (context, state) => AdminManagementScreen(
+          initialTab: state.uri.queryParameters['tab'],
+          initialRole: state.uri.queryParameters['role'],
+          initialMetric: state.uri.queryParameters['metric'],
+        ),
       ),
       GoRoute(
         path: RoutePaths.contact,

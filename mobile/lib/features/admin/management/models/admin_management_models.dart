@@ -95,3 +95,36 @@ class AdminInvitation {
         status: '${json['status'] ?? ''}',
       );
 }
+
+/// Read-only, non-clinical metadata returned by the administration activity
+/// endpoint. No notes, diagnoses, medication instructions, or attachments are
+/// included in this model.
+class AdminActivityItem {
+  const AdminActivityItem({
+    required this.id,
+    required this.reference,
+    required this.status,
+    required this.occurredOn,
+    required this.patientEmail,
+    required this.doctorEmail,
+    this.detail,
+  });
+  final String id;
+  final String reference;
+  final String status;
+  final String occurredOn;
+  final String patientEmail;
+  final String doctorEmail;
+  final String? detail;
+
+  factory AdminActivityItem.fromJson(Map<String, dynamic> json) =>
+      AdminActivityItem(
+        id: '${json['id'] ?? ''}',
+        reference: '${json['reference'] ?? ''}',
+        status: '${json['status'] ?? ''}',
+        occurredOn: '${json['occurred_on'] ?? ''}',
+        patientEmail: '${json['patient_email'] ?? ''}',
+        doctorEmail: '${json['doctor_email'] ?? ''}',
+        detail: json['detail']?.toString(),
+      );
+}

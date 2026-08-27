@@ -42,6 +42,33 @@ void main() {
     expect(fake.path, '/admin/users/user-1/deactivate');
     expect(fake.method, 'PUT');
   });
+
+  test(
+    'loads read-only administrative activity through its selected endpoint',
+    () async {
+      final fake = _FakeDio({
+        'success': true,
+        'data': [
+          {
+            'id': 'appointment-1',
+            'reference': 'APT-001',
+            'status': 'scheduled',
+            'occurred_on': '2026-08-28',
+            'patient_email': 'patient@example.test',
+            'doctor_email': 'doctor@example.test',
+          },
+        ],
+      });
+
+      final activity = await AdminManagementApi(
+        fake.dio,
+      ).activity('appointments');
+
+      expect(fake.path, '/admin/activity/appointments');
+      expect(activity.single.reference, 'APT-001');
+      expect(activity.single.patientEmail, 'patient@example.test');
+    },
+  );
 }
 
 class _FakeDio {
