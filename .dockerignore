@@ -1,11 +1,10 @@
 # Root .dockerignore — the single ignore file for every image build in this
-# repo (ai-service, backend, backend test, frontend), all of which now use
-# the repository root as their build context.
+# repo (ai-service, backend, backend test, frontend), all of which use the
+# repository root as their build context.
 #
-# NOTE: unlike .gitignore, Docker root-anchors a bare pattern (no "**/") to
-# the build context root — it does NOT match at every depth. Any rule below
-# meant to apply inside subdirectories (backend/, frontend/, ai-service/,
-# mobile/, ...) must be written with a "**/" prefix.
+# NOTE: Docker anchors a bare pattern to the build context root; it does not
+# match at every depth. Rules meant to apply inside subdirectories must use a
+# "**/" prefix.
 
 .git
 .github
@@ -25,15 +24,12 @@ Dockerfile.*
 **/Dockerfile.*
 .dockerignore
 
-# Not needed inside any image, and can be large/sensitive
+# Not needed inside any image, and can be large or sensitive.
 db
 database
 docs
 
-# ai-service/data/ is one-off OSM data-collection tooling (see EXPLAINDATA.md)
-# with zero runtime import from chatbot.main:app, and some of those scratch
-# scripts have a hardcoded local DB password — keep it out of the image
-# entirely rather than baking that into an image layer.
+# Data-collection/training tooling is not required in runtime images.
 ai-service/data
 ai-service/tests
 
@@ -50,5 +46,4 @@ ai-service/tests
 !**/.env.example
 
 **/*.md
-**/.aider*
 tempData
