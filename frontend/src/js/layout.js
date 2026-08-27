@@ -58,6 +58,19 @@ const Layout = (() => {
         return name.trim().charAt(0).toUpperCase() || '?';
     }
 
+    // Operational accounts are not patient-facing AI or support consumers.
+    // This only controls navigation presentation; backend authorization stays
+    // responsible for every route and API request.
+    function isAdminSession() {
+        const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
+        return role === 'admin' || role === 'super_admin';
+    }
+
+    function visiblePagesForSession() {
+        if (!isAdminSession()) return PAGES;
+        return PAGES.filter((page) => page.href !== 'contact.html' && !page.children);
+    }
+
     // ================= NAV =================
 
     function renderLink(p, page) {
@@ -77,7 +90,7 @@ const Layout = (() => {
         const page = currentPage();
         const flat = !!options.flat;
 
-        el.innerHTML = PAGES.map(p => {
+        el.innerHTML = visiblePagesForSession().map(p => {
             if (!p.children) return renderLink(p, page);
 
             if (flat) {
@@ -201,7 +214,7 @@ const Layout = (() => {
 
     function renderDrawerNavItems() {
         const page = currentPage();
-        return PAGES.map(p => {
+        return visiblePagesForSession().map(p => {
             if (!p.children) {
                 const active = (p.match ? p.match.includes(page) : page === p.href) ? ' active' : '';
                 return `<a href="${p.href}" class="drawer-link${active}" data-i18n="${p.key}"></a>`;
