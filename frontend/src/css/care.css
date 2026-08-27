@@ -351,6 +351,46 @@
     margin-bottom: 12px;
 }
 
+/* === Prescription composer === */
+.care-form-hint {
+    margin: -4px 0 16px;
+    color: var(--text-soft);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.care-items-title {
+    margin-top: 18px;
+}
+
+.prescription-item {
+    position: relative;
+    margin-bottom: 14px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-soft);
+}
+
+.prescription-item-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.prescription-item .form-row {
+    margin-bottom: 0;
+}
+
+.prescription-item .form-group {
+    margin-bottom: 12px;
+}
+
 @media (max-width: 768px) {
     .care-detail-header {
         flex-direction: column;

@@ -479,6 +479,9 @@ const API = (() => {
         myPatients: (query, options) => get('/doctors/me/patients', query, options),
         patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
         addPatientNote: (patientId, body, options) => post(`/doctors/me/patients/${patientId}/notes`, body, options),
+        // Doctor-only clinical authoring. The backend validates appointment
+        // ownership and an active care relationship before creating anything.
+        createPrescription: (body, options) => post('/prescriptions', body, options),
         // Patient's view of their own doctor(s) + notes a doctor explicitly
         // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),

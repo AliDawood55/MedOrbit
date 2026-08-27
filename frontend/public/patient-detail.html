@@ -165,6 +165,67 @@
             <!-- Prescriptions -->
             <div class="care-section">
                 <div class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></div>
+
+                <div class="care-form-title" data-i18n="patientDetail.prescriptionComposerTitle">إنشاء وصفة طبية</div>
+                <p class="care-form-hint" data-i18n="patientDetail.prescriptionComposerHint">اختر موعداً لهذا المريض وأضف دواءً واحداً على الأقل. تظهر تنبيهات التداخلات بعد الحفظ ولا تغيّر قرار الطبيب.</p>
+                <div class="alert" id="prescriptionFormAlert" aria-live="polite"></div>
+
+                <form class="care-prescription-form" id="prescriptionForm" novalidate>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="prescriptionAppointment" data-i18n="patientDetail.prescriptionAppointment">الموعد</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar-check"></i>
+                                <select id="prescriptionAppointment" required></select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="prescriptionValidUntil" data-i18n="patientDetail.prescriptionValidUntil">صالحة حتى (اختياري)</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar"></i>
+                                <input type="date" id="prescriptionValidUntil">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="prescriptionDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-stethoscope"></i>
+                                <input type="text" id="prescriptionDiagnosis">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="prescriptionInstructions" data-i18n="patientDetail.prescriptionInstructions">تعليمات عامة للمريض</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-circle-info"></i>
+                                <input type="text" id="prescriptionInstructions">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="prescriptionDoctorNotes" data-i18n="patientDetail.prescriptionPrivateNotes">ملاحظات خاصة بالطبيب (لا تظهر للمريض)</label>
+                        <textarea class="feedback-textarea" id="prescriptionDoctorNotes" style="min-height:60px;"></textarea>
+                    </div>
+
+                    <div class="care-form-title care-items-title" data-i18n="patientDetail.prescriptionItems">الأدوية</div>
+                    <div id="prescriptionItems"></div>
+                    <button type="button" class="btn btn-secondary btn-sm" id="addPrescriptionItemBtn">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="patientDetail.prescriptionAddItem">إضافة دواء</span>
+                    </button>
+
+                    <div class="care-form-actions">
+                        <button type="submit" class="btn btn-primary" id="prescriptionSubmitBtn">
+                            <i class="fas fa-prescription"></i>
+                            <span class="btn-label" data-i18n="patientDetail.prescriptionCreate">حفظ الوصفة الطبية</span>
+                            <span class="spinner spinner-sm btn-spinner"></span>
+                        </button>
+                    </div>
+                </form>
+
                 <div id="prescriptionsList"></div>
             </div>
 
