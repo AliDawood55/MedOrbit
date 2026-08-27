@@ -29,7 +29,15 @@ async function requirePrescriptionRead(req, res, next) {
     try {
         const prescription = await findAuthorizedPrescription(req.params.id, req.user);
         if (!prescription) return error(res, 'Prescription not found', 404, 'NOT_FOUND');
-        req.prescription = prescription;
+        // `doctor_notes` are clinician-private.  This generic route is also
+        // available to the owning patient, so the role boundary belongs here
+        // as a second defence in addition to the patient-scoped service.
+        if (req.user.role === 'patient') {
+            const { doctor_notes: _doctorNotes, ...patientPrescription } = prescription;
+            req.prescription = patientPrescription;
+        } else {
+            req.prescription = prescription;
+        }
         return next();
     } catch (err) {
         return next(err);

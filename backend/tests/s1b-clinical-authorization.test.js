@@ -120,9 +120,9 @@ async function seed() {
         );
         await client.query(
             `INSERT INTO medorbit.prescriptions
-               (id,prescription_number,patient_id,doctor_id,appointment_id,prescription_date,status,diagnosis)
-             VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'active','own rx'),
-                    ($6,$7,$8,$9,$10,CURRENT_DATE,'active','other rx')`,
+               (id,prescription_number,patient_id,doctor_id,appointment_id,prescription_date,status,diagnosis,doctor_notes)
+             VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'active','own rx','private prescription note'),
+                    ($6,$7,$8,$9,$10,CURRENT_DATE,'active','other rx','other private prescription note')`,
             [ids.rx1, `S1BR1-${shortRun}`, ids.p1, ids.d1, ids.a1,
                 ids.rx2, `S1BR2-${shortRun}`, ids.p2, ids.d2, ids.a2]
         );
@@ -244,6 +244,13 @@ async function main() {
 
         response = await request('GET', `/prescriptions/${ids.rx1}`, patient1);
         check('patient can read own prescription', response.status === 200);
+        check('generic patient prescription DTO excludes doctor notes', !('doctor_notes' in (response.body.data?.prescription || response.body.data || {})));
+        response = await request('GET', '/patients/me/prescriptions', patient1);
+        check('patient prescription list excludes doctor notes', response.status === 200
+            && response.body.data.every((prescription) => !('doctor_notes' in prescription)));
+        response = await request('GET', `/patients/me/prescriptions/${ids.rx1}`, patient1);
+        check('patient prescription detail excludes doctor notes', response.status === 200
+            && !('doctor_notes' in (response.body.data?.prescription || {})));
         response = await request('GET', `/prescriptions/${ids.rx2}`, patient1);
         check('patient cannot read another prescription', response.status === 404);
         response = await request('GET', `/prescriptions/${ids.rx2}/pdf`, patient1);
