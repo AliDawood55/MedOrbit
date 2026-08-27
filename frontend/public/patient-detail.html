@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – ملف المريض</title>
+    <title>MedOrbit – ملف المريض</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,12 +34,13 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
             <div class="brand-text">
-                <h1>MedOrbit</h1>
+                <span class="brand-name">MedOrbit</span>
                 <p data-i18n="brand.tagline">Smart Healthcare AI</p>
             </div>
         </a>
@@ -55,7 +56,7 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:900px;">
+    <main id="main-content" class="page-container patient-detail-page">
 
         <div class="care-restricted hidden" id="restrictedNotice">
             <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
@@ -94,25 +95,32 @@
             </a>
 
             <!-- Patient header -->
-            <div class="care-detail-header" id="patientHeader" style="margin-top:14px;"></div>
+            <div class="care-detail-header" id="patientHeader"></div>
 
             <!-- Appointment history -->
             <div class="care-section">
-                <div class="care-section-title"><i class="fas fa-calendar-check"></i> <span data-i18n="patientDetail.appointmentHistory">سجل المواعيد</span></div>
+                <h2 class="care-section-title"><i class="fas fa-calendar-check"></i> <span data-i18n="patientDetail.appointmentHistory">سجل المواعيد</span></h2>
                 <div id="appointmentHistoryList"></div>
             </div>
 
-            <!-- Session notes timeline + real add-note form -->
-            <div class="care-section">
-                <div class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">ملاحظات الجلسات</span></div>
+            <!-- Medical records timeline + real record-authoring form -->
+            <div class="care-section care-records-section">
+                <h2 class="care-section-title"><i class="fas fa-notes-medical"></i> <span data-i18n="patientDetail.sessionNotes">السجلات الطبية</span></h2>
 
-                <div class="note-timeline" id="notesTimeline" style="margin-bottom:20px;"></div>
+                <div class="note-timeline" id="notesTimeline"></div>
 
-                <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة ملاحظة جلسة</div>
+                <div class="care-form-title" data-i18n="patientDetail.addNote">إضافة سجل طبي</div>
                 <div class="alert" id="noteFormAlert"></div>
 
                 <div class="care-note-form">
                     <div class="form-row">
+                        <div class="form-group">
+                            <label for="noteAppointment" data-i18n="patientDetail.appointment">الموعد</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-calendar-check"></i>
+                                <select id="noteAppointment"></select>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label for="noteRecordType" data-i18n="patientDetail.recordType">نوع السجل</label>
                             <div class="input-wrapper">
@@ -124,18 +132,34 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="noteDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-stethoscope"></i>
-                                <input type="text" id="noteDiagnosis">
-                            </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-stethoscope"></i>
+                            <input type="text" id="noteDiagnosis">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="noteChiefComplaint" data-i18n="patientDetail.chiefComplaint">الشكوى الرئيسية</label>
-                        <textarea class="feedback-textarea" id="noteChiefComplaint" style="min-height:60px;"></textarea>
+                        <textarea class="feedback-textarea" id="noteChiefComplaint"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteSymptoms" data-i18n="patientDetail.symptoms">الأعراض (مفصولة بفواصل)</label>
+                        <input type="text" id="noteSymptoms">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteTreatmentPlan" data-i18n="patientDetail.treatmentPlan">خطة العلاج</label>
+                        <textarea class="feedback-textarea" id="noteTreatmentPlan"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notePrognosis" data-i18n="patientDetail.prognosis">التوقعات</label>
+                        <textarea class="feedback-textarea" id="notePrognosis"></textarea>
                     </div>
 
                     <div class="form-group">
@@ -143,98 +167,114 @@
                         <textarea class="feedback-textarea" id="noteClinicalNotes"></textarea>
                     </div>
 
+                    <div class="form-group care-form-group-internal">
+                        <label for="noteDoctorNotes" data-i18n="patientDetail.doctorNotes">ملاحظات داخلية (لا تظهر للمريض)</label>
+                        <textarea class="feedback-textarea" id="noteDoctorNotes"></textarea>
+                    </div>
+
                     <label class="care-toggle-row">
                         <input type="checkbox" id="noteDraftToggle">
                         <span data-i18n="patientDetail.saveDraft">حفظ كمسودة (غير مرئية للمريض)</span>
                     </label>
 
-                    <label class="care-toggle-row">
-                        <input type="checkbox" id="noteShareToggle">
-                        <span data-i18n="patientDetail.shareWithPatient">مشاركة هذه الملاحظة مع المريض في صفحة "طبيبي"</span>
-                    </label>
-
-                    <div class="care-form-actions" style="border-top:none;padding-top:0;justify-content:flex-start;">
+                    <div class="care-form-actions">
                         <button type="button" class="btn btn-primary" id="noteSubmitBtn">
-                            <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ الملاحظة</span>
+                            <span class="btn-label" data-i18n="patientDetail.saveNote">حفظ السجل</span>
                             <span class="spinner spinner-sm btn-spinner"></span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Prescriptions -->
-            <div class="care-section">
-                <div class="care-section-title"><i class="fas fa-prescription-bottle-medical"></i> <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span></div>
+<!-- Prescriptions + real prescription-authoring form -->
+<div class="care-section care-prescriptions-section">
+    <h2 class="care-section-title">
+        <i class="fas fa-prescription-bottle-medical"></i>
+        <span data-i18n="patientDetail.prescriptions">الوصفات الطبية</span>
+    </h2>
 
-                <div class="care-form-title" data-i18n="patientDetail.prescriptionComposerTitle">إنشاء وصفة طبية</div>
-                <p class="care-form-hint" data-i18n="patientDetail.prescriptionComposerHint">اختر موعداً لهذا المريض وأضف دواءً واحداً على الأقل. تظهر تنبيهات التداخلات بعد الحفظ ولا تغيّر قرار الطبيب.</p>
-                <div class="alert" id="prescriptionFormAlert" aria-live="polite"></div>
+    <div class="care-form-title" data-i18n="patientDetail.prescriptionComposerTitle">
+        إنشاء وصفة طبية
+    </div>
 
-                <form class="care-prescription-form" id="prescriptionForm" novalidate>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="prescriptionAppointment" data-i18n="patientDetail.prescriptionAppointment">الموعد</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-calendar-check"></i>
-                                <select id="prescriptionAppointment" required></select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="prescriptionValidUntil" data-i18n="patientDetail.prescriptionValidUntil">صالحة حتى (اختياري)</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-calendar"></i>
-                                <input type="date" id="prescriptionValidUntil">
-                            </div>
-                        </div>
-                    </div>
+    <p class="care-form-hint" data-i18n="patientDetail.prescriptionComposerHint">
+        اختر موعداً لهذا المريض وأضف دواءً واحداً على الأقل. تظهر تنبيهات التداخلات بعد الحفظ ولا تغيّر قرار الطبيب.
+    </p>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="prescriptionDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-stethoscope"></i>
-                                <input type="text" id="prescriptionDiagnosis">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="prescriptionInstructions" data-i18n="patientDetail.prescriptionInstructions">تعليمات عامة للمريض</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-circle-info"></i>
-                                <input type="text" id="prescriptionInstructions">
-                            </div>
-                        </div>
-                    </div>
+    <div class="alert" id="prescriptionFormAlert" aria-live="polite"></div>
 
-                    <div class="form-group">
-                        <label for="prescriptionDoctorNotes" data-i18n="patientDetail.prescriptionPrivateNotes">ملاحظات خاصة بالطبيب (لا تظهر للمريض)</label>
-                        <textarea class="feedback-textarea" id="prescriptionDoctorNotes" style="min-height:60px;"></textarea>
-                    </div>
-
-                    <div class="care-form-title care-items-title" data-i18n="patientDetail.prescriptionItems">الأدوية</div>
-                    <div id="prescriptionItems"></div>
-                    <button type="button" class="btn btn-secondary btn-sm" id="addPrescriptionItemBtn">
-                        <i class="fas fa-plus"></i>
-                        <span data-i18n="patientDetail.prescriptionAddItem">إضافة دواء</span>
-                    </button>
-
-                    <div class="care-form-actions">
-                        <button type="submit" class="btn btn-primary" id="prescriptionSubmitBtn">
-                            <i class="fas fa-prescription"></i>
-                            <span class="btn-label" data-i18n="patientDetail.prescriptionCreate">حفظ الوصفة الطبية</span>
-                            <span class="spinner spinner-sm btn-spinner"></span>
-                        </button>
-                    </div>
-                </form>
-
-                <div id="prescriptionsList"></div>
+    <form class="care-prescription-form" id="prescriptionForm" novalidate>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="prescriptionAppointment" data-i18n="patientDetail.prescriptionAppointment">الموعد</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-calendar-check"></i>
+                    <select id="prescriptionAppointment" required></select>
+                </div>
             </div>
 
-            <!-- Real result for the note form: success or honest failure -->
-            <div class="feedback-result hidden" id="noteFormResult">
-                <div class="feedback-result-icon" id="noteFormResultIcon"><i class="fas fa-circle-check"></i></div>
-                <h2 id="noteFormResultTitle"></h2>
-                <p id="noteFormResultHint"></p>
-                <button type="button" class="btn btn-secondary btn-sm" id="noteFormResultCloseBtn">
+            <div class="form-group">
+                <label for="prescriptionValidUntil" data-i18n="patientDetail.prescriptionValidUntil">صالحة حتى (اختياري)</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-calendar"></i>
+                    <input type="date" id="prescriptionValidUntil">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="prescriptionDiagnosis" data-i18n="patientDetail.diagnosis">التشخيص</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-stethoscope"></i>
+                    <input type="text" id="prescriptionDiagnosis">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="prescriptionInstructions" data-i18n="patientDetail.prescriptionInstructions">تعليمات عامة للمريض</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-circle-info"></i>
+                    <input type="text" id="prescriptionInstructions">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="prescriptionDoctorNotes" data-i18n="patientDetail.prescriptionPrivateNotes">
+                ملاحظات خاصة بالطبيب (لا تظهر للمريض)
+            </label>
+            <textarea class="feedback-textarea" id="prescriptionDoctorNotes" style="min-height:60px;"></textarea>
+        </div>
+
+        <div class="care-form-title care-items-title" data-i18n="patientDetail.prescriptionItems">
+            الأدوية
+        </div>
+
+        <div id="prescriptionItems"></div>
+
+        <button type="button" class="btn btn-secondary btn-sm" id="addPrescriptionItemBtn">
+            <i class="fas fa-plus"></i>
+            <span data-i18n="patientDetail.prescriptionAddItem">إضافة دواء</span>
+        </button>
+
+        <div class="care-form-actions">
+            <button type="submit" class="btn btn-primary" id="prescriptionSubmitBtn">
+                <i class="fas fa-prescription"></i>
+                <span class="btn-label" data-i18n="patientDetail.prescriptionCreate">حفظ الوصفة الطبية</span>
+                <span class="spinner spinner-sm btn-spinner"></span>
+            </button>
+        </div>
+    </form>
+
+    <div id="prescriptionsList"></div>
+</div>
+            <!-- Real result for the prescription form: success or honest failure -->
+            <div class="feedback-result hidden" id="rxFormResult">
+                <div class="feedback-result-icon" id="rxFormResultIcon"><i class="fas fa-circle-check"></i></div>
+                <h2 id="rxFormResultTitle"></h2>
+                <p id="rxFormResultHint"></p>
+                <button type="button" class="btn btn-secondary btn-sm" id="rxFormResultCloseBtn">
                     <span data-i18n="common.close">إغلاق</span>
                 </button>
             </div>

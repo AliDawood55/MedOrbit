@@ -67,8 +67,4 @@
     .collapsible {
         transition: none !important;
     }
-
-    .skeleton {
-        animation: none !important;
-    }
 }

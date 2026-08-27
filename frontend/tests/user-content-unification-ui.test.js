@@ -93,8 +93,8 @@ check(
 );
 check(
     'public feed retains locale-first historical title fallback and HTML escaping',
-    /const title = isAr\(\) \? \(p\.title_ar \|\| p\.title_en\) : \(p\.title_en \|\| p\.title_ar\);/.test(feed) &&
-    /<h2 class="feed-title">\$\{esc\(title\)\}<\/h2>/.test(feed)
+/title\s*=\s*isAr\(\)\s*\?\s*\(?p\.title_ar\s*\|\|\s*p\.title_en\)?\s*:\s*\(?p\.title_en\s*\|\|\s*p\.title_ar\)?/.test(feed) &&
+/<h2 class="feed-title">\$\{esc\(title\)\}<\/h2>/.test(feed)
 );
 check(
     'doctor profile retains locale-first fallbacks for bios and reviews',

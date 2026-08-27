@@ -1,7 +1,9 @@
 /**
  * MedOrbit v2 - My Prescriptions
- * The patient-scoped API is the only source for this page. It excludes
- * clinician-private doctor_notes at the backend boundary.
+ * Fetches via GET /patients/me/prescriptions (backend/src/routes/
+ * patient.routes.js), an ownership-scoped call that returns the patient's
+ * prescription list and medication items in one request. The backend excludes
+ * clinician-private doctor_notes before this page receives the data.
  */
 const MyPrescriptions = (() => {
 
@@ -54,27 +56,21 @@ const MyPrescriptions = (() => {
     }
 
     function normalizePrescription(raw) {
-        const prescription = raw?.prescription || raw || {};
-        return {
-            ...prescription,
-            id: prescription.id || raw?.id || prescription.prescription_number,
-            items: raw?.items || prescription.items || []
-        };
+        // Patient-facing UI must never surface the doctor's internal notes;
+        // drop it here so no downstream rendering code can reuse it.
+        const { doctor_notes, ...rest } = raw || {};
+        return { ...rest, items: Array.isArray(raw?.items) ? raw.items : [] };
     }
 
     function normalizeList(payload) {
-        const source =
-            payload?.prescriptions ||
-            payload?.data?.prescriptions ||
-            payload?.data ||
-            payload ||
-            [];
-        return (Array.isArray(source) ? source : []).map(normalizePrescription).filter((p) => p.id);
+        const source = Array.isArray(payload?.data) ? payload.data : [];
+        return source.map(normalizePrescription).filter((p) => p.id);
     }
 
     // GET /patients/me/prescriptions — ownership-scoped (backend/src/routes/
-    // patient.routes.js), unlike the generic /api/prescriptions/:id, which
-    // has no ownership filtering at all and must never be called from here.
+    // patient.routes.js) and returns the patient's full list in one call.
+    // The generic /api/prescriptions/:id is ownership-scoped too, but it's
+    // single-record and would need one request per prescription here.
     async function fetchPrescriptions() {
         const res = await API.care.myPrescriptions();
         return normalizeList(res);
@@ -88,14 +84,55 @@ const MyPrescriptions = (() => {
         show(document.getElementById('prescriptionsLockedTag'), !enabled);
     }
 
+    // Swaps the shared empty-state container's copy between "no prescriptions
+    // at all" (dataset-empty) and "no matches for the current filters"
+    // (filtered-empty), so the two cases are never presented the same way.
+    function setEmptyStateContent(isFiltered) {
+        const container = document.getElementById('prescriptionsEmpty');
+        if (!container) return;
+        const titleEl = container.querySelector('h2');
+        const hintEl = container.querySelector('p');
+        const linkEl = container.querySelector('a');
+
+        if (isFiltered) {
+            if (titleEl) {
+                titleEl.removeAttribute('data-i18n');
+                titleEl.textContent = label('لا توجد نتائج مطابقة', 'No matching prescriptions');
+            }
+            if (hintEl) {
+                hintEl.removeAttribute('data-i18n');
+                hintEl.textContent = label('جرّب تغيير كلمة البحث أو الفلاتر.', 'Try changing your search or filters.');
+            }
+            show(linkEl, false);
+        } else {
+            const titleKey = 'prescriptions.emptyTitle';
+            const hintKey = 'prescriptions.emptyHint';
+            if (titleEl) {
+                titleEl.setAttribute('data-i18n', titleKey);
+                titleEl.textContent = (typeof I18n !== 'undefined' ? I18n.t(titleKey) : null)
+                    || label('لا توجد وصفات طبية لعرضها', 'No prescriptions to show');
+            }
+            if (hintEl) {
+                hintEl.setAttribute('data-i18n', hintKey);
+                hintEl.textContent = (typeof I18n !== 'undefined' ? I18n.t(hintKey) : null)
+                    || label('ستظهر هنا الوصفات الطبية التي تتم مشاركتها مع حسابك.', 'Prescriptions shared with your account will appear here.');
+            }
+            show(linkEl, true);
+        }
+    }
+
     function setState(state, message) {
+        const isFilteredEmpty = state === 'filtered-empty';
+        const isEmpty = state === 'empty' || isFilteredEmpty;
+        const filtersVisible = state === 'data' || isFilteredEmpty;
+
         show(document.getElementById('prescriptionsLoading'), state === 'loading');
         show(document.getElementById('prescriptionsError'), state === 'error');
         show(document.getElementById('prescriptionsData'), state === 'data');
         show(document.getElementById('prescriptionsPreview'), false);
-        show(document.getElementById('prescriptionsEmpty'), state === 'empty');
-        show(document.getElementById('prescriptionsFilters'), state === 'data');
-        setFiltersEnabled(state === 'data');
+        show(document.getElementById('prescriptionsEmpty'), isEmpty);
+        show(document.getElementById('prescriptionsFilters'), filtersVisible);
+        setFiltersEnabled(filtersVisible);
 
         if (message) {
             document.getElementById('prescriptionsErrorText').textContent = message;
@@ -135,15 +172,15 @@ const MyPrescriptions = (() => {
         const status = String(item.status || label('غير محدد', 'unknown')).toLowerCase();
         return (
             '<button type="button" class="records-real-card' + active + '" data-id="' + escapeHtml(item.id) + '">' +
-                '<span class="records-real-icon"><i class="fas fa-prescription-bottle-medical"></i></span>' +
-                '<span class="records-real-card-main">' +
-                    '<span class="records-real-title">' + escapeHtml(medicationName(item)) + '</span>' +
-                    '<span class="records-real-meta">' +
-                        '<span>' + escapeHtml(item.prescription_number || label('بدون رقم', 'No number')) + '</span>' +
-                        '<span class="records-real-badge ' + escapeHtml(status) + '">' + escapeHtml(status) + '</span>' +
-                    '</span>' +
-                    '<span class="records-real-subtitle">' + escapeHtml(fmtDate(dateValue(item))) + '</span>' +
-                '</span>' +
+            '<span class="records-real-icon"><i class="fas fa-prescription-bottle-medical"></i></span>' +
+            '<span class="records-real-card-main">' +
+            '<span class="records-real-title">' + escapeHtml(medicationName(item)) + '</span>' +
+            '<span class="records-real-meta">' +
+            '<span>' + escapeHtml(item.prescription_number || label('بدون رقم', 'No number')) + '</span>' +
+            '<span class="records-real-badge ' + escapeHtml(status) + '">' + escapeHtml(status) + '</span>' +
+            '</span>' +
+            '<span class="records-real-subtitle">' + escapeHtml(fmtDate(dateValue(item))) + '</span>' +
+            '</span>' +
             '</button>'
         );
     }
@@ -151,8 +188,8 @@ const MyPrescriptions = (() => {
     function field(labelText, value) {
         return (
             '<div class="records-detail-field">' +
-                '<div class="label">' + escapeHtml(labelText) + '</div>' +
-                '<div class="value">' + escapeHtml(value || label('غير محدد', 'Not set')) + '</div>' +
+            '<div class="label">' + escapeHtml(labelText) + '</div>' +
+            '<div class="value">' + escapeHtml(value || label('غير محدد', 'Not set')) + '</div>' +
             '</div>'
         );
     }
@@ -164,21 +201,21 @@ const MyPrescriptions = (() => {
 
         return (
             '<div class="records-medication-list">' +
-                items.map((item) => {
-                    const name =
-                        (isAr() ? item.medication_name_ar : item.medication_name_en) ||
-                        item.medication_name_en ||
-                        item.medication_name_ar ||
-                        label('دواء', 'Medication');
-                    const meta = [item.dosage, item.frequency, item.duration, item.quantity].filter(Boolean).join(' - ');
-                    return (
-                        '<div class="records-medication-item">' +
-                            '<strong>' + escapeHtml(name) + '</strong>' +
-                            '<span>' + escapeHtml(meta || label('الجرعة غير محددة', 'Dosage not specified')) + '</span>' +
-                            (item.instructions ? '<span>' + escapeHtml(item.instructions) + '</span>' : '') +
-                        '</div>'
-                    );
-                }).join('') +
+            items.map((item) => {
+                const name =
+                    (isAr() ? item.medication_name_ar : item.medication_name_en) ||
+                    item.medication_name_en ||
+                    item.medication_name_ar ||
+                    label('دواء', 'Medication');
+                const meta = [item.dosage, item.frequency, item.duration, item.quantity].filter(Boolean).join(' - ');
+                return (
+                    '<div class="records-medication-item">' +
+                    '<strong>' + escapeHtml(name) + '</strong>' +
+                    '<span>' + escapeHtml(meta || label('الجرعة غير محددة', 'Dosage not specified')) + '</span>' +
+                    (item.instructions ? '<span>' + escapeHtml(item.instructions) + '</span>' : '') +
+                    '</div>'
+                );
+            }).join('') +
             '</div>'
         );
     }
@@ -188,29 +225,28 @@ const MyPrescriptions = (() => {
         const status = String(item.status || label('غير محدد', 'unknown')).toLowerCase();
         detail.innerHTML =
             '<div class="records-detail-header">' +
-                '<div class="records-real-icon"><i class="fas fa-prescription-bottle-medical"></i></div>' +
-                '<div>' +
-                    '<h2 class="records-detail-title">' + escapeHtml(medicationName(item)) + '</h2>' +
-                    '<div class="records-real-meta">' +
-                        '<span>' + escapeHtml(item.prescription_number || label('بدون رقم', 'No number')) + '</span>' +
-                        '<span class="records-real-badge ' + escapeHtml(status) + '">' + escapeHtml(status) + '</span>' +
-                    '</div>' +
-                '</div>' +
+            '<div class="records-real-icon"><i class="fas fa-prescription-bottle-medical"></i></div>' +
+            '<div>' +
+            '<h2 class="records-detail-title">' + escapeHtml(medicationName(item)) + '</h2>' +
+            '<div class="records-real-meta">' +
+            '<span>' + escapeHtml(item.prescription_number || label('بدون رقم', 'No number')) + '</span>' +
+            '<span class="records-real-badge ' + escapeHtml(status) + '">' + escapeHtml(status) + '</span>' +
+            '</div>' +
+            '</div>' +
             '</div>' +
             '<div class="records-detail-section">' +
-                '<h3><i class="fas fa-circle-info"></i>' + escapeHtml(label('تفاصيل الوصفة', 'Prescription Details')) + '</h3>' +
-                '<div class="records-detail-grid">' +
-                    field(label('تاريخ الوصفة', 'Prescription date'), fmtDate(item.prescription_date)) +
-                    field(label('صالحة حتى', 'Valid until'), fmtDate(item.valid_until)) +
-                    field(label('التشخيص', 'Diagnosis'), item.diagnosis) +
-                    field(label('التعليمات', 'Instructions'), item.instructions) +
-                '</div>' +
+            '<h3><i class="fas fa-circle-info"></i>' + escapeHtml(label('تفاصيل الوصفة', 'Prescription Details')) + '</h3>' +
+            '<div class="records-detail-grid">' +
+            field(label('تاريخ الوصفة', 'Prescription date'), fmtDate(item.prescription_date)) +
+            field(label('صالحة حتى', 'Valid until'), fmtDate(item.valid_until)) +
+            field(label('التشخيص', 'Diagnosis'), item.diagnosis) +
+            field(label('التعليمات', 'Instructions'), item.instructions) +
+            '</div>' +
             '</div>' +
             '<div class="records-detail-section">' +
-                '<h3><i class="fas fa-pills"></i>' + escapeHtml(label('الأدوية', 'Medications')) + '</h3>' +
-                renderMedicationItems(item.items) +
-            '</div>' +
-            (item.doctor_notes ? '<div class="records-detail-section">' + field(label('ملاحظات الطبيب', 'Doctor notes'), item.doctor_notes) + '</div>' : '');
+            '<h3><i class="fas fa-pills"></i>' + escapeHtml(label('الأدوية', 'Medications')) + '</h3>' +
+            renderMedicationItems(item.items) +
+            '</div>';
     }
 
     function selectPrescription(id) {
@@ -225,7 +261,9 @@ const MyPrescriptions = (() => {
         const listEl = document.getElementById('prescriptionsList');
 
         if (!list.length) {
-            setState('empty');
+            const isFiltered = prescriptions.length > 0;
+            setEmptyStateContent(isFiltered);
+            setState(isFiltered ? 'filtered-empty' : 'empty');
             return;
         }
 
@@ -244,14 +282,7 @@ const MyPrescriptions = (() => {
     async function load() {
         setState('loading');
         try {
-            const result = await fetchPrescriptions();
-            if (result?.blocked) {
-                prescriptions = [];
-                setState('empty');
-                return;
-            }
-
-            prescriptions = normalizeList(result);
+            prescriptions = await fetchPrescriptions();
             selectedId = prescriptions[0]?.id || null;
             render();
         } catch (err) {

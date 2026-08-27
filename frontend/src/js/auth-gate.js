@@ -62,6 +62,7 @@ const AuthGate = (() => {
         'admin-invitation-accept.html',
         'admin-invitations.html',
         'admin-social.html',
+        'admin-users.html',
         'analytics.html',
         'avatar-preview.html',
         'billing.html',
@@ -113,6 +114,7 @@ const AuthGate = (() => {
         'admin-contact-messages.html': ['admin', 'super_admin'],
         'admin-doctor-applications.html': ['admin', 'super_admin'],
         'admin-social.html': ['admin', 'super_admin'],
+        'admin-users.html': ['admin', 'super_admin'],
         'admin-invitations.html': ['super_admin'],
         // admin-invitation-accept.html is deliberately absent. Its backend
         // route (POST /api/admin/invitations/accept) requires authenticate but

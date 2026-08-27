@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Accept administrative invitation | MedOrbit</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>Accept administrative invitation | MedOrbit</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="../src/css/main.css">
+  <link rel="stylesheet" href="../src/css/components.css">
+  <link rel="stylesheet" href="../src/css/auth.css">
+  <link rel="stylesheet" href="../src/css/admin-invitation-accept.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -16,13 +20,17 @@
          protected markup is parsed (see frontend/src/js/auth-gate.js). -->
     <script src="../src/js/auth-gate.js"></script>
 </head>
-<body>
-  <main class="auth-page"><section class="auth-card">
+<body class="admin-invitation-accept-page" data-theme="light">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <main id="main-content" class="auth-page"><section class="auth-card card admin-invitation-card">
+    <div class="admin-invitation-icon" aria-hidden="true">&#128274;</div>
     <h1>Administrative invitation</h1>
-    <p id="message">Confirm that you are signed in to the invited account.</p>
-    <button id="acceptInvitation" type="button" class="btn btn-primary">Accept invitation</button>
-    <p><a href="login.html" id="loginLink">Sign in</a></p>
+    <p id="message" aria-live="polite">Confirm that you are signed in to the invited account.</p>
+    <button id="acceptInvitation" type="button" class="btn btn-primary admin-invitation-accept-btn">Accept invitation</button>
+    <p class="admin-invitation-login-row"><a href="login.html" id="loginLink">Sign in</a></p>
   </section></main>
+  <script src="../src/utils/store.js"></script>
+  <script src="../src/js/theme.js"></script>
   <script src="../src/js/api.js"></script>
   <script src="../src/js/admin-invitation-accept.js"></script>
 </body>

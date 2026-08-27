@@ -37,7 +37,7 @@ async function findEligiblePost(postId, queryable = db) {
 
 async function findFollowableDoctor(doctorId, queryable = db) {
     const result = await queryable.query(
-        `SELECT d.id FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id
+        `SELECT d.id,d.user_id FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id
          WHERE d.id=$1 AND d.approval_status='approved'
            AND u.role='doctor' AND u.is_active=true AND u.deleted_at IS NULL`,
         [doctorId]

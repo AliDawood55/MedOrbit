@@ -129,6 +129,7 @@ const SocialFeed = (() => {
         const why = reasonLabel(p.reason_code);
         const liked = !!p.liked_by_me;
         const following = !!p.following_doctor;
+        const ownDoctor = !!p.is_own_doctor;
         const title = isAr() ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
         const specialty = doctorSpecialty(p.doctor);
 
@@ -140,9 +141,10 @@ const SocialFeed = (() => {
                         `<div class="feed-doctor-name">${esc(doctorName(p.doctor))}</div>` +
                         `<div class="feed-meta">${specialty ? esc(specialty) + ' · ' : ''}${esc(formatDate(p.published_at))}</div>` +
                     `</div>` +
-                    `<button type="button" class="btn btn-secondary btn-sm feed-follow-btn${following ? ' following' : ''}" data-follow="${esc(p.doctor.id)}" aria-pressed="${following}">` +
-                        followButtonInner(following) +
-                    `</button>` +
+                    (ownDoctor ? '' :
+                        `<button type="button" class="btn btn-secondary btn-sm feed-follow-btn${following ? ' following' : ''}" data-follow="${esc(p.doctor.id)}" aria-pressed="${following}">` +
+                            followButtonInner(following) +
+                        `</button>`) +
                 `</div>` +
                 (why ? `<div class="feed-reason"><i class="fas fa-star" aria-hidden="true"></i>${esc(why)}</div>` : '') +
                 `<div class="feed-card-body">` +
@@ -285,6 +287,7 @@ const SocialFeed = (() => {
         if (pendingFollows.has(doctorId)) return;
         const post = items.find(x => x.doctor.id === doctorId);
         if (!post) return;
+        if (post.is_own_doctor) return;
 
         pendingFollows.add(doctorId);
         btn.classList.add('loading');
@@ -520,15 +523,10 @@ const SocialFeed = (() => {
         const cachedUser = API.getUser();
         if (cachedUser && cachedUser.role !== 'doctor') return;
 
-        let profile = null;
-        try {
-            const res = await API.users.me();
-            profile = res?.data || null;
-        } catch (err) {
-            console.error('SocialFeed: failed to verify account role for composer', err);
-            return;
-        }
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
 
+        const profile = AuthGate.getVerifiedUser();
         if (!profile || profile.role !== 'doctor') return;
 
         composerProfile = profile;

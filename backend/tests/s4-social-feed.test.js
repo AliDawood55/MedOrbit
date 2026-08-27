@@ -87,6 +87,23 @@ async function residual(){return(await pool.query(`SELECT
  await request('POST',`/admin/social/comments/${commentId}/moderate`,token(admin),{action:'hide'});
  check('hidden comment excluded',!(await request('GET',`/feed/posts/${postId}/comments`,token(patient))).body.data.some(c=>c.id===commentId));
 
+ const selfFollow=await request('POST',`/doctors/${doc1.doctorId}/follow`,token(doc1),{});
+ check('doctor cannot follow self',selfFollow.status===400&&selfFollow.body.error.code==='SELF_FOLLOW_NOT_ALLOWED');
+ check('self-follow attempt inserts no row',Number((await pool.query('SELECT count(*) FROM medorbit.user_follows WHERE user_id=$1 AND doctor_id=$2',[doc1.id,doc1.doctorId])).rows[0].count)===0);
+ const ownFeed=await request('GET','/feed/posts?limit=30',token(doc1));
+ const ownPostItem=ownFeed.body.data.items.find(p=>p.id===postId);
+ check('own feed post marks is_own_doctor true',ownPostItem?.is_own_doctor===true);
+ check('own feed post reports following_doctor false',ownPostItem?.following_doctor===false);
+ const otherViewerFeed=await request('GET','/feed/posts?limit=30',token(patient));
+ const otherPostItem=otherViewerFeed.body.data.items.find(p=>p.id===postId);
+ check('another viewer feed post marks is_own_doctor false',otherPostItem?.is_own_doctor===false);
+
+ const legacyFollow=await pool.query(`INSERT INTO medorbit.user_follows(user_id,doctor_id) VALUES($1,$2) ON CONFLICT DO NOTHING`,[doc1.id,doc1.doctorId]).catch(()=>{});
+ const legacyFeed=await request('GET','/feed/posts?limit=30',token(doc1));
+ const legacyPostItem=legacyFeed.body.data.items.find(p=>p.id===postId);
+ check('legacy self-follow row does not make own post following_doctor true',legacyPostItem?.following_doctor===false);
+ await pool.query('DELETE FROM medorbit.user_follows WHERE user_id=$1 AND doctor_id=$2',[doc1.id,doc1.doctorId]).catch(()=>{});
+
  const follow=await request('POST',`/doctors/${doc1.doctorId}/follow`,token(patient),{user_id:other.id});
  check('user can follow approved doctor and client id ignored',follow.status===200&&follow.body.data.created&&Number((await pool.query('SELECT count(*) FROM medorbit.user_follows WHERE user_id=$1 AND doctor_id=$2',[patient.id,doc1.doctorId])).rows[0].count)===1);
  check('duplicate follow prevented',!(await request('POST',`/doctors/${doc1.doctorId}/follow`,token(patient),{})).body.data.created);

@@ -8,17 +8,7 @@
    RTL/LTR via logical properties throughout.
    =========================================== */
 
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
+/* .sr-only lives in main.css (shared across every page) */
 
 /* === Shell (mobile-first: normal document flow, single column) === */
 .feed-shell {
@@ -162,7 +152,7 @@
 .composer-textarea {
     padding: 9px 12px;
     resize: none;
-    min-height: 38px;
+    min-height: 44px;
     line-height: 1.6;
     overflow: hidden;
     transition: min-height var(--t-base);
@@ -172,6 +162,11 @@
     min-height: 72px;
     overflow: auto;
     resize: vertical;
+}
+
+#composerCategory.composer-category,
+#composerSubmit {
+    min-height: 44px;
 }
 
 .composer-footer {
@@ -249,6 +244,10 @@
     margin-block-end: 16px;
 }
 
+.feed-page #feedRetryBtn {
+    min-height: 44px;
+}
+
 /* === Post list & card === */
 .feed-list {
     display: grid;
@@ -260,10 +259,18 @@
     padding: 0;
 }
 
+/* Card is a static surface, not a link — .card:hover's lift/shadow implies
+   clickability the card doesn't have. */
+.feed-page .feed-card:hover {
+    box-shadow: none;
+    transform: none;
+}
+
 .feed-card-header {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px 12px;
     padding: 14px 16px 0;
 }
 
@@ -279,12 +286,21 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    overflow-wrap: anywhere;
 }
 
 .feed-meta {
     color: var(--text-mute);
     font-size: 12.5px;
     margin-block-start: 2px;
+    overflow-wrap: anywhere;
+}
+
+.feed-follow-btn {
+    flex-shrink: 0;
+    min-height: 44px;
+    white-space: normal;
+    text-align: center;
 }
 
 .feed-follow-btn.following {
@@ -293,13 +309,14 @@
 }
 
 .feed-reason {
-    display: inline-flex;
-    align-items: center;
+    display: flex;
+    align-items: flex-start;
     gap: 5px;
     font-size: 12px;
     font-weight: 600;
     color: var(--primary);
     margin: 8px 16px 0;
+    overflow-wrap: anywhere;
 }
 
 .feed-card-body {
@@ -308,6 +325,7 @@
 
 .feed-category {
     display: inline-flex;
+    max-width: 100%;
     padding: 3px 10px;
     border-radius: var(--r-full);
     background: var(--primary-50);
@@ -315,6 +333,7 @@
     font-size: 11.5px;
     font-weight: 700;
     margin-block-end: 8px;
+    overflow-wrap: anywhere;
 }
 
 [data-theme="dark"] .feed-category {
@@ -326,10 +345,12 @@
     font-weight: 700;
     margin: 0 0 6px;
     color: var(--text);
+    overflow-wrap: anywhere;
 }
 
 .feed-body {
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     line-height: 1.65;
     color: var(--text-soft);
     font-size: 14px;
@@ -347,7 +368,9 @@
 .feed-action-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
+    min-height: 44px;
     padding: 7px 12px;
     border-radius: var(--r-md);
     font-size: 13px;
@@ -381,6 +404,7 @@
     border-bottom: 1px solid var(--border);
     font-size: 13.5px;
     color: var(--text-soft);
+    overflow-wrap: anywhere;
 }
 
 .comment-row:last-child {
@@ -402,6 +426,8 @@
 
 .comment-form input {
     flex: 1;
+    min-width: 0;
+    min-height: 44px;
     border: 1px solid var(--border);
     border-radius: var(--r-md);
     padding: 8px 12px;
@@ -410,9 +436,18 @@
     color: var(--text);
 }
 
+.comment-form .btn {
+    flex-shrink: 0;
+    min-height: 44px;
+}
+
 .feed-more {
     text-align: center;
     margin-block-start: 16px;
+}
+
+.feed-more .btn {
+    min-height: 44px;
 }
 
 @media (max-width: 480px) {
@@ -429,6 +464,15 @@
         padding: 8px 14px 12px;
         flex-wrap: wrap;
         row-gap: 8px;
+    }
+    .comment-form {
+        flex-wrap: wrap;
+    }
+    .comment-form input {
+        flex-basis: 100%;
+    }
+    .comment-form .btn {
+        flex: 1;
     }
 }
 
