@@ -176,6 +176,16 @@ body.site-page [id] {
     text-decoration: none;
 }
 
+.account-shortcut {
+    color: var(--text-soft);
+    text-decoration: none;
+}
+
+.account-shortcut:hover {
+    color: var(--primary);
+    background: var(--primary-50);
+}
+
 .icon-btn .notification-badge,
 .drawer-notification-link .notification-badge {
     position: absolute;
@@ -257,6 +267,31 @@ body.site-page [id] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.user-identity {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.role-badge {
+    width: fit-content;
+    max-width: 118px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 1px 6px;
+    border-radius: var(--r-full);
+    background: var(--primary-50);
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+[data-theme="dark"] .role-badge {
+    background: rgba(59, 130, 246, .18);
 }
 
 .user-chip > i {

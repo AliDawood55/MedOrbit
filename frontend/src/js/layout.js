@@ -58,6 +58,27 @@ const Layout = (() => {
         return name.trim().charAt(0).toUpperCase() || '?';
     }
 
+    function localized(ar, en) {
+        return (typeof I18n !== 'undefined' && I18n.getLang() === 'ar') ? ar : en;
+    }
+
+    function roleLabel(role) {
+        const labels = {
+            patient: ['مريض', 'Patient'],
+            doctor: ['طبيب', 'Doctor'],
+            admin: ['مسؤول', 'Administrator'],
+            super_admin: ['مسؤول عام', 'Super administrator']
+        };
+        const pair = labels[role] || ['عضو', 'Member'];
+        return localized(pair[0], pair[1]);
+    }
+
+    function profileShortcut() {
+        return '<a href="profile.html" class="icon-btn account-shortcut" title="Account / الحساب" aria-label="Account">' +
+            '<i class="fas fa-user-circle" aria-hidden="true"></i>' +
+        '</a>';
+    }
+
     // Operational accounts are not patient-facing AI or support consumers.
     // This only controls navigation presentation; backend authorization stays
     // responsible for every route and API request.
@@ -154,9 +175,11 @@ const Layout = (() => {
                 '<i class="fas fa-bell" aria-hidden="true"></i>' +
                 '<span class="notification-badge hidden" id="notificationBadge" aria-hidden="true"></span>' +
             '</a>' +
+            profileShortcut() +
             '<div class="user-chip" id="userChip">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
-                '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
+                '<span class="user-identity"><span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
+                '<span class="role-badge">' + escapeHtml(roleLabel(user?.role)) + '</span></span>' +
                 '<i class="fas fa-chevron-down"></i>' +
                 '<div class="user-menu" id="userMenu">' +
                     '<a href="dashboard.html" class="user-menu-item" data-i18n="nav.dashboard"></a>' +
@@ -176,6 +199,7 @@ const Layout = (() => {
                     (isAdmin ? '<a href="admin-contact-messages.html" class="user-menu-item" data-i18n="nav.contactMessages"></a>' : '') +
                     (isAdmin ? '<a href="admin-social.html" class="user-menu-item" data-i18n="nav.socialModeration"></a>' : '') +
                     (isSuperAdmin ? '<a href="admin-invitations.html" class="user-menu-item">Admin Invitations</a>' : '') +
+                    (isSuperAdmin ? '<a href="admin-users.html?role=admin" class="user-menu-item"><i class="fas fa-user-shield" aria-hidden="true"></i> ' + localized('قائمة المسؤولين', 'Administrators directory') + '</a>' : '') +
                     (isAdmin ? '<a href="analytics.html" class="user-menu-item" data-i18n="nav.analytics"></a>' : '') +
                     '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
                     (!isAdmin ? '<a href="contact.html" class="user-menu-item" data-i18n="nav.contactUs"></a>' : '') +
@@ -268,6 +292,7 @@ const Layout = (() => {
             (isAdmin ? '<a href="admin-contact-messages.html" class="drawer-link" data-i18n="nav.contactMessages"></a>' : '') +
             (isAdmin ? '<a href="admin-social.html" class="drawer-link" data-i18n="nav.socialModeration"></a>' : '') +
             (isSuperAdmin ? '<a href="admin-invitations.html" class="drawer-link">Admin Invitations</a>' : '') +
+            (isSuperAdmin ? '<a href="admin-users.html?role=admin" class="drawer-link"><i class="fas fa-user-shield" aria-hidden="true"></i> ' + localized('قائمة المسؤولين', 'Administrators directory') + '</a>' : '') +
             (isAdmin ? '<a href="analytics.html" class="drawer-link" data-i18n="nav.analytics"></a>' : '') +
             '<a href="notifications.html" class="drawer-link drawer-notification-link"><i class="fas fa-bell" aria-hidden="true"></i><span data-i18n="nav.notifications"></span><span class="notification-badge hidden" id="drawerNotificationBadge" aria-hidden="true"></span></a>' +
             (!isAdmin ? '<a href="contact.html" class="drawer-link" data-i18n="nav.contactUs"></a>' : '') +
