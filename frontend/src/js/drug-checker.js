@@ -66,6 +66,17 @@ const DrugChecker = (() => {
         return (isAr() ? drug.name_ar : drug.name_en) || drug.name_en || drug.name_ar || '';
     }
 
+    function interactionDescription(interaction) {
+        const description = interaction.description || '';
+        // The curated aspirin/warfarin safety record is translated here for
+        // the legacy web client. Other server-provided clinical prose remains
+        // unchanged until the reference-data format carries both languages.
+        if (/^Severe - increased bleeding risk\./i.test(description)) {
+            return t('drugChecker.bleedingRiskWarning');
+        }
+        return description;
+    }
+
     // ================= QUICK CHIPS =================
 
     function renderQuickChips() {
@@ -176,7 +187,7 @@ const DrugChecker = (() => {
                         '<div class="interaction-card-icon"><i class="fas ' + meta.icon + '"></i></div>' +
                         '<div>' +
                             '<div class="interaction-card-title">' + escapeHtml(d1) + ' + ' + escapeHtml(d2) + '</div>' +
-                            (ix.description ? '<div class="interaction-card-desc">' + escapeHtml(ix.description) + '</div>' : '') +
+                            (ix.description ? '<div class="interaction-card-desc">' + escapeHtml(interactionDescription(ix)) + '</div>' : '') +
                         '</div>' +
                     '</div>';
                 });
