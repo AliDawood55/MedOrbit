@@ -28,7 +28,6 @@ class RecordEntryModel {
     this.prescriptionDate,
     this.validUntil,
     this.instructions,
-    this.doctorNotes,
     this.items = const [],
     this.doctorFirstNameAr,
     this.doctorFirstNameEn,
@@ -64,7 +63,6 @@ class RecordEntryModel {
   final String? prescriptionDate;
   final String? validUntil;
   final String? instructions;
-  final String? doctorNotes;
   final List<PrescriptionItemModel> items;
 
   // shared by 'appointment' and 'record'
@@ -113,7 +111,6 @@ class RecordEntryModel {
       prescriptionDate: json['prescription_date'] as String?,
       validUntil: json['valid_until'] as String?,
       instructions: json['instructions'] as String?,
-      doctorNotes: json['doctor_notes'] as String?,
       items: rawItems is List
           ? rawItems
               .whereType<Map>()

@@ -1,3 +1,5 @@
+import '../../../shared/utils/json_parsing.dart';
+
 class DoctorListResponse {
   const DoctorListResponse({
     this.doctors = const [],
@@ -142,7 +144,7 @@ class Doctor {
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
     return Doctor(
-      id: _asString(json['id']) ?? '',
+      id: requireExactString(json, 'id'),
       userId: _asString(_read(json, 'user_id', 'userId')),
       medicalLicenseNumber: _asString(
         _read(json, 'medical_license_number', 'medicalLicenseNumber'),
@@ -313,7 +315,7 @@ class DoctorClinicSummary {
 
   factory DoctorClinicSummary.fromJson(Map<String, dynamic> json) {
     return DoctorClinicSummary(
-      id: _asString(json['id']) ?? '',
+      id: requireExactString(json, 'id'),
       nameAr: _asString(_read(json, 'name_ar', 'nameAr')),
       nameEn:
           _asString(_read(json, 'name_en', 'nameEn')) ??
@@ -389,7 +391,7 @@ class DoctorAvailabilitySlot {
 
   factory DoctorAvailabilitySlot.fromJson(Map<String, dynamic> json) {
     return DoctorAvailabilitySlot(
-      id: _asString(json['id']) ?? '',
+      id: requireExactString(json, 'id'),
       doctorId: _asString(_read(json, 'doctor_id', 'doctorId')),
       clinicId: _asString(_read(json, 'clinic_id', 'clinicId')),
       date: _asDate(json['date']),
@@ -449,7 +451,7 @@ class DoctorReview {
 
   factory DoctorReview.fromJson(Map<String, dynamic> json) {
     return DoctorReview(
-      id: _asString(json['id']) ?? '',
+      id: requireExactString(json, 'id'),
       patientId: _asString(_read(json, 'patient_id', 'patientId')),
       patientName: _asString(_read(json, 'patient_name', 'patientName')),
       rating: _asDouble(json['rating']),
@@ -533,10 +535,12 @@ Map<String, dynamic>? _asMap(Object? value) =>
 
 List<Map<String, dynamic>> _list(Object? value) {
   if (value is! List) return const [];
-  return value
-      .whereType<Map>()
-      .map((item) => Map<String, dynamic>.from(item))
-      .toList();
+  return value.map((item) {
+    if (item is! Map) {
+      throw const FormatException('Malformed list item: expected an object.');
+    }
+    return Map<String, dynamic>.from(item);
+  }).toList();
 }
 
 List<String> _stringList(Object? value) {

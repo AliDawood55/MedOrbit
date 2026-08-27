@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -19,9 +20,10 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
   @override void dispose() { _debounce?.cancel(); _search.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
     final state = ref.watch(discoveryControllerProvider);
     return AppScaffold(
-      appBar: AppBar(title: const Text('Doctor directory')),
+      appBar: AppBar(title: Text(strings.doctorDirectoryScreenTitle)),
       useSafeArea: true,
       keyboardAware: true,
       body: RefreshIndicator(
@@ -33,18 +35,18 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
             ResponsiveContent(
               maxWidth: 960,
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const PageIntro(title: 'Find a doctor', subtitle: 'Browse doctors listed by healthcare facilities around Nablus.', icon: Icons.person_search_outlined),
+                PageIntro(title: strings.doctorDirectoryTitle, subtitle: strings.doctorDirectorySubtitle, icon: Icons.person_search_outlined),
                 const SizedBox(height: AppTheme.spaceLg),
-                Card(child: Padding(padding: const EdgeInsets.all(AppTheme.spaceLg), child: AppTextField(label: 'Search doctors', hintText: 'Name or specialty', controller: _search, prefixIcon: const Icon(Icons.search_rounded), suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: _clear, icon: const Icon(Icons.close_rounded), tooltip: 'Clear search'), onChanged: _onSearch))),
+                Card(child: Padding(padding: const EdgeInsets.all(AppTheme.spaceLg), child: AppTextField(label: strings.searchDoctorsLabel, hintText: strings.searchDoctorsFieldHint, controller: _search, prefixIcon: const Icon(Icons.search_rounded), suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: _clear, icon: const Icon(Icons.close_rounded), tooltip: strings.clearSearch), onChanged: _onSearch))),
                 const SizedBox(height: AppTheme.spaceLg),
-                _Summary(filters: state.doctorFilters, count: state.doctors.length, onFilters: () => _filters(state)),
+                _Summary(strings: strings, filters: state.doctorFilters, count: state.doctors.length, onFilters: () => _filters(state)),
                 const SizedBox(height: AppTheme.spaceLg),
-                if (state.isLoadingDoctors) const _Loading()
-                else if (state.doctorListError != null) Card(child: ErrorRetryState(title: 'Could not load doctors', message: state.doctorListError!.message, retryLabel: 'Retry', onRetry: () => ref.read(discoveryControllerProvider.notifier).loadDoctors(), variant: ErrorRetryVariant.compact))
-                else if (state.doctors.isEmpty) const Card(child: EmptyState(icon: Icons.person_search_outlined, title: 'No doctors found', hint: 'Try clearing filters or using a different search.', variant: EmptyStateVariant.compact))
+                if (state.isLoadingDoctors) _Loading(strings: strings)
+                else if (state.doctorListError != null) Card(child: ErrorRetryState(title: strings.couldNotLoadDoctors, message: state.doctorListError!.message, retryLabel: strings.retry, onRetry: () => ref.read(discoveryControllerProvider.notifier).loadDoctors(), variant: ErrorRetryVariant.compact))
+                else if (state.doctors.isEmpty) Card(child: EmptyState(icon: Icons.person_search_outlined, title: strings.doctorEmptyTitle, hint: strings.doctorEmptyHint, variant: EmptyStateVariant.compact))
                 else ...[
                   for (final doctor in state.doctors) ...[DoctorResultCard(doctor: doctor), const SizedBox(height: AppTheme.spaceSm)],
-                  if (state.canLoadMoreDoctors) PrimaryButton(label: 'Load more', isLoading: state.isLoadingMoreDoctors, onPressed: () => ref.read(discoveryControllerProvider.notifier).loadMoreDoctors()),
+                  if (state.canLoadMoreDoctors) PrimaryButton(label: strings.discoveryLoadMoreButton, isLoading: state.isLoadingMoreDoctors, onPressed: () => ref.read(discoveryControllerProvider.notifier).loadMoreDoctors()),
                 ],
               ]),
             ),
@@ -57,6 +59,6 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
   void _clear() { _search.clear(); _onSearch(''); }
   Future<void> _filters(DiscoveryState state) async { final doctors = state.doctors; await showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => DoctorFilterSheet(initialFilters: state.doctorFilters, specialties: _derive(doctors, (d) => d.specialtyNameEn ?? d.specialtyEn ?? d.specialtyNameAr ?? d.specialtyAr), regions: doctors.expand((d) => d.clinics.map((c) => c.region)).whereType<String>().toSet().toList(), onApply: (filters) => ref.read(discoveryControllerProvider.notifier).loadDoctors(filters: filters), onClear: () => ref.read(discoveryControllerProvider.notifier).loadDoctors(filters: const DoctorFilters()))); }
 }
-class _Summary extends StatelessWidget { const _Summary({required this.filters, required this.count, required this.onFilters}); final DoctorFilters filters; final int count; final VoidCallback onFilters; @override Widget build(BuildContext context) { final active = [if (filters.specialty != null) 'Specialty: ${filters.specialty}', if (filters.region != null) 'Region: ${filters.region}', if (filters.minRating != null) 'Rating ${filters.minRating}+', if (filters.minFee != null || filters.maxFee != null) 'Fee filter active', if (filters.search != null) 'Search active']; return SectionHeader(title: '$count doctor result${count == 1 ? '' : 's'}', subtitle: active.isEmpty ? 'No active filters' : active.join(' · '), trailing: OutlinedButton.icon(onPressed: onFilters, icon: const Icon(Icons.filter_list_rounded), label: const Text('Filters'))); } }
-class _Loading extends StatelessWidget { const _Loading(); @override Widget build(BuildContext context) => const Card(child: Padding(padding: EdgeInsets.all(AppTheme.spaceLg), child: Row(children: [SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: AppTheme.spaceMd), Expanded(child: Text('Loading doctors...'))]))); }
+class _Summary extends StatelessWidget { const _Summary({required this.strings, required this.filters, required this.count, required this.onFilters}); final AppStrings strings; final DoctorFilters filters; final int count; final VoidCallback onFilters; @override Widget build(BuildContext context) { final active = [if (filters.specialty != null) strings.discoveryFilterSummarySpecialty(filters.specialty!), if (filters.region != null) strings.discoveryFilterSummaryRegion(filters.region!), if (filters.minRating != null) strings.discoveryFilterSummaryMinRating(filters.minRating.toString()), if (filters.minFee != null || filters.maxFee != null) strings.discoveryFilterSummaryFeeActive, if (filters.search != null) strings.discoverySearchActiveLabel]; return SectionHeader(title: strings.doctorResultsCount(count), subtitle: active.isEmpty ? strings.discoveryNoActiveFilters : active.join(' · '), trailing: OutlinedButton.icon(onPressed: onFilters, icon: const Icon(Icons.filter_list_rounded), label: Text(strings.discoveryFiltersButton))); } }
+class _Loading extends StatelessWidget { const _Loading({required this.strings}); final AppStrings strings; @override Widget build(BuildContext context) => Card(child: Padding(padding: const EdgeInsets.all(AppTheme.spaceLg), child: Row(children: [const SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2)), const SizedBox(width: AppTheme.spaceMd), Expanded(child: Text(strings.doctorLoadingDoctors))]))); }
 List<String> _derive(List<Doctor> doctors, String? Function(Doctor) getter) => doctors.map(getter).whereType<String>().where((value) => value.trim().isNotEmpty).toSet().toList()..sort();

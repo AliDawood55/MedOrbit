@@ -23,6 +23,7 @@ class RoutePaths {
   static const String sharedDoctorNotes = '/my-doctors/:id/notes';
   static const String savedPlaces = '/saved-places';
   static const String contact = '/contact';
+  static const String myDoctor = '/my-doctor';
   static const String virtualDoctor = '/virtual-doctor';
   static const String mapFoundation = '/map-foundation';
   static const String clinics = '/clinics';

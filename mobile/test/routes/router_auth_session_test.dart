@@ -20,6 +20,10 @@ void main() {
     RoutePaths.drugChecker,
     RoutePaths.reportSummarizer,
     RoutePaths.myReports,
+    RoutePaths.myDoctors,
+    RoutePaths.savedPlaces,
+    RoutePaths.contact,
+    RoutePaths.myDoctor,
   ];
 
   const public = [
@@ -59,10 +63,19 @@ void main() {
     });
 
     test('discovery detail routes stay public', () {
-      expect(sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'), isNull);
-      expect(sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'), isNull);
       expect(
-        sessionRedirect(AuthStatus.unauthenticated, '/chatbot/conversations/abc'),
+        sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'),
+        isNull,
+      );
+      expect(
+        sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'),
+        isNull,
+      );
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          '/chatbot/conversations/abc',
+        ),
         isNull,
       );
     });
@@ -71,7 +84,11 @@ void main() {
   group('authenticated', () {
     test('nothing is redirected', () {
       for (final route in [...protected, ...public]) {
-        expect(sessionRedirect(AuthStatus.authenticated, route), isNull, reason: route);
+        expect(
+          sessionRedirect(AuthStatus.authenticated, route),
+          isNull,
+          reason: route,
+        );
       }
     });
   });
@@ -82,29 +99,51 @@ void main() {
       // persisted tokens. Redirecting here would bounce an already-signed-in
       // patient to the login screen on every cold start.
       for (final route in [...protected, ...public]) {
-        expect(sessionRedirect(AuthStatus.unknown, route), isNull, reason: route);
+        expect(
+          sessionRedirect(AuthStatus.unknown, route),
+          isNull,
+          reason: route,
+        );
       }
     });
   });
 
   group('session expiry', () {
-    test('a route that was allowed becomes a redirect once the session clears', () {
-      // The transition a failed token refresh produces: the patient is sitting
-      // on a records screen and the refresh fails underneath them.
-      expect(sessionRedirect(AuthStatus.authenticated, RoutePaths.records), isNull);
-      expect(sessionRedirect(AuthStatus.unauthenticated, RoutePaths.records), RoutePaths.login);
-    });
+    test(
+      'a route that was allowed becomes a redirect once the session clears',
+      () {
+        // The transition a failed token refresh produces: the patient is sitting
+        // on a records screen and the refresh fails underneath them.
+        expect(
+          sessionRedirect(AuthStatus.authenticated, RoutePaths.records),
+          isNull,
+        );
+        expect(
+          sessionRedirect(AuthStatus.unauthenticated, RoutePaths.records),
+          RoutePaths.login,
+        );
+      },
+    );
 
-    test('the login target is never itself protected, so redirects cannot loop', () {
-      expect(protectedRoutes.contains(RoutePaths.login), isFalse);
-      expect(sessionRedirect(AuthStatus.unauthenticated, RoutePaths.login), isNull);
-    });
+    test(
+      'the login target is never itself protected, so redirects cannot loop',
+      () {
+        expect(protectedRoutes.contains(RoutePaths.login), isFalse);
+        expect(
+          sessionRedirect(AuthStatus.unauthenticated, RoutePaths.login),
+          isNull,
+        );
+      },
+    );
   });
 
   group('protected set', () {
-    test('covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, and my reports', () {
-      expect(protectedRoutes, protected.toSet());
-    });
+    test(
+      'covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, my reports, my doctors, saved places, contact, and my doctor',
+      () {
+        expect(protectedRoutes, protected.toSet());
+      },
+    );
 
     test('excludes every public route', () {
       for (final route in public) {

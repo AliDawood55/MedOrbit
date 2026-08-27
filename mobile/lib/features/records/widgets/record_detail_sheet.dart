@@ -134,8 +134,7 @@ String recordEntryTitle(
 String? recordEntryNotePreview(RecordEntryModel entry) {
   return switch (entry.entryType) {
     'appointment' => _trimmed(entry.reasonForVisit),
-    'prescription' =>
-      _firstValue([entry.instructions, entry.doctorNotes]),
+    'prescription' => _trimmed(entry.instructions),
     _ => _firstValue([entry.treatmentPlan, entry.chiefComplaint]),
   };
 }
@@ -416,14 +415,6 @@ class _RecordDetailContent extends StatelessWidget {
                             ],
                           ],
                         ),
-                ),
-              ],
-              if (_trimmed(entry.doctorNotes) case final value?) ...[
-                const SizedBox(height: AppTheme.spaceLg),
-                _DetailSection(
-                  title: strings.doctorNotes,
-                  icon: Icons.note_alt_outlined,
-                  child: _DetailTextCard(value: value),
                 ),
               ],
             ],
