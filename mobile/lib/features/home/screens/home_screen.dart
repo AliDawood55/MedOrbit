@@ -372,6 +372,14 @@ class _AdminHomeScreen extends ConsumerWidget {
                               children: [
                                 OutlinedButton.icon(
                                   onPressed: () =>
+                                      context.push(RoutePaths.adminManagement),
+                                  icon: const Icon(
+                                    Icons.admin_panel_settings_outlined,
+                                  ),
+                                  label: Text(strings.adminManagementTitle),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () =>
                                       context.push(RoutePaths.notifications),
                                   icon: const Icon(
                                     Icons.notifications_outlined,
@@ -417,10 +425,12 @@ class _AdminStatisticsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return statsAsync.when(
-      loading: () => const Center(child: Padding(
-        padding: EdgeInsets.all(AppTheme.spaceLg),
-        child: CircularProgressIndicator(),
-      )),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppTheme.spaceLg),
+          child: CircularProgressIndicator(),
+        ),
+      ),
       error: (error, stackTrace) => FeatureCard(
         title: strings.adminMobileDashboardTitle,
         subtitle: strings.statLoadError,
@@ -431,21 +441,59 @@ class _AdminStatisticsGrid extends StatelessWidget {
       ),
       data: (stats) {
         final tiles = <_AdminStatData>[
-          _AdminStatData(stats.usersTotal, strings.adminStatsUsers, Icons.groups_outlined, AppTheme.primary),
-          _AdminStatData(stats.patients, strings.adminStatsPatients, Icons.person_outline_rounded, AppTheme.secondary),
-          _AdminStatData(stats.doctors, strings.adminStatsDoctors, Icons.medical_services_outlined, AppTheme.accent),
-          _AdminStatData(stats.appointmentsTotal, strings.adminStatsAppointments, Icons.event_available_outlined, AppTheme.violet),
-          _AdminStatData(stats.recordsTotal, strings.adminStatsRecords, Icons.description_outlined, AppTheme.primary),
-          _AdminStatData(stats.prescriptionsTotal, strings.adminStatsPrescriptions, Icons.medication_outlined, AppTheme.secondary),
+          _AdminStatData(
+            stats.usersTotal,
+            strings.adminStatsUsers,
+            Icons.groups_outlined,
+            AppTheme.primary,
+          ),
+          _AdminStatData(
+            stats.patients,
+            strings.adminStatsPatients,
+            Icons.person_outline_rounded,
+            AppTheme.secondary,
+          ),
+          _AdminStatData(
+            stats.doctors,
+            strings.adminStatsDoctors,
+            Icons.medical_services_outlined,
+            AppTheme.accent,
+          ),
+          _AdminStatData(
+            stats.appointmentsTotal,
+            strings.adminStatsAppointments,
+            Icons.event_available_outlined,
+            AppTheme.violet,
+          ),
+          _AdminStatData(
+            stats.recordsTotal,
+            strings.adminStatsRecords,
+            Icons.description_outlined,
+            AppTheme.primary,
+          ),
+          _AdminStatData(
+            stats.prescriptionsTotal,
+            strings.adminStatsPrescriptions,
+            Icons.medication_outlined,
+            AppTheme.secondary,
+          ),
           if (stats.averageRating != null)
-            _AdminStatData(stats.averageRating!.toStringAsFixed(1), strings.adminStatsRating, Icons.star_outline_rounded, AppTheme.accent),
+            _AdminStatData(
+              stats.averageRating!.toStringAsFixed(1),
+              strings.adminStatsRating,
+              Icons.star_outline_rounded,
+              AppTheme.accent,
+            ),
         ];
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= AppTheme.compactBreakpoint ? 2 : 1;
+            final columns = constraints.maxWidth >= AppTheme.compactBreakpoint
+                ? 2
+                : 1;
             final gap = AppTheme.spaceMd;
-            final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
             return Wrap(
               spacing: gap,
               runSpacing: gap,

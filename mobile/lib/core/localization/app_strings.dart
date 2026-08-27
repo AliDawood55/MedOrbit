@@ -285,6 +285,41 @@ class AppStrings {
     'لا تتضمن حسابات الإدارة بيانات صحية أو أدوات طبية. استخدم لوحة الويب لإدارة الطلبات والمستخدمين وإعدادات النظام.',
     'Administration accounts do not include health data or medical tools. Use the web dashboard to manage applications, users, and system settings.',
   );
+  String get adminManagementTitle => _t('إدارة المنصة', 'Manage platform');
+  String get adminApplications => _t('طلبات الأطباء', 'Doctor applications');
+  String get adminUsers => _t('المستخدمون', 'Users');
+  String get adminInvitations => _t('الدعوات', 'Invitations');
+  String get adminAccessDenied =>
+      _t('لا تملك صلاحية الوصول', 'You do not have access');
+  String get adminAccessDeniedHint => _t(
+    'هذه الصفحة متاحة لحسابات الإدارة فقط.',
+    'This page is available to administrator accounts only.',
+  );
+  String get adminNoApplications =>
+      _t('لا توجد طلبات معلقة', 'No pending applications');
+  String get adminNoApplicationsHint => _t(
+    'ستظهر طلبات الانضمام كطبيب هنا.',
+    'New doctor applications will appear here.',
+  );
+  String get adminNoUsers => _t('لا يوجد مستخدمون', 'No users found');
+  String get adminNoUsersHint =>
+      _t('جرّب التحديث لاحقاً.', 'Try refreshing later.');
+  String get adminNoInvitations => _t('لا توجد دعوات', 'No invitations');
+  String get adminNoInvitationsHint => _t(
+    'ستظهر الدعوات الإدارية هنا.',
+    'Administrative invitations will appear here.',
+  );
+  String get adminLicense => _t('رقم الترخيص', 'License');
+  String get adminApprove => _t('موافقة', 'Approve');
+  String get adminReject => _t('رفض', 'Reject');
+  String get adminRejectionReason => _t('سبب الرفض', 'Rejection reason');
+  String get adminActionComplete =>
+      _t('تم تنفيذ الإجراء.', 'Action completed.');
+  String get adminInvitationEmail => _t('بريد الحساب', 'Account email');
+  String get adminInvite => _t('إرسال دعوة', 'Send invite');
+  String get adminRevoke => _t('إلغاء الدعوة', 'Revoke invitation');
+  String get adminManualLinkTitle =>
+      _t('رابط الدعوة اليدوي', 'Manual invitation link');
   String get adminStatsUsers => _t('إجمالي المستخدمين', 'Total users');
   String get adminStatsPatients => _t('المرضى', 'Patients');
   String get adminStatsDoctors => _t('الأطباء', 'Doctors');
