@@ -9,6 +9,10 @@ final adminManagementApiProvider = Provider<AdminManagementApi>(
 final adminUsersProvider = FutureProvider.autoDispose<List<AdminUser>>(
   (ref) => ref.watch(adminManagementApiProvider).users(),
 );
+final adminUsersByRoleProvider = FutureProvider.autoDispose
+    .family<List<AdminUser>, String>(
+      (ref, role) => ref.watch(adminManagementApiProvider).users(role: role),
+    );
 final adminInvitationsProvider =
     FutureProvider.autoDispose<List<AdminInvitation>>(
       (ref) => ref.watch(adminManagementApiProvider).invitations(),

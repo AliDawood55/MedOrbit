@@ -10,24 +10,12 @@ import '../../../auth/providers/auth_provider.dart';
 import '../models/admin_management_models.dart';
 import '../providers/admin_management_provider.dart';
 
-class AdminManagementScreen extends ConsumerStatefulWidget {
-  const AdminManagementScreen({super.key});
-  @override
-  ConsumerState<AdminManagementScreen> createState() =>
-      _AdminManagementScreenState();
-}
-
-class _AdminManagementScreenState extends ConsumerState<AdminManagementScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 3, vsync: this);
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
+class AdminManagementScreen extends ConsumerWidget {
+  const AdminManagementScreen({super.key, this.initialTab});
+  final String? initialTab;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(appStringsProvider);
     final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
     final superAdmin = role == 'super_admin';
@@ -43,25 +31,31 @@ class _AdminManagementScreenState extends ConsumerState<AdminManagementScreen>
         ),
       );
     }
-    return AppScaffold(
-      appBar: AppBar(
-        title: Text(strings.adminManagementTitle),
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: [
-            Tab(text: strings.adminApplications),
-            Tab(text: strings.adminUsers),
-            Tab(text: strings.adminInvitations),
-          ],
-        ),
+    final initialIndex = superAdmin && initialTab == 'admins' ? 2 : 0;
+    final tabs = <Tab>[
+      Tab(text: strings.adminApplications),
+      Tab(text: strings.adminUsers),
+      if (superAdmin) Tab(text: strings.adminAdministrators),
+      Tab(text: strings.adminInvitations),
+    ];
+    final views = <Widget>[
+      _ApplicationsTab(),
+      _UsersTab(),
+      if (superAdmin) _AdministratorsTab(),
+      superAdmin ? _InvitationsTab() : _RestrictedTab(),
+    ];
+    return DefaultTabController(
+      key: ValueKey(
+        'admin-console-${superAdmin ? 'super' : 'admin'}-$initialIndex',
       ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [
-          _ApplicationsTab(),
-          _UsersTab(),
-          superAdmin ? _InvitationsTab() : _RestrictedTab(),
-        ],
+      length: tabs.length,
+      initialIndex: initialIndex,
+      child: AppScaffold(
+        appBar: AppBar(
+          title: Text(strings.adminManagementTitle),
+          bottom: TabBar(isScrollable: true, tabs: tabs),
+        ),
+        body: TabBarView(children: views),
       ),
     );
   }
@@ -213,6 +207,26 @@ class _UsersTab extends ConsumerWidget {
         icon: Icons.groups_outlined,
         title: strings.adminNoUsers,
         hint: strings.adminNoUsersHint,
+      ),
+      item: (item) => _UserTile(item: item),
+    );
+  }
+}
+
+/// A Super Admin-only view. It deliberately uses the same backend user
+/// endpoint and mutation constraints as the general user list, while keeping
+/// operational administrators easy to find without searching through patients.
+class _AdministratorsTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
+    return _AsyncList<AdminUser>(
+      state: ref.watch(adminUsersByRoleProvider('admin')),
+      retry: () => ref.invalidate(adminUsersByRoleProvider('admin')),
+      empty: EmptyState(
+        icon: Icons.admin_panel_settings_outlined,
+        title: strings.adminNoAdministrators,
+        hint: strings.adminNoAdministratorsHint,
       ),
       item: (item) => _UserTile(item: item),
     );

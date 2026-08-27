@@ -5,8 +5,13 @@ import '../models/admin_management_models.dart';
 class AdminManagementApi {
   AdminManagementApi(this._dio);
   final Dio _dio;
-  Future<List<AdminUser>> users() async =>
-      _list('/admin/users', AdminUser.fromJson);
+  Future<List<AdminUser>> users({String? role}) {
+    final query = role == null || role.isEmpty
+        ? ''
+        : '?role=${Uri.encodeQueryComponent(role)}';
+    return _list('/admin/users$query', AdminUser.fromJson);
+  }
+
   Future<void> setUserActive(String id, bool active) async => _dio.put<void>(
     '/admin/users/$id/${active ? 'reactivate' : 'deactivate'}',
   );

@@ -24,6 +24,7 @@ class RoutePaths {
   static const String savedPlaces = '/saved-places';
   static const String contact = '/contact';
   static const String adminManagement = '/admin/management';
+  static const String doctorPatients = '/doctor/patients';
   static const String virtualDoctor = '/virtual-doctor';
   static const String mapFoundation = '/map-foundation';
   static const String clinics = '/clinics';
@@ -42,6 +43,13 @@ class RoutePaths {
       '/chatbot/conversations/${Uri.encodeComponent(id)}';
   static String sharedDoctorNotesPath(String id) =>
       '/my-doctors/${Uri.encodeComponent(id)}/notes';
+
+  /// Opens a focused section of the operational console. The base path remains
+  /// one protected route; this query parameter only chooses its initial tab.
+  static String adminManagementPath({String? tab}) {
+    if (tab == null || tab.isEmpty) return adminManagement;
+    return '$adminManagement?tab=${Uri.encodeQueryComponent(tab)}';
+  }
 
   static String appointmentBookingPath({String? doctorId}) {
     if (doctorId == null || doctorId.isEmpty) return appointmentBooking;
