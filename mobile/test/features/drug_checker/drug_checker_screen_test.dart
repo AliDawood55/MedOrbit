@@ -62,6 +62,7 @@ void main() {
   });
 
   testWidgets('submitting with fewer than 2 medications shows a validation message and does not call the API', (tester) async {
+    await _useTallSurface(tester);
     final api = _FakeDrugCheckerApi();
     await tester.pumpWidget(_app(api: api));
     await tester.pump();
@@ -74,7 +75,25 @@ void main() {
     expect(api.checkInteractionsCalls, isEmpty);
   });
 
+  testWidgets('common medication chips add distinct medications to the input', (tester) async {
+    final api = _FakeDrugCheckerApi();
+    await tester.pumpWidget(_app(api: api));
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(ActionChip, 'Aspirin'));
+    await tester.tap(find.widgetWithText(ActionChip, 'Warfarin'));
+    await tester.pump();
+
+    final field = tester.widget<TextFormField>(find.byType(TextFormField));
+    expect(field.controller!.text, 'Aspirin\nWarfarin');
+
+    await tester.tap(find.widgetWithText(ActionChip, 'Aspirin'));
+    await tester.pump();
+    expect(field.controller!.text, 'Aspirin\nWarfarin');
+  });
+
   testWidgets('shows a loading state on the submit button while a check is in flight', (tester) async {
+    await _useTallSurface(tester);
     final completer = Completer<DrugCheckResult>();
     final api = _FakeDrugCheckerApi()..checkInteractionsResults.add(completer.future);
     await tester.pumpWidget(_app(api: api));
@@ -175,7 +194,8 @@ void main() {
     await tester.pump();
 
     expect(find.byType(TextFormField), findsOneWidget);
-    expect(find.text('Paracetamol'), findsNothing);
+    final field = tester.widget<TextFormField>(find.byType(TextFormField));
+    expect(field.controller!.text, isEmpty);
     expect(find.text(_strings.drugNoInteractionsTitle), findsNothing);
   });
 

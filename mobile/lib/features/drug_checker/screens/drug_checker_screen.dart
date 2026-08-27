@@ -69,6 +69,7 @@ class DrugCheckerScreen extends ConsumerWidget {
                     strings: strings,
                     isSubmitting: state.isSubmitting,
                     showValidationError: state.showValidationError,
+                    isArabic: isArabic,
                     onChanged: notifier.updateInput,
                     onSubmit: notifier.submit,
                   ),
