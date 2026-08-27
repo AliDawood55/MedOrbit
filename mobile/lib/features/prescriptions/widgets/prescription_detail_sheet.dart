@@ -8,10 +8,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../models/prescription_model.dart';
 
-(String, Color) prescriptionStatusVisual(
-  String status,
-  AppStrings strings,
-) {
+(String, Color) prescriptionStatusVisual(String status, AppStrings strings) {
   switch (status) {
     case 'active':
       return (strings.statusActive, AppTheme.success);
@@ -51,6 +48,7 @@ void showPrescriptionDetailSheet(
   PrescriptionModel prescription,
   AppStrings strings,
   bool isArabic,
+  Future<void> Function(PrescriptionModel prescription) onOpenPdf,
 ) {
   showModalBottomSheet<void>(
     context: context,
@@ -61,10 +59,7 @@ void showPrescriptionDetailSheet(
     builder: (sheetContext) {
       final bottomInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
       return AnimatedPadding(
-        duration: AppTheme.motionDuration(
-          sheetContext,
-          AppTheme.motionFast,
-        ),
+        duration: AppTheme.motionDuration(sheetContext, AppTheme.motionFast),
         curve: Curves.easeOut,
         padding: EdgeInsets.only(bottom: bottomInset),
         child: Align(
@@ -90,6 +85,7 @@ void showPrescriptionDetailSheet(
                     strings: strings,
                     isArabic: isArabic,
                     scrollController: scrollController,
+                    onOpenPdf: onOpenPdf,
                   );
                 },
               ),
@@ -107,21 +103,19 @@ class _PrescriptionDetailContent extends StatelessWidget {
     required this.strings,
     required this.isArabic,
     required this.scrollController,
+    required this.onOpenPdf,
   });
 
   final PrescriptionModel prescription;
   final AppStrings strings;
   final bool isArabic;
   final ScrollController scrollController;
+  final Future<void> Function(PrescriptionModel prescription) onOpenPdf;
 
   @override
   Widget build(BuildContext context) {
     final localeCode = isArabic ? 'ar' : 'en';
-    final title = prescriptionDisplayTitle(
-      prescription,
-      isArabic,
-      strings,
-    );
+    final title = prescriptionDisplayTitle(prescription, isArabic, strings);
     final issuedDate = formatDate(
       parseDateOnly(prescription.prescriptionDate),
       localeCode: localeCode,
@@ -132,8 +126,10 @@ class _PrescriptionDetailContent extends StatelessWidget {
             parseDateOnly(prescription.validUntil!),
             localeCode: localeCode,
           );
-    final (statusLabel, statusColor) =
-        prescriptionStatusVisual(prescription.status, strings);
+    final (statusLabel, statusColor) = prescriptionStatusVisual(
+      prescription.status,
+      strings,
+    );
 
     return CustomScrollView(
       controller: scrollController,
@@ -166,6 +162,7 @@ class _PrescriptionDetailContent extends StatelessWidget {
                   statusColor: statusColor,
                   strings: strings,
                   onClose: () => Navigator.of(context).pop(),
+                  onOpenPdf: () => onOpenPdf(prescription),
                 ),
               ),
               const Divider(),
@@ -206,9 +203,7 @@ class _PrescriptionDetailContent extends StatelessWidget {
                     ),
                     _DetailFieldData(
                       label: strings.detailMedications,
-                      value: strings.medicationCount(
-                        prescription.items.length,
-                      ),
+                      value: strings.medicationCount(prescription.items.length),
                       icon: Icons.medication_outlined,
                     ),
                   ],
@@ -219,9 +214,7 @@ class _PrescriptionDetailContent extends StatelessWidget {
                 _DetailSection(
                   title: strings.detailDiagnosis,
                   icon: Icons.medical_information_outlined,
-                  child: _DetailTextCard(
-                    value: prescription.diagnosis!.trim(),
-                  ),
+                  child: _DetailTextCard(value: prescription.diagnosis!.trim()),
                 ),
               ],
               if (prescription.instructions?.trim().isNotEmpty == true) ...[
@@ -291,6 +284,7 @@ class _DetailHeader extends StatelessWidget {
     required this.statusColor,
     required this.strings,
     required this.onClose,
+    required this.onOpenPdf,
   });
 
   final String title;
@@ -300,6 +294,7 @@ class _DetailHeader extends StatelessWidget {
   final Color statusColor;
   final AppStrings strings;
   final VoidCallback onClose;
+  final Future<void> Function() onOpenPdf;
 
   @override
   Widget build(BuildContext context) {
@@ -356,7 +351,8 @@ class _DetailHeader extends StatelessWidget {
       label: strings.prescriptionNumberValue(prescriptionNumber),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final stack = constraints.maxWidth < AppTheme.compactBreakpoint ||
+          final stack =
+              constraints.maxWidth < AppTheme.compactBreakpoint ||
               AppTheme.usesLargeText(context);
           if (stack) {
             return Column(
@@ -367,6 +363,11 @@ class _DetailHeader extends StatelessWidget {
                   children: [
                     icon,
                     const Spacer(),
+                    IconButton(
+                      tooltip: strings.prescriptionPdfAction,
+                      onPressed: onOpenPdf,
+                      icon: const Icon(Icons.picture_as_pdf_outlined),
+                    ),
                     IconButton(
                       tooltip: strings.close,
                       onPressed: onClose,
@@ -386,6 +387,11 @@ class _DetailHeader extends StatelessWidget {
               icon,
               const SizedBox(width: AppTheme.spaceMd),
               Expanded(child: heading),
+              IconButton(
+                tooltip: strings.prescriptionPdfAction,
+                onPressed: onOpenPdf,
+                icon: const Icon(Icons.picture_as_pdf_outlined),
+              ),
               IconButton(
                 tooltip: strings.close,
                 onPressed: onClose,
@@ -423,8 +429,8 @@ class _DetailSection extends StatelessWidget {
               child: Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: AppTheme.weightBold,
-                    ),
+                  fontWeight: AppTheme.weightBold,
+                ),
               ),
             ),
           ],
@@ -446,13 +452,12 @@ class _DetailFieldGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final largeText = AppTheme.usesLargeText(context);
-        final columns = constraints.maxWidth >= AppTheme.wideBreakpoint &&
-                !largeText
+        final columns =
+            constraints.maxWidth >= AppTheme.wideBreakpoint && !largeText
             ? 2
             : 1;
         final gap = AppTheme.spaceMd;
-        final width =
-            (constraints.maxWidth - (gap * (columns - 1))) / columns;
+        final width = (constraints.maxWidth - (gap * (columns - 1))) / columns;
         return Wrap(
           spacing: gap,
           runSpacing: gap,
@@ -509,10 +514,8 @@ class _DetailField extends StatelessWidget {
                 Text(
                   field.label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: AppTheme.spaceXs),
                 Directionality(
@@ -554,10 +557,8 @@ class _DetailTextCard extends StatelessWidget {
             Text(
               label!,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: AppTheme.spaceXs),
           ],
@@ -649,8 +650,8 @@ class _MedicationCard extends StatelessWidget {
                     child: Text(
                       displayName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: AppTheme.weightBold,
-                          ),
+                        fontWeight: AppTheme.weightBold,
+                      ),
                     ),
                   ),
                 ],

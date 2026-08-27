@@ -53,6 +53,14 @@
                     <p data-i18n="auth.registerSubtitle">انضم إلى MedOrbit وابدأ رحلتك الصحية</p>
                 </div>
 
+                <aside id="doctorApplicationIntro" class="auth-role-help hidden">
+                    <i class="fas fa-user-doctor" aria-hidden="true"></i>
+                    <div>
+                        <strong data-i18n="auth.doctorRegisterTitle">التقديم للانضمام كطبيب</strong>
+                        <p data-i18n="auth.doctorRegisterDesc">أنشئ حسابك أولاً، ثم فعّل بريدك وسجّل الدخول لإرسال بياناتك المهنية للمراجعة.</p>
+                    </div>
+                </aside>
+
                 <div class="alert" id="alertBox">
                     <i class="fas fa-circle-exclamation"></i>
                     <span id="alertMsg"></span>
@@ -176,7 +184,8 @@
     <script src="../src/utils/store.js"></script>
 
     <script src="../src/js/api.js"></script>
-    <script src="../src/js/i18n.js"></script>
+    <!-- Versioned because these auth pages add new translation keys over time. -->
+    <script src="../src/js/i18n.js?v=auth-doctor-signup-20260825"></script>
     <script src="../src/js/theme.js"></script>
     <script src="../src/js/toast.js"></script>
     <script src="../src/js/layout.js"></script>
@@ -186,6 +195,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             Layout.init();
+            if (new URLSearchParams(window.location.search).get('intent') === 'doctor') {
+                document.getElementById('doctorApplicationIntro')?.classList.remove('hidden');
+            }
             GoogleSignIn.init('googleSignInBtn');
         });
     </script>

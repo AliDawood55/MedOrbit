@@ -17,6 +17,10 @@ const {
     withCanonicalContent
 } = require("../utils/bilingualUserContent");
 
+function isRating(value) {
+    return Number.isInteger(value) && value >= 1 && value <= 5;
+}
+
 
 
 
@@ -82,6 +86,18 @@ router.post(
                 label: 'Review text'
             });
 
+            if (!isRating(rating)
+                || !isRating(professionalism_rating)
+                || !isRating(treatment_rating)
+                || !isRating(communication_rating)) {
+                return error(res, "Ratings must be whole numbers from 1 to 5", 400, "VALIDATION_ERROR");
+            }
+
+            if ((reviewText.ar && reviewText.ar.length > 5000)
+                || (reviewText.en && reviewText.en.length > 5000)) {
+                return error(res, "Review text is too long", 400, "VALIDATION_ERROR");
+            }
+
 
 
             // Check appointment
@@ -114,6 +130,25 @@ router.post(
                     "INVALID_APPOINTMENT"
                 );
 
+            }
+
+            // The canonical database enforces one review per appointment.
+            // Check first so a normal duplicate attempt receives a stable API
+            // response instead of a raw PostgreSQL unique-constraint error.
+            const existingReview = await db.query(
+                `SELECT id
+                 FROM medorbit.doctor_reviews
+                 WHERE appointment_id=$1`,
+                [appointment_id]
+            );
+
+            if (existingReview.rows.length) {
+                return error(
+                    res,
+                    "A review already exists for this appointment",
+                    409,
+                    "DUPLICATE_REVIEW"
+                );
             }
 
 
@@ -203,6 +238,17 @@ router.post(
 
         }
         catch (err) {
+
+            // Keep the concurrent-request race stable as well. The unique
+            // database constraint remains the final authority.
+            if (err.code === "23505") {
+                return error(
+                    res,
+                    "A review already exists for this appointment",
+                    409,
+                    "DUPLICATE_REVIEW"
+                );
+            }
 
             next(err);
 

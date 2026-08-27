@@ -1,0 +1,3 @@
+# Docker executes these files with Bash even when the repository is checked out
+# on Windows. CRLF would make the shell parse command names with a trailing \r.
+*.sh text eol=lf

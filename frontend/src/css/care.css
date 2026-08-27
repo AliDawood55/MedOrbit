@@ -383,20 +383,7 @@
     margin-bottom: 12px;
 }
 
-/* === Prescription medication items === */
-.rx-item-card {
-    position: relative;
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    margin-bottom: 12px;
-}
-
-.rx-item-remove {
-    position: absolute;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
-}
+.patient-detail-page .care-prescriptions-section .rx-item-card .rx-item-remove:focus-visible {}
 
 @media (max-width: 768px) {
     .care-detail-header {

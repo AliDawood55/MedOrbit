@@ -19,6 +19,10 @@ class RoutePaths {
   static const String drugChecker = '/drug-checker';
   static const String reportSummarizer = '/report-summarizer';
   static const String myReports = '/my-reports';
+  static const String myDoctors = '/my-doctors';
+  static const String sharedDoctorNotes = '/my-doctors/:id/notes';
+  static const String savedPlaces = '/saved-places';
+  static const String contact = '/contact';
   static const String virtualDoctor = '/virtual-doctor';
   static const String mapFoundation = '/map-foundation';
   static const String clinics = '/clinics';
@@ -35,6 +39,8 @@ class RoutePaths {
       '/doctors/${Uri.encodeComponent(id)}';
   static String chatbotConversationPath(String id) =>
       '/chatbot/conversations/${Uri.encodeComponent(id)}';
+  static String sharedDoctorNotesPath(String id) =>
+      '/my-doctors/${Uri.encodeComponent(id)}/notes';
 
   static String appointmentBookingPath({String? doctorId}) {
     if (doctorId == null || doctorId.isEmpty) return appointmentBooking;

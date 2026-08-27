@@ -1,10 +1,11 @@
 const express = require('express');
 
 const db = require('../config/database');
+const { createAudit } = require('../services/audit.service');
 
 const {
     authenticate,
-    authorize
+    authorizeAdmin
 } = require('../middleware/auth');
 
 const {
@@ -15,13 +16,21 @@ const {
 
 const router = express.Router();
 
+function isNonEmptyString(value, maxLength) {
+    return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength;
+}
+
+function isTemplateVariables(value) {
+    return value === undefined || (value !== null && typeof value === 'object' && !Array.isArray(value));
+}
+
 
 
 // GET ALL templates
 router.get(
     "/",
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -37,7 +46,6 @@ ORDER BY created_at DESC
 `
 
             );
-
 
             return success(
                 res,
@@ -66,7 +74,7 @@ router.get(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
 
@@ -127,11 +135,10 @@ router.post(
     "/",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
 
 
@@ -147,9 +154,19 @@ router.post(
 
             } = req.body;
 
+            if (!isNonEmptyString(name, 100) || !isNonEmptyString(type, 50)
+                || !isNonEmptyString(subject_en, 255) || !isNonEmptyString(body_html, 100000)
+                || (subject_ar !== undefined && subject_ar !== null && (typeof subject_ar !== 'string' || subject_ar.length > 255))
+                || (body_text !== undefined && body_text !== null && typeof body_text !== 'string')
+                || !isTemplateVariables(variables)) {
+                return error(res, "Invalid notification template fields", 400, "VALIDATION_ERROR");
+            }
 
 
-            const result = await db.query(
+
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const result = await client.query(
 
                 `
 INSERT INTO medorbit.notification_templates
@@ -183,6 +200,16 @@ RETURNING *
 
             );
 
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'NOTIFICATION_TEMPLATE_CREATED',
+                entity_type: 'NOTIFICATION_TEMPLATE',
+                entity_id: result.rows[0].id,
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
+
 
 
             return success(
@@ -194,9 +221,10 @@ RETURNING *
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 
@@ -213,11 +241,10 @@ router.put(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
 
 
@@ -232,9 +259,30 @@ router.put(
 
             } = req.body;
 
+            if ((subject_en !== undefined && !isNonEmptyString(subject_en, 255))
+                || (subject_ar !== undefined && subject_ar !== null && (typeof subject_ar !== 'string' || subject_ar.length > 255))
+                || (body_html !== undefined && !isNonEmptyString(body_html, 100000))
+                || (body_text !== undefined && body_text !== null && typeof body_text !== 'string')
+                || (is_active !== undefined && typeof is_active !== 'boolean')
+                || !isTemplateVariables(variables)) {
+                return error(res, "Invalid notification template fields", 400, "VALIDATION_ERROR");
+            }
 
 
-            await db.query(
+
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const previous = await client.query(
+                `SELECT id, name, type, subject_en, subject_ar, body_html, body_text, variables, is_active
+                 FROM medorbit.notification_templates WHERE id = $1 FOR UPDATE`,
+                [req.params.id]
+            );
+            if (previous.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return error(res, "Template not found", 404, "NOT_FOUND");
+            }
+
+            const result = await client.query(
 
                 `
 
@@ -255,6 +303,7 @@ variables = COALESCE($5,variables),
 is_active = COALESCE($6,is_active)
 
 WHERE id=$7
+RETURNING *
 
 `,
 
@@ -270,6 +319,17 @@ WHERE id=$7
 
             );
 
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'NOTIFICATION_TEMPLATE_UPDATED',
+                entity_type: 'NOTIFICATION_TEMPLATE',
+                entity_id: result.rows[0].id,
+                old_values: previous.rows[0],
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
+
 
 
             return success(
@@ -282,9 +342,10 @@ WHERE id=$7
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
     });
@@ -300,15 +361,24 @@ router.delete(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const previous = await client.query(
+                `SELECT id, name, type, subject_en, subject_ar, body_html, body_text, variables, is_active
+                 FROM medorbit.notification_templates WHERE id = $1 FOR UPDATE`,
+                [req.params.id]
+            );
+            if (previous.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return error(res, "Template not found", 404, "NOT_FOUND");
+            }
 
-
-            const result = await db.query(
+            const result = await client.query(
 
                 `
                 UPDATE medorbit.notification_templates
@@ -329,16 +399,16 @@ router.delete(
             );
 
 
-            if (result.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Template not found",
-                    404,
-                    "NOT_FOUND"
-                );
-
-            }
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'NOTIFICATION_TEMPLATE_DEACTIVATED',
+                entity_type: 'NOTIFICATION_TEMPLATE',
+                entity_id: result.rows[0].id,
+                old_values: previous.rows[0],
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
 
 
             return success(
@@ -351,9 +421,10 @@ router.delete(
         }
 
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 

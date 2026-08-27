@@ -25,8 +25,9 @@ function firstProvided(body, keys) {
 
 /**
  * Accept one canonical user-content field while retaining legacy Arabic/English
- * payloads. Canonical input is copied verbatim (apart from outer whitespace)
- * to both existing columns; legacy input keeps the two historical values apart.
+ * payloads. Canonical text is copied to both existing columns. A canonical
+ * `{ ar, en }` object preserves its two language values; legacy input keeps
+ * the two historical values apart.
  */
 function resolveBilingualUserContent(rawBody, options) {
     const body = rawBody && typeof rawBody === 'object' ? rawBody : {};
@@ -40,17 +41,21 @@ function resolveBilingualUserContent(rawBody, options) {
     } = options;
 
     if (hasOwn(body, canonicalKey)) {
-        const canonical = normalizeText(body[canonicalKey]);
+        const supplied = body[canonicalKey];
+        const isBilingualObject = supplied !== null && typeof supplied === 'object' && !Array.isArray(supplied);
+        const ar = isBilingualObject ? normalizeText(supplied.ar) : normalizeText(supplied);
+        const en = isBilingualObject ? normalizeText(supplied.en) : normalizeText(supplied);
+        const canonical = ar || en || null;
         if (required && !canonical) throw validationError(`${label} is required`);
-        if (canonical && maxLength && canonical.length > maxLength) {
+        if (maxLength && ((ar && ar.length > maxLength) || (en && en.length > maxLength))) {
             throw validationError(`${label} is too long`);
         }
         return {
             provided: true,
             source: 'canonical',
             canonical,
-            ar: canonical,
-            en: canonical,
+            ar,
+            en,
             arProvided: true,
             enProvided: true,
         };

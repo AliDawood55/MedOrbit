@@ -37,7 +37,12 @@ class PrescriptionModel {
       instructions: json['instructions'] as String?,
       doctorNotes: json['doctor_notes'] as String?,
       items: rawItems is List
-          ? rawItems.map((e) => PrescriptionItemModel.fromJson(e as Map<String, dynamic>)).toList()
+          ? rawItems
+                .map(
+                  (e) =>
+                      PrescriptionItemModel.fromJson(e as Map<String, dynamic>),
+                )
+                .toList()
           : const [],
     );
   }

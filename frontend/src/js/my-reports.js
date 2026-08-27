@@ -5,6 +5,9 @@
  *   GET /users/me/saved-places
  * Prescriptions/medical-records have their own dedicated pages
  * (my-prescriptions.html / my-records.html) and are out of scope here.
+ * Medical-record and prescription endpoints now exist. This legacy summary
+ * intentionally remains limited to its original endpoint set until the new
+ * client report experience is implemented.
  * Printing is plain browser window.print() against the print stylesheet
  * in reports.css — no PDF library.
  */

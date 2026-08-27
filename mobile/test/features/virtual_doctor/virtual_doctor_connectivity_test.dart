@@ -12,15 +12,18 @@ import 'package:mobile/features/virtual_doctor/providers/virtual_doctor_provider
 
 void main() {
   group('AI health preflight', () {
-    test('an unreachable service blocks the consultation with a safe state', () async {
-      final harness = _Harness(health: AiHealthStatus.unreachable);
-      addTearDown(harness.dispose);
+    test(
+      'an unreachable service blocks the consultation with a safe state',
+      () async {
+        final harness = _Harness(health: AiHealthStatus.unreachable);
+        addTearDown(harness.dispose);
 
-      await harness.controller.startConsultation('ar');
+        await harness.controller.startConsultation('ar');
 
-      expect(harness.controller.state.state, ConsultState.error);
-      expect(harness.controller.state.errorMessage, 'ai_unavailable');
-    });
+        expect(harness.controller.state.state, ConsultState.error);
+        expect(harness.controller.state.errorMessage, 'ai_unavailable');
+      },
+    );
 
     test('a failed preflight never asks for the microphone', () async {
       // Asking for a permission the app then cannot use is a bad prompt to
@@ -53,7 +56,11 @@ void main() {
         final harness = _Harness(health: status);
         await harness.controller.startConsultation('ar');
 
-        expect(harness.controller.state.errorMessage, 'ai_unavailable', reason: '$status');
+        expect(
+          harness.controller.state.errorMessage,
+          'ai_unavailable',
+          reason: '$status',
+        );
         harness.dispose();
       }
     });
@@ -73,7 +80,9 @@ void main() {
 
   group('start failure categories', () {
     test('a connect timeout maps to the AI timeout message', () async {
-      final harness = _Harness(startFailure: DioExceptionType.connectionTimeout);
+      final harness = _Harness(
+        startFailure: DioExceptionType.connectionTimeout,
+      );
       addTearDown(harness.dispose);
 
       await harness.controller.startConsultation('ar');
@@ -100,19 +109,22 @@ void main() {
       expect(harness.controller.state.errorMessage, 'ai_unreachable');
     });
 
-    test('an unclassified failure falls back to a mapped code, never a raw one', () async {
-      // `start_${api.code}` used to produce codes like `start_UNKNOWN_ERROR`,
-      // which the string mapper did not recognise and rendered verbatim.
-      final harness = _Harness(startFailure: DioExceptionType.unknown);
-      addTearDown(harness.dispose);
+    test(
+      'an unclassified failure falls back to a mapped code, never a raw one',
+      () async {
+        // `start_${api.code}` used to produce codes like `start_UNKNOWN_ERROR`,
+        // which the string mapper did not recognise and rendered verbatim.
+        final harness = _Harness(startFailure: DioExceptionType.unknown);
+        addTearDown(harness.dispose);
 
-      await harness.controller.startConsultation('ar');
+        await harness.controller.startConsultation('ar');
 
-      final code = harness.controller.state.errorMessage!;
-      expect(code, 'ai_failed');
-      expect(code, isNot(contains('UNKNOWN_ERROR')));
-      expect(const AppStrings(false).vdError(code), isNot(code));
-    });
+        final code = harness.controller.state.errorMessage!;
+        expect(code, 'ai_failed');
+        expect(code, isNot(contains('UNKNOWN_ERROR')));
+        expect(const AppStrings(false).vdError(code), isNot(code));
+      },
+    );
 
     test('a failed start invalidates the cached health pass', () async {
       final harness = _Harness(startFailure: DioExceptionType.connectionError);
@@ -129,7 +141,10 @@ void main() {
 
   group('duplicate start', () {
     test('two rapid taps issue exactly one /virtual-doctor/start', () async {
-      final harness = _Harness(health: AiHealthStatus.available, holdStart: true);
+      final harness = _Harness(
+        health: AiHealthStatus.available,
+        holdStart: true,
+      );
       addTearDown(harness.dispose);
 
       final first = harness.controller.startConsultation('ar');
@@ -184,7 +199,10 @@ void main() {
       const strings = AppStrings(false);
 
       expect(strings.vdError('start_UNKNOWN_ERROR'), strings.vdErrGeneric);
-      expect(strings.vdError(r'FileSystemException: C:\patients\record.pdf'), strings.vdErrGeneric);
+      expect(
+        strings.vdError(r'FileSystemException: C:\patients\record.pdf'),
+        strings.vdErrGeneric,
+      );
     });
 
     test('the unavailable message names no host, port or diagnostic', () {
@@ -203,10 +221,10 @@ class _Harness {
     AiHealthStatus health = AiHealthStatus.available,
     DioExceptionType? startFailure,
     bool holdStart = false,
-  })  : health = _FakeHealth(health),
-        api = _FakeApi(startFailure: startFailure, hold: holdStart),
-        recorder = _FakeRecorder(),
-        tts = _FakeTts() {
+  }) : health = _FakeHealth(health),
+       api = _FakeApi(startFailure: startFailure, hold: holdStart),
+       recorder = _FakeRecorder(),
+       tts = _FakeTts() {
     controller = VirtualDoctorController(api, recorder, tts, this.health);
   }
 
@@ -239,8 +257,8 @@ class _FakeHealth extends AiHealthClient {
 
 class _FakeApi extends VirtualDoctorApi {
   _FakeApi({this.startFailure, bool hold = false})
-      : _gate = hold ? Completer<void>() : null,
-        super(Dio());
+    : _gate = hold ? Completer<void>() : null,
+      super(Dio());
 
   DioExceptionType? startFailure;
   int startCalls = 0;

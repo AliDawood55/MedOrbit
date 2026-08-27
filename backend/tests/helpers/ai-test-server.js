@@ -25,7 +25,44 @@ const server = http.createServer(async (req, res) => {
     try {
         if (req.method === 'GET' && req.url === '/health') return send(res, 200, { status: 'healthy' });
         if (req.method === 'POST' && req.url === '/drug-interactions') {
+            const body = await readJson(req);
+            const userId = req.headers['x-medorbit-user-id'] || null;
+            const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
+            }
+            if ((body.medication_names || []).includes('__UPSTREAM_FAIL__')) {
+                return send(res, 503, { detail: 'Simulated AI outage' });
+            }
             return send(res, 200, { has_interactions: false, interaction_count: 0, interactions: [], severity_summary: {} });
+        }
+        if (req.method === 'POST' && req.url === '/prescription-check') {
+            const body = await readJson(req);
+            const userId = req.headers['x-medorbit-user-id'] || null;
+            const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
+            }
+            const names = (body.prescription_items || []).map((item) => String(item.medication_name_en || ''));
+            if (names.includes('__PRESCRIPTION_CHECK_UNAVAILABLE__')) {
+                return send(res, 503, { detail: 'Simulated prescription-check outage' });
+            }
+            if (names.includes('__PRESCRIPTION_CHECK_MALFORMED__')) {
+                return send(res, 200, { invalid: true });
+            }
+            if (names.includes('__PRESCRIPTION_CHECK_WARNING__')) {
+                return send(res, 200, {
+                    prescription_safe: false,
+                    interactions: [{
+                        drug_1: { name_en: 'Drug A' },
+                        drug_2: { name_en: 'Drug B' },
+                        severity: 'severe',
+                        description: 'Simulated severe interaction',
+                    }],
+                    warnings: ['[SEVERE] Drug A + Drug B: Simulated severe interaction'],
+                });
+            }
+            return send(res, 200, { prescription_safe: true, interactions: [], warnings: [] });
         }
         if (req.method === 'POST' && req.url === '/triage') {
             const body = await readJson(req);
@@ -33,8 +70,8 @@ const server = http.createServer(async (req, res) => {
 
             const userId = req.headers['x-medorbit-user-id'] || null;
             const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
-            if (userId && suppliedToken !== getInternalToken()) {
-                return send(res, 403, { detail: 'Invalid internal identity context' });
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
             }
             const inserted = await pool.query(
                 `INSERT INTO medorbit.symptom_triage_sessions
@@ -63,6 +100,11 @@ const server = http.createServer(async (req, res) => {
         // the consume path.
         if (req.method === 'POST' && req.url === '/chat') {
             const body = await readJson(req);
+            const userId = req.headers['x-medorbit-user-id'] || null;
+            const suppliedToken = req.headers['x-medorbit-internal-token'] || null;
+            if (!userId || suppliedToken !== getInternalToken()) {
+                return send(res, 403, { detail: 'Internal identity context is required' });
+            }
             // Sentinel for the failure path. A real AI outage is what the
             // release-on-failure logic exists for, and it cannot be exercised
             // through a stub that always succeeds.

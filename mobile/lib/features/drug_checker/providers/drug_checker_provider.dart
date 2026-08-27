@@ -6,7 +6,7 @@ import '../data/drug_checker_api.dart';
 import '../models/drug_check_result.dart';
 
 final drugCheckerApiProvider = Provider<DrugCheckerApi>(
-  (ref) => DrugCheckerApi(ref.watch(aiDioProvider)),
+  (ref) => DrugCheckerApi(ref.watch(dioProvider)),
 );
 
 enum DrugCheckErrorKind { timeout, serviceUnavailable, generic }

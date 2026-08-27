@@ -13,15 +13,14 @@ void main() {
       expect(await AiHealthClient(fake.dio).check(), AiHealthStatus.available);
     });
 
-    test('hits /health on the AI base with no /api prefix', () async {
+    test('hits the backend health endpoint through the API base', () async {
       final fake = _FakeAiDio.responding(200);
 
       await AiHealthClient(fake.dio).check();
 
       expect(fake.requests.single.path, '/health');
-      expect(fake.requests.single.uri.path, '/health');
-      expect(fake.requests.single.uri.toString(), isNot(contains('/api')));
-      expect(fake.requests.single.uri.port, AppConfig.aiServicePort);
+      expect(fake.requests.single.uri.path, '/api/health');
+      expect(fake.requests.single.uri.port, 3001);
     });
 
     test('applies a short bounded budget, not the 120s AI message timeout', () async {
@@ -114,7 +113,7 @@ void main() {
         body: {
           'model': 'qwen2:7b',
           'device': 'cuda',
-          'host': '192.168.0.105',
+          'host': '192.0.2.1',
           'sessions': ['private-session-id'],
         },
       );
@@ -148,8 +147,9 @@ void main() {
 class _FakeAiDio {
   _FakeAiDio._(void Function(RequestOptions, RequestInterceptorHandler) onRequest)
       : dio = Dio(BaseOptions(
-          baseUrl: 'http://192.168.0.105:8001',
-          // Mirrors aiDioProvider: a long budget the probe must override.
+          baseUrl: 'http://192.0.2.1:3001/api',
+          // Mirrors the backend API client: the probe must still override
+          // its ordinary request budget with the short health budget.
           connectTimeout: AppConfig.connectTimeout,
           receiveTimeout: AppConfig.aiMessageTimeout,
           sendTimeout: AppConfig.aiMessageTimeout,

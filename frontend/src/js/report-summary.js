@@ -1,7 +1,6 @@
 /**
  * MedOrbit v2 - Medical Report Summarizer
- * Calls the AI service directly: POST <current-host>:8001/summarize
- * (multipart/form-data, open CORS, no auth — this is not the Node backend).
+ * Uses the authenticated backend gateway: POST /api/ai/summarize.
  */
 const ReportSummary = (() => {
 

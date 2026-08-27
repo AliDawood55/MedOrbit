@@ -110,7 +110,7 @@ class DrugInteractionMatcher:
         seen_pairs: set = set()
 
         for i, drug_a in enumerate(meds):
-            interactions_jsonb = drug_a.get("known_interactions") or {}
+            interactions_jsonb = self._interaction_map(drug_a.get("known_interactions"))
 
             # known_interactions can be: {"Aspirin": "Moderate - increases bleeding risk"}
             # or: {"<uuid>": "Severe - ..."}
@@ -142,7 +142,7 @@ class DrugInteractionMatcher:
 
         # 3) Also check drug_b interactions for drug_a (bidirectional)
         for j, drug_b in enumerate(meds):
-            interactions_jsonb = drug_b.get("known_interactions") or {}
+            interactions_jsonb = self._interaction_map(drug_b.get("known_interactions"))
             for i, drug_a in enumerate(meds):
                 if i == j:
                     continue
@@ -221,6 +221,20 @@ class DrugInteractionMatcher:
                 return str(value)
 
         return None
+
+    @staticmethod
+    def _interaction_map(value: Any) -> Dict[str, Any]:
+        """Normalize PostgreSQL JSONB returned as either a mapping or text."""
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                decoded = json.loads(value)
+            except json.JSONDecodeError:
+                logger.warning("Ignoring malformed medication known_interactions JSON")
+                return {}
+            return decoded if isinstance(decoded, dict) else {}
+        return {}
 
     @staticmethod
     def _classify_severity(description: str) -> str:

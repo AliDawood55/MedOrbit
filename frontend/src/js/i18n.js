@@ -156,6 +156,10 @@ const I18n = (() => {
             'auth.submitReset': 'تعيين كلمة المرور الجديدة',
             'auth.noAccount': 'ليس لديك حساب؟',
             'auth.haveAccount': 'لديك حساب بالفعل؟',
+            'auth.patientSignUp': 'إنشاء حساب مريض',
+            'auth.doctorSignUp': 'التقديم كطبيب',
+            'auth.doctorRegisterTitle': 'التقديم للانضمام كطبيب',
+            'auth.doctorRegisterDesc': 'أنشئ حسابك أولاً، ثم فعّل بريدك وسجّل الدخول لإرسال بياناتك المهنية للمراجعة.',
             'auth.forgotPassword': 'نسيت كلمة المرور؟',
             'auth.backToLogin': 'العودة لتسجيل الدخول',
             'auth.verify.checking': 'جارِ التحقق من بريدك الإلكتروني...',
@@ -311,6 +315,7 @@ const I18n = (() => {
             'drugChecker.severityUnknown': 'غير محدد',
             'drugChecker.checkAnother': 'فحص أدوية أخرى',
             'drugChecker.disclaimer': 'استشر الصيدلاني أو الطبيب دائماً قبل إجراء أي تغيير على أدويتك.',
+            'drugChecker.bleedingRiskWarning': 'خطر نزيف شديد متزايد. قد يُستخدم الدواءان معاً فقط تحت متابعة يحددها الطبيب؛ لا تبدأ أو توقف أيًّا منهما قبل استشارة الطبيب أو الصيدلي.',
 
             // Report Summarizer
             'reportSummary.title': 'تلخيص التقارير الطبية',
@@ -759,27 +764,31 @@ const I18n = (() => {
             'patientDetail.errorNoteRequired': 'الرجاء إدخال الشكوى الرئيسية أو ملاحظات إكلينيكية',
             'patientDetail.errorAppointmentRequired': 'الرجاء اختيار الموعد المرتبط بهذا السجل',
             'patientDetail.noAppointmentForRecord': 'لا يوجد موعد مع هذا المريض بعد، لذا لا يمكن إنشاء سجل طبي',
-            'patientDetail.addPrescription': 'إنشاء وصفة طبية',
-            'patientDetail.rxValidUntil': 'صالحة حتى',
-            'patientDetail.rxInstructions': 'تعليمات للمريض',
-            'patientDetail.medications': 'الأدوية',
-            'patientDetail.medicationNameAr': 'اسم الدواء (عربي)',
-            'patientDetail.medicationNameEn': 'اسم الدواء (إنجليزي)',
-            'patientDetail.dosage': 'الجرعة',
-            'patientDetail.frequency': 'عدد مرات الاستخدام',
-            'patientDetail.duration': 'مدة العلاج',
-            'patientDetail.quantity': 'الكمية',
-            'patientDetail.itemInstructions': 'تعليمات هذا الدواء',
-            'patientDetail.addMedication': 'إضافة دواء',
-            'patientDetail.removeMedication': 'إزالة الدواء',
-            'patientDetail.savePrescription': 'حفظ الوصفة',
-            'patientDetail.noAppointmentForRx': 'لا يوجد موعد مع هذا المريض بعد، لذا لا يمكن إنشاء وصفة طبية',
-            'patientDetail.errorRxAppointmentRequired': 'الرجاء اختيار الموعد المرتبط بهذه الوصفة',
-            'patientDetail.errorRxItemRequired': 'الرجاء إكمال بيانات كل دواء: الاسم بالعربية والإنجليزية، الجرعة، عدد المرات، والكمية',
-            'patientDetail.rxSavedTitle': 'تم حفظ الوصفة',
-            'patientDetail.rxSavedHint': 'تمت إضافة الوصفة الطبية إلى ملف المريض.',
-            'patientDetail.rxErrorTitle': 'تعذر حفظ الوصفة',
-            'patientDetail.rxErrorHint': 'حدث خطأ أثناء الحفظ. الرجاء المحاولة مرة أخرى.',
+
+            'patientDetail.prescriptionComposerTitle': 'إنشاء وصفة طبية',
+            'patientDetail.prescriptionComposerHint': 'اختر موعداً لهذا المريض وأضف دواءً واحداً على الأقل. تظهر تنبيهات التداخلات بعد الحفظ ولا تغيّر قرار الطبيب.',
+            'patientDetail.prescriptionAppointment': 'الموعد',
+            'patientDetail.prescriptionSelectAppointment': 'اختر موعداً',
+            'patientDetail.prescriptionValidUntil': 'صالحة حتى (اختياري)',
+            'patientDetail.prescriptionInstructions': 'تعليمات عامة للمريض',
+            'patientDetail.prescriptionPrivateNotes': 'ملاحظات خاصة بالطبيب (لا تظهر للمريض)',
+            'patientDetail.prescriptionItems': 'الأدوية',
+            'patientDetail.prescriptionItem': 'دواء',
+            'patientDetail.prescriptionMedicationEnglish': 'اسم الدواء بالإنجليزية',
+            'patientDetail.prescriptionMedicationArabic': 'اسم الدواء بالعربية (اختياري)',
+            'patientDetail.prescriptionDosage': 'الجرعة',
+            'patientDetail.prescriptionFrequency': 'التكرار',
+            'patientDetail.prescriptionDuration': 'المدة (اختياري)',
+            'patientDetail.prescriptionQuantity': 'الكمية',
+            'patientDetail.prescriptionItemInstructions': 'تعليمات الدواء (اختياري)',
+            'patientDetail.prescriptionAddItem': 'إضافة دواء',
+            'patientDetail.prescriptionRemoveItem': 'حذف',
+            'patientDetail.prescriptionCreate': 'حفظ الوصفة الطبية',
+            'patientDetail.prescriptionCreated': 'تم حفظ الوصفة الطبية بنجاح.',
+            'patientDetail.prescriptionSafetyWarning': 'تم حفظ الوصفة، لكن توجد تنبيهات دوائية ينبغي مراجعتها قبل إرشاد المريض.',
+            'patientDetail.prescriptionSafetyUnavailable': 'تم حفظ الوصفة، لكن تعذر التحقق من التداخلات الدوائية حالياً.',
+            'patientDetail.prescriptionValidation': 'اختر موعداً وأكمل اسم الدواء والجرعة والتكرار والكمية.',
+
             'patientDetail.editRecord': 'تعديل',
             'patientDetail.deleteRecord': 'حذف',
             'patientDetail.editRecordTitle': 'تعديل السجل الطبي',
@@ -794,7 +803,6 @@ const I18n = (() => {
             'patientDetail.deleteConfirmBtn': 'حذف',
             'patientDetail.deleteSuccess': 'تم حذف السجل',
             'patientDetail.deleteError': 'تعذر حذف السجل',
-
             // My Doctor (patient's view of their doctor — no backend yet)
             'myDoctor.title': 'طبيبي',
             'myDoctor.subtitle': 'الأطباء المعالجون لك والملاحظات المشتركة معك',
@@ -1018,6 +1026,10 @@ const I18n = (() => {
             'auth.submitReset': 'Set new password',
             'auth.noAccount': "Don't have an account?",
             'auth.haveAccount': 'Already have an account?',
+            'auth.patientSignUp': 'Create patient account',
+            'auth.doctorSignUp': 'Apply as a doctor',
+            'auth.doctorRegisterTitle': 'Apply to join as a doctor',
+            'auth.doctorRegisterDesc': 'Create your account first, then verify your email and sign in to submit your professional details for review.',
             'auth.forgotPassword': 'Forgot password?',
             'auth.backToLogin': 'Back to login',
             'auth.verify.checking': 'Verifying your email...',
@@ -1173,6 +1185,7 @@ const I18n = (() => {
             'drugChecker.severityUnknown': 'Unknown',
             'drugChecker.checkAnother': 'Check other medications',
             'drugChecker.disclaimer': 'Always consult a pharmacist or doctor before making any change to your medications.',
+            'drugChecker.bleedingRiskWarning': 'Severe increased bleeding risk. Using both medicines together may be intentional only with prescriber-directed monitoring; do not start or stop either medicine without consulting a clinician or pharmacist.',
 
             // Report Summarizer
             'reportSummary.title': 'Medical Report Summarizer',
@@ -1621,27 +1634,31 @@ const I18n = (() => {
             'patientDetail.errorNoteRequired': 'Please enter a chief complaint or clinical notes',
             'patientDetail.errorAppointmentRequired': 'Please select the appointment this record belongs to',
             'patientDetail.noAppointmentForRecord': "There's no appointment with this patient yet, so a medical record can't be created",
-            'patientDetail.addPrescription': 'Create Prescription',
-            'patientDetail.rxValidUntil': 'Valid Until',
-            'patientDetail.rxInstructions': 'Patient Instructions',
-            'patientDetail.medications': 'Medications',
-            'patientDetail.medicationNameAr': 'Medication Name (Arabic)',
-            'patientDetail.medicationNameEn': 'Medication Name (English)',
-            'patientDetail.dosage': 'Dosage',
-            'patientDetail.frequency': 'Frequency',
-            'patientDetail.duration': 'Duration',
-            'patientDetail.quantity': 'Quantity',
-            'patientDetail.itemInstructions': 'Instructions for this medication',
-            'patientDetail.addMedication': 'Add Medication',
-            'patientDetail.removeMedication': 'Remove Medication',
-            'patientDetail.savePrescription': 'Save Prescription',
-            'patientDetail.noAppointmentForRx': "There's no appointment with this patient yet, so a prescription can't be created",
-            'patientDetail.errorRxAppointmentRequired': 'Please select the appointment this prescription belongs to',
-            'patientDetail.errorRxItemRequired': 'Please complete every medication: Arabic and English name, dosage, frequency, and quantity',
-            'patientDetail.rxSavedTitle': 'Prescription saved',
-            'patientDetail.rxSavedHint': "The prescription was added to the patient's file.",
-            'patientDetail.rxErrorTitle': "Couldn't save the prescription",
-            'patientDetail.rxErrorHint': 'Something went wrong while saving. Please try again.',
+
+            'patientDetail.prescriptionComposerTitle': 'Create Prescription',
+            'patientDetail.prescriptionComposerHint': 'Choose an appointment for this patient and add at least one medication. Interaction warnings appear after saving and never change the clinician decision.',
+            'patientDetail.prescriptionAppointment': 'Appointment',
+            'patientDetail.prescriptionSelectAppointment': 'Choose an appointment',
+            'patientDetail.prescriptionValidUntil': 'Valid until (optional)',
+            'patientDetail.prescriptionInstructions': 'General patient instructions',
+            'patientDetail.prescriptionPrivateNotes': 'Private doctor notes (not shown to the patient)',
+            'patientDetail.prescriptionItems': 'Medications',
+            'patientDetail.prescriptionItem': 'Medication',
+            'patientDetail.prescriptionMedicationEnglish': 'Medication name in English',
+            'patientDetail.prescriptionMedicationArabic': 'Medication name in Arabic (optional)',
+            'patientDetail.prescriptionDosage': 'Dosage',
+            'patientDetail.prescriptionFrequency': 'Frequency',
+            'patientDetail.prescriptionDuration': 'Duration (optional)',
+            'patientDetail.prescriptionQuantity': 'Quantity',
+            'patientDetail.prescriptionItemInstructions': 'Medication instructions (optional)',
+            'patientDetail.prescriptionAddItem': 'Add medication',
+            'patientDetail.prescriptionRemoveItem': 'Remove',
+            'patientDetail.prescriptionCreate': 'Save prescription',
+            'patientDetail.prescriptionCreated': 'Prescription saved successfully.',
+            'patientDetail.prescriptionSafetyWarning': 'The prescription was saved, but there are medication warnings to review before advising the patient.',
+            'patientDetail.prescriptionSafetyUnavailable': 'The prescription was saved, but medication interactions could not be checked right now.',
+            'patientDetail.prescriptionValidation': 'Choose an appointment and complete the medication name, dosage, frequency, and quantity.',
+
             'patientDetail.editRecord': 'Edit',
             'patientDetail.deleteRecord': 'Delete',
             'patientDetail.editRecordTitle': 'Edit Medical Record',
@@ -1656,7 +1673,6 @@ const I18n = (() => {
             'patientDetail.deleteConfirmBtn': 'Delete',
             'patientDetail.deleteSuccess': 'Record deleted',
             'patientDetail.deleteError': "Couldn't delete the record",
-
             // My Doctor (patient's view of their doctor — no backend yet)
             'myDoctor.title': 'My Doctor',
             'myDoctor.subtitle': 'Your treating doctor(s) and notes shared with you',
@@ -1752,8 +1768,11 @@ const I18n = (() => {
         // Keep icon-only controls understandable to both pointer users and
         // assistive technology in every language.
         document.querySelectorAll('[data-i18n-title]').forEach(el => {
-            const text = t(el.getAttribute('data-i18n-title'));
-            if (!text) return;
+            const key = el.getAttribute('data-i18n-title');
+            const text = t(key);
+            // HTML provides a readable fallback.  Do not replace it with a
+            // missing dictionary key when a browser has a stale JS response.
+            if (!text || text === key) return;
             el.title = text;
             el.setAttribute('aria-label', text);
         });
@@ -1762,19 +1781,20 @@ const I18n = (() => {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const text = t(key);
-            if (text) el.textContent = text;
+            if (text && text !== key) el.textContent = text;
         });
 
         // Translate placeholders
         document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
             const key = el.getAttribute('data-i18n-placeholder');
             const text = t(key);
-            if (text) el.placeholder = text;
+            if (text && text !== key) el.placeholder = text;
         });
 
         document.querySelectorAll('[data-i18n-aria]').forEach(el => {
-            const text = t(el.getAttribute('data-i18n-aria'));
-            if (text) el.setAttribute('aria-label', text);
+            const key = el.getAttribute('data-i18n-aria');
+            const text = t(key);
+            if (text && text !== key) el.setAttribute('aria-label', text);
         });
 
         // Translate rich-text elements (dictionary value may contain inline markup,
@@ -1782,7 +1802,7 @@ const I18n = (() => {
         document.querySelectorAll('[data-i18n-html]').forEach(el => {
             const key = el.getAttribute('data-i18n-html');
             const html = t(key);
-            if (html) el.innerHTML = html;
+            if (html && html !== key) el.innerHTML = html;
         });
 
         const langLabel = document.getElementById('langLabel');

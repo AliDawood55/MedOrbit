@@ -10,7 +10,7 @@ const run = Date.now();
 const shortRun = String(run).slice(-6);
 const ids = Object.fromEntries([
     'u1', 'u2', 'u3', 'u4', 'p1', 'p2', 'd1', 'd2', 'd3',
-    'a1', 'a2', 'a3', 'aConfirm', 'aComplete', 'aCancel', 'aReview',
+    'a1', 'a2', 'a3', 'aConfirm', 'aComplete', 'aCancel', 'aReview', 'aReviewNew',
     'r1', 'r2', 'rx1', 'rx2', 'slot1', 'review1',
 ].map((key) => [key, crypto.randomUUID()]));
 
@@ -92,13 +92,14 @@ async function seed() {
             [ids.aComplete, ids.p1, ids.d1, 'confirmed'],
             [ids.aCancel, ids.p1, ids.d1, 'scheduled'],
             [ids.aReview, ids.p1, ids.d1, 'completed'],
+            [ids.aReviewNew, ids.p1, ids.d1, 'completed'],
         ];
-        for (const [id, patientId, doctorId, status] of appointmentRows) {
+        for (const [index, [id, patientId, doctorId, status]] of appointmentRows.entries()) {
             await client.query(
                 `INSERT INTO medorbit.appointments
                    (id,appointment_number,patient_id,doctor_id,scheduled_date,start_time,end_time,duration_minutes,status)
-                 VALUES ($1,$2,$3,$4,CURRENT_DATE + 7,'10:00','10:30',30,$5)`,
-                [id, `S1B-${id.slice(0, 8)}`, patientId, doctorId, status]
+                 VALUES ($1,$2,$3,$4,CURRENT_DATE + 7 + $6::int,'10:00','10:30',30,$5)`,
+                [id, `S1B-${id.slice(0, 8)}`, patientId, doctorId, status, index]
             );
         }
         await client.query(
@@ -119,9 +120,9 @@ async function seed() {
         );
         await client.query(
             `INSERT INTO medorbit.prescriptions
-               (id,prescription_number,patient_id,doctor_id,appointment_id,prescription_date,status,diagnosis)
-             VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'active','own rx'),
-                    ($6,$7,$8,$9,$10,CURRENT_DATE,'active','other rx')`,
+               (id,prescription_number,patient_id,doctor_id,appointment_id,prescription_date,status,diagnosis,doctor_notes)
+             VALUES ($1,$2,$3,$4,$5,CURRENT_DATE,'active','own rx','private prescription note'),
+                    ($6,$7,$8,$9,$10,CURRENT_DATE,'active','other rx','other private prescription note')`,
             [ids.rx1, `S1BR1-${shortRun}`, ids.p1, ids.d1, ids.a1,
                 ids.rx2, `S1BR2-${shortRun}`, ids.p2, ids.d2, ids.a2]
         );
@@ -133,8 +134,8 @@ async function seed() {
         );
         await client.query(
             `INSERT INTO medorbit.doctor_availability
-               (id,doctor_id,day_of_week,start_time,end_time,slot_duration,is_active)
-             VALUES ($1,$2,1,'09:00','10:00',30,true)`,
+               (id,doctor_id,day_of_week,start_time,end_time,slot_duration,is_telemedicine,is_active)
+             VALUES ($1,$2,2,'09:00','10:00',30,true,true)`,
             [ids.slot1, ids.d1]
         );
         await client.query(
@@ -158,6 +159,7 @@ async function cleanup() {
     let attachmentPaths = [];
     try {
         await client.query('BEGIN');
+        await client.query('DELETE FROM medorbit.audit_logs WHERE user_id=ANY($1::uuid[])', [allUsers]);
         await client.query('DELETE FROM medorbit.report_summarizations WHERE user_id=ANY($1::uuid[])', [allUsers]);
         await client.query('DELETE FROM medorbit.symptom_triage_sessions WHERE user_id=ANY($1::uuid[]) OR session_id LIKE $2', [allUsers, `s1b-${run}%`]);
         const attachments = await client.query(
@@ -169,7 +171,7 @@ async function cleanup() {
         await client.query('DELETE FROM medorbit.prescription_items WHERE prescription_id IN (SELECT id FROM medorbit.prescriptions WHERE patient_id=ANY($1::uuid[]))', [[ids.p1, ids.p2]]);
         await client.query('DELETE FROM medorbit.prescriptions WHERE patient_id=ANY($1::uuid[])', [[ids.p1, ids.p2]]);
         await client.query('DELETE FROM medorbit.medical_records WHERE patient_id=ANY($1::uuid[])', [[ids.p1, ids.p2]]);
-        await client.query('DELETE FROM medorbit.doctor_reviews WHERE id=$1', [ids.review1]);
+        await client.query('DELETE FROM medorbit.doctor_reviews WHERE patient_id=ANY($1::uuid[])', [[ids.p1, ids.p2]]);
         await client.query('DELETE FROM medorbit.doctor_availability WHERE doctor_id=ANY($1::uuid[])', [[ids.d1, ids.d2, ids.d3]]);
         await client.query('DELETE FROM medorbit.doctor_patient_relationships WHERE doctor_id=ANY($1::uuid[])', [[ids.d1, ids.d2, ids.d3]]);
         await client.query("DELETE FROM medorbit.appointment_status_history WHERE appointment_id IN (SELECT id FROM medorbit.appointments WHERE appointment_number LIKE 'S1B-%')");
@@ -218,6 +220,7 @@ async function main() {
         check('unrelated doctor cannot delete record', response.status === 404);
         response = await request('POST', '/medical-records', doctor1, { appointment_id: ids.a1, record_type: 'consultation', diagnosis: 'valid' });
         check('assigned doctor can create record', response.status === 201);
+        check('medical record creation is audited', (await pool.query("SELECT 1 FROM medorbit.audit_logs WHERE action='MEDICAL_RECORD_CREATED' AND entity_id=$1", [response.body.data?.id])).rows.length === 1);
         response = await request('POST', '/medical-records', doctor2, { appointment_id: ids.a1, record_type: 'consultation' });
         check('unassigned doctor cannot create from another appointment', response.status === 404);
 
@@ -241,6 +244,13 @@ async function main() {
 
         response = await request('GET', `/prescriptions/${ids.rx1}`, patient1);
         check('patient can read own prescription', response.status === 200);
+        check('generic patient prescription DTO excludes doctor notes', !('doctor_notes' in (response.body.data?.prescription || response.body.data || {})));
+        response = await request('GET', '/patients/me/prescriptions', patient1);
+        check('patient prescription list excludes doctor notes', response.status === 200
+            && response.body.data.every((prescription) => !('doctor_notes' in prescription)));
+        response = await request('GET', `/patients/me/prescriptions/${ids.rx1}`, patient1);
+        check('patient prescription detail excludes doctor notes', response.status === 200
+            && !('doctor_notes' in (response.body.data?.prescription || {})));
         response = await request('GET', `/prescriptions/${ids.rx2}`, patient1);
         check('patient cannot read another prescription', response.status === 404);
         response = await request('GET', `/prescriptions/${ids.rx2}/pdf`, patient1);
@@ -254,6 +264,38 @@ async function main() {
             items: [{ medication_name_ar: 'دواء', medication_name_en: 'Medicine', dosage: '1', frequency: 'daily', quantity: 1 }],
         });
         check('doctor cannot prescribe from another doctor appointment', response.status === 404);
+        const prescriptionRequest = (medicationName) => ({
+            patient_id: ids.p1,
+            appointment_id: ids.a1,
+            diagnosis: 'Safety integration test',
+            items: [{ medication_name_ar: 'دواء', medication_name_en: medicationName, dosage: '1', frequency: 'daily', quantity: 1 }],
+        });
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('Safe medicine'));
+        check('prescription safety returns a clear advisory result', response.status === 201
+            && response.body.data?.safety_check?.status === 'clear'
+            && response.body.data?.safety_check?.prescription_safe === true);
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('__PRESCRIPTION_CHECK_WARNING__'));
+        const warnedPrescriptionId = response.body.data?.id;
+        check('warning is returned without changing the clinician item', response.status === 201
+            && response.body.data?.safety_check?.status === 'warning'
+            && response.body.data?.safety_check?.prescription_safe === false
+            && response.body.data?.safety_check?.warnings?.length === 1
+            && (await pool.query('SELECT medication_name_en FROM medorbit.prescription_items WHERE prescription_id=$1', [warnedPrescriptionId])).rows[0]?.medication_name_en === '__PRESCRIPTION_CHECK_WARNING__');
+        const warningAudit = await pool.query(
+            "SELECT new_values FROM medorbit.audit_logs WHERE action='PRESCRIPTION_SAFETY_WARNING_REPORTED' AND entity_id=$1",
+            [warnedPrescriptionId]
+        );
+        check('safety warning is audited without storing warning text', warningAudit.rows.length === 1
+            && warningAudit.rows[0].new_values.warning_count === 1
+            && !JSON.stringify(warningAudit.rows[0].new_values).includes('Drug A'));
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('__PRESCRIPTION_CHECK_UNAVAILABLE__'));
+        check('AI outage saves prescription with unavailable safety status', response.status === 201
+            && response.body.data?.safety_check?.status === 'unavailable'
+            && response.body.data?.safety_check?.prescription_safe === null);
+        response = await request('POST', '/prescriptions', doctor1, prescriptionRequest('__PRESCRIPTION_CHECK_MALFORMED__'));
+        check('malformed AI response saves prescription with unavailable safety status', response.status === 201
+            && response.body.data?.safety_check?.status === 'unavailable'
+            && response.body.data?.safety_check?.prescription_safe === null);
 
         response = await request('PUT', `/appointments/${ids.aConfirm}/confirm`, doctor2, {});
         check('unrelated doctor cannot confirm appointment', response.status === 404);
@@ -266,16 +308,43 @@ async function main() {
         response = await request('PUT', `/appointments/${ids.aCancel}/cancel`, patient1, { reason: 'test' });
         check('patient cancellation ownership remains intact', response.status === 200);
 
-        response = await request('PUT', `/doctors/${ids.d1}/availability/${ids.slot1}`, doctor1, { end_time: '10:30' });
-        check('doctor can manage own availability', response.status === 200);
+        response = await request('PUT', `/doctors/${ids.d1}/availability/${ids.slot1}`, doctor1, { end_time: '09:30' });
+        check('doctor can manage own availability', response.status === 200, JSON.stringify(response.body));
         response = await request('PUT', `/doctors/${ids.d1}/availability/${ids.slot1}`, doctor2, { end_time: '11:00' });
         check('doctor cannot mutate another availability', response.status === 404);
 
-        response = await request('GET', `/doctors/${ids.d1}/reviews`);
+        response = await request('GET', `/doctors/${ids.d1}/reviews`, patient1);
         const review = response.body.data?.find((row) => row.id === ids.review1) || {};
         check('public review omits patient UUID', response.status === 200 && !('patient_id' in review));
         check('public review omits appointment UUID', !('appointment_id' in review));
         check('public review rating fields remain correct', review.rating === 5 && review.professionalism_rating === 5);
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, doctor1, {
+            appointment_id: ids.aReviewNew, rating: 4, professionalism_rating: 4, treatment_rating: 4, communication_rating: 4,
+        });
+        check('doctor cannot submit a patient review', response.status === 404);
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.a1, rating: 4, professionalism_rating: 4, treatment_rating: 4, communication_rating: 4,
+        });
+        check('review requires a completed matching appointment', response.status === 400 && response.body.error?.code === 'INVALID_APPOINTMENT');
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.aReviewNew, rating: 6, professionalism_rating: 4, treatment_rating: 4, communication_rating: 4,
+        });
+        check('review ratings are validated before persistence', response.status === 400 && response.body.error?.code === 'VALIDATION_ERROR');
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.aReviewNew, rating: 4, professionalism_rating: 4, treatment_rating: 5, communication_rating: 4,
+            review_text: { ar: 'مراجعة موثوقة', en: 'Trusted review' },
+        });
+        const createdReviewId = response.body.data?.id;
+        check('patient can review one completed appointment once', response.status === 201 && Boolean(createdReviewId)
+            && response.body.data.review_text_ar === 'مراجعة موثوقة'
+            && response.body.data.review_text_en === 'Trusted review'
+            && response.body.data.review_text === 'مراجعة موثوقة', JSON.stringify(response.body));
+        response = await request('POST', `/doctors/${ids.d1}/reviews`, patient1, {
+            appointment_id: ids.aReviewNew, rating: 4, professionalism_rating: 4, treatment_rating: 5, communication_rating: 4,
+        });
+        check('duplicate appointment review is rejected deterministically', response.status === 409 && response.body.error?.code === 'DUPLICATE_REVIEW');
+        const updatedDoctorRating = await pool.query('SELECT average_rating FROM medorbit.doctors WHERE id=$1', [ids.d1]);
+        check('review creation updates the doctor aggregate rating', Number(updatedDoctorRating.rows[0].average_rating) === 4.5);
 
         const aiDirect = 'http://ai-service-test:8001';
         let direct = await fetch(`${aiDirect}/triage`, {
@@ -295,14 +364,20 @@ async function main() {
         direct = await fetch(`${aiDirect}/drug-interactions`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ medication_names: [] }),
         });
-        check('anonymous stateless AI flow remains available', direct.status === 200);
+        check('direct drug interaction endpoint requires internal identity', direct.status === 403);
+        response = await request('POST', '/ai/drug-interactions', null, { medication_names: ['Aspirin', 'Warfarin'] });
+        check('backend drug interaction proxy requires authentication', response.status === 401);
+        response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin'] });
+        check('backend drug interaction proxy validates medication count', response.status === 400 && response.body.error?.code === 'VALIDATION_ERROR');
+        response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin', 'Warfarin'] });
+        check('backend drug interaction proxy uses the standard envelope',
+            response.status === 200 && response.body.success === true && response.body.data?.has_interactions === false);
+        response = await request('POST', '/ai/drug-interactions', patient1, { medication_names: ['Aspirin', '__UPSTREAM_FAIL__'] });
+        check('backend drug interaction proxy masks upstream failures', response.status === 502 && response.body.error?.code === 'AI_SERVICE_ERROR');
         response = await request('POST', '/ai/triage', null, { symptoms: ['headache'], user_id: ids.u2, session_id: `s1b-${run}-anon` }, {
             'X-MedOrbit-Internal-Token': 'browser-spoof', 'X-MedOrbit-User-Id': ids.u2,
         });
-        const anonymousPersisted = await pool.query(
-            'SELECT user_id FROM medorbit.symptom_triage_sessions WHERE id=$1', [response.body.id]
-        );
-        check('browser cannot spoof internal AI identity context', response.status === 200 && anonymousPersisted.rows[0]?.user_id === null);
+        check('browser cannot spoof internal AI identity context', response.status === 401);
 
         response = await request('GET', `/patients/me/medical-records/${ids.r1}`, patient1);
         check('/patients/me medical-record behavior remains green', response.status === 200);

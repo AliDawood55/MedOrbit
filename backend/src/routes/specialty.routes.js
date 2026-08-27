@@ -1,10 +1,11 @@
 const express = require('express');
 
 const db = require('../config/database');
+const { createAudit } = require('../services/audit.service');
 
 const {
     authenticate,
-    authorize
+    authorizeAdmin
 } = require('../middleware/auth');
 
 const {
@@ -14,6 +15,10 @@ const {
 
 
 const router = express.Router();
+
+function isNonEmptyString(value, maxLength) {
+    return typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength;
+}
 
 
 
@@ -36,7 +41,6 @@ router.get(
                 ORDER BY name_en
                 `
             );
-
 
             return success(
                 res,
@@ -64,11 +68,7 @@ router.get(
     "/:id",
     authenticate,
     async (req, res, next) => {
-
-
         try {
-
-
             const result = await db.query(
                 `
                 SELECT *
@@ -80,8 +80,6 @@ router.get(
                     req.params.id
                 ]
             );
-
-
             if (result.rows.length === 0) {
 
                 return error(
@@ -103,9 +101,7 @@ router.get(
 
         }
         catch (err) {
-
             next(err);
-
         }
 
 
@@ -123,11 +119,10 @@ router.get(
 router.post(
     "/",
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
 
 
@@ -141,9 +136,21 @@ router.post(
 
             } = req.body;
 
+            if (!isNonEmptyString(name_ar, 100) || !isNonEmptyString(name_en, 100)) {
+                return error(res, "Arabic and English specialty names are required", 400, "VALIDATION_ERROR");
+            }
+
+            if ((description_ar !== undefined && typeof description_ar !== 'string')
+                || (description_en !== undefined && typeof description_en !== 'string')
+                || (icon !== undefined && (typeof icon !== 'string' || icon.length > 255))) {
+                return error(res, "Invalid specialty fields", 400, "VALIDATION_ERROR");
+            }
 
 
-            const result = await db.query(
+
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const result = await client.query(
                 `
                 INSERT INTO medorbit.specialties
                 (
@@ -168,6 +175,16 @@ router.post(
                 ]
             );
 
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'SPECIALTY_CREATED',
+                entity_type: 'SPECIALTY',
+                entity_id: result.rows[0].id,
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
+
 
 
             return success(
@@ -180,9 +197,10 @@ router.post(
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 
@@ -202,11 +220,10 @@ router.put(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
 
 
@@ -223,7 +240,19 @@ router.put(
 
 
 
-            const result = await db.query(
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const previous = await client.query(
+                `SELECT id, name_ar, name_en, description_ar, description_en, icon, is_active
+                 FROM medorbit.specialties WHERE id = $1 FOR UPDATE`,
+                [req.params.id]
+            );
+            if (previous.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return error(res, "Specialty not found", 404, "NOT_FOUND");
+            }
+
+            const result = await client.query(
                 `
                 UPDATE medorbit.specialties
 
@@ -259,16 +288,16 @@ router.put(
 
 
 
-            if (result.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Specialty not found",
-                    404,
-                    "NOT_FOUND"
-                );
-
-            }
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'SPECIALTY_UPDATED',
+                entity_type: 'SPECIALTY',
+                entity_id: result.rows[0].id,
+                old_values: previous.rows[0],
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
 
 
 
@@ -282,9 +311,10 @@ router.put(
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 
@@ -304,15 +334,24 @@ router.delete(
     "/:id",
 
     authenticate,
-    authorize("admin"),
+    authorizeAdmin,
 
     async (req, res, next) => {
-
-
+        let client;
         try {
+            client = await db.getClient();
+            await client.query('BEGIN');
+            const previous = await client.query(
+                `SELECT id, name_ar, name_en, description_ar, description_en, icon, is_active
+                 FROM medorbit.specialties WHERE id = $1 FOR UPDATE`,
+                [req.params.id]
+            );
+            if (previous.rowCount === 0) {
+                await client.query('ROLLBACK');
+                return error(res, "Specialty not found", 404, "NOT_FOUND");
+            }
 
-
-            const result = await db.query(
+            const result = await client.query(
 
                 `
                 UPDATE medorbit.specialties
@@ -332,16 +371,16 @@ router.delete(
 
 
 
-            if (result.rows.length === 0) {
-
-                return error(
-                    res,
-                    "Specialty not found",
-                    404,
-                    "NOT_FOUND"
-                );
-
-            }
+            await createAudit({
+                user_id: req.user.sub,
+                user_role: req.user.role,
+                action: 'SPECIALTY_DEACTIVATED',
+                entity_type: 'SPECIALTY',
+                entity_id: result.rows[0].id,
+                old_values: previous.rows[0],
+                new_values: result.rows[0],
+            }, client);
+            await client.query('COMMIT');
 
 
 
@@ -355,9 +394,10 @@ router.delete(
 
         }
         catch (err) {
-
+            if (client) await client.query('ROLLBACK').catch(() => {});
             next(err);
-
+        } finally {
+            client?.release();
         }
 
 

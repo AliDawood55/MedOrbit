@@ -27,63 +27,75 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('list success shows verification status and hides missing fields cleanly', (tester) async {
-    final api = _FakeDiscoveryApi()
-      ..clinicListResults.add(
-        Future.value(
-          const ClinicListResponse(
-            clinics: [
-              Clinic(
-                id: 'clinic-1',
-                nameEn: 'Rafidia Clinic',
-                type: 'clinic',
-                verificationStatus: ClinicVerificationStatus.verified,
-                services: ['Pediatrics'],
-              ),
-            ],
+  testWidgets(
+    'list success shows verification status and hides missing fields cleanly',
+    (tester) async {
+      final api = _FakeDiscoveryApi()
+        ..clinicListResults.add(
+          Future.value(
+            const ClinicListResponse(
+              clinics: [
+                Clinic(
+                  id: 'clinic-1',
+                  nameEn: 'Rafidia Clinic',
+                  type: 'clinic',
+                  verificationStatus: ClinicVerificationStatus.verified,
+                  services: ['Pediatrics'],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
 
-    await tester.pumpWidget(_app(api));
-    await tester.pump();
-    await tester.pump();
+      await tester.pumpWidget(_app(api));
+      await tester.pump();
+      await tester.pump();
 
-    expect(find.text('Rafidia Clinic'), findsOneWidget);
-    expect(find.text('Verified'), findsOneWidget);
-    expect(find.text('Pediatrics'), findsOneWidget);
-    expect(find.textContaining('Phone'), findsNothing);
-  });
+      expect(find.text('Rafidia Clinic'), findsOneWidget);
+      expect(find.text('Verified'), findsOneWidget);
+      expect(find.text('Pediatrics'), findsOneWidget);
+      expect(find.textContaining('Phone'), findsNothing);
+    },
+  );
 
-  testWidgets('search debounces and preserves query across list and map switch', (tester) async {
-    final api = _FakeDiscoveryApi()
-      ..clinicListResults.add(Future.value(const ClinicListResponse()))
-      ..clinicListResults.add(
-        Future.value(
-          const ClinicListResponse(clinics: [Clinic(id: 'search-1', nameEn: 'Nablus Lab')]),
-        ),
-      );
+  testWidgets(
+    'search debounces and preserves query across list and map switch',
+    (tester) async {
+      final api = _FakeDiscoveryApi()
+        ..clinicListResults.add(Future.value(const ClinicListResponse()))
+        ..clinicListResults.add(
+          Future.value(
+            const ClinicListResponse(
+              clinics: [Clinic(id: 'search-1', nameEn: 'Nablus Lab')],
+            ),
+          ),
+        );
 
-    await tester.pumpWidget(_app(api));
-    await tester.pump();
-    await tester.enterText(find.byType(TextFormField), 'lab');
-    await tester.pump(const Duration(milliseconds: 399));
-    expect(api.clinicListCalls, hasLength(1));
+      await tester.pumpWidget(_app(api));
+      await tester.pump();
+      await tester.enterText(find.byType(TextFormField), 'lab');
+      await tester.pump(const Duration(milliseconds: 399));
+      expect(api.clinicListCalls, hasLength(1));
 
-    await tester.pump(const Duration(milliseconds: 2));
-    await tester.pump();
-    expect(api.clinicListCalls.last.search, 'lab');
+      await tester.pump(const Duration(milliseconds: 2));
+      await tester.pump();
+      expect(api.clinicListCalls.last.search, 'lab');
 
-    await tester.tap(find.text('Map'));
-    await tester.pump();
-    expect(find.text('lab'), findsOneWidget);
-  });
+      await tester.tap(find.text('Map'));
+      await tester.pump();
+      expect(find.text('lab'), findsOneWidget);
+    },
+  );
 
   testWidgets('type filter sends supported backend filter', (tester) async {
     final api = _FakeDiscoveryApi()
       ..clinicListResults.add(Future.value(const ClinicListResponse()))
       ..clinicListResults.add(
-        Future.value(const ClinicListResponse(clinics: [Clinic(id: 'pharmacy', nameEn: 'Care Pharmacy')])),
+        Future.value(
+          const ClinicListResponse(
+            clinics: [Clinic(id: 'pharmacy', nameEn: 'Care Pharmacy')],
+          ),
+        ),
       );
 
     await tester.pumpWidget(_app(api));
@@ -110,7 +122,9 @@ void main() {
     expect(api.clinicListCalls.last.type, 'pharmacy');
   });
 
-  testWidgets('nearby GPS and manual district keep nearby results separate', (tester) async {
+  testWidgets('nearby GPS and manual district keep nearby results separate', (
+    tester,
+  ) async {
     final location = _FakeLocationService()
       ..permissionResult = LocationPermissionState.granted
       ..results.add(
@@ -125,13 +139,25 @@ void main() {
       );
     final api = _FakeDiscoveryApi()
       ..clinicListResults.add(
-        Future.value(const ClinicListResponse(clinics: [Clinic(id: 'normal', nameEn: 'Normal Clinic')])),
+        Future.value(
+          const ClinicListResponse(
+            clinics: [Clinic(id: 'normal', nameEn: 'Normal Clinic')],
+          ),
+        ),
       )
       ..nearbyResults.add(
-        Future.value(const NearbyClinicResponse(clinics: [Clinic(id: 'nearby', nameEn: 'Nearby Clinic')])),
+        Future.value(
+          const NearbyClinicResponse(
+            clinics: [Clinic(id: 'nearby', nameEn: 'Nearby Clinic')],
+          ),
+        ),
       )
       ..nearbyResults.add(
-        Future.value(const NearbyClinicResponse(clinics: [Clinic(id: 'district', nameEn: 'District Clinic')])),
+        Future.value(
+          const NearbyClinicResponse(
+            clinics: [Clinic(id: 'district', nameEn: 'District Clinic')],
+          ),
+        ),
       );
 
     await tester.pumpWidget(_app(api, location: location));
@@ -144,8 +170,13 @@ void main() {
     expect(find.text('Normal Clinic'), findsNothing);
     expect(api.nearbyCalls.single.radius, 5);
 
-    final mainScrollable = find.byKey(const PageStorageKey<String>('clinic-discovery-scroll'));
-    final chooseLocation = find.widgetWithText(OutlinedButton, 'Choose location');
+    final mainScrollable = find.byKey(
+      const PageStorageKey<String>('clinic-discovery-scroll'),
+    );
+    final chooseLocation = find.widgetWithText(
+      OutlinedButton,
+      'Choose location',
+    );
     await dragUntilHitTestable(tester, chooseLocation, mainScrollable);
     expect(chooseLocation.hitTestable(), findsOneWidget);
     await tester.tap(chooseLocation.hitTestable());
@@ -154,7 +185,9 @@ void main() {
       of: find.byKey(const ValueKey('location-picker-scrollable')),
       matching: find.byType(Scrollable),
     );
-    final district = find.byKey(const ValueKey('location-district-nablus-center'));
+    final district = find.byKey(
+      const ValueKey('location-district-nablus-center'),
+    );
     expect(pickerScrollable, findsOneWidget);
     expect(district, findsOneWidget);
     await dragUntilHitTestable(tester, district, pickerScrollable);
@@ -167,7 +200,9 @@ void main() {
       tester.element(find.byType(ClinicDiscoveryScreen)),
       listen: false,
     );
-    final selectedLocation = container.read(locationControllerProvider).currentLocation;
+    final selectedLocation = container
+        .read(locationControllerProvider)
+        .currentLocation;
     expect(selectedLocation?.source, LocationSource.manualDistrict);
     expect(selectedLocation?.approximate, isTrue);
     expect(find.text('District Clinic'), findsOneWidget);
@@ -176,7 +211,9 @@ void main() {
     expect(api.nearbyCalls.last.lng, 35.2544);
   });
 
-  testWidgets('empty state is visible after a successful empty response', (tester) async {
+  testWidgets('empty state is visible after a successful empty response', (
+    tester,
+  ) async {
     final api = _FakeDiscoveryApi()
       ..clinicListResults.add(Future.value(const ClinicListResponse()));
 
@@ -184,15 +221,24 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('clinic-discovery-empty-state')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('clinic-discovery-empty-state')),
+      findsOneWidget,
+    );
     expect(api.clinicListCalls, hasLength(1));
   });
 
   testWidgets('error and retry states are visible', (tester) async {
     final api = _FakeDiscoveryApi()
-      ..clinicListFailures.add(const ApiException(message: 'Clinic load failed', code: 'FAILED'))
+      ..clinicListFailures.add(
+        const ApiException(message: 'Clinic load failed', code: 'FAILED'),
+      )
       ..clinicListResults.add(
-        Future.value(const ClinicListResponse(clinics: [Clinic(id: 'retry', nameEn: 'Retry Clinic')])),
+        Future.value(
+          const ClinicListResponse(
+            clinics: [Clinic(id: 'retry', nameEn: 'Retry Clinic')],
+          ),
+        ),
       );
 
     await tester.pumpWidget(_app(api));
@@ -201,7 +247,9 @@ void main() {
     expect(find.text('Could not load clinics'), findsOneWidget);
     expect(api.clinicListCalls, hasLength(1));
 
-    final mainScrollable = find.byKey(const PageStorageKey<String>('clinic-discovery-scroll'));
+    final mainScrollable = find.byKey(
+      const PageStorageKey<String>('clinic-discovery-scroll'),
+    );
     final retry = find.byKey(const ValueKey('clinic-discovery-retry'));
     await dragUntilHitTestable(tester, retry, mainScrollable);
     expect(retry.hitTestable(), findsOneWidget);
@@ -218,7 +266,12 @@ void main() {
         Future.value(
           const ClinicListResponse(
             clinics: [
-              Clinic(id: 'mapped', nameEn: 'Mapped Clinic', latitude: 32.2211, longitude: 35.2544),
+              Clinic(
+                id: 'mapped',
+                nameEn: 'Mapped Clinic',
+                latitude: 32.2211,
+                longitude: 35.2544,
+              ),
             ],
           ),
         ),
@@ -229,7 +282,9 @@ void main() {
     await tester.tap(find.text('Map'));
     await tester.pump(const Duration(milliseconds: 300));
     final marker = find.byKey(const ValueKey('discovery-map-place-mapped'));
-    await tester.ensureVisible(find.byKey(const ValueKey('discovery-flutter-map')));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('discovery-flutter-map')),
+    );
     await tester.pump(const Duration(milliseconds: 300));
     await tester.ensureVisible(marker);
     await tester.pump();
@@ -239,7 +294,9 @@ void main() {
     expect(find.byKey(const ValueKey('clinic-card-mapped')), findsOneWidget);
   });
 
-  testWidgets('RTL and large text discovery layout does not overflow', (tester) async {
+  testWidgets('RTL and large text discovery layout does not overflow', (
+    tester,
+  ) async {
     final errors = <FlutterErrorDetails>[];
     final previous = FlutterError.onError;
     FlutterError.onError = errors.add;
@@ -247,13 +304,22 @@ void main() {
 
     final api = _FakeDiscoveryApi()
       ..clinicListResults.add(
-        Future.value(const ClinicListResponse(clinics: [Clinic(id: 'rtl', nameAr: 'عيادة نابلس')])),
+        Future.value(
+          const ClinicListResponse(
+            clinics: [Clinic(id: 'rtl', nameAr: 'عيادة نابلس')],
+          ),
+        ),
       );
 
-    await tester.pumpWidget(_app(api, textDirection: TextDirection.rtl, textScale: 2));
+    await tester.pumpWidget(
+      _app(api, textDirection: TextDirection.rtl, textScale: 2),
+    );
     await tester.pump();
 
-    expect(errors.where((error) => error.exceptionAsString().contains('overflowed')), isEmpty);
+    expect(
+      errors.where((error) => error.exceptionAsString().contains('overflowed')),
+      isEmpty,
+    );
   });
 }
 
@@ -274,7 +340,9 @@ Future<void> dragUntilHitTestable(
   }
 
   final center = tester.getCenter(target);
-  fail('Target $target never became hit-testable after $maxDrags drags. Last global center: $center');
+  fail(
+    'Target $target never became hit-testable after $maxDrags drags. Last global center: $center',
+  );
 }
 
 Widget _app(
@@ -286,7 +354,9 @@ Widget _app(
   return ProviderScope(
     overrides: [
       discoveryApiProvider.overrideWithValue(api),
-      locationServiceProvider.overrideWithValue(location ?? _FakeLocationService()),
+      locationServiceProvider.overrideWithValue(
+        location ?? _FakeLocationService(),
+      ),
     ],
     child: MaterialApp(
       theme: AppTheme.light(isArabic: textDirection == TextDirection.rtl),
@@ -308,7 +378,8 @@ class _FakeDiscoveryApi extends DiscoveryApi {
   final clinicListFailures = <Object>[];
   final nearbyResults = <Future<NearbyClinicResponse>>[];
   final clinicListCalls = <ClinicFilters>[];
-  final nearbyCalls = <({double lat, double lng, double radius, String? type})>[];
+  final nearbyCalls =
+      <({double lat, double lng, double radius, String? type})>[];
 
   @override
   Future<ClinicListResponse> listClinics({
@@ -356,22 +427,24 @@ class _FakeLocationService extends LocationService {
   final results = <FutureOr<LocationResult>>[];
 
   @override
-  Future<LocationPermissionState> checkPermissionState() async => permissionResult;
+  Future<LocationPermissionState> checkPermissionState() async =>
+      permissionResult;
 
   @override
   Future<LocationResult> resolveCurrentLocation() async {
     final result = results.removeAt(0);
-    if (result is Future<LocationResult>) return result;
     return result;
   }
 }
 
 class _NeverUsedAdapter implements LocationPlatformAdapter {
   @override
-  Future<LocationPermissionState> checkPermission() => throw UnimplementedError();
+  Future<LocationPermissionState> checkPermission() =>
+      throw UnimplementedError();
 
   @override
-  Future<DevicePosition> getCurrentPosition({required Duration timeout}) => throw UnimplementedError();
+  Future<DevicePosition> getCurrentPosition({required Duration timeout}) =>
+      throw UnimplementedError();
 
   @override
   Future<bool> isLocationServiceEnabled() => throw UnimplementedError();
@@ -383,5 +456,6 @@ class _NeverUsedAdapter implements LocationPlatformAdapter {
   Future<bool> openLocationSettings() => throw UnimplementedError();
 
   @override
-  Future<LocationPermissionState> requestPermission() => throw UnimplementedError();
+  Future<LocationPermissionState> requestPermission() =>
+      throw UnimplementedError();
 }

@@ -138,7 +138,7 @@ router.put('/:id/cancel', authenticate, async (req, res, next) => {
         await client.query('COMMIT');
         return success(res, appointmentDto(result.rows[0]), 'Appointment cancelled');
     } catch (err) {
-        await client.query('ROLLBACK').catch(() => {});
+        await client.query('ROLLBACK').catch(() => { });
         return next(err);
     } finally {
         client.release();
@@ -185,7 +185,7 @@ async function updateDoctorAppointmentStatus(req, res, next, targetStatus, allow
         await client.query('COMMIT');
         return success(res, appointmentDto(result.rows[0]), `Appointment ${targetStatus}`);
     } catch (err) {
-        await client.query('ROLLBACK').catch(() => {});
+        await client.query('ROLLBACK').catch(() => { });
         return next(err);
     } finally {
         client.release();

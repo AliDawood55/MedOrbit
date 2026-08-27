@@ -119,6 +119,11 @@ const policy = {
     fairUse: {
         maxConcurrentVoiceSessions: 1,
         chatbotMessagesPerMinute: intFromEnv('BILLING_FAIR_USE_CHAT_PER_MINUTE', 20, { min: 1, max: 600 }),
+        // Drug checks are a separate AI/database workload from conversational
+        // chat. They do not consume the chatbot product quota, but still need
+        // a per-user burst ceiling so one client cannot monopolise the AI
+        // service with large medication combinations.
+        drugInteractionsPerMinute: intFromEnv('AI_DRUG_INTERACTIONS_PER_MINUTE', 30, { min: 1, max: 600 }),
     },
 };
 

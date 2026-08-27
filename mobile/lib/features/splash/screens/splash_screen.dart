@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/app_strings.dart';
+import '../../../core/network/api_host_resolver.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../routes/route_paths.dart';
@@ -19,6 +20,7 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  String? _configurationError;
   @override
   void initState() {
     super.initState();
@@ -28,7 +30,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _resolveInitialRoute() async {
     // Pick a reachable API host before anything issues a request, so the
     // first real call already points at the right backend.
-    await ref.read(apiHostResolverProvider).resolve();
+    try {
+      await ref.read(apiHostResolverProvider).resolve();
+    } on ApiConfigurationException catch (error) {
+      if (mounted) setState(() => _configurationError = error.message);
+      return;
+    }
     if (!mounted) return;
 
     await ref.read(authControllerProvider.notifier).checkAuthStatus();
@@ -43,6 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final strings = ref.watch(appStringsProvider);
     final dark = Theme.of(context).brightness == Brightness.dark;
 
+    final configurationError = _configurationError;
     return AppScaffold(
       useSafeArea: true,
       body: DecoratedBox(
@@ -99,10 +107,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: AppTheme.spaceXl),
-                  const SizedBox.square(
-                    dimension: AppTheme.iconLg,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
-                  ),
+                  if (configurationError == null)
+                    const SizedBox.square(
+                      dimension: AppTheme.iconLg,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    )
+                  else ...[
+                    const Icon(Icons.settings_ethernet_rounded, size: AppTheme.iconXl),
+                    const SizedBox(height: AppTheme.spaceMd),
+                    Text(
+                      configurationError,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
               ),
             ),
