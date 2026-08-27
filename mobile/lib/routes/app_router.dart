@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/appointments/screens/appointments_screen.dart';
+import '../features/admin/management/screens/admin_management_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -65,6 +66,7 @@ const Set<String> protectedRoutes = {
   RoutePaths.myDoctors,
   RoutePaths.savedPlaces,
   RoutePaths.contact,
+  RoutePaths.adminManagement,
 };
 
 /// Redirect target for [location], or null to allow it.
@@ -213,6 +215,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.savedPlaces,
         builder: (context, state) => const SavedPlacesScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminManagement,
+        builder: (context, state) => const AdminManagementScreen(),
       ),
       GoRoute(
         path: RoutePaths.contact,
