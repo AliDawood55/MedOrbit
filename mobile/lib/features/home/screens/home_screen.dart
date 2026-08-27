@@ -293,32 +293,7 @@ class _AdminHomeScreen extends ConsumerWidget {
     return AppScaffold(
       appBar: AppBar(
         title: Text(strings.appName),
-        actions: [
-          IconButton(
-            tooltip: strings.navNotifications,
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push(RoutePaths.notifications),
-          ),
-          IconButton(
-            tooltip: strings.navProfile,
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () => context.push(RoutePaths.profile),
-          ),
-          IconButton(
-            tooltip: strings.languageToggleTooltip,
-            icon: const Icon(Icons.translate_rounded),
-            onPressed: () =>
-                ref.read(localeControllerProvider.notifier).toggle(),
-          ),
-          IconButton(
-            tooltip: strings.logoutTooltip,
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go(RoutePaths.login);
-            },
-          ),
-        ],
+        actions: const [RoleHeaderActions()],
       ),
       body: SafeArea(
         top: false,
