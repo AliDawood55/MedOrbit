@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – لوحة التحكم</title>
+    <title>MedOrbit – لوحة التحكم</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,12 +32,13 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
             <div class="brand-text">
-                <h1>MedOrbit</h1>
+                <span class="brand-name">MedOrbit</span>
                 <p data-i18n="brand.tagline">Smart Healthcare AI</p>
             </div>
         </a>
@@ -53,7 +54,7 @@
         </div>
     </header>
 
-    <main class="page-container dashboard-page">
+    <main id="main-content" class="page-container dashboard-page">
 
         <div class="loading-state" id="dashLoading">
             <div class="spinner spinner-lg"></div>

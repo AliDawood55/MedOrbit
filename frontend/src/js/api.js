@@ -474,27 +474,55 @@ const API = (() => {
         createPost: (body, options) => post('/doctors/me/posts', body, options),
         updatePost: (postId, body, options) => put(`/doctors/me/posts/${postId}`, body, options),
         deletePost: (postId, options) => del(`/doctors/me/posts/${postId}`, options),
-        // Doctor's patient list + one patient's file, incl. session notes
+        // Doctor's patient list + one patient's file, incl. medical records
         // (my-patients.html, patient-detail.html)
         myPatients: (query, options) => get('/doctors/me/patients', query, options),
         patientDetail: (patientId, options) => get(`/doctors/me/patients/${patientId}`, null, options),
-        addPatientNote: (patientId, body, options) => post(`/doctors/me/patients/${patientId}/notes`, body, options),
-        // Doctor-only clinical authoring. The backend validates appointment
-        // ownership and an active care relationship before creating anything.
+        // Legacy doctor note route used by the existing patient-detail page.
+        addPatientNote: (patientId, body, options) =>
+            post(`/doctors/me/patients/${patientId}/notes`, body, options),
+
+        // Canonical medical-record endpoints. The backend derives the doctor
+        // and patient from the authorized appointment; client input cannot
+        // choose another clinician or patient.
+        createMedicalRecord: (body, options) =>
+            post('/medical-records', body, options),
+
+        // Doctor-scoped record management. Load the canonical record before
+        // updating because the backend treats PUT as a full replacement.
+        getMedicalRecord: (id, options) =>
+            get(`/medical-records/${id}`, null, options),
+
+        updateMedicalRecord: (id, body, options) =>
+            put(`/medical-records/${id}`, body, options),
+
+        deleteMedicalRecord: (id, options) =>
+            del(`/medical-records/${id}`, options),
+
+        // Prescription creation requires an appointment, patient, and at
+        // least one medication. The backend re-verifies authorization.
         createPrescription: (body, options) => post('/prescriptions', body, options),
         // Patient's view of their own doctor(s) + notes a doctor explicitly
         // shared (visible_to_patient=true) — my-doctor.html
         myDoctors: (options) => get('/patients/me/doctors', null, options),
         sharedNotes: (doctorId, options) => get(`/patients/me/doctors/${doctorId}/notes`, null, options),
-        // Patient's own medical records / prescriptions — the safe,
-        // ownership-scoped equivalents of the generic GET /medical-records
-        // and GET /prescriptions/:id, which have no ownership filtering at all.
+        // Patient's own medical records / prescriptions. The generic
+        // GET /medical-records(/:id) and GET /prescriptions/:id are also
+        // ownership-scoped now (requireRecordRead / requirePrescriptionRead
+        // in the backend), but these /patients/me/* routes stay the
+        // preferred call here since they return the patient-facing DTO shape.
         myMedicalRecords: (query, options) => get('/patients/me/medical-records', query, options),
         medicalRecordDetail: (id, options) => get(`/patients/me/medical-records/${id}`, null, options),
         // Combined timeline (appointments + records + prescriptions) — my-records.html
         myRecordsTimeline: (query, options) => get('/patients/me/records', query, options),
         myPrescriptions: (query, options) => get('/patients/me/prescriptions', query, options),
         prescriptionDetail: (id, options) => get(`/patients/me/prescriptions/${id}`, null, options)
+    };
+
+    // Personalized/ranked doctor suggestions (backend-authoritative ranking,
+    // reason_code only) — backend/src/routes/recommendation.routes.js.
+    const recommendations = {
+        doctors: (limit, options) => get('/recommendations/doctors', { limit }, options)
     };
 
     const social = {
@@ -615,9 +643,15 @@ const API = (() => {
         revoke: (id, options) => del(`/admin/invitations/${id}`, options)
     };
 
+    const adminUsers = {
+        list: (query, options) => get('/admin/users', query, options),
+        deactivate: (id, options) => put(`/admin/users/${id}/deactivate`, {}, options),
+        reactivate: (id, options) => put(`/admin/users/${id}/reactivate`, {}, options)
+    };
+
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, billing, virtualDoctor,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, clearSession, requireAuth, logout, getOrigin, assetUrl, resolveServiceOrigin, clearCache
     };

@@ -646,3 +646,349 @@
         text-align: center;
     }
 }
+
+/* ===========================================
+   Symptom Checker — Phase 4 Wave E1
+   Scoped to .symptom-checker-page only. ai-tools.css is shared with
+   drug-checker.html / report-summary.html (E2/E3, not yet reviewed) —
+   do not extend these selectors beyond this page. See src/css/README.md.
+   =========================================== */
+
+.symptom-checker-page {
+    max-width: 640px;
+    padding-block: 32px 60px;
+}
+
+.symptom-checker-page .tool-header {
+    margin-bottom: 28px;
+}
+
+.symptom-checker-page .tool-header .tool-icon {
+    box-shadow: var(--shadow-sm);
+}
+
+.symptom-checker-page .tool-header h1 {
+    font-size: 24px;
+}
+
+.symptom-checker-page .disclaimer-banner span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.symptom-checker-page .tool-card {
+    box-shadow: var(--shadow-xs);
+}
+
+/* Input + Add composition: input shrinks safely, Add stays a fixed,
+   always-tappable secondary action (not just under the 1024px breakpoint
+   components.css uses for the generic .btn tap-target rule). */
+.symptom-checker-page .chip-input-group input {
+    min-width: 0;
+}
+
+.symptom-checker-page .chip-input-group #addSymptomBtn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding-inline: 16px;
+}
+
+.symptom-checker-page .chip-tag-list .chip-tag {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.symptom-checker-page .chip-tag-list .chip-remove {
+    width: 24px;
+    height: 24px;
+}
+
+.symptom-checker-page .quick-chips .quick-chip {
+    min-height: 44px;
+    padding: 8px 14px;
+}
+
+.symptom-checker-page #submitBtn {
+    min-height: 44px;
+}
+
+.symptom-checker-page .tool-loading {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 48px 24px;
+}
+
+.symptom-checker-page .tool-error #retryBtn {
+    min-height: 44px;
+    padding-inline: 20px;
+}
+
+.symptom-checker-page .triage-banner {
+    overflow-wrap: break-word;
+}
+
+.symptom-checker-page .triage-detail-row {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
+.symptom-checker-page .triage-detail-value {
+    min-width: 0;
+    overflow-wrap: break-word;
+    text-align: end;
+}
+
+.symptom-checker-page .result-actions .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 480px) {
+    .symptom-checker-page .chip-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .symptom-checker-page .chip-input-group #addSymptomBtn {
+        width: 100%;
+    }
+
+    .symptom-checker-page .result-actions {
+        flex-direction: column;
+    }
+}
+
+/* ===========================================
+   Drug Interaction Checker — Phase 4 Wave E2
+   Scoped to .drug-checker-page only. ai-tools.css is shared with
+   symptom-checker.html (E1, already reviewed) / report-summary.html
+   (E3, not yet reviewed) — do not extend these selectors beyond this
+   page. See src/css/README.md.
+   =========================================== */
+
+.drug-checker-page {
+    max-width: 640px;
+    padding-block: 32px 60px;
+}
+
+.drug-checker-page .tool-header {
+    margin-bottom: 28px;
+}
+
+.drug-checker-page .tool-header .tool-icon {
+    box-shadow: var(--shadow-sm);
+}
+
+.drug-checker-page .tool-header h1 {
+    font-size: 24px;
+}
+
+.drug-checker-page .disclaimer-banner span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .tool-card {
+    box-shadow: var(--shadow-xs);
+}
+
+/* Input + Add composition: input shrinks safely, Add stays a fixed,
+   always-tappable secondary action (not just under the 1024px breakpoint
+   components.css uses for the generic .btn tap-target rule). */
+.drug-checker-page .chip-input-group input {
+    min-width: 0;
+}
+
+.drug-checker-page .chip-input-group #addMedBtn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding-inline: 16px;
+}
+
+.drug-checker-page .chip-tag-list .chip-tag {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .chip-tag-list .chip-remove {
+    width: 24px;
+    height: 24px;
+}
+
+.drug-checker-page .quick-chips .quick-chip {
+    min-height: 44px;
+    padding: 8px 14px;
+}
+
+.drug-checker-page #submitBtn {
+    min-height: 44px;
+}
+
+.drug-checker-page .tool-loading {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 48px 24px;
+}
+
+.drug-checker-page .tool-error #retryBtn {
+    min-height: 44px;
+    padding-inline: 20px;
+}
+
+/* === Interaction results === */
+.drug-checker-page .severity-group-title {
+    flex-wrap: wrap;
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .interaction-card {
+    min-width: 0;
+}
+
+.drug-checker-page .interaction-card-title {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .interaction-card-desc {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.drug-checker-page .no-interactions {
+    box-shadow: var(--shadow-xs);
+}
+
+.drug-checker-page .result-actions .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 480px) {
+    .drug-checker-page .chip-input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .drug-checker-page .chip-input-group #addMedBtn {
+        width: 100%;
+    }
+
+    .drug-checker-page .result-actions {
+        flex-direction: column;
+    }
+}
+
+/* ===========================================
+   Report Summarizer — Phase 4 Wave E3
+   Scoped to .report-summary-page only. ai-tools.css is shared with
+   symptom-checker.html / drug-checker.html (E1/E2, already reviewed) —
+   do not extend these selectors beyond this page. See src/css/README.md.
+   =========================================== */
+
+.report-summary-page {
+    max-width: 640px;
+    padding-block: 32px 60px;
+}
+
+.report-summary-page .tool-header {
+    margin-bottom: 28px;
+}
+
+.report-summary-page .tool-header .tool-icon {
+    box-shadow: var(--shadow-sm);
+}
+
+.report-summary-page .tool-header h1 {
+    font-size: 24px;
+}
+
+.report-summary-page .disclaimer-banner span {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.report-summary-page #formAlert {
+    max-width: 640px;
+    margin: 0 auto 20px;
+}
+
+/* === Dropzone === */
+.report-summary-page .upload-dropzone {
+    box-shadow: var(--shadow-xs);
+}
+
+.report-summary-page .upload-dropzone:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-color: var(--primary);
+}
+
+.report-summary-page .upload-dropzone h3,
+.report-summary-page .upload-dropzone p {
+    overflow-wrap: break-word;
+}
+
+/* === Selected file chip === */
+.report-summary-page .upload-file-chip {
+    box-shadow: var(--shadow-xs);
+}
+
+.report-summary-page .upload-file-chip .file-name {
+    min-width: 0;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+.report-summary-page #removeFileBtn {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding-inline: 16px;
+}
+
+.report-summary-page #submitBtn {
+    min-height: 44px;
+}
+
+.report-summary-page .tool-loading {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 48px 24px;
+}
+
+.report-summary-page .tool-error #retryBtn {
+    min-height: 44px;
+    padding-inline: 20px;
+}
+
+/* === Summary tabs / content === */
+.report-summary-page .summary-tab:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.report-summary-page .summary-content {
+    overflow-wrap: break-word;
+}
+
+.report-summary-page .collapsible-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+.report-summary-page .collapsible-content {
+    overflow-wrap: break-word;
+}
+
+.report-summary-page .result-actions .btn {
+    min-height: 44px;
+}
+
+@media (max-width: 480px) {
+    .report-summary-page .result-actions {
+        flex-direction: column;
+    }
+}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – التحليلات</title>
+    <title>MedOrbit – التحليلات</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,13 +30,14 @@
          protected markup is parsed (see frontend/src/js/auth-gate.js). -->
     <script src="../src/js/auth-gate.js"></script>
 </head>
-<body class="site-page" data-theme="light">
+<body class="site-page analytics-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
             <div class="brand-text">
-                <h1>MedOrbit</h1>
+                <span class="brand-name">MedOrbit</span>
                 <p data-i18n="brand.tagline">Smart Healthcare AI</p>
             </div>
         </a>
@@ -52,14 +53,14 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:1300px;">
+    <main id="main-content" class="page-container">
 
-        <div class="page-header">
+        <div class="page-header analytics-page-header">
             <h1 data-i18n="analytics.title">التحليلات</h1>
-            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="analytics.subtitle">إحصاءات مجمّعة عن استخدام المنصة</p>
+            <p class="analytics-subtitle" data-i18n="analytics.subtitle">إحصاءات مجمّعة عن استخدام المنصة</p>
         </div>
 
-        <div class="loading-state" id="analyticsLoading" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:var(--text-mute);">
+        <div class="loading-state" id="analyticsLoading">
             <div class="spinner spinner-lg"></div>
             <p data-i18n="common.loading">جارِ التحميل...</p>
         </div>
@@ -94,7 +95,7 @@
 
             <div class="analytics-grid hidden" id="analyticsGrid">
 
-                <div class="chart-card hover-lift">
+                <div class="chart-card">
                     <div class="chart-card-header"><i class="fas fa-chart-line"></i> <span data-i18n="analytics.appointmentsOverTime">المواعيد عبر الزمن</span></div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chartAppointments"></canvas>
@@ -105,7 +106,7 @@
                     </div>
                 </div>
 
-                <div class="chart-card hover-lift">
+                <div class="chart-card">
                     <div class="chart-card-header"><i class="fas fa-user-group"></i> <span data-i18n="analytics.usersByRole">المستخدمون حسب الدور</span></div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chartUsersByRole"></canvas>
@@ -116,7 +117,7 @@
                     </div>
                 </div>
 
-                <div class="chart-card hover-lift">
+                <div class="chart-card">
                     <div class="chart-card-header"><i class="fas fa-stethoscope"></i> <span data-i18n="analytics.topSpecialties">أكثر التخصصات طلباً</span></div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chartTopSpecialties"></canvas>
@@ -127,7 +128,7 @@
                     </div>
                 </div>
 
-                <div class="chart-card hover-lift">
+                <div class="chart-card">
                     <div class="chart-card-header"><i class="fas fa-comments"></i> <span data-i18n="analytics.conversationsPerWeek">محادثات المساعد الذكي أسبوعياً</span></div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chartConversations"></canvas>
@@ -138,7 +139,7 @@
                     </div>
                 </div>
 
-                <div class="chart-card hover-lift">
+                <div class="chart-card">
                     <div class="chart-card-header"><i class="fas fa-layer-group"></i> <span data-i18n="analytics.triageLevels">توزيع مستويات الفرز الطبي</span></div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chartTriage"></canvas>
@@ -149,7 +150,7 @@
                     </div>
                 </div>
 
-                <div class="chart-card hover-lift">
+                <div class="chart-card">
                     <div class="chart-card-header"><i class="fas fa-hospital"></i> <span data-i18n="analytics.clinicTypes">أنواع المرافق الطبية</span></div>
                     <div class="chart-canvas-wrap">
                         <canvas id="chartClinicTypes"></canvas>

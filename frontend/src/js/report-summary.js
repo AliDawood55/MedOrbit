@@ -27,18 +27,6 @@ const ReportSummary = (() => {
             .replace(/"/g, '&quot;');
     }
 
-    function showAlert(message) {
-        const box = document.getElementById('formAlert');
-        if (!box) return;
-        box.className = 'alert error';
-        box.textContent = message;
-    }
-
-    function clearAlert() {
-        const box = document.getElementById('formAlert');
-        if (box) box.className = 'alert';
-    }
-
     function formatSize(bytes) {
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -63,12 +51,12 @@ const ReportSummary = (() => {
     }
 
     function selectFile(file) {
-        clearAlert();
+        FormAlert.clear();
         if (!file) return;
 
         const error = validateFile(file);
         if (error) {
-            showAlert(error);
+            FormAlert.error(error);
             return;
         }
 
@@ -95,7 +83,7 @@ const ReportSummary = (() => {
 
     async function submit() {
         if (!selectedFile) return;
-        clearAlert();
+        FormAlert.clear();
 
         setLoading(true);
         showLoading();
@@ -204,7 +192,7 @@ const ReportSummary = (() => {
 
     function reset() {
         clearFile();
-        clearAlert();
+        FormAlert.clear();
         const result = document.getElementById('resultSection');
         if (result) {
             result.innerHTML = '';
@@ -220,6 +208,12 @@ const ReportSummary = (() => {
         const fileInput = document.getElementById('fileInput');
 
         dropzone?.addEventListener('click', () => fileInput?.click());
+
+        dropzone?.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            fileInput?.click();
+        });
 
         fileInput?.addEventListener('change', () => {
             if (fileInput.files && fileInput.files[0]) selectFile(fileInput.files[0]);

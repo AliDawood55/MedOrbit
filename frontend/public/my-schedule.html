@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – My Schedule</title>
+    <title>MedOrbit – My Schedule</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,13 +27,14 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
     <header class="app-header">
-        <a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><h1>MedOrbit</h1><p data-i18n="brand.tagline"></p></div></a>
+        <a class="header-brand" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><span class="brand-name">MedOrbit</span><p data-i18n="brand.tagline"></p></div></a>
         <nav class="site-nav" id="navLinks"></nav>
         <div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle" aria-label="Theme"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle" aria-label="Language"><span id="langLabel">EN</span></button></div>
     </header>
 
-    <main class="page-container experience-page schedule-page">
+    <main id="main-content" class="page-container experience-page schedule-page">
         <div class="experience-heading">
             <div><h1 id="scheduleTitle">جدولي</h1><p id="scheduleSubtitle">أدر ساعات العمل والاستثناءات والمواعيد القادمة.</p></div>
             <div class="heading-actions"><a class="btn btn-secondary" href="doctor-profile-edit.html"><i class="fas fa-user-doctor"></i><span id="editProfileLabel">ملفي المهني</span></a><button class="btn btn-primary" id="addAvailabilityButton"><i class="fas fa-plus"></i><span id="addAvailabilityLabel">إضافة توفر</span></button></div>

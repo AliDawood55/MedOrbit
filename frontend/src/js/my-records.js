@@ -3,9 +3,9 @@
  *
  * Fetches via GET /patients/me/records (backend/src/routes/patient.routes.js)
  * — a single ownership-scoped timeline that interleaves the patient's own
- * appointments, medical records (diagnoses) and prescriptions. Never call
- * the generic /api/medical-records or /api/prescriptions/:id from here —
- * those have no ownership filtering at all.
+ * appointments, medical records (diagnoses) and prescriptions. The generic
+ * /api/medical-records and /api/prescriptions/:id are ownership-scoped too,
+ * but call this combined timeline instead of stitching them together here.
  */
 const MyRecords = (() => {
 
@@ -135,17 +135,15 @@ const MyRecords = (() => {
     }
 
     function normalizeEntry(raw) {
-        return { ...raw };
+        // Prescription entries in this timeline carry the doctor's internal
+        // notes from the backend; the patient-facing UI must not retain them.
+        const { doctor_notes, ...rest } = raw || {};
+        return rest;
     }
 
     function normalizeTimeline(payload) {
-        const source =
-            payload?.data?.timeline ||
-            payload?.timeline ||
-            [];
-        return (Array.isArray(source) ? source : [])
-            .map(normalizeEntry)
-            .filter((e) => e.id && e.entry_type);
+        const source = Array.isArray(payload?.data?.timeline) ? payload.data.timeline : [];
+        return source.map(normalizeEntry).filter((e) => e.id && e.entry_type);
     }
 
     async function fetchRecords() {
@@ -163,12 +161,56 @@ const MyRecords = (() => {
         if (date) date.disabled = !enabled;
     }
 
+    let lastEmptyIsFiltered = false;
+
+    // Swaps the shared empty-state container's copy between "no history at
+    // all for this patient" (true-empty) and "no matches for the current
+    // filters" (filtered-empty), mirroring my-prescriptions.js so the two
+    // cases are never presented the same way.
+    function setEmptyStateContent(isFiltered) {
+        lastEmptyIsFiltered = isFiltered;
+        const container = document.getElementById('recordsEmpty');
+        if (!container) return;
+        const titleEl = container.querySelector('h2');
+        const hintEl = container.querySelector('p');
+        const linkEl = container.querySelector('a');
+
+        if (isFiltered) {
+            if (titleEl) {
+                titleEl.removeAttribute('data-i18n');
+                titleEl.textContent = label('لا توجد نتائج مطابقة', 'No matching records');
+            }
+            if (hintEl) {
+                hintEl.removeAttribute('data-i18n');
+                hintEl.textContent = label('جرّب تغيير كلمة البحث أو الفلاتر.', 'Try changing your search or filters.');
+            }
+            show(linkEl, false);
+        } else {
+            const titleKey = 'records.emptyTitle';
+            const hintKey = 'records.emptyHint';
+            if (titleEl) {
+                titleEl.setAttribute('data-i18n', titleKey);
+                titleEl.textContent = (typeof I18n !== 'undefined' ? I18n.t(titleKey) : null)
+                    || label('لا يوجد سجل طبي بعد', 'No medical record yet');
+            }
+            if (hintEl) {
+                hintEl.setAttribute('data-i18n', hintKey);
+                hintEl.textContent = (typeof I18n !== 'undefined' ? I18n.t(hintKey) : null)
+                    || label('ستظهر هنا مواعيدك وتشخيصاتك ووصفاتك الطبية بمجرد توفرها.', 'Your appointments, diagnoses and prescriptions will appear here once available.');
+            }
+            show(linkEl, true);
+        }
+    }
+
     function setState(state, message) {
+        const isFilteredEmpty = state === 'filtered-empty';
+        const isEmpty = state === 'empty' || isFilteredEmpty;
+
         show(document.getElementById('recordsLoading'), state === 'loading');
         show(document.getElementById('recordsError'), state === 'error');
         show(document.getElementById('recordsData'), state === 'data');
-        show(document.getElementById('recordsEmpty'), state === 'empty');
-        setFiltersEnabled(state === 'data' || state === 'empty');
+        show(document.getElementById('recordsEmpty'), isEmpty);
+        setFiltersEnabled(state === 'data' || isEmpty);
 
         if (message) {
             const el = document.getElementById('recordsErrorText');
@@ -374,7 +416,9 @@ const MyRecords = (() => {
         const listEl = document.getElementById('recordsList');
 
         if (!list.length) {
-            setState('empty');
+            const isFiltered = entries.length > 0;
+            setEmptyStateContent(isFiltered);
+            setState(isFiltered ? 'filtered-empty' : 'empty');
             return;
         }
 
@@ -409,6 +453,16 @@ const MyRecords = (() => {
         document.getElementById('recordTypeFilter')?.addEventListener('change', render);
         document.getElementById('recordDateFilter')?.addEventListener('change', render);
         document.getElementById('recordsRetryBtn')?.addEventListener('click', load);
+
+        // The filtered-empty copy is set as plain text (not data-i18n), so
+        // it needs its own re-render on language switch; true-empty and the
+        // data grid don't need this — their static labels already carry
+        // data-i18n and are covered by I18n.apply()'s own global pass.
+        window.addEventListener('languageChanged', () => {
+            if (lastEmptyIsFiltered && !document.getElementById('recordsEmpty')?.classList.contains('hidden')) {
+                setEmptyStateContent(true);
+            }
+        });
 
         load();
     }
