@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Centralized environment configuration for the MedOrbit mobile app.
 ///
 /// ## Environments
@@ -20,8 +22,10 @@ class AppConfig {
   static bool get hasApiOverride => _apiUrlOverride.isNotEmpty;
 
   /// The configured backend base URL — always ending in exactly one `/api`.
+  /// The configured backend base URL — always ending in exactly one `/api`.
   /// Empty means startup must show the configuration error before any request.
-  static String get baseUrl => hasApiOverride ? normalizeApiBase(_apiUrlOverride) : '';
+  static String get baseUrl =>
+      hasApiOverride ? normalizeApiBase(_apiUrlOverride) : '';
 
   static bool get hasValidReleaseApiUrl =>
       hasApiOverride && normalizeApiBase(_apiUrlOverride).startsWith('https://');
@@ -34,15 +38,36 @@ class AppConfig {
   /// its explicitly supplied backend — it never falls back to localhost or a
   /// developer LAN address.
   static List<String> get baseUrlCandidates => candidatesFor(_apiUrlOverride);
-
+  
   /// Candidate list for a given override value. Split out from
   /// [baseUrlCandidates] because `String.fromEnvironment` is resolved at
-  /// compile time and cannot be varied from a test.
-  static List<String> candidatesFor(String apiUrlOverride) {
+  /// compile time and cannot be varied from a test. `debug` defaults to
+  /// `kDebugMode` for the same reason; tests pass it explicitly.
+  static List<String> candidatesFor(String apiUrlOverride, {bool debug = kDebugMode}) {
     if (apiUrlOverride.isNotEmpty) {
       return <String>[normalizeApiBase(apiUrlOverride)];
     }
+
+    if (!debug) {
+      throw StateError(
+        'MEDORBIT_API_URL must be set outside debug builds — pass '
+        '--dart-define=MEDORBIT_API_URL=<backend origin>. The developer LAN '
+        'default ($devLanBaseUrl) is never used for release/profile builds.',
+      );
+    }
+    return const <String>[devLanBaseUrl, emulatorBaseUrl, localhostBaseUrl];
+
+      static List<String> candidatesFor(
+    String apiUrlOverride, {
+    bool debug = kDebugMode,
+  }) {
+    if (apiUrlOverride.isNotEmpty) {
+      return <String>[normalizeApiBase(apiUrlOverride)];
+    }
+
     return const <String>[];
+  }
+
   }
 
   /// Forces a backend origin to end in exactly one `/api`, matching the web

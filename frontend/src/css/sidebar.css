@@ -135,6 +135,14 @@
     color: var(--text);
 }
 
+/* === Responsive: touch tap targets === */
+@media (max-width: 1024px) {
+    .sidebar-item-btn {
+        width: 44px;
+        height: 44px;
+    }
+}
+
 .sidebar-rename-input {
     width: 100%;
     font-size: 13px;

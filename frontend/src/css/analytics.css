@@ -2,6 +2,31 @@
    MedOrbit v2 - Analytics (analytics.html)
    =========================================== */
 
+/* === Page shell === */
+body.analytics-page .page-container {
+    max-width: 1300px;
+}
+
+.analytics-page-header {
+    margin-bottom: 24px;
+}
+
+.analytics-subtitle {
+    color: var(--text-mute);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+/* === Loading state === */
+#analyticsLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 70px 20px;
+    color: var(--text-mute);
+}
+
 .analytics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -18,20 +43,25 @@
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
-    padding: 18px;
-    transition: transform var(--t-fast), box-shadow var(--t-fast);
+    padding: 20px;
+    box-shadow: var(--shadow-xs);
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 
+/* Static cards, not navigation — a subtle surface change on hover, no lift,
+   so they don't read as clickable. */
 .chart-card:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
+    border-color: var(--border);
+    box-shadow: var(--shadow-sm);
 }
 
 .chart-card-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
     font-size: 14px;
     font-weight: 700;
     color: var(--text);
@@ -112,6 +142,17 @@
     max-width: 420px;
     margin: 0 auto 18px;
     line-height: 1.7;
+}
+
+.analytics-restricted a.btn,
+#analyticsRetryBtn {
+    min-height: 44px;
+}
+
+/* Distinct from the restricted state — a load failure, not an
+   authorization boundary — without the alarming full-error treatment. */
+#analyticsLoadError {
+    border-top: 3px solid var(--danger);
 }
 
 @media (max-width: 768px) {

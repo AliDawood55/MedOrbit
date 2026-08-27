@@ -30,12 +30,16 @@ Future<void> main() async {
     ),
   );
   final api = VirtualDoctorApi(dio);
-  final sessionId = (await api.start(language: 'ar')).sessionId;
-  stdout.writeln('session: $sessionId');
+  // This timing tool uses one throwaway authenticated consultation session.
+const spoken = 'عندي صداع شديد منذ يومين';
+final sessionId = (await api.start(language: 'ar')).sessionId;
+stdout.writeln('session: $sessionId');
 
-  // Prepare a real Arabic clip via TTS.
-  const spoken = 'عندي صداع شديد منذ يومين';
-  final wav = await api.speak(text: spoken, language: 'ar', sessionId: sessionId);
+final wav = await api.speak(
+  text: spoken,
+  language: 'ar',
+  sessionId: sessionId,
+);
   final clip = File('${Directory.systemTemp.path}/vd_stt_timing.wav');
   await clip.writeAsBytes(wav, flush: true);
   stdout.writeln('clip: ${wav.length} bytes\n');
@@ -70,7 +74,7 @@ Future<void> main() async {
   stdout.writeln('warmup: ${sw.elapsedMilliseconds}ms');
 
   await attempt('warm transcribe :');
-  await attempt('warm transcribe :');
+  //await attempt('warm transcribe :');
 
   await clip.delete();
   stdout.writeln('\nApp client budget (AppConfig.sttTimeout): ${AppConfig.sttTimeout.inSeconds}s');

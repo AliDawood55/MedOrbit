@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – مرضاي</title>
+    <title>MedOrbit – مرضاي</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,12 +32,13 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
             <div class="brand-text">
-                <h1>MedOrbit</h1>
+                <span class="brand-name">MedOrbit</span>
                 <p data-i18n="brand.tagline">Smart Healthcare AI</p>
             </div>
         </a>
@@ -53,7 +54,7 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:1100px;">
+    <main id="main-content" class="page-container my-patients-page">
 
         <div class="care-restricted hidden" id="restrictedNotice">
             <div class="empty-state-icon"><i class="fas fa-lock"></i></div>
@@ -69,13 +70,13 @@
 
             <div class="page-header">
                 <h1 data-i18n="myPatients.title">مرضاي</h1>
-                <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="myPatients.subtitle">قائمة المرضى الذين لديهم مواعيد معك</p>
+                <p class="my-patients-subtitle" data-i18n="myPatients.subtitle">قائمة المرضى الذين لديهم مواعيد معك</p>
             </div>
 
             <div class="care-search-bar">
                 <div class="search-field">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="patientSearchInput" data-i18n-placeholder="myPatients.searchPlaceholder" placeholder="ابحث باسم المريض...">
+                    <input type="text" id="patientSearchInput" data-i18n-placeholder="myPatients.searchPlaceholder" data-i18n-aria="myPatients.searchPlaceholder" placeholder="ابحث باسم المريض...">
                 </div>
                 <select id="patientFilterSelect">
                     <option value="all" data-i18n="myPatients.filterAll">كل المرضى</option>

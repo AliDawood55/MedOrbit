@@ -15,6 +15,18 @@
     100% { background-position: -200% 0; }
 }
 
+/* Moved here from animation.css's reduced-motion block, which grouped it with
+   .fade-in-item / .hover-lift / .collapsible — but those three are DEFINED in
+   animation.css, whereas .skeleton and its keyframes are defined right above.
+   The override was stranded away from what it disables, so pages that use a
+   skeleton without loading animation.css (book-appointment, my-schedule) kept
+   shimmering for readers who asked motion to stop. */
+@media (prefers-reduced-motion: reduce) {
+    .skeleton {
+        animation: none !important;
+    }
+}
+
 /* === Card === */
 .card {
     background: var(--bg-card);
@@ -177,11 +189,86 @@
     to { transform: rotate(360deg); }
 }
 
+/* Spinner stays visible (loading feedback), just stops spinning. */
+@media (prefers-reduced-motion: reduce) {
+    .spinner,
+    .spinner-sm,
+    .spinner-lg {
+        animation: none;
+    }
+}
+
 /* === Divider === */
 .divider {
     height: 1px;
     background: var(--border);
     margin: 12px 0;
+}
+
+/* === Page header ===
+   Promoted here from listing.css: the title/subtitle block at the top of a
+   content page is generic, and 14 pages use .page-header while only 13 of
+   them load listing.css (billing.html does not). No stylesheet defines a
+   competing .page-header rule, so nothing overrides this base. */
+.page-header {
+    margin-bottom: 20px;
+}
+
+.page-header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.page-header p {
+    font-size: 14px;
+    color: var(--text-mute);
+}
+
+/* === Pagination ===
+   Promoted here from listing.css. Rendered by find-doctors.js and
+   find-clinics.js; both those pages load listing.css today, so this move
+   exposes it to no new page. Direction-agnostic on purpose — the flex row
+   reverses itself under [dir="rtl"] and the chevrons are chosen in JS. */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 28px;
+}
+
+.pagination-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all var(--t-fast);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pagination-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* === Empty State === */
@@ -368,6 +455,11 @@
     .btn-icon {
         min-width: 44px;
         min-height: 44px;
+    }
+
+    .pagination-btn {
+        min-width: 44px;
+        height: 44px;
     }
 }
 

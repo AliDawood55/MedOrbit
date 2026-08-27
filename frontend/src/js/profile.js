@@ -50,9 +50,11 @@ const Profile = (() => {
         document.getElementById('errorState')?.classList.add('hidden');
         document.getElementById('profileContent')?.classList.add('hidden');
 
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
         try {
-            const res = await API.users.me();
-            profile = res.data;
+            profile = AuthGate.getVerifiedUser();
             render();
             document.getElementById('profileContent')?.classList.remove('hidden');
         } catch (err) {

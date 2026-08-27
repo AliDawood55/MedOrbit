@@ -109,11 +109,10 @@ body.site-page [id] {
     transform: rotate(180deg);
 }
 
-.nav-dropdown-menu {
+.nav-dropdown-menu,
+.user-menu {
     position: absolute;
     top: calc(100% + 8px);
-    left: 0;
-    min-width: 190px;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
@@ -123,6 +122,11 @@ body.site-page [id] {
     flex-direction: column;
     gap: 2px;
     z-index: var(--z-modal);
+}
+
+.nav-dropdown-menu {
+    left: 0;
+    min-width: 190px;
 }
 
 [dir="rtl"] .nav-dropdown-menu {
@@ -266,19 +270,8 @@ body.site-page [id] {
 }
 
 .user-menu {
-    position: absolute;
-    top: calc(100% + 8px);
     right: 0;
     min-width: 180px;
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    box-shadow: var(--shadow-lg);
-    padding: 6px;
-    display: none;
-    flex-direction: column;
-    gap: 2px;
-    z-index: var(--z-modal);
 }
 
 [dir="rtl"] .user-menu {
@@ -308,6 +301,13 @@ body.site-page [id] {
 }
 
 /* === Footer === */
+/* margin-top: auto consumes the leftover flex space in body.site-page's
+   column, pinning the footer to the viewport bottom on short pages while
+   staying in normal flow (long pages scroll past it as usual). */
+body.site-page .site-footer {
+    margin-top: auto;
+}
+
 .site-footer {
     background: var(--bg-elevated);
     border-top: 1px solid var(--border);
@@ -475,7 +475,7 @@ body.site-page [id] {
     font-size: 16px;
 }
 
-.mobile-drawer-header .brand-text h1 {
+.mobile-drawer-header .brand-text .brand-name {
     font-size: 15px;
 }
 

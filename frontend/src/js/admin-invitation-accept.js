@@ -1,4 +1,6 @@
 (() => {
+    if (typeof Theme !== 'undefined') Theme.apply();
+
     const token = new URLSearchParams(window.location.search).get('token');
     const message = document.getElementById('message');
     const button = document.getElementById('acceptInvitation');
@@ -19,9 +21,15 @@
         button.disabled = true;
         try {
             await API.post('/admin/invitations/accept', { token });
-            API.clearSession();
+            history.replaceState({}, '', window.location.pathname);
             message.textContent = 'Invitation accepted. Please sign in again.';
-            window.setTimeout(() => { window.location.href = 'login.html'; }, 800);
+            window.setTimeout(() => {
+                API.clearSession();
+                if (typeof AuthGate !== 'undefined' && typeof AuthGate.clearIntendedDestination === 'function') {
+                    AuthGate.clearIntendedDestination();
+                }
+                window.location.replace('login.html');
+            }, 800);
         } catch (err) {
             message.textContent = err.message || 'This invitation is unavailable.';
             button.disabled = false;

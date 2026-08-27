@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>MedOrbit – Doctor Applications</title>
+  <title>MedOrbit – Doctor Applications</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="../src/css/main.css">
@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../src/css/layout.css">
   <link rel="stylesheet" href="../src/css/forms.css">
   <link rel="stylesheet" href="../src/css/doctor-applications.css">
+  <link rel="stylesheet" href="../src/css/admin-doctor-applications.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -25,7 +26,8 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 
-<body class="site-page" data-theme="light">
+<body class="site-page admin-doctor-applications-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
   <header class="app-header">
     <a class="header-brand" id="brandLink" href="home.html">
       <div class="brand-icon">
@@ -33,7 +35,7 @@
       </div>
 
       <div class="brand-text">
-        <h1>MedOrbit</h1>
+        <span class="brand-name">MedOrbit</span>
         <p>Smart Healthcare AI</p>
       </div>
     </a>
@@ -53,7 +55,7 @@
     </div>
   </header>
 
-  <main class="page-container application-shell">
+  <main id="main-content" class="page-container application-shell">
     <section class="application-hero">
       <div>
         <h1>طلبات الأطباء / Doctor Applications</h1>

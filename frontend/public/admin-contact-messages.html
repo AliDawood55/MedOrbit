@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#2563EB">
 
-  <title>MedOrbit – Contact Messages</title>
+  <title>MedOrbit – Contact Messages</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="../src/css/components.css">
   <link rel="stylesheet" href="../src/css/layout.css">
   <link rel="stylesheet" href="../src/css/experience.css">
+  <link rel="stylesheet" href="../src/css/admin-contact-messages.css">
     <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
          below is an external file and an external file can 404, be blocked or
          time out, and a gate that never loads hides nothing. These lines
@@ -35,7 +36,8 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 
-<body class="site-page" data-theme="light">
+<body class="site-page admin-contact-messages-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
   <header class="app-header">
     <a class="header-brand" href="home.html">
       <div class="brand-icon">
@@ -43,7 +45,7 @@
       </div>
 
       <div class="brand-text">
-        <h1>MedOrbit</h1>
+        <span class="brand-name">MedOrbit</span>
         <p data-i18n="brand.tagline"></p>
       </div>
     </a>
@@ -63,7 +65,7 @@
     </div>
   </header>
 
-  <main class="page-container experience-page">
+  <main id="main-content" class="page-container experience-page">
     <div class="experience-heading">
       <div>
         <h1 id="adminContactTitle">Contact Messages</h1>
@@ -83,7 +85,7 @@
             <option value="resolved">Resolved</option>
           </select>
 
-          <button class="btn btn-ghost btn-sm" id="refreshContactList" type="button">
+          <button class="btn btn-ghost btn-sm" id="refreshContactList" type="button" aria-label="Refresh messages">
             <i class="fas fa-rotate"></i>
           </button>
         </div>
