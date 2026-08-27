@@ -39,7 +39,6 @@
 #################################################
 
 **/logs/
-backend/storage/chatbot-logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -68,6 +67,13 @@ Thumbs.db
 !**/uploads/avatars/.gitkeep
 **/temp/
 **/tmp/
+
+#################################################
+# Runtime data — generated / user-uploaded / runtime output.
+# The whole backend storage tree is runtime state, never source.
+#################################################
+
+backend/storage/
 
 #################################################
 # Database Backups
@@ -102,13 +108,6 @@ Thumbs.db
 **/coverage/
 
 #################################################
-# AI / Assistant
-#################################################
-
-.aider*
-.clinerules
-
-#################################################
 # Misc
 #################################################
 
@@ -117,7 +116,7 @@ Thumbs.db
 *.bak
 
 #################################################
-# Editor / AI-tool artifacts (repo root)
+# Local scratch
 #################################################
 
 tempData/
@@ -160,8 +159,6 @@ ai-service/data/nablus_wide_review*.csv
 tests/
 jest.config.js
 
-#### Omar Appendix ####
-Appendix-Omar/
 ai-service/data/cache/
 ai-service/data/reports/
 
