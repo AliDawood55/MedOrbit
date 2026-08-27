@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/locale/locale_controller.dart';
 import '../../../core/localization/app_strings.dart';
@@ -61,49 +65,78 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen>
     final now = DateTime.now();
     final threshold = switch (_dateFilter) {
       _PrescriptionDateFilter.any => null,
-      _PrescriptionDateFilter.last30Days =>
-        now.subtract(const Duration(days: 30)),
-      _PrescriptionDateFilter.lastYear =>
-        now.subtract(const Duration(days: 365)),
+      _PrescriptionDateFilter.last30Days => now.subtract(
+        const Duration(days: 30),
+      ),
+      _PrescriptionDateFilter.lastYear => now.subtract(
+        const Duration(days: 365),
+      ),
     };
 
-    final filtered = prescriptions.where((prescription) {
-      final medicineNames = prescription.items.expand(
-        (item) => [item.medicationNameAr, item.medicationNameEn],
-      );
-      final haystack = [
-        prescription.prescriptionNumber,
-        prescription.diagnosis,
-        ...medicineNames,
-      ].whereType<String>().join(' ').toLowerCase();
-      final matchesQuery = _query.isEmpty || haystack.contains(_query);
-      final matchesStatus = effectiveStatus == 'all' ||
-          prescription.status == effectiveStatus;
+    final filtered =
+        prescriptions.where((prescription) {
+            final medicineNames = prescription.items.expand(
+              (item) => [item.medicationNameAr, item.medicationNameEn],
+            );
+            final haystack = [
+              prescription.prescriptionNumber,
+              prescription.diagnosis,
+              ...medicineNames,
+            ].whereType<String>().join(' ').toLowerCase();
+            final matchesQuery = _query.isEmpty || haystack.contains(_query);
+            final matchesStatus =
+                effectiveStatus == 'all' ||
+                prescription.status == effectiveStatus;
 
-      var matchesDate = true;
-      if (threshold != null) {
-        try {
-          matchesDate = parseDateOnly(
-            prescription.prescriptionDate,
-          ).isAfter(threshold);
-        } catch (_) {
-          matchesDate = false;
-        }
-      }
-      return matchesQuery && matchesStatus && matchesDate;
-    }).toList()
-      ..sort(
-        (a, b) => b.prescriptionDate.compareTo(a.prescriptionDate),
-      );
+            var matchesDate = true;
+            if (threshold != null) {
+              try {
+                matchesDate = parseDateOnly(
+                  prescription.prescriptionDate,
+                ).isAfter(threshold);
+              } catch (_) {
+                matchesDate = false;
+              }
+            }
+            return matchesQuery && matchesStatus && matchesDate;
+          }).toList()
+          ..sort((a, b) => b.prescriptionDate.compareTo(a.prescriptionDate));
     return filtered;
+  }
+
+  Future<void> _openPdf(PrescriptionModel prescription) async {
+    final strings = ref.read(appStringsProvider);
+    try {
+      final bytes = await ref
+          .read(prescriptionsApiProvider)
+          .downloadPdf(prescription.id);
+      final directory = await getTemporaryDirectory();
+      final safeNumber = prescription.prescriptionNumber.replaceAll(
+        RegExp(r'[^A-Za-z0-9_-]'),
+        '_',
+      );
+      final file = File(
+        '${directory.path}/medorbit_prescription_$safeNumber.pdf',
+      );
+      await file.writeAsBytes(bytes, flush: true);
+      final result = await OpenFilex.open(file.path);
+      if (!mounted || result.type == ResultType.done) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.prescriptionPdfOpenError)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(strings.prescriptionPdfDownloadError)),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final strings = ref.watch(appStringsProvider);
-    final isArabic =
-        ref.watch(localeControllerProvider).languageCode == 'ar';
+    final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
     final listAsync = ref.watch(prescriptionsListProvider);
 
     return AppScaffold(
@@ -127,12 +160,13 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen>
             Expanded(
               child: listAsync.when(
                 data: (prescriptions) {
-                  final statuses = prescriptions
-                      .map((item) => item.status)
-                      .where((status) => status.isNotEmpty)
-                      .toSet()
-                      .toList()
-                    ..sort();
+                  final statuses =
+                      prescriptions
+                          .map((item) => item.status)
+                          .where((status) => status.isNotEmpty)
+                          .toSet()
+                          .toList()
+                        ..sort();
                   final effectiveStatus = statuses.contains(_status)
                       ? _status
                       : 'all';
@@ -151,19 +185,18 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen>
                     query: _query,
                     strings: strings,
                     isArabic: isArabic,
-                    onSearchChanged: (value) => setState(
-                      () => _query = value.trim().toLowerCase(),
-                    ),
+                    onSearchChanged: (value) =>
+                        setState(() => _query = value.trim().toLowerCase()),
                     onClearSearch: () {
                       _searchController.clear();
                       setState(() => _query = '');
                     },
-                    onStatusChanged: (value) =>
-                        setState(() => _status = value),
+                    onStatusChanged: (value) => setState(() => _status = value),
                     onDateChanged: (value) =>
                         setState(() => _dateFilter = value),
                     onClearFilters: _clearFilters,
                     onRefresh: _refresh,
+                    onOpenPdf: _openPdf,
                   );
                 },
                 loading: () => _PrescriptionsLoading(
@@ -172,8 +205,7 @@ class _PrescriptionsScreenState extends ConsumerState<PrescriptionsScreen>
                 ),
                 error: (error, stackTrace) => _PrescriptionsError(
                   strings: strings,
-                  onRetry: () =>
-                      ref.invalidate(prescriptionsListProvider),
+                  onRetry: () => ref.invalidate(prescriptionsListProvider),
                   onRefresh: _refresh,
                 ),
               ),
@@ -202,6 +234,7 @@ class _PrescriptionsData extends StatelessWidget {
     required this.onDateChanged,
     required this.onClearFilters,
     required this.onRefresh,
+    required this.onOpenPdf,
   });
 
   final List<PrescriptionModel> allPrescriptions;
@@ -219,8 +252,10 @@ class _PrescriptionsData extends StatelessWidget {
   final ValueChanged<_PrescriptionDateFilter> onDateChanged;
   final VoidCallback onClearFilters;
   final Future<void> Function() onRefresh;
+  final Future<void> Function(PrescriptionModel prescription) onOpenPdf;
 
-  bool get hasActiveFilters => query.isNotEmpty ||
+  bool get hasActiveFilters =>
+      query.isNotEmpty ||
       selectedStatus != 'all' ||
       selectedDateFilter != _PrescriptionDateFilter.any;
 
@@ -312,6 +347,7 @@ class _PrescriptionsData extends StatelessWidget {
                           filteredPrescriptions[index],
                           strings,
                           isArabic,
+                          onOpenPdf,
                         ),
                       ),
                       if (index != filteredPrescriptions.length - 1)
@@ -366,15 +402,13 @@ class _PrescriptionFilters extends StatelessWidget {
             children: [
               SectionHeader(
                 title: strings.prescriptionFiltersTitle,
-                padding: const EdgeInsets.only(
-                  bottom: AppTheme.spaceMd,
-                ),
+                padding: const EdgeInsets.only(bottom: AppTheme.spaceMd),
               ),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final largeText = AppTheme.usesLargeText(context);
-                  final useRow = constraints.maxWidth >=
-                          AppTheme.wideBreakpoint &&
+                  final useRow =
+                      constraints.maxWidth >= AppTheme.wideBreakpoint &&
                       !largeText;
                   final search = AppTextField(
                     label: strings.prescriptionSearchLabel,
@@ -392,8 +426,7 @@ class _PrescriptionFilters extends StatelessWidget {
                     semanticLabel: strings.prescriptionSearchLabel,
                     onChanged: onSearchChanged,
                   );
-                  final date = DropdownButtonFormField<
-                      _PrescriptionDateFilter>(
+                  final date = DropdownButtonFormField<_PrescriptionDateFilter>(
                     key: ValueKey(selectedDateFilter),
                     initialValue: selectedDateFilter,
                     isExpanded: true,
@@ -459,10 +492,7 @@ class _PrescriptionFilters extends StatelessWidget {
                   for (final status in statuses)
                     _StatusFilterChip(
                       status: status,
-                      label: prescriptionStatusVisual(
-                        status,
-                        strings,
-                      ).$1,
+                      label: prescriptionStatusVisual(status, strings).$1,
                       selected: selectedStatus == status,
                       onSelected: onStatusChanged,
                     ),
@@ -521,13 +551,11 @@ class _PrescriptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final (statusLabel, statusColor) =
-        prescriptionStatusVisual(prescription.status, strings);
-    final title = prescriptionDisplayTitle(
-      prescription,
-      isArabic,
+    final (statusLabel, statusColor) = prescriptionStatusVisual(
+      prescription.status,
       strings,
     );
+    final title = prescriptionDisplayTitle(prescription, isArabic, strings);
     final issuedDate = formatDate(
       parseDateOnly(prescription.prescriptionDate),
       localeCode: isArabic ? 'ar' : 'en',
@@ -541,8 +569,8 @@ class _PrescriptionCard extends StatelessWidget {
     final preview = prescription.instructions?.trim().isNotEmpty == true
         ? prescription.instructions!.trim()
         : prescription.doctorNotes?.trim().isNotEmpty == true
-            ? prescription.doctorNotes!.trim()
-            : null;
+        ? prescription.doctorNotes!.trim()
+        : null;
     final semanticLabel = [
       strings.prescriptionNumberValue(prescription.prescriptionNumber),
       title,
@@ -564,8 +592,8 @@ class _PrescriptionCard extends StatelessWidget {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final largeText = AppTheme.usesLargeText(context);
-                  final stack = constraints.maxWidth <
-                          AppTheme.compactBreakpoint ||
+                  final stack =
+                      constraints.maxWidth < AppTheme.compactBreakpoint ||
                       largeText;
                   final icon = Container(
                     width: 52,
@@ -615,10 +643,7 @@ class _PrescriptionCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: AppTheme.spaceMd),
-                        StatusBadge(
-                          label: statusLabel,
-                          color: statusColor,
-                        ),
+                        StatusBadge(label: statusLabel, color: statusColor),
                       ],
                     );
                   }
@@ -630,10 +655,7 @@ class _PrescriptionCard extends StatelessWidget {
                       const SizedBox(width: AppTheme.spaceMd),
                       Expanded(child: heading),
                       const SizedBox(width: AppTheme.spaceSm),
-                      StatusBadge(
-                        label: statusLabel,
-                        color: statusColor,
-                      ),
+                      StatusBadge(label: statusLabel, color: statusColor),
                     ],
                   );
                 },
@@ -659,9 +681,7 @@ class _PrescriptionCard extends StatelessWidget {
                   _PrescriptionMeta(
                     icon: Icons.medication_liquid_outlined,
                     label: strings.detailMedications,
-                    value: strings.medicationCount(
-                      prescription.items.length,
-                    ),
+                    value: strings.medicationCount(prescription.items.length),
                   ),
                 ],
               ),
@@ -731,13 +751,12 @@ class _PrescriptionMeta extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: color,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: color),
                 ),
                 Directionality(
-                  textDirection:
-                      textDirection ?? Directionality.of(context),
+                  textDirection: textDirection ?? Directionality.of(context),
                   child: Text(
                     value,
                     style: Theme.of(context).textTheme.bodySmall,
@@ -773,8 +792,8 @@ class _TextPreview extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppTheme.spaceXs),
           Text(
@@ -813,8 +832,7 @@ class _PrescriptionsLoading extends StatelessWidget {
                   const SizedBox(height: AppTheme.spaceLg),
                   for (var index = 0; index < 3; index++) ...[
                     const _PrescriptionSkeletonCard(),
-                    if (index != 2)
-                      const SizedBox(height: AppTheme.spaceMd),
+                    if (index != 2) const SizedBox(height: AppTheme.spaceMd),
                   ],
                 ],
               ),
@@ -846,8 +864,7 @@ class _FilterSkeleton extends StatelessWidget {
                   const Expanded(
                     child: _SkeletonLine(widthFactor: 1, height: 32),
                   ),
-                  if (index != 2)
-                    const SizedBox(width: AppTheme.spaceSm),
+                  if (index != 2) const SizedBox(width: AppTheme.spaceSm),
                 ],
               ],
             ),
