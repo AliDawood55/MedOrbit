@@ -1,7 +1,7 @@
 /**
  * MedOrbit v2 - My Prescriptions
- * Real list/detail UI is ready. Data fetching is intentionally blocked until
- * Omar adds a safe caller-scoped endpoint.
+ * The patient-scoped API is the only source for this page. It excludes
+ * clinician-private doctor_notes at the backend boundary.
  */
 const MyPrescriptions = (() => {
 
@@ -267,6 +267,11 @@ const MyPrescriptions = (() => {
         document.getElementById('prescriptionStatusFilter')?.addEventListener('change', render);
         document.getElementById('prescriptionDateFilter')?.addEventListener('change', render);
         document.getElementById('prescriptionsRetryBtn')?.addEventListener('click', load);
+        // Static labels are translated by I18n, but prescription names and
+        // dates are rendered from API data. Re-render them on a language
+        // switch so medication_name_en is used in English and
+        // medication_name_ar in Arabic whenever both values exist.
+        window.addEventListener('languageChanged', render);
 
         load();
     }
