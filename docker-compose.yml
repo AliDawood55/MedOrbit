@@ -379,8 +379,12 @@ services:
   ai-service-test:
     build:
       context: .
-      dockerfile: ai-service/Dockerfile
-    image: medorbit-ai-service-test
+      dockerfile: backend/Dockerfile.test
+    # This is intentionally the Node test image.  `ai-test-server.js` is a
+    # deterministic internal AI double used by backend integration tests to
+    # exercise warning, malformed-response, and outage paths.  The real
+    # FastAPI service is verified by the separate ai-tests CI job.
+    image: medorbit-backend-test
     profiles: ["test"]
     restart: "no"
     env_file:
@@ -392,8 +396,7 @@ services:
       DB_SCHEMA: medorbit
       NODE_ENV: test
       MEDORBIT_TEST_ISOLATION: docker
-      # Keep the FastAPI service on its Dockerfile default.  The test backend
-      # reaches it by the compose service name, never through a host port.
+      PORT: 8001
     depends_on:
       postgres:
         condition: service_healthy
@@ -403,12 +406,13 @@ services:
       test:
         [
           "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)\" || exit 1",
+          "node -e \"require('http').get('http://localhost:8001/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\"",
         ]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 15s
+    command: ["node", "tests/helpers/ai-test-server.js"]
 
   frontend:
     build:
