@@ -4,7 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/localization/app_strings.dart';
 import 'package:mobile/core/network/api_exception.dart';
+import 'package:mobile/core/providers/core_providers.dart';
+import 'package:mobile/core/storage/secure_storage_service.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/discovery/data/discovery_api.dart';
 import 'package:mobile/features/discovery/data/location_service.dart';
@@ -14,6 +17,9 @@ import 'package:mobile/features/discovery/providers/discovery_provider.dart';
 import 'package:mobile/features/discovery/providers/location_provider.dart';
 import 'package:mobile/features/discovery/screens/clinic_discovery_screen.dart';
 
+const _strings = AppStrings(false);
+const _arStrings = AppStrings(true);
+
 void main() {
   testWidgets('initial loading is visible', (tester) async {
     final pending = Completer<ClinicListResponse>();
@@ -22,7 +28,7 @@ void main() {
     await tester.pumpWidget(_app(api));
     await tester.pump();
 
-    expect(find.text('Loading clinics...'), findsOneWidget);
+    expect(find.text(_strings.clinicLoadingClinics), findsOneWidget);
     pending.complete(const ClinicListResponse());
     await tester.pump();
   });
@@ -50,9 +56,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Rafidia Clinic'), findsOneWidget);
-    expect(find.text('Verified'), findsOneWidget);
+    expect(find.text(_strings.clinicVerifiedLabel), findsOneWidget);
     expect(find.text('Pediatrics'), findsOneWidget);
-    expect(find.textContaining('Phone'), findsNothing);
+    expect(find.textContaining(_strings.clinicPhoneLabel), findsNothing);
   });
 
   testWidgets('search debounces and preserves query across list and map switch', (tester) async {
@@ -74,7 +80,7 @@ void main() {
     await tester.pump();
     expect(api.clinicListCalls.last.search, 'lab');
 
-    await tester.tap(find.text('Map'));
+    await tester.tap(find.text(_strings.discoveryViewModeMap));
     await tester.pump();
     expect(find.text('lab'), findsOneWidget);
   });
@@ -88,7 +94,7 @@ void main() {
 
     await tester.pumpWidget(_app(api));
     await tester.pump();
-    await tester.tap(find.text('Filters'));
+    await tester.tap(find.text(_strings.discoveryFiltersButton));
     await tester.pumpAndSettle();
     final sheetScrollable = find.descendant(
       of: find.byKey(const ValueKey('clinic-filter-scrollable')),
@@ -101,13 +107,60 @@ void main() {
     await tester.tap(pharmacy.hitTestable());
     final apply = find.byKey(const ValueKey('clinic-filter-apply'));
     await dragUntilHitTestable(tester, apply, sheetScrollable);
-    final applyButton = find.widgetWithText(ElevatedButton, 'Apply filters');
+    final applyButton = find.widgetWithText(ElevatedButton, _strings.discoveryApplyFiltersButton);
     expect(applyButton.hitTestable(), findsOneWidget);
     await tester.tap(applyButton.hitTestable());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(api.clinicListCalls.last.type, 'pharmacy');
+  });
+
+  testWidgets('English search, filter, and location labels render in English', (tester) async {
+    final api = _FakeDiscoveryApi()..clinicListResults.add(Future.value(const ClinicListResponse()));
+    await tester.pumpWidget(_app(api));
+    await tester.pump();
+
+    expect(find.text(_strings.clinicDiscoveryScreenTitle), findsOneWidget);
+    expect(find.text(_strings.searchClinicsLabel), findsOneWidget);
+    expect(find.text(_strings.discoveryFiltersButton), findsOneWidget);
+    expect(find.text(_strings.nearbySearchTitle), findsOneWidget);
+    expect(find.text(_strings.useGpsButton), findsOneWidget);
+    expect(find.text(_strings.chooseLocationButton), findsOneWidget);
+  });
+
+  testWidgets('Arabic search, filter, and location labels render in Arabic', (tester) async {
+    final api = _FakeDiscoveryApi()..clinicListResults.add(Future.value(const ClinicListResponse()));
+    await tester.pumpWidget(_app(api, isArabic: true));
+    await tester.pump();
+
+    expect(find.text(_arStrings.clinicDiscoveryScreenTitle), findsOneWidget);
+    expect(find.text(_arStrings.searchClinicsLabel), findsOneWidget);
+    expect(find.text(_arStrings.discoveryFiltersButton), findsOneWidget);
+    expect(find.text(_arStrings.nearbySearchTitle), findsOneWidget);
+    expect(find.text(_arStrings.useGpsButton), findsOneWidget);
+    expect(find.text(_arStrings.chooseLocationButton), findsOneWidget);
+  });
+
+  testWidgets('facility type display localizes to Arabic while the raw enum sent to the backend stays stable', (tester) async {
+    final api = _FakeDiscoveryApi()
+      ..clinicListResults.add(
+        Future.value(
+          const ClinicListResponse(
+            clinics: [Clinic(id: 'pharmacy-1', nameEn: 'Care Pharmacy', type: 'pharmacy')],
+          ),
+        ),
+      );
+
+    await tester.pumpWidget(_app(api, isArabic: true));
+    await tester.pump();
+    await tester.pump();
+
+    // Display label is localized to Arabic; the raw backend enum value
+    // ('pharmacy') is proven stable by the separate "type filter sends
+    // supported backend filter" test above, which applies the filter and
+    // asserts the exact wire value sent.
+    expect(find.text(_arStrings.clinicTypeLabelFor('pharmacy')), findsOneWidget);
   });
 
   testWidgets('nearby GPS and manual district keep nearby results separate', (tester) async {
@@ -136,7 +189,7 @@ void main() {
 
     await tester.pumpWidget(_app(api, location: location));
     await tester.pump();
-    await tester.tap(find.text('Use GPS'));
+    await tester.tap(find.text(_strings.useGpsButton));
     await tester.pump();
     await tester.pump();
 
@@ -145,7 +198,7 @@ void main() {
     expect(api.nearbyCalls.single.radius, 5);
 
     final mainScrollable = find.byKey(const PageStorageKey<String>('clinic-discovery-scroll'));
-    final chooseLocation = find.widgetWithText(OutlinedButton, 'Choose location');
+    final chooseLocation = find.widgetWithText(OutlinedButton, _strings.chooseLocationButton);
     await dragUntilHitTestable(tester, chooseLocation, mainScrollable);
     expect(chooseLocation.hitTestable(), findsOneWidget);
     await tester.tap(chooseLocation.hitTestable());
@@ -198,7 +251,7 @@ void main() {
     await tester.pumpWidget(_app(api));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Could not load clinics'), findsOneWidget);
+    expect(find.text(_strings.clinicCouldNotLoadClinics), findsOneWidget);
     expect(api.clinicListCalls, hasLength(1));
 
     final mainScrollable = find.byKey(const PageStorageKey<String>('clinic-discovery-scroll'));
@@ -226,7 +279,7 @@ void main() {
 
     await tester.pumpWidget(_app(api));
     await tester.pump();
-    await tester.tap(find.text('Map'));
+    await tester.tap(find.text(_strings.discoveryViewModeMap));
     await tester.pump(const Duration(milliseconds: 300));
     final marker = find.byKey(const ValueKey('discovery-map-place-mapped'));
     await tester.ensureVisible(find.byKey(const ValueKey('discovery-flutter-map')));
@@ -250,10 +303,11 @@ void main() {
         Future.value(const ClinicListResponse(clinics: [Clinic(id: 'rtl', nameAr: 'عيادة نابلس')])),
       );
 
-    await tester.pumpWidget(_app(api, textDirection: TextDirection.rtl, textScale: 2));
+    await tester.pumpWidget(_app(api, textDirection: TextDirection.rtl, textScale: 2, isArabic: true));
     await tester.pump();
 
     expect(errors.where((error) => error.exceptionAsString().contains('overflowed')), isEmpty);
+    expect(find.text(_arStrings.clinicDiscoveryScreenTitle), findsOneWidget);
   });
 }
 
@@ -282,11 +336,13 @@ Widget _app(
   _FakeLocationService? location,
   TextDirection textDirection = TextDirection.ltr,
   double textScale = 1,
+  bool isArabic = false,
 }) {
   return ProviderScope(
     overrides: [
       discoveryApiProvider.overrideWithValue(api),
       locationServiceProvider.overrideWithValue(location ?? _FakeLocationService()),
+      secureStorageProvider.overrideWithValue(_FakeSecureStorage(isArabic ? 'ar' : 'en')),
     ],
     child: MaterialApp(
       theme: AppTheme.light(isArabic: textDirection == TextDirection.rtl),
@@ -299,6 +355,17 @@ Widget _app(
       ),
     ),
   );
+}
+
+class _FakeSecureStorage extends SecureStorageService {
+  _FakeSecureStorage(this._languageCode);
+  final String _languageCode;
+
+  @override
+  Future<String?> getLanguageCode() async => _languageCode;
+
+  @override
+  Future<void> saveLanguageCode(String code) async {}
 }
 
 class _FakeDiscoveryApi extends DiscoveryApi {

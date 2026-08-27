@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/discovery_provider.dart';
@@ -14,7 +16,7 @@ const clinicFacilityTypes = <String>[
   'emergency',
 ];
 
-class ClinicFilterSheet extends StatefulWidget {
+class ClinicFilterSheet extends ConsumerStatefulWidget {
   const ClinicFilterSheet({
     super.key,
     required this.initialFilters,
@@ -33,10 +35,10 @@ class ClinicFilterSheet extends StatefulWidget {
   final VoidCallback onClear;
 
   @override
-  State<ClinicFilterSheet> createState() => _ClinicFilterSheetState();
+  ConsumerState<ClinicFilterSheet> createState() => _ClinicFilterSheetState();
 }
 
-class _ClinicFilterSheetState extends State<ClinicFilterSheet> {
+class _ClinicFilterSheetState extends ConsumerState<ClinicFilterSheet> {
   late ClinicFilters _filters;
 
   @override
@@ -47,6 +49,7 @@ class _ClinicFilterSheetState extends State<ClinicFilterSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -63,37 +66,38 @@ class _ClinicFilterSheetState extends State<ClinicFilterSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Filter clinics',
+                  strings.clinicFilterSheetTitle,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: AppTheme.spaceMd),
                 _ChoiceSection(
-                  title: 'Facility type',
+                  title: strings.clinicFilterFacilityType,
                   selected: _filters.type,
                   values: clinicFacilityTypes,
-                  allLabel: 'All',
+                  allLabel: strings.clinicFilterAllTypes,
+                  valueLabel: (value) => strings.clinicTypeLabelFor(value),
                   keyPrefix: 'clinic-filter-type',
                   onSelected: (value) => setState(() => _filters = _filters.copyWith(type: value, clearType: value == null)),
                 ),
                 _ChoiceSection(
-                  title: 'Region',
+                  title: strings.doctorFilterRegionLabel,
                   selected: _filters.region,
                   values: widget.regions,
-                  allLabel: 'Any region',
+                  allLabel: strings.clinicFilterAnyRegion,
                   onSelected: (value) => setState(() => _filters = _filters.copyWith(region: value, clearRegion: value == null)),
                 ),
                 _ChoiceSection(
-                  title: 'Service',
+                  title: strings.clinicFilterService,
                   selected: _filters.service,
                   values: widget.services,
-                  allLabel: 'Any service',
+                  allLabel: strings.clinicFilterAnyService,
                   onSelected: (value) => setState(() => _filters = _filters.copyWith(service: value, clearService: value == null)),
                 ),
                 _ChoiceSection(
-                  title: 'Insurance',
+                  title: strings.clinicFilterInsurance,
                   selected: _filters.insurance,
                   values: widget.insuranceOptions,
-                  allLabel: 'Any insurance',
+                  allLabel: strings.clinicFilterAnyInsurance,
                   onSelected: (value) => setState(() => _filters = _filters.copyWith(insurance: value, clearInsurance: value == null)),
                 ),
                 const SizedBox(height: AppTheme.spaceLg),
@@ -107,11 +111,11 @@ class _ClinicFilterSheetState extends State<ClinicFilterSheet> {
                         widget.onClear();
                         Navigator.pop(context);
                       },
-                      child: const Text('Clear filters'),
+                      child: Text(strings.clearFilters),
                     ),
                     PrimaryButton(
                       key: const ValueKey('clinic-filter-apply'),
-                      label: 'Apply filters',
+                      label: strings.discoveryApplyFiltersButton,
                       icon: Icons.check_rounded,
                       onPressed: () {
                         widget.onApply(_filters.copyWith(page: 1));
@@ -137,6 +141,7 @@ class _ChoiceSection extends StatelessWidget {
     required this.allLabel,
     required this.onSelected,
     this.keyPrefix,
+    this.valueLabel,
   });
 
   final String title;
@@ -145,6 +150,7 @@ class _ChoiceSection extends StatelessWidget {
   final String allLabel;
   final ValueChanged<String?> onSelected;
   final String? keyPrefix;
+  final String Function(String value)? valueLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +175,7 @@ class _ChoiceSection extends StatelessWidget {
               for (final item in items)
                 ChoiceChip(
                   key: keyPrefix == null ? null : ValueKey('$keyPrefix-$item'),
-                  label: Text(item),
+                  label: Text(valueLabel == null ? item : valueLabel!(item)),
                   selected: selected == item,
                   onSelected: (_) => onSelected(item),
                 ),
