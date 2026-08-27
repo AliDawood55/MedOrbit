@@ -43,6 +43,36 @@ html:not(.app-shell) {
     html:not(.app-shell) {
         scroll-behavior: auto;
     }
+
+    /* Loader stays visible as feedback but stops looping motion. */
+    .loader-logo {
+        animation: none;
+    }
+
+    .loader-bar-fill {
+        animation: none;
+        width: 60%;
+    }
+
+    .toast {
+        animation: none;
+    }
+
+    .brand-icon,
+    .icon-btn,
+    .filter-chip,
+    .mobile-view-toggle {
+        transition: none;
+    }
+
+    .brand-icon:hover,
+    .icon-btn:hover {
+        transform: none;
+    }
+
+    .mobile-view-toggle:active {
+        transform: none;
+    }
 }
 
 /* Reference-counted overlay lock (see Dom.lockScroll/unlockScroll) — blocks
@@ -52,9 +82,9 @@ body.scroll-locked {
 }
 
 body {
-    font-family: 'Cairo', 'Inter', system-ui, sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
+    font-family: var(--font-ar);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
     color: var(--text);
     background: var(--bg);
     -webkit-font-smoothing: antialiased;
@@ -63,7 +93,7 @@ body {
 }
 
 [lang="en"] body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-en);
 }
 
 button {
@@ -77,6 +107,41 @@ button {
 :where(a, button, input, textarea, select, [tabindex]):focus-visible {
     outline: 3px solid var(--primary-light);
     outline-offset: 3px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Keyboard-only "skip to main content" link. Fixed positioning keeps it out
+   of flow (no layout shift) while off-screen; it slides into view on focus
+   so keyboard users can bypass the header/nav without a screen reader. */
+.skip-link {
+    position: fixed;
+    inset-inline-start: 12px;
+    top: 12px;
+    z-index: var(--z-skip-link);
+    padding: 10px 18px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: var(--r-md);
+    transform: translateY(-150%);
+    transition: transform var(--t-base);
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+    transform: translateY(0);
 }
 
 :where(button, input, textarea, select):disabled {
@@ -106,7 +171,7 @@ kbd {
 
 /* === Design Tokens === */
 :root {
-    /* Brand */
+    /* --- Brand --- */
     --primary: #2563EB;
     --primary-dark: #1D4ED8;
     --primary-light: #3B82F6;
@@ -120,12 +185,13 @@ kbd {
     --accent: #F59E0B;
     --accent-gradient: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
 
+    /* --- Semantic --- */
     --danger: #EF4444;
     --warning: #F59E0B;
     --success: #10B981;
     --info: #06B6D4;
 
-    /* Category colors */
+    /* --- Category colors --- */
     --cat-clinic: #2563EB;
     --cat-dental: #0D9488;
     --cat-pharmacy: #F59E0B;
@@ -133,30 +199,38 @@ kbd {
     --cat-doctor: #7C3AED;
     --cat-healthcare: #64748B;
 
-    /* Neutral - Light */
+    /* --- Surfaces (light) --- */
     --bg: #F9FAFB;
     --bg-soft: #F3F4F6;
     --bg-card: #FFFFFF;
     --bg-elevated: #FFFFFF;
     --bg-overlay: rgba(0, 0, 0, 0.5);
 
+    /* --- Text hierarchy (light) --- */
     --text: #111827;
     --text-soft: #4B5563;
     --text-mute: #6B7280;
     --text-faint: #9CA3AF;
 
+    /* --- Borders (light) --- */
     --border: #E5E7EB;
     --border-strong: #D1D5DB;
 
-    /* Shadows */
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
-    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
-    --shadow-glow: 0 0 24px rgba(37, 99, 235, 0.25);
+    /* --- Spacing scale ---
+       Derived from the pixel values already most common across
+       frontend/src/css/*.css (margin/padding/gap usage). Tokens only —
+       existing hardcoded values are not migrated in this step. */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+    --sp-10: 40px;
+    --sp-12: 48px;
 
-    /* Radii */
+    /* --- Radii --- */
     --r-xs: 4px;
     --r-sm: 6px;
     --r-md: 10px;
@@ -165,7 +239,27 @@ kbd {
     --r-2xl: 24px;
     --r-full: 9999px;
 
-    /* Transitions */
+    /* --- Shadows (light) --- */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+    --shadow-glow: 0 0 24px rgba(37, 99, 235, 0.25);
+
+    /* --- Layout --- */
+    --header-h: 64px;
+    --filter-h: 52px;
+
+    /* --- Z-index --- */
+    --z-header: 100;
+    --z-filter: 90;
+    --z-modal: 1000;
+    --z-drawer: 1500;
+    --z-toast: 2000;
+    --z-skip-link: 3000;
+
+    /* --- Motion --- */
     --ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -173,14 +267,20 @@ kbd {
     --t-base: 250ms var(--ease);
     --t-slow: 400ms var(--ease);
 
-    /* Layout */
-    --header-h: 64px;
-    --filter-h: 52px;
-    --z-header: 100;
-    --z-filter: 90;
-    --z-modal: 1000;
-    --z-drawer: 1500;
-    --z-toast: 2000;
+    /* --- Typography ---
+       Font stacks match the existing body/[lang="en"] rules below.
+       Sizes/line-heights are the most-repeated values already used across
+       main.css, components.css, layout.css and records.css — not a new
+       scale. --lh-relaxed is the line-height already used for longer
+       Arabic-friendly paragraph text (empty/error states). */
+    --font-ar: 'Cairo', 'Inter', system-ui, sans-serif;
+    --font-en: 'Inter', system-ui, sans-serif;
+    --fs-title: 18px;
+    --fs-body: 15px;
+    --fs-small: 13.5px;
+    --fs-caption: 12px;
+    --lh-body: 1.6;
+    --lh-relaxed: 1.7;
 }
 
 /* ===========================================
@@ -337,7 +437,8 @@ kbd {
     transform: scaleX(-1);
 }
 
-.brand-text h1 {
+.brand-text .brand-name {
+    display: block;
     font-size: 16px;
     font-weight: 800;
     color: var(--text);

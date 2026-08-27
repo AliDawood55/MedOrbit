@@ -66,12 +66,23 @@ Future<void> main() async {
   stdout.writeln('=== 1. Whisper transcription (Arabic TTS -> STT) ===');
   const spoken = 'عندي صداع شديد منذ يومين';
   try {
-    final wav = await api.speak(text: spoken, language: 'ar', sessionId: sessionId);
+    // /speak is scoped to a consultation the caller owns, so this probe needs
+    // its own throwaway session — it isn't otherwise used by this check.
+    final probeSession = await api.start(language: 'ar');
+    final wav = await api.speak(
+      text: spoken,
+      language: 'ar',
+      sessionId: probeSession.sessionId,
+    );
     final tmp = File('${Directory.systemTemp.path}/vd_ar_probe.wav');
     await tmp.writeAsBytes(wav, flush: true);
     stdout.writeln('  synthesized ${wav.length} bytes');
 
-    final transcription = await api.transcribe(filePath: tmp.path, language: 'ar', sessionId: sessionId);
+    final transcription = await api.transcribe(
+      filePath: tmp.path,
+      language: 'ar',
+      sessionId: probeSession.sessionId,
+    );
     stdout.writeln('  spoken     : $spoken');
     stdout.writeln('  transcribed: ${transcription.text}');
     stdout.writeln('  timed_out  : ${transcription.timedOut}');

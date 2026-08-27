@@ -147,7 +147,9 @@ const ClinicProfile = (() => {
         return (
             '<div class="profile-header">' +
                 '<div class="profile-avatar">' +
-                    (logoUrl ? '<img src="' + logoUrl + '" alt="">' : '<i class="fas ' + typeIcon + '"></i>') +
+                    (logoUrl
+                        ? '<img src="' + logoUrl + '" alt="" data-fallback-icon="' + escapeHtml(typeIcon) + '" onerror="ClinicProfile.__logoFallback(this)">'
+                        : '<i class="fas ' + typeIcon + '"></i>') +
                 '</div>' +
                 '<div class="profile-info">' +
                     '<h1>' + clinicName + '</h1>' +
@@ -232,9 +234,11 @@ const ClinicProfile = (() => {
         const initials = (doctorName(d) || '?').trim().charAt(0).toUpperCase();
 
         return (
-            '<a class="sub-item" href="doctor.html?id=' + encodeURIComponent(d.id) + '" style="text-decoration:none;color:inherit;">' +
-                '<div class="entity-avatar" style="width:38px;height:38px;font-size:13px;">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
+            '<a class="sub-item" href="doctor.html?id=' + encodeURIComponent(d.id) + '">' +
+                '<div class="entity-avatar">' +
+                    (d.profile_image_url
+                        ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="" data-fallback-initials="' + escapeHtml(initials) + '" onerror="ClinicProfile.__avatarFallback(this)">'
+                        : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="sub-item-body">' +
                     '<div class="sub-item-title">' + dName + '</div>' +
@@ -253,12 +257,32 @@ const ClinicProfile = (() => {
         });
     }
 
+    // ================= IMAGE FALLBACK =================
+
+    // Swaps a broken clinic logo <img> for the same type-icon <i> already used
+    // when logo_url is absent. Invoked from a static
+    // onerror="ClinicProfile.__logoFallback(this)" attribute (no user-derived
+    // string is ever embedded in executable JS); the icon class travels only
+    // as an HTML-escaped data attribute.
+    function logoFallback(img) {
+        const icon = document.createElement('i');
+        icon.className = 'fas ' + (img.dataset.fallbackIcon || 'fa-notes-medical');
+        img.replaceWith(icon);
+    }
+
+    // Swaps a broken doctor sub-item <img> for the same initials fallback
+    // already used when profile_image_url is absent. Same static-onerror
+    // pattern as logoFallback above.
+    function avatarFallback(img) {
+        img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
+    }
+
     // ================= INIT =================
 
     function init() {
         load();
     }
 
-    return { init };
+    return { init, __logoFallback: logoFallback, __avatarFallback: avatarFallback };
 
 })();

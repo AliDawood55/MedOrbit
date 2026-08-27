@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MedOrbit – طلب الانضمام كطبيب</title>
+    <title>MedOrbit – طلب الانضمام كطبيب</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../src/css/main.css">
     <link rel="stylesheet" href="../src/css/components.css">
@@ -23,10 +23,11 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
-            <div class="brand-text"><h1>MedOrbit</h1><p>Smart Healthcare AI</p></div>
+            <div class="brand-text"><span class="brand-name">MedOrbit</span><p>Smart Healthcare AI</p></div>
         </a>
         <nav class="site-nav" id="navLinks"></nav>
         <div class="header-actions">
@@ -36,7 +37,7 @@
         </div>
     </header>
 
-    <main class="page-container application-shell">
+    <main id="main-content" class="page-container application-shell">
         <section class="application-hero">
             <div>
                 <h1>طلب الانضمام كطبيب / Apply as a Doctor</h1>

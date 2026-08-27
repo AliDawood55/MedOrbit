@@ -117,7 +117,7 @@ const MyDoctor = (() => {
         return (
             '<div class="care-person-card">' +
                 '<div class="care-person-avatar">' +
-                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="">' : escapeHtml(initials)) +
+                    (d.profile_image_url ? '<img src="' + escapeHtml(API.assetUrl(d.profile_image_url)) + '" alt="" data-fallback-initials="' + escapeHtml(initials) + '" onerror="MyDoctor.__avatarFallback(this)">' : escapeHtml(initials)) +
                 '</div>' +
                 '<div class="care-person-info">' +
                     '<div class="care-person-name" title="' + name + '">' + name + '</div>' +
@@ -260,13 +260,10 @@ const MyDoctor = (() => {
     async function init() {
         if (!API.requireAuth()) return;
 
-        let isPatient = false;
-        try {
-            const res = await API.users.me();
-            isPatient = res?.data?.role === 'patient';
-        } catch (err) {
-            console.error('MyDoctor: failed to verify role', err);
-        }
+        const state = await AuthGate.verifySession();
+        if (state !== 'valid') return;
+
+        const isPatient = AuthGate.getVerifiedUser()?.role === 'patient';
 
         if (!isPatient) {
             document.getElementById('restrictedNotice').classList.remove('hidden');
@@ -277,6 +274,15 @@ const MyDoctor = (() => {
         load();
     }
 
-    return { init };
+    // Swaps a broken avatar <img> for the same plain-text initials fallback
+    // already used when no profile_image_url exists at all. Invoked from a
+    // static onerror="MyDoctor.__avatarFallback(this)" attribute (no
+    // user-derived string is ever embedded in executable JS); the initials
+    // travel only as an HTML-escaped data attribute.
+    function avatarFallback(img) {
+        img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
+    }
+
+    return { init, __avatarFallback: avatarFallback };
 
 })();

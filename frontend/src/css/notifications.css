@@ -19,12 +19,25 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    min-height: 44px;
+    padding-inline: 4px;
+    margin-inline-start: -4px;
+    border-radius: var(--r-md);
     font-size: 13px;
     font-weight: 600;
     color: var(--text-soft);
-    margin-bottom: 18px;
+    margin-bottom: 14px;
     cursor: pointer;
     user-select: none;
+}
+
+.notif-filter-toggle:hover {
+    background: var(--bg-soft);
+}
+
+.notif-filter-toggle:focus-within {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .notif-filter-toggle input {
@@ -38,17 +51,26 @@
     align-items: flex-start;
 }
 
+.notif-page-item.unread {
+    background: var(--bg-soft);
+}
+
 .notif-page-item .dashboard-list-actions {
     align-self: center;
 }
 
 .notif-page-item.navigable {
     cursor: pointer;
+    border: 1px solid transparent;
 }
 
 .notif-page-item.navigable:hover,
 .notif-page-item.navigable:focus-visible {
     border-color: var(--primary);
     background: var(--primary-50);
-    outline: none;
+}
+
+.notif-page-item.navigable:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }

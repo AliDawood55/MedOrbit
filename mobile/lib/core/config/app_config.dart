@@ -1,53 +1,56 @@
 /// Centralized environment configuration for the MedOrbit mobile app.
 ///
-/// ## Environments
-///
 /// Every build receives its backend origin through `--dart-define`; source
 /// code never names a developer machine. A debug build may use a local HTTP
-/// origin explicitly, while a release build must use HTTPS:
+/// origin only when it is explicitly provided, while release builds must use
+/// an HTTPS origin.
+///
+/// Example:
 ///
 /// ```
 /// flutter build apk \
-///   --dart-define=MEDORBIT_API_URL=https://staging.example/api
+///  --dart-define=MEDORBIT_API_URL=https://staging.example/api
 /// ```
 class AppConfig {
   AppConfig._();
 
-  /// Build-time overrides. Empty unless supplied via `--dart-define`.
-  static const String _apiUrlOverride = String.fromEnvironment('MEDORBIT_API_URL');
+  /// Build-time override. Empty unless supplied via `--dart-define`.
+  static const String _apiUrlOverride = String.fromEnvironment(
+    'MEDORBIT_API_URL',
+  );
 
   /// True when this build was given an explicit backend origin.
   static bool get hasApiOverride => _apiUrlOverride.isNotEmpty;
 
-  /// The configured backend base URL — always ending in exactly one `/api`.
-  /// Empty means startup must show the configuration error before any request.
-  static String get baseUrl => hasApiOverride ? normalizeApiBase(_apiUrlOverride) : '';
+  /// Configured backend URL, ending in exactly one `/api`.
+  ///
+  /// Empty means the application must show a configuration error before
+  /// attempting any API request.
+  static String get baseUrl =>
+      hasApiOverride ? normalizeApiBase(_apiUrlOverride) : '';
 
   static bool get hasValidReleaseApiUrl =>
-      hasApiOverride && normalizeApiBase(_apiUrlOverride).startsWith('https://');
+      hasApiOverride &&
+      normalizeApiBase(_apiUrlOverride).startsWith('https://');
 
   static String get missingApiUrlMessage =>
       'MEDORBIT_API_URL is required. For local debug use '
-      '--dart-define=MEDORBIT_API_URL=http://YOUR_LAN_IP:3001/api.';
+      '--dart-define=MEDORBIT_API_URL=http://10.0.2.2:3001/api.';
 
-  /// Probed at startup by `ApiHostResolver`. A configured build contacts only
-  /// its explicitly supplied backend — it never falls back to localhost or a
-  /// developer LAN address.
+  /// A configured build contacts only its explicitly supplied backend.
+  /// It never falls back to localhost, an emulator host, or a developer LAN IP.
   static List<String> get baseUrlCandidates => candidatesFor(_apiUrlOverride);
 
-  /// Candidate list for a given override value. Split out from
-  /// [baseUrlCandidates] because `String.fromEnvironment` is resolved at
-  /// compile time and cannot be varied from a test.
+  /// Pure URL-resolution logic for tests.
   static List<String> candidatesFor(String apiUrlOverride) {
     if (apiUrlOverride.isNotEmpty) {
       return <String>[normalizeApiBase(apiUrlOverride)];
     }
+
     return const <String>[];
   }
 
-  /// Forces a backend origin to end in exactly one `/api`, matching the web
-  /// client's `MEDORBIT_API_URL` handling in `frontend/src/js/api.js`.
-  /// Idempotent: normalizing an already-normalized value is a no-op.
+  /// Forces a backend origin to end in exactly one `/api`.
   static String normalizeApiBase(String raw) {
     final trimmed = _stripTrailingSlash(raw.trim());
     if (trimmed.isEmpty) return trimmed;
@@ -123,7 +126,8 @@ class AppConfig {
   /// Origin (no `/api` suffix) — used to resolve relative asset URLs
   /// (e.g. `avatar_url`) returned by the backend, same as the web
   /// frontend's `API.getOrigin()`.
-  static String originOf(String url) => url.replaceFirst(RegExp(r'/api/?$'), '');
+  static String originOf(String url) =>
+      url.replaceFirst(RegExp(r'/api/?$'), '');
 
   /// Origin for the compile-time primary host. Prefer
   /// `activeOriginProvider` at runtime so it tracks a resolved fallback.

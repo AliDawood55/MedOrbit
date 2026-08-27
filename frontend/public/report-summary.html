@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – تلخيص التقارير الطبية</title>
+    <title>MedOrbit – تلخيص التقارير الطبية</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,12 +30,13 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
             <div class="brand-text">
-                <h1>MedOrbit</h1>
+                <span class="brand-name">MedOrbit</span>
                 <p data-i18n="brand.tagline">Smart Healthcare AI</p>
             </div>
         </a>
@@ -51,7 +52,7 @@
         </div>
     </header>
 
-    <main class="page-container">
+    <main id="main-content" class="page-container report-summary-page">
         <div class="tool-header">
             <div class="tool-icon"><i class="fas fa-file-medical"></i></div>
             <h1 data-i18n="reportSummary.title">تلخيص التقارير الطبية</h1>
@@ -70,7 +71,7 @@
         </div>
 
         <div id="formSection">
-            <div class="upload-dropzone" id="dropzone">
+            <div class="upload-dropzone" id="dropzone" role="button" tabindex="0" data-i18n-aria="reportSummary.dropzoneTitle">
                 <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
                 <i class="fas fa-cloud-arrow-up"></i>
                 <h3 data-i18n="reportSummary.dropzoneTitle">اسحب الملف هنا أو انقر للاختيار</h3>
@@ -86,7 +87,7 @@
                 <button type="button" class="btn btn-ghost btn-sm" id="removeFileBtn" data-i18n="reportSummary.remove">إزالة</button>
             </div>
 
-            <div class="alert" id="formAlert" style="max-width:640px;margin:0 auto 20px;"></div>
+            <div class="alert" id="formAlert"></div>
 
             <div class="result-actions">
                 <button type="button" class="btn btn-primary tool-submit" id="submitBtn" disabled>
@@ -111,6 +112,7 @@
     <script src="../src/js/i18n.js"></script>
     <script src="../src/js/theme.js"></script>
     <script src="../src/js/toast.js"></script>
+    <script src="../src/utils/form-alert.js"></script>
     <script src="../src/js/layout.js"></script>
     <script src="../src/js/report-summary.js"></script>
 

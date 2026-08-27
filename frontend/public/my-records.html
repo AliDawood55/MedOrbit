@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="MedOrbit - Smart Healthcare AI Platform">
     <meta name="theme-color" content="#2563EB">
-    <title>MedOrbit – سجلاتي الطبية</title>
+    <title>MedOrbit – سجلاتي الطبية</title><link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,12 +31,13 @@
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
             <div class="brand-icon"><i class="fas fa-heartbeat"></i></div>
             <div class="brand-text">
-                <h1>MedOrbit</h1>
+                <span class="brand-name">MedOrbit</span>
                 <p data-i18n="brand.tagline">Smart Healthcare AI</p>
             </div>
         </a>
@@ -52,18 +53,18 @@
         </div>
     </header>
 
-    <main class="page-container" style="max-width:1100px;">
+    <main id="main-content" class="page-container my-records-page">
 
         <div class="page-header">
             <h1 data-i18n="records.title">سجلاتي الطبية</h1>
-            <p style="color:var(--text-mute);font-size:14px;margin-top:4px;" data-i18n="records.subtitle">السجل الزمني لزياراتك وتشخيصاتك الطبية</p>
+            <p class="page-subtitle" data-i18n="records.subtitle">السجل الزمني لزياراتك وتشخيصاتك الطبية</p>
         </div>
 
-        <!-- Filters: visually built, disabled — nothing to filter yet -->
+        <!-- Filters: enabled once the timeline finishes loading -->
         <div class="records-filter-bar" id="recordsFilters">
             <div class="search-field">
                 <i class="fas fa-search"></i>
-                <input type="text" id="recordSearchInput" disabled data-i18n-placeholder="records.searchPlaceholder" placeholder="ابحث في السجلات...">
+                <input type="text" id="recordSearchInput" disabled data-i18n-placeholder="records.searchPlaceholder" data-i18n-aria="records.searchPlaceholder" placeholder="ابحث في السجلات...">
             </div>
             <select id="recordTypeFilter" disabled>
                 <option value="all" data-i18n="records.filterAllTypes">كل الأنواع</option>
