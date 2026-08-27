@@ -15,18 +15,23 @@ import '../features/discovery/screens/clinic_discovery_screen.dart';
 import '../features/discovery/screens/doctor_detail_screen.dart';
 import '../features/discovery/screens/doctor_directory_screen.dart';
 import '../features/chatbot/screens/chatbot_screen.dart';
+import '../features/contact/screens/contact_screen.dart';
 import '../features/chatbot/screens/conversations_screen.dart';
 import '../features/discovery/screens/map_foundation_screen.dart';
 import '../features/drug_checker/screens/drug_checker_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/my_reports/screens/my_reports_screen.dart';
+import '../features/my_doctors/models/patient_doctor_models.dart';
+import '../features/my_doctors/screens/my_doctors_screen.dart';
+import '../features/my_doctors/screens/shared_doctor_notes_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/prescriptions/screens/prescriptions_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/records/screens/records_screen.dart';
 import '../features/report_summarizer/screens/report_summarizer_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
+import '../features/saved_places/screens/saved_places_screen.dart';
 import '../features/symptom_checker/screens/symptom_checker_screen.dart';
 import '../features/virtual_doctor/screens/virtual_doctor_screen.dart';
 import 'main_shell.dart';
@@ -57,6 +62,9 @@ const Set<String> protectedRoutes = {
   RoutePaths.drugChecker,
   RoutePaths.reportSummarizer,
   RoutePaths.myReports,
+  RoutePaths.myDoctors,
+  RoutePaths.savedPlaces,
+  RoutePaths.contact,
 };
 
 /// Redirect target for [location], or null to allow it.
@@ -197,6 +205,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.myReports,
         builder: (context, state) => const MyReportsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.myDoctors,
+        builder: (context, state) => const MyDoctorsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.savedPlaces,
+        builder: (context, state) => const SavedPlacesScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.contact,
+        builder: (context, state) => const ContactScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.sharedDoctorNotes,
+        builder: (context, state) => SharedDoctorNotesScreen(
+          doctorId: state.pathParameters['id'] ?? '',
+          doctor: state.extra is PatientDoctor
+              ? state.extra as PatientDoctor
+              : null,
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

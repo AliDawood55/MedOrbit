@@ -92,7 +92,7 @@ class LocationService {
       if (!await _adapter.isLocationServiceEnabled()) {
         return LocationPermissionState.serviceDisabled;
       }
-      return _adapter.checkPermission();
+      return await _adapter.checkPermission();
     } catch (_) {
       return LocationPermissionState.unknown;
     }

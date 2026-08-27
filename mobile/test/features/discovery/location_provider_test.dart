@@ -24,7 +24,9 @@ void main() {
     final container = _container(service);
     addTearDown(container.dispose);
 
-    final ok = await container.read(locationControllerProvider.notifier).resolveCurrentLocation();
+    final ok = await container
+        .read(locationControllerProvider.notifier)
+        .resolveCurrentLocation();
     final state = container.read(locationControllerProvider);
 
     expect(ok, isTrue);
@@ -41,8 +43,12 @@ void main() {
     final container = _container(service);
     addTearDown(container.dispose);
 
-    final first = container.read(locationControllerProvider.notifier).resolveCurrentLocation();
-    final second = await container.read(locationControllerProvider.notifier).resolveCurrentLocation();
+    final first = container
+        .read(locationControllerProvider.notifier)
+        .resolveCurrentLocation();
+    final second = await container
+        .read(locationControllerProvider.notifier)
+        .resolveCurrentLocation();
 
     expect(second, isFalse);
     expect(service.resolveCalls, 1);
@@ -68,8 +74,12 @@ void main() {
     final container = _container(service);
     addTearDown(container.dispose);
 
-    final gps = container.read(locationControllerProvider.notifier).resolveCurrentLocation();
-    container.read(locationControllerProvider.notifier).selectManualMapPoint(32.2, 35.2);
+    final gps = container
+        .read(locationControllerProvider.notifier)
+        .resolveCurrentLocation();
+    container
+        .read(locationControllerProvider.notifier)
+        .selectManualMapPoint(32.2, 35.2);
     pending.complete(
       LocationResult.success(
         AppLocation(
@@ -92,12 +102,22 @@ void main() {
     final container = _container(_FakeLocationService());
     addTearDown(container.dispose);
 
-    container.read(locationControllerProvider.notifier).selectManualMapPoint(32.2, 35.2);
-    expect(container.read(locationControllerProvider).currentLocation?.source, LocationSource.manualMap);
+    container
+        .read(locationControllerProvider.notifier)
+        .selectManualMapPoint(32.2, 35.2);
+    expect(
+      container.read(locationControllerProvider).currentLocation?.source,
+      LocationSource.manualMap,
+    );
     expect(container.read(locationControllerProvider).isApproximate, isFalse);
 
-    container.read(locationControllerProvider.notifier).selectManualDistrict(manualDistrictLocations.first);
-    expect(container.read(locationControllerProvider).currentLocation?.source, LocationSource.manualDistrict);
+    container
+        .read(locationControllerProvider.notifier)
+        .selectManualDistrict(manualDistrictLocations.first);
+    expect(
+      container.read(locationControllerProvider).currentLocation?.source,
+      LocationSource.manualDistrict,
+    );
     expect(container.read(locationControllerProvider).isApproximate, isTrue);
   });
 
@@ -105,7 +125,9 @@ void main() {
     final container = _container(_FakeLocationService());
     addTearDown(container.dispose);
 
-    container.read(locationControllerProvider.notifier).selectManualMapPoint(32.2, 35.2);
+    container
+        .read(locationControllerProvider.notifier)
+        .selectManualMapPoint(32.2, 35.2);
     container.read(locationControllerProvider.notifier).clearLocation();
 
     final state = container.read(locationControllerProvider);
@@ -118,7 +140,10 @@ void main() {
       ..permissionResult = LocationPermissionState.granted
       ..results.add(
         LocationResult.failure(
-          const LocationFailure(code: LocationFailureCode.timeout, message: 'location_timeout'),
+          const LocationFailure(
+            code: LocationFailureCode.timeout,
+            message: 'location_timeout',
+          ),
         ),
       )
       ..results.add(
@@ -134,17 +159,30 @@ void main() {
     final container = _container(service);
     addTearDown(container.dispose);
 
-    expect(await container.read(locationControllerProvider.notifier).resolveCurrentLocation(), isFalse);
-    expect(await container.read(locationControllerProvider.notifier).retry(), isTrue);
+    expect(
+      await container
+          .read(locationControllerProvider.notifier)
+          .resolveCurrentLocation(),
+      isFalse,
+    );
+    expect(
+      await container.read(locationControllerProvider.notifier).retry(),
+      isTrue,
+    );
 
     expect(service.resolveCalls, 2);
-    expect(container.read(locationControllerProvider).status, LocationControllerStatus.resolved);
+    expect(
+      container.read(locationControllerProvider).status,
+      LocationControllerStatus.resolved,
+    );
   });
 
   test('no persistence is performed by provider', () {
     final service = _FakeLocationService();
     final first = _container(service);
-    first.read(locationControllerProvider.notifier).selectManualMapPoint(32.2, 35.2);
+    first
+        .read(locationControllerProvider.notifier)
+        .selectManualMapPoint(32.2, 35.2);
     first.dispose();
 
     final second = _container(service);
@@ -156,9 +194,7 @@ void main() {
 
 ProviderContainer _container(LocationService service) {
   return ProviderContainer(
-    overrides: [
-      locationServiceProvider.overrideWithValue(service),
-    ],
+    overrides: [locationServiceProvider.overrideWithValue(service)],
   );
 }
 
@@ -170,23 +206,25 @@ class _FakeLocationService extends LocationService {
   int resolveCalls = 0;
 
   @override
-  Future<LocationPermissionState> checkPermissionState() async => permissionResult;
+  Future<LocationPermissionState> checkPermissionState() async =>
+      permissionResult;
 
   @override
   Future<LocationResult> resolveCurrentLocation() async {
     resolveCalls += 1;
     final result = results.removeAt(0);
-    if (result is Future<LocationResult>) return result;
     return result;
   }
 }
 
 class _NeverUsedAdapter implements LocationPlatformAdapter {
   @override
-  Future<LocationPermissionState> checkPermission() => throw UnimplementedError();
+  Future<LocationPermissionState> checkPermission() =>
+      throw UnimplementedError();
 
   @override
-  Future<DevicePosition> getCurrentPosition({required Duration timeout}) => throw UnimplementedError();
+  Future<DevicePosition> getCurrentPosition({required Duration timeout}) =>
+      throw UnimplementedError();
 
   @override
   Future<bool> isLocationServiceEnabled() => throw UnimplementedError();
@@ -198,5 +236,6 @@ class _NeverUsedAdapter implements LocationPlatformAdapter {
   Future<bool> openLocationSettings() => throw UnimplementedError();
 
   @override
-  Future<LocationPermissionState> requestPermission() => throw UnimplementedError();
+  Future<LocationPermissionState> requestPermission() =>
+      throw UnimplementedError();
 }
