@@ -288,6 +288,19 @@ class AppStrings {
   String get adminManagementTitle => _t('إدارة المنصة', 'Manage platform');
   String get adminApplications => _t('طلبات الأطباء', 'Doctor applications');
   String get adminUsers => _t('المستخدمون', 'Users');
+  String get adminAllUsers => _t('كل المستخدمين', 'All users');
+  String get adminPatients => _t('المرضى', 'Patients');
+  String get adminDoctors => _t('الأطباء', 'Doctors');
+  String get adminActivity => _t('نشاط المنصة', 'Platform activity');
+  String get adminAppointments => _t('المواعيد', 'Appointments');
+  String get adminRecords => _t('السجلات', 'Records');
+  String get adminPrescriptions => _t('الوصفات', 'Prescriptions');
+  String get adminReviews => _t('التقييمات', 'Reviews');
+  String get adminNoActivity => _t('لا يوجد نشاط لعرضه', 'No activity to show');
+  String get adminNoActivityHint => _t(
+    'ستظهر هنا بيانات نشاط المنصة غير السريرية.',
+    'Non-clinical platform activity will appear here.',
+  );
   String get adminAdministrators => _t('المسؤولون', 'Administrators');
   String get adminNoAdministrators =>
       _t('لا توجد حسابات مسؤولين', 'No administrator accounts');

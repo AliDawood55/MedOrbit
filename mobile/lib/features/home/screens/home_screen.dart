@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
+import '../../../shared/widgets/role_header_actions.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../appointments/models/enriched_appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
@@ -137,32 +138,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return AppScaffold(
       appBar: AppBar(
         title: Text(strings.appName),
-        actions: [
-          IconButton(
-            tooltip: strings.navNotifications,
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push(RoutePaths.notifications),
-          ),
-          IconButton(
-            tooltip: strings.navProfile,
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () => context.push(RoutePaths.profile),
-          ),
-          IconButton(
-            tooltip: strings.languageToggleTooltip,
-            icon: const Icon(Icons.translate_rounded),
-            onPressed: () =>
-                ref.read(localeControllerProvider.notifier).toggle(),
-          ),
-          IconButton(
-            tooltip: strings.logoutTooltip,
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go(RoutePaths.login);
-            },
-          ),
-        ],
+        actions: const [RoleHeaderActions()],
       ),
       body: SafeArea(
         top: false,
@@ -482,39 +458,48 @@ class _AdminStatisticsGrid extends StatelessWidget {
             strings.adminStatsUsers,
             Icons.groups_outlined,
             AppTheme.primary,
-            RoutePaths.adminManagement,
+            RoutePaths.adminManagementPath(tab: 'users'),
           ),
           _AdminStatData(
             stats.patients,
             strings.adminStatsPatients,
             Icons.person_outline_rounded,
             AppTheme.secondary,
-            RoutePaths.adminManagement,
+            RoutePaths.adminManagementPath(tab: 'users', role: 'patient'),
           ),
           _AdminStatData(
             stats.doctors,
             strings.adminStatsDoctors,
             Icons.medical_services_outlined,
             AppTheme.accent,
-            RoutePaths.adminManagement,
+            RoutePaths.adminManagementPath(tab: 'users', role: 'doctor'),
           ),
           _AdminStatData(
             stats.appointmentsTotal,
             strings.adminStatsAppointments,
             Icons.event_available_outlined,
             AppTheme.violet,
+            RoutePaths.adminManagementPath(
+              tab: 'activity',
+              metric: 'appointments',
+            ),
           ),
           _AdminStatData(
             stats.recordsTotal,
             strings.adminStatsRecords,
             Icons.description_outlined,
             AppTheme.primary,
+            RoutePaths.adminManagementPath(tab: 'activity', metric: 'records'),
           ),
           _AdminStatData(
             stats.prescriptionsTotal,
             strings.adminStatsPrescriptions,
             Icons.medication_outlined,
             AppTheme.secondary,
+            RoutePaths.adminManagementPath(
+              tab: 'activity',
+              metric: 'prescriptions',
+            ),
           ),
           if (stats.averageRating != null)
             _AdminStatData(
@@ -522,6 +507,10 @@ class _AdminStatisticsGrid extends StatelessWidget {
               strings.adminStatsRating,
               Icons.star_outline_rounded,
               AppTheme.accent,
+              RoutePaths.adminManagementPath(
+                tab: 'activity',
+                metric: 'reviews',
+              ),
             ),
         ];
 

@@ -46,9 +46,18 @@ class RoutePaths {
 
   /// Opens a focused section of the operational console. The base path remains
   /// one protected route; this query parameter only chooses its initial tab.
-  static String adminManagementPath({String? tab}) {
-    if (tab == null || tab.isEmpty) return adminManagement;
-    return '$adminManagement?tab=${Uri.encodeQueryComponent(tab)}';
+  static String adminManagementPath({
+    String? tab,
+    String? role,
+    String? metric,
+  }) {
+    final query = <String, String>{
+      if (tab != null && tab.isNotEmpty) 'tab': tab,
+      if (role != null && role.isNotEmpty) 'role': role,
+      if (metric != null && metric.isNotEmpty) 'metric': metric,
+    };
+    if (query.isEmpty) return adminManagement;
+    return '$adminManagement?${Uri(queryParameters: query).query}';
   }
 
   static String appointmentBookingPath({String? doctorId}) {
