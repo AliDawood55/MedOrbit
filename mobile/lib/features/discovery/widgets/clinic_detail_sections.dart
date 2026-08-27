@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/page_sections.dart';
@@ -8,7 +10,7 @@ import '../../../shared/widgets/status_badge.dart';
 import '../models/clinic_models.dart';
 import 'clinic_result_card.dart';
 
-class ClinicDetailSections extends StatelessWidget {
+class ClinicDetailSections extends ConsumerWidget {
   const ClinicDetailSections({
     super.key,
     required this.clinic,
@@ -19,9 +21,10 @@ class ClinicDetailSections extends StatelessWidget {
   final List<ClinicDoctorSummary> doctors;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final direction = Directionality.of(context);
-    final (verificationLabel, verificationColor) = clinicVerificationVisual(clinic);
+    final (verificationLabel, verificationColor) = clinicVerificationVisual(clinic, strings);
     final needsDisclaimer = clinic.verificationStatus != ClinicVerificationStatus.verified;
 
     return Column(
@@ -37,19 +40,19 @@ class ClinicDetailSections extends StatelessWidget {
                   spacing: AppTheme.spaceSm,
                   runSpacing: AppTheme.spaceSm,
                   children: [
-                    StatusBadge(label: clinicTypeLabel(clinic.type), color: Theme.of(context).colorScheme.primary),
+                    StatusBadge(label: clinicTypeLabel(clinic.type, strings), color: Theme.of(context).colorScheme.primary),
                     StatusBadge(label: verificationLabel, color: verificationColor),
                   ],
                 ),
                 const SizedBox(height: AppTheme.spaceMd),
                 Text(
-                  clinicDisplayName(clinic, direction),
+                  clinicDisplayName(clinic, direction, strings),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 if (needsDisclaimer) ...[
                   const SizedBox(height: AppTheme.spaceMd),
-                  const InlineMessage(
-                    message: 'Hours and facility details may not be verified. Contact the facility before visiting.',
+                  InlineMessage(
+                    message: strings.clinicVerificationDisclaimer,
                     tone: InlineMessageTone.warning,
                   ),
                 ],
@@ -58,24 +61,25 @@ class ClinicDetailSections extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppTheme.spaceLg),
-        _ContactSection(clinic: clinic),
+        _ContactSection(clinic: clinic, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
-        _ServicesSection(title: 'Services', values: clinic.services),
+        _ServicesSection(title: strings.clinicServicesTitle, values: clinic.services, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
-        _ServicesSection(title: 'Insurance accepted', values: clinic.insuranceAccepted),
+        _ServicesSection(title: strings.clinicInsuranceTitle, values: clinic.insuranceAccepted, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
-        _HoursSection(hours: clinic.operatingHours),
+        _HoursSection(hours: clinic.operatingHours, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
-        _DoctorsSection(doctors: doctors),
+        _DoctorsSection(doctors: doctors, strings: strings),
       ],
     );
   }
 }
 
 class _ContactSection extends StatelessWidget {
-  const _ContactSection({required this.clinic});
+  const _ContactSection({required this.clinic, required this.strings});
 
   final Clinic clinic;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -87,12 +91,12 @@ class _ContactSection extends StatelessWidget {
     final email = _clean(clinic.email);
     final website = _clean(clinic.website);
     final rows = [
-      if (address != null) _DetailRow(Icons.place_outlined, 'Address', address),
-      if (city != null) _DetailRow(Icons.location_city_outlined, 'City', city),
-      if (region != null) _DetailRow(Icons.map_outlined, 'Region', region),
-      if (phone != null) _DetailRow(Icons.phone_outlined, 'Phone', phone, ltr: true),
-      if (email != null) _DetailRow(Icons.email_outlined, 'Email', email, ltr: true),
-      if (website != null) _DetailRow(Icons.language_outlined, 'Website', website, ltr: true),
+      if (address != null) _DetailRow(Icons.place_outlined, strings.addressLabel, address),
+      if (city != null) _DetailRow(Icons.location_city_outlined, strings.cityLabel, city),
+      if (region != null) _DetailRow(Icons.map_outlined, strings.clinicRegionLabel, region),
+      if (phone != null) _DetailRow(Icons.phone_outlined, strings.clinicPhoneLabel, phone, ltr: true),
+      if (email != null) _DetailRow(Icons.email_outlined, strings.emailLabel, email, ltr: true),
+      if (website != null) _DetailRow(Icons.language_outlined, strings.clinicWebsiteLabel, website, ltr: true),
     ];
 
     return Card(
@@ -101,17 +105,17 @@ class _ContactSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader(title: 'Contact and location'),
+            SectionHeader(title: strings.clinicContactSectionTitle),
             if (rows.isEmpty)
               Text(
-                'No contact details are listed.',
+                strings.clinicNoContactDetails,
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else
               ...rows,
             const SizedBox(height: AppTheme.spaceSm),
             Text(
-              'Phone and website actions are not enabled in this phase.',
+              strings.clinicActionsDisabledNote,
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -122,10 +126,11 @@ class _ContactSection extends StatelessWidget {
 }
 
 class _ServicesSection extends StatelessWidget {
-  const _ServicesSection({required this.title, required this.values});
+  const _ServicesSection({required this.title, required this.values, required this.strings});
 
   final String title;
   final List<String> values;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +142,7 @@ class _ServicesSection extends StatelessWidget {
           children: [
             SectionHeader(title: title),
             if (values.isEmpty)
-              Text('None listed.', style: Theme.of(context).textTheme.bodyMedium)
+              Text(strings.clinicNoneListed, style: Theme.of(context).textTheme.bodyMedium)
             else
               Wrap(
                 spacing: AppTheme.spaceXs,
@@ -152,9 +157,10 @@ class _ServicesSection extends StatelessWidget {
 }
 
 class _HoursSection extends StatelessWidget {
-  const _HoursSection({required this.hours});
+  const _HoursSection({required this.hours, required this.strings});
 
   final ClinicOperatingHours? hours;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -165,19 +171,19 @@ class _HoursSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader(
-              title: 'Listed hours',
-              subtitle: 'Hours are provided by the clinic and may change. Contact the clinic to confirm before visiting.',
+            SectionHeader(
+              title: strings.clinicHoursTitle,
+              subtitle: strings.clinicHoursSubtitle,
             ),
             if (days.isEmpty)
-              Text('No operating hours are listed.', style: Theme.of(context).textTheme.bodyMedium)
+              Text(strings.clinicNoHoursListed, style: Theme.of(context).textTheme.bodyMedium)
             else
               for (final entry in days)
                 _DetailRow(
                   Icons.schedule_outlined,
-                  entry.key,
+                  strings.weekdayLabel(entry.key),
                   entry.value.isClosed == true
-                      ? 'Closed'
+                      ? strings.clinicHoursClosed
                       : [entry.value.open, entry.value.close].whereType<String>().join('–'),
                   ltr: true,
                 ),
@@ -189,9 +195,10 @@ class _HoursSection extends StatelessWidget {
 }
 
 class _DoctorsSection extends StatelessWidget {
-  const _DoctorsSection({required this.doctors});
+  const _DoctorsSection({required this.doctors, required this.strings});
 
   final List<ClinicDoctorSummary> doctors;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -202,12 +209,12 @@ class _DoctorsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader(title: 'Doctors at this facility'),
+            SectionHeader(title: strings.clinicDoctorsSectionTitle),
             if (doctors.isEmpty)
-              Text('No doctors are listed for this facility.', style: Theme.of(context).textTheme.bodyMedium)
+              Text(strings.clinicNoDoctorsListed, style: Theme.of(context).textTheme.bodyMedium)
             else
               for (final doctor in doctors) ...[
-                _DoctorTile(doctor: doctor, direction: direction),
+                _DoctorTile(doctor: doctor, direction: direction, strings: strings),
                 if (doctor != doctors.last) const Divider(),
               ],
           ],
@@ -218,10 +225,11 @@ class _DoctorsSection extends StatelessWidget {
 }
 
 class _DoctorTile extends StatelessWidget {
-  const _DoctorTile({required this.doctor, required this.direction});
+  const _DoctorTile({required this.doctor, required this.direction, required this.strings});
 
   final ClinicDoctorSummary doctor;
   final TextDirection direction;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -237,11 +245,11 @@ class _DoctorTile extends StatelessWidget {
       key: ValueKey('clinic-detail-doctor-${doctor.id}'),
       contentPadding: EdgeInsets.zero,
       leading: const CircleAvatar(child: Icon(Icons.person_outline_rounded)),
-      title: Text(name.isEmpty ? 'Doctor' : name),
+      title: Text(name.isEmpty ? strings.doctorFallbackName : name),
       subtitle: Text([
         if (_clean(specialty) != null) specialty,
-        if (rating != null) 'Rating ${rating.toStringAsFixed(1)}',
-        if (accepting != null) accepting ? 'Accepting patients' : 'Not accepting patients',
+        if (rating != null) strings.clinicDoctorRatingLabel(rating.toStringAsFixed(1)),
+        if (accepting != null) accepting ? strings.doctorAcceptingPatients : strings.doctorNotAcceptingPatients,
       ].whereType<String>().join(' · ')),
       trailing: Icon(AppTheme.directionalForwardIconOf(context)),
       onTap: doctor.id.isEmpty ? null : () => context.push(RoutePaths.doctorDetailPath(doctor.id)),

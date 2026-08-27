@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mobile/core/localization/app_strings.dart';
+import 'package:mobile/core/providers/core_providers.dart';
+import 'package:mobile/core/storage/secure_storage_service.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/discovery/models/location_models.dart';
 import 'package:mobile/features/discovery/widgets/discovery_map.dart';
 import 'package:mobile/features/discovery/widgets/location_picker_sheet.dart';
 import 'package:mobile/features/discovery/widgets/place_marker.dart';
+
+const _strings = AppStrings(false);
+const _arStrings = AppStrings(true);
 
 void main() {
   testWidgets('default Nablus center is configured', (tester) async {
@@ -122,10 +129,85 @@ void main() {
         ),
       ),
     );
+    await tester.pump();
 
     expect(find.textContaining('Nablus City Center'), findsOneWidget);
     expect(find.textContaining('approximate'), findsWidgets);
   });
+
+  testWidgets('manual district picker renders Arabic district names and labels in RTL', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [secureStorageProvider.overrideWithValue(_FakeSecureStorage('ar'))],
+        child: MaterialApp(
+          theme: AppTheme.light(isArabic: true),
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Scaffold(
+              body: LocationPickerSheet(
+                permissionState: LocationPermissionState.unknown,
+                onUseCurrentLocation: () {},
+                onSelectMapPoint: () {},
+                onSelectDistrict: (_) {},
+                onOpenAppSettings: () {},
+                onOpenLocationSettings: () {},
+                onClear: () {},
+                onCancel: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text(_arStrings.chooseLocationTitle), findsOneWidget);
+    expect(find.textContaining('مركز مدينة نابلس'), findsOneWidget);
+    expect(find.textContaining(_arStrings.districtApproximateSuffix), findsWidgets);
+  });
+
+  testWidgets(
+    'location failure states show distinct localized messages',
+    (tester) async {
+      final messages = <String, String>{};
+      for (final code in const [
+        'serviceDisabled',
+        'denied',
+        'deniedForever',
+        'timeout',
+        'unavailable',
+        'unexpected',
+      ]) {
+        await tester.pumpWidget(
+          _app(
+            LocationPickerSheet(
+              permissionState: LocationPermissionState.unknown,
+              errorCode: code,
+              errorMessage: 'raw_internal_code_for_$code',
+              onUseCurrentLocation: () {},
+              onSelectMapPoint: () {},
+              onSelectDistrict: (_) {},
+              onOpenAppSettings: () {},
+              onOpenLocationSettings: () {},
+              onClear: () {},
+              onCancel: () {},
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final message = _strings.locationErrorForCode(code);
+        expect(find.text(message), findsOneWidget, reason: 'no distinct message rendered for $code');
+        // The raw internal failure code must never be shown to the patient.
+        expect(find.textContaining('raw_internal_code_for_$code'), findsNothing);
+        messages[code] = message;
+      }
+
+      // Every failure kind must render genuinely distinct text — a denied
+      // permission is never confused with a service outage or a GPS timeout.
+      expect(messages.values.toSet(), hasLength(messages.length));
+    },
+  );
 
   testWidgets('large text and RTL layout do not overflow', (tester) async {
     final errors = <FlutterErrorDetails>[];
@@ -134,23 +216,27 @@ void main() {
     addTearDown(() => FlutterError.onError = previous);
 
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(isArabic: true),
-        home: MediaQuery(
-          data: const MediaQueryData(textScaler: TextScaler.linear(1.8)),
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: Scaffold(
-              body: LocationPickerSheet(
-                permissionState: LocationPermissionState.deniedForever,
-                errorMessage: 'location_permission_denied_forever',
-                onUseCurrentLocation: () {},
-                onSelectMapPoint: () {},
-                onSelectDistrict: (_) {},
-                onOpenAppSettings: () {},
-                onOpenLocationSettings: () {},
-                onClear: () {},
-                onCancel: () {},
+      ProviderScope(
+        overrides: [secureStorageProvider.overrideWithValue(_FakeSecureStorage('ar'))],
+        child: MaterialApp(
+          theme: AppTheme.light(isArabic: true),
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.8)),
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Scaffold(
+                body: LocationPickerSheet(
+                  permissionState: LocationPermissionState.deniedForever,
+                  errorCode: 'deniedForever',
+                  errorMessage: 'location_permission_denied_forever',
+                  onUseCurrentLocation: () {},
+                  onSelectMapPoint: () {},
+                  onSelectDistrict: (_) {},
+                  onOpenAppSettings: () {},
+                  onOpenLocationSettings: () {},
+                  onClear: () {},
+                  onCancel: () {},
+                ),
               ),
             ),
           ),
@@ -174,8 +260,22 @@ Widget _sizedMap(Widget child) {
 }
 
 Widget _app(Widget child) {
-  return MaterialApp(
-    theme: AppTheme.light(isArabic: false),
-    home: Scaffold(body: Center(child: child)),
+  return ProviderScope(
+    overrides: [secureStorageProvider.overrideWithValue(_FakeSecureStorage('en'))],
+    child: MaterialApp(
+      theme: AppTheme.light(isArabic: false),
+      home: Scaffold(body: Center(child: child)),
+    ),
   );
+}
+
+class _FakeSecureStorage extends SecureStorageService {
+  _FakeSecureStorage(this._languageCode);
+  final String _languageCode;
+
+  @override
+  Future<String?> getLanguageCode() async => _languageCode;
+
+  @override
+  Future<void> saveLanguageCode(String code) async {}
 }

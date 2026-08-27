@@ -1152,6 +1152,283 @@ class AppStrings {
   String get myReportViewDetails => _t('عرض التفاصيل', 'View details');
   String get myReportHideDetails => _t('إخفاء التفاصيل', 'Hide details');
   String get myReportDownloadAction => _t('تنزيل', 'Download');
+
+  // Discovery — common
+  String get discoveryFiltersButton => _t('التصفية', 'Filters');
+  String get discoveryApplyFiltersButton => _t('تطبيق التصفية', 'Apply filters');
+  String get discoveryAnyOption => _t('الكل', 'Any');
+  String get discoveryDetailsAction => _t('التفاصيل', 'Details');
+  String get discoveryLoadMoreButton => _t('تحميل المزيد', 'Load more');
+  String get discoveryNoActiveFilters => _t('لا توجد عوامل تصفية نشطة', 'No active filters');
+  String get discoverySearchActiveLabel => _t('البحث مفعّل', 'Search active');
+  String discoveryFilterSummarySpecialty(String value) => _t('التخصص: $value', 'Specialty: $value');
+  String discoveryFilterSummaryRegion(String value) => _t('المنطقة: $value', 'Region: $value');
+  String discoveryFilterSummaryMinRating(String value) => _t('تقييم $value فأكثر', 'Rating $value+');
+  String get discoveryFilterSummaryFeeActive => _t('عامل تصفية الرسوم مفعّل', 'Fee filter active');
+  String discoveryFilterSummaryTypeValue(String label) => _t('النوع: $label', 'Type: $label');
+  String discoveryFilterSummaryService(String value) => _t('الخدمة: $value', 'Service: $value');
+  String discoveryFilterSummaryInsurance(String value) => _t('التأمين: $value', 'Insurance: $value');
+  String get discoveryFilterSummaryNearby => _t('قريب', 'Nearby');
+  String consultationFeeValue(String fee) => _t('$fee شيكل', '$fee ILS');
+  String consultationDurationValue(int minutes) => _t('$minutes د', '$minutes min');
+  String yearsExperienceValue(int years) => _t('$years سنة', '$years years');
+
+  // Discovery — doctor directory
+  String get doctorDirectoryScreenTitle => _t('دليل الأطباء', 'Doctor directory');
+  String get doctorDirectoryTitle => _t('ابحث عن طبيب', 'Find a doctor');
+  String get doctorDirectorySubtitle => _t(
+        'تصفّح الأطباء المدرجين من قبل المرافق الصحية في محيط نابلس.',
+        'Browse doctors listed by healthcare facilities around Nablus.',
+      );
+  String get searchDoctorsLabel => _t('البحث عن طبيب', 'Search doctors');
+  String get searchDoctorsFieldHint => _t('الاسم أو التخصص', 'Name or specialty');
+  String get doctorFilterSpecialtyLabel => _t('التخصص', 'Specialty');
+  String get doctorFilterRegionLabel => _t('المنطقة', 'Region');
+  String get doctorFilterMinRatingLabel => _t('الحد الأدنى للتقييم', 'Minimum rating');
+  String get doctorFilterMinFeeLabel => _t('الحد الأدنى للرسوم', 'Minimum fee');
+  String get doctorFilterMaxFeeLabel => _t('الحد الأقصى للرسوم', 'Maximum fee');
+  String get doctorFilterFeeRangeError =>
+      _t('يجب أن يكون الحد الأقصى أكبر من أو يساوي الحد الأدنى', 'Maximum must be at least minimum');
+  String get doctorFilterSheetTitle => _t('تصفية الأطباء', 'Filter doctors');
+  String doctorResultsCount(int count) => _t('$count نتيجة طبيب', '$count doctor result${count == 1 ? '' : 's'}');
+  String get doctorLoadingDoctors => _t('جارٍ تحميل الأطباء...', 'Loading doctors...');
+  String get doctorEmptyTitle => _t('لم يتم العثور على أطباء', 'No doctors found');
+  String get doctorEmptyHint =>
+      _t('جرّب إزالة عوامل التصفية أو استخدام كلمة بحث مختلفة.', 'Try clearing filters or using a different search.');
+  String get doctorAcceptingPatients => _t('يستقبل مرضى جدد', 'Accepting patients');
+  String get doctorAvailabilityNotConfirmed => _t('التوفر غير مؤكد', 'Availability not confirmed');
+  String get doctorNotAcceptingPatients => _t('لا يستقبل مرضى جدد', 'Not accepting patients');
+  String get doctorFallbackName => _t('طبيب', 'Doctor');
+  String get clinicFallbackName => _t('عيادة', 'Clinic');
+  String get healthcareFacilityFallbackName => _t('منشأة صحية', 'Healthcare facility');
+
+  // Discovery — doctor detail
+  String get doctorDetailTitle => _t('تفاصيل الطبيب', 'Doctor details');
+  String get doctorDetailLoadErrorTitle => _t('تعذر تحميل بيانات الطبيب', 'Could not load doctor');
+  String get doctorDetailNotFoundTitle => _t('الطبيب غير موجود', 'Doctor not found');
+  String get doctorDetailNotFoundHint =>
+      _t('قد لا يكون هذا الطبيب متاحًا بعد الآن.', 'This doctor may no longer be available.');
+  String get doctorLoadingDetails => _t('جارٍ تحميل بيانات الطبيب...', 'Loading doctor details...');
+  String get doctorSectionEducation => _t('التعليم', 'Education');
+  String get doctorSectionEducationEmpty =>
+      _t('لا توجد تفاصيل تعليمية مدرجة.', 'No education details are listed.');
+  String get doctorSectionCertifications => _t('الشهادات', 'Certifications');
+  String get doctorSectionCertificationsEmpty =>
+      _t('لا توجد شهادات مدرجة.', 'No certifications are listed.');
+  String get doctorSectionProfessionalDetails => _t('التفاصيل المهنية', 'Professional details');
+  String get doctorSectionProfessionalDetailsEmpty =>
+      _t('لا توجد تفاصيل مهنية إضافية.', 'No additional professional details are listed.');
+  String doctorInfoExperience(int years) => _t('الخبرة: $years سنة', 'Experience: $years years');
+  String doctorInfoConsultationFee(String fee) => _t('رسوم الاستشارة: $fee شيكل', 'Consultation fee: $fee ILS');
+  String doctorInfoConsultationDuration(int minutes) =>
+      _t('مدة الاستشارة: $minutes دقيقة', 'Consultation duration: $minutes min');
+  String doctorInfoRating(String rating) => _t('التقييم: $rating', 'Rating: $rating');
+  String doctorInfoRatingWithCount(String rating, int count) =>
+      _t('التقييم: $rating ($count تقييم)', 'Rating: $rating ($count ratings)');
+  String doctorInfoMedicalLicense(String value) => _t('رقم الترخيص الطبي: $value', 'Medical license: $value');
+  String get doctorSectionAssociatedClinics => _t('العيادات المرتبطة', 'Associated clinics');
+  String get doctorSectionAssociatedClinicsEmpty =>
+      _t('لا توجد عيادات مرتبطة مدرجة.', 'No associated clinics are listed.');
+  String get doctorSectionReviews => _t('التقييمات', 'Reviews');
+  String get doctorSectionReviewsEmpty => _t('لا توجد تقييمات مدرجة.', 'No reviews are listed.');
+  String get doctorReviewNoComment => _t('لا يوجد تعليق مكتوب', 'No written comment');
+  String get doctorAvailabilityTitle => _t('الأوقات المتاحة', 'Availability');
+  String get doctorChooseDateAction => _t('اختر التاريخ', 'Choose date');
+  String get doctorAvailabilityLoadError =>
+      _t('تعذر تحميل الأوقات المتاحة', 'Could not load availability');
+  String get doctorAvailabilityChooseDateHint =>
+      _t('اختر تاريخًا لعرض الأوقات المتاحة.', 'Choose a date to view available times.');
+  String get doctorAvailabilityNoneForDate =>
+      _t('لا توجد أوقات متاحة لهذا التاريخ.', 'No times are available for this date.');
+
+  // Discovery — clinic discovery
+  String get clinicDiscoveryTitle => _t('ابحث عن رعاية صحية قريبة', 'Find healthcare nearby');
+  String get clinicDiscoverySubtitle => _t(
+        'ابحث عن عيادات ومستشفيات وصيدليات ومختبرات موثّقة ومجتمعية في محيط نابلس.',
+        'Search verified and community-listed clinics, hospitals, pharmacies, and labs around Nablus.',
+      );
+  String get searchClinicsLabel => _t('البحث عن عيادة', 'Search clinics');
+  String get searchClinicsFieldHint => _t('عيادة أو خدمة أو منطقة', 'Clinic, service, region');
+  String get discoveryViewModeList => _t('قائمة', 'List');
+  String get discoveryViewModeMap => _t('خريطة', 'Map');
+  String get nearbySearchTitle => _t('بحث قريب', 'Nearby search');
+  String get nearbySearchSubtitleInactive =>
+      _t('استخدم GPS أو نقطة على الخريطة أو حيًا تقريبيًا في نابلس.', 'Use GPS, a map point, or an approximate Nablus-area district.');
+  String nearbySearchSubtitleActive(String source, bool approximate) => _t(
+        'باستخدام موقع $source${approximate ? ' · تقريبي' : ''}. الإحداثيات الدقيقة غير محفوظة.',
+        'Using $source location${approximate ? ' · approximate' : ''}. Exact coordinates are not stored.',
+      );
+  String get locationSourceGps => _t('GPS', 'GPS');
+  String get locationSourceManualMap => _t('نقطة يدوية على الخريطة', 'manual map');
+  String get locationSourceManualDistrict => _t('حي تقريبي', 'approximate district');
+  String get locationSourceNone => _t('لا شيء', 'none');
+  String get clinicDiscoveryScreenTitle => _t('اكتشاف العيادات', 'Clinic discovery');
+  String get useGpsButton => _t('استخدام GPS', 'Use GPS');
+  String get chooseLocationButton => _t('اختيار الموقع', 'Choose location');
+  String get exitNearbyButton => _t('الخروج من البحث القريب', 'Exit nearby');
+  String radiusKmValue(String value) => _t('$value كم', '$value km');
+  String get pickMapPointHint =>
+      _t('اضغط على الخريطة لاختيار نقطة بحث يدوية قريبة.', 'Tap the map to choose a manual nearby search point.');
+  String clinicResultsCount(int count) => _t('$count نتيجة عيادة', '$count clinic result${count == 1 ? '' : 's'}');
+  String get clinicLoadingClinics => _t('جارٍ تحميل العيادات...', 'Loading clinics...');
+  String get clinicCouldNotLoadClinics => _t('تعذر تحميل العيادات', 'Could not load clinics');
+  String get clinicEmptyTitle => _t('لم يتم العثور على عيادات', 'No clinics found');
+  String get clinicEmptyHint => _t(
+        'جرّب إزالة عوامل التصفية أو اختيار موقع قريب آخر.',
+        'Try clearing filters or choosing another nearby location.',
+      );
+  String get clinicNoMappedResults => _t('لا توجد نتائج عيادات على الخريطة.', 'No mapped clinic results.');
+  String get clinicFilterSheetTitle => _t('تصفية العيادات', 'Filter clinics');
+  String get clinicFilterFacilityType => _t('نوع المنشأة', 'Facility type');
+  String get clinicFilterAllTypes => _t('الكل', 'All');
+  String get clinicFilterAnyRegion => _t('أي منطقة', 'Any region');
+  String get clinicFilterService => _t('الخدمة', 'Service');
+  String get clinicFilterAnyService => _t('أي خدمة', 'Any service');
+  String get clinicFilterInsurance => _t('التأمين', 'Insurance');
+  String get clinicFilterAnyInsurance => _t('أي تأمين', 'Any insurance');
+
+  // Discovery — clinic types / verification
+  String clinicTypeLabelFor(String? type) => switch ((type ?? '').trim().toLowerCase()) {
+        'clinic' => _t('عيادة', 'Clinic'),
+        'pharmacy' => _t('صيدلية', 'Pharmacy'),
+        'hospital' => _t('مستشفى', 'Hospital'),
+        'laboratory' => _t('مختبر', 'Laboratory'),
+        'dental' => _t('أسنان', 'Dental'),
+        'radiology' => _t('أشعة', 'Radiology'),
+        'emergency' => _t('طوارئ', 'Emergency'),
+        _ => _t('منشأة', 'Facility'),
+      };
+  String get clinicVerifiedLabel => _t('موثّقة', 'Verified');
+  String get clinicPendingVerificationLabel => _t('قيد التحقق', 'Pending verification');
+  String get clinicUnverifiedLabel => _t('غير موثّقة / غير معروفة', 'Unverified / unknown');
+
+  // Discovery — clinic detail
+  String get clinicDetailTitle => _t('تفاصيل العيادة', 'Clinic details');
+  String get clinicDetailLoadErrorTitle => _t('تعذر تحميل بيانات العيادة', 'Could not load clinic');
+  String get clinicDetailNotFoundTitle => _t('العيادة غير موجودة', 'Clinic not found');
+  String get clinicDetailNotFoundHint =>
+      _t('قد لا تكون هذه العيادة متاحة بعد الآن.', 'This clinic may no longer be available.');
+  String get clinicLoadingDetails => _t('جارٍ تحميل بيانات العيادة...', 'Loading clinic details...');
+  String get clinicVerificationDisclaimer => _t(
+        'قد لا تكون ساعات العمل وتفاصيل المنشأة موثّقة. تواصل مع المنشأة قبل الزيارة.',
+        'Hours and facility details may not be verified. Contact the facility before visiting.',
+      );
+  String get clinicMapSectionTitle => _t('الخريطة', 'Map');
+  String get clinicMapRoutingNote =>
+      _t('التوجيه والاتجاهات غير مفعّلة في هذه المرحلة.', 'Routing and directions are not enabled in this phase.');
+  String get clinicNoCoordinates =>
+      _t('لا توجد إحداثيات خريطة مدرجة لهذه العيادة.', 'No map coordinates are listed for this clinic.');
+  String get clinicsNoCoordinates =>
+      _t('لا توجد إحداثيات خريطة مدرجة لهذه العيادات.', 'No map coordinates are listed for these clinics.');
+  String get clinicContactSectionTitle => _t('التواصل والموقع', 'Contact and location');
+  String get clinicNoContactDetails => _t('لا توجد تفاصيل تواصل مدرجة.', 'No contact details are listed.');
+  String get clinicActionsDisabledNote => _t(
+        'إجراءات الهاتف والموقع الإلكتروني غير مفعّلة في هذه المرحلة.',
+        'Phone and website actions are not enabled in this phase.',
+      );
+  String get clinicRegionLabel => _t('المنطقة', 'Region');
+  String get clinicPhoneLabel => _t('الهاتف', 'Phone');
+  String get clinicWebsiteLabel => _t('الموقع الإلكتروني', 'Website');
+  String get clinicServicesTitle => _t('الخدمات', 'Services');
+  String get clinicInsuranceTitle => _t('التأمين المقبول', 'Insurance accepted');
+  String get clinicNoneListed => _t('لا يوجد شيء مدرج.', 'None listed.');
+  String get clinicHoursTitle => _t('ساعات العمل المدرجة', 'Listed hours');
+  String get clinicHoursSubtitle => _t(
+        'ساعات العمل مقدَّمة من العيادة وقد تتغيّر. تواصل مع العيادة للتأكد قبل الزيارة.',
+        'Hours are provided by the clinic and may change. Contact the clinic to confirm before visiting.',
+      );
+  String get clinicHoursClosed => _t('مغلق', 'Closed');
+  String get clinicNoHoursListed => _t('لا توجد ساعات عمل مدرجة.', 'No operating hours are listed.');
+  String get clinicDoctorsSectionTitle => _t('الأطباء في هذه المنشأة', 'Doctors at this facility');
+  String get clinicNoDoctorsListed =>
+      _t('لا يوجد أطباء مدرجون لهذه المنشأة.', 'No doctors are listed for this facility.');
+  String clinicDoctorRatingLabel(String rating) => _t('التقييم $rating', 'Rating $rating');
+  String weekdayLabel(String key) => switch (key.trim().toLowerCase()) {
+        'monday' => _t('الاثنين', 'Monday'),
+        'tuesday' => _t('الثلاثاء', 'Tuesday'),
+        'wednesday' => _t('الأربعاء', 'Wednesday'),
+        'thursday' => _t('الخميس', 'Thursday'),
+        'friday' => _t('الجمعة', 'Friday'),
+        'saturday' => _t('السبت', 'Saturday'),
+        'sunday' => _t('الأحد', 'Sunday'),
+        _ => key,
+      };
+
+  // Discovery — map
+  String get mapFitMarkersTooltip => _t('احتواء جميع العلامات', 'Fit markers');
+  String get mapRecenterTooltip => _t('إعادة التمركز إلى موقعك', 'Recenter to your location');
+  String get mapUserLocationMarkerLabel => _t('علامة موقعك', 'User location marker');
+  String mapPlaceMarkerLabel(String label) => _t('علامة $label', '$label marker');
+  String get mapDoctorMarkerLabel => _t('علامة طبيب', 'Doctor marker');
+  String get mapUnknownMarkerLabel => _t('علامة موقع', 'Place marker');
+  String get mapFoundationTitle => _t('أساس الخريطة', 'Map foundation');
+  String get locationStateSectionTitle => _t('حالة الموقع', 'Location state');
+  String get noLocationSelected => _t('لم يتم تحديد موقع', 'No location selected');
+  String get locationPrecisionApproximate => _t('تقريبي', 'Approximate');
+  String get locationPrecisionExact => _t('دقيق', 'Exact');
+  String locationStatusSourceLine(String status, String source) =>
+      _t('الحالة: $status · المصدر: $source', 'Status: $status · Source: $source');
+  String get selectManualMapPointHint =>
+      _t('اضغط على الخريطة لتحديد نقطة يدويًا.', 'Tap the map to select a manual point.');
+  String get pickOnMapButton => _t('اختيار من الخريطة', 'Pick on map');
+  String get moreOptionsButton => _t('المزيد من الخيارات', 'More options');
+  String get clearLocationButton => _t('مسح', 'Clear');
+
+  // Discovery — location picker sheet
+  String get chooseLocationTitle => _t('اختر الموقع', 'Choose location');
+  String get chooseLocationSubtitle => _t(
+        'استخدم GPS، اختر نقطة، أو اختر حيًا تقريبيًا في نابلس.',
+        'Use GPS, select a point, or choose an approximate Nablus-area district.',
+      );
+  String get useCurrentLocationButton => _t('استخدام الموقع الحالي', 'Use current location');
+  String get selectPointOnMapButton => _t('اختيار نقطة على الخريطة', 'Select point on map');
+  String get approximateDistrictTitle => _t('حي تقريبي', 'Approximate district');
+  String get districtApproximateSuffix => _t('تقريبي', 'approximate');
+  String get locationPrivacyNote => _t(
+        'يُستخدم الموقع لعرض النتائج القريبة. لا يحفظ التطبيق الموقع الدقيق. قد تصل مزودات الخرائط أو التوجيه الخارجية إلى الموقع لاحقًا عند استخدام تلك الإجراءات.',
+        'Location is used for nearby results. Exact location is not persisted by the mobile app. External map or routing providers may receive location later when those actions are used.',
+      );
+  String get appSettingsButton => _t('إعدادات التطبيق', 'App settings');
+  String get locationSettingsButton => _t('إعدادات الموقع', 'Location settings');
+
+  // Discovery — location error states (must stay distinct per state)
+  String get locationServiceDisabledMessage => _t(
+        'خدمات الموقع متوقفة. فعّلها أو اختر موقعًا يدويًا.',
+        'Location services are off. Turn them on or choose a manual location.',
+      );
+  String get locationDeniedMessage => _t(
+        'تم رفض إذن الموقع. يمكنك إعادة المحاولة أو اختيار موقع يدوي.',
+        'Location permission was denied. You can retry or choose a manual location.',
+      );
+  String get locationDeniedForeverMessage => _t(
+        'تم حظر إذن الموقع. افتح إعدادات التطبيق أو اختر موقعًا يدويًا.',
+        'Location permission is blocked. Open app settings or choose a manual location.',
+      );
+  String get locationTimeoutMessage => _t(
+        'استغرق تحديد موقعك وقتًا طويلاً. أعد المحاولة أو اختر موقعًا يدويًا.',
+        'Finding your location took too long. Try again or choose a manual location.',
+      );
+  String get locationUnavailableMessage => _t(
+        'تعذر تحديد موقعك. أعد المحاولة أو اختر موقعًا يدويًا.',
+        'Your location could not be determined. Try again or choose a manual location.',
+      );
+  String get locationUnexpectedMessage => _t(
+        'حدث خطأ أثناء تحديد موقعك. أعد المحاولة أو اختر موقعًا يدويًا.',
+        'Something went wrong while finding your location. Try again or choose a manual location.',
+      );
+
+  /// Maps a [LocationFailureCode] name (e.g. `serviceDisabled`, `denied`,
+  /// `deniedForever`, `timeout`, `unavailable`, `unexpected`) to a distinct,
+  /// user-facing message. Each failure state keeps its own wording so a
+  /// denied permission is never confused with a timed-out GPS fix.
+  String locationErrorForCode(String? code) => switch (code) {
+        'serviceDisabled' => locationServiceDisabledMessage,
+        'denied' => locationDeniedMessage,
+        'deniedForever' => locationDeniedForeverMessage,
+        'timeout' => locationTimeoutMessage,
+        'unavailable' => locationUnavailableMessage,
+        _ => locationUnexpectedMessage,
+      };
 }
 
 final appStringsProvider = Provider<AppStrings>((ref) {
