@@ -26,6 +26,8 @@ const PatientDetail = (() => {
     };
 
     let notes = [];
+    let appointments = [];
+    let prescriptions = [];
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -177,6 +179,140 @@ const PatientDetail = (() => {
         }).join('') + '</div>';
     }
 
+    // ================= PRESCRIPTION COMPOSER =================
+
+    function appointmentLabel(appointment) {
+        const status = t(STATUS_KEY[appointment.status] || appointment.status || '');
+        const reason = appointment.reason_for_visit ? ' · ' + appointment.reason_for_visit : '';
+        return fmtDate(appointment.scheduled_date) +
+            (appointment.start_time ? ' · ' + fmtTimeRange(appointment.start_time, appointment.end_time) : '') +
+            (status ? ' · ' + status : '') + reason;
+    }
+
+    function populatePrescriptionAppointments() {
+        const select = document.getElementById('prescriptionAppointment');
+        if (!select) return;
+        select.innerHTML = '<option value="">' + escapeHtml(t('patientDetail.prescriptionSelectAppointment')) + '</option>' +
+            appointments.map((appointment) =>
+                '<option value="' + escapeHtml(appointment.id) + '">' + escapeHtml(appointmentLabel(appointment)) + '</option>'
+            ).join('');
+    }
+
+    function prescriptionItemHtml(number) {
+        return '<div class="prescription-item">' +
+            '<div class="prescription-item-heading">' +
+                '<span><i class="fas fa-pills"></i> ' + escapeHtml(t('patientDetail.prescriptionItem')) + ' ' + number + '</span>' +
+                '<button type="button" class="btn btn-ghost btn-sm prescription-remove-item" aria-label="' + escapeHtml(t('patientDetail.prescriptionRemoveItem')) + '">' +
+                    '<i class="fas fa-trash"></i> <span>' + escapeHtml(t('patientDetail.prescriptionRemoveItem')) + '</span>' +
+                '</button>' +
+            '</div>' +
+            '<div class="form-row">' +
+                '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionMedicationEnglish')) + '</label><div class="input-wrapper"><i class="fas fa-capsules"></i><input class="rx-medication-en" type="text" required></div></div>' +
+                '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionMedicationArabic')) + '</label><div class="input-wrapper"><i class="fas fa-language"></i><input class="rx-medication-ar" type="text"></div></div>' +
+            '</div>' +
+            '<div class="form-row">' +
+                '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionDosage')) + '</label><div class="input-wrapper"><i class="fas fa-prescription-bottle"></i><input class="rx-dosage" type="text" required placeholder="e.g. 500 mg"></div></div>' +
+                '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionFrequency')) + '</label><div class="input-wrapper"><i class="fas fa-clock"></i><input class="rx-frequency" type="text" required placeholder="e.g. Twice daily"></div></div>' +
+            '</div>' +
+            '<div class="form-row">' +
+                '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionDuration')) + '</label><div class="input-wrapper"><i class="fas fa-calendar-days"></i><input class="rx-duration" type="text" placeholder="e.g. 7 days"></div></div>' +
+                '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionQuantity')) + '</label><div class="input-wrapper"><i class="fas fa-box"></i><input class="rx-quantity" type="number" min="1" step="1" required></div></div>' +
+            '</div>' +
+            '<div class="form-group"><label>' + escapeHtml(t('patientDetail.prescriptionItemInstructions')) + '</label><textarea class="feedback-textarea rx-instructions" style="min-height:54px;"></textarea></div>' +
+        '</div>';
+    }
+
+    function renumberPrescriptionItems() {
+        document.querySelectorAll('#prescriptionItems .prescription-item').forEach((item, index) => {
+            const heading = item.querySelector('.prescription-item-heading > span');
+            if (heading) heading.innerHTML = '<i class="fas fa-pills"></i> ' + escapeHtml(t('patientDetail.prescriptionItem')) + ' ' + (index + 1);
+            const removeButton = item.querySelector('.prescription-remove-item');
+            if (removeButton) removeButton.disabled = index === 0 && document.querySelectorAll('#prescriptionItems .prescription-item').length === 1;
+        });
+    }
+
+    function addPrescriptionItem() {
+        const items = document.getElementById('prescriptionItems');
+        if (!items) return;
+        items.insertAdjacentHTML('beforeend', prescriptionItemHtml(items.children.length + 1));
+        renumberPrescriptionItems();
+    }
+
+    function resetPrescriptionForm() {
+        const form = document.getElementById('prescriptionForm');
+        if (form) form.reset();
+        const items = document.getElementById('prescriptionItems');
+        if (items) {
+            items.innerHTML = '';
+            addPrescriptionItem();
+        }
+    }
+
+    function collectPrescriptionItems() {
+        return Array.from(document.querySelectorAll('#prescriptionItems .prescription-item')).map((item) => ({
+            medication_name_en: item.querySelector('.rx-medication-en').value.trim(),
+            medication_name_ar: item.querySelector('.rx-medication-ar').value.trim() || null,
+            dosage: item.querySelector('.rx-dosage').value.trim(),
+            frequency: item.querySelector('.rx-frequency').value.trim(),
+            duration: item.querySelector('.rx-duration').value.trim() || null,
+            quantity: item.querySelector('.rx-quantity').value.trim(),
+            instructions: item.querySelector('.rx-instructions').value.trim() || null
+        }));
+    }
+
+    function showPrescriptionAlert(kind, message) {
+        const alertBox = document.getElementById('prescriptionFormAlert');
+        if (!alertBox) return;
+        alertBox.className = 'alert ' + kind;
+        alertBox.textContent = message;
+    }
+
+    async function submitPrescription(patientId) {
+        const appointmentId = document.getElementById('prescriptionAppointment').value;
+        const items = collectPrescriptionItems();
+        const itemIsIncomplete = items.some((item) => !item.medication_name_en || !item.dosage || !item.frequency || !item.quantity);
+        if (!appointmentId || itemIsIncomplete) {
+            showPrescriptionAlert('error', t('patientDetail.prescriptionValidation'));
+            return;
+        }
+
+        const submitButton = document.getElementById('prescriptionSubmitBtn');
+        submitButton.classList.add('loading');
+        document.getElementById('prescriptionFormAlert').className = 'alert';
+
+        try {
+            const response = await API.care.createPrescription({
+                patient_id: patientId,
+                appointment_id: appointmentId,
+                valid_until: document.getElementById('prescriptionValidUntil').value || null,
+                diagnosis: document.getElementById('prescriptionDiagnosis').value.trim() || null,
+                instructions: document.getElementById('prescriptionInstructions').value.trim() || null,
+                doctor_notes: document.getElementById('prescriptionDoctorNotes').value.trim() || null,
+                items
+            });
+            const prescription = response?.data;
+            if (prescription) {
+                prescriptions = [prescription, ...prescriptions];
+                renderPrescriptions(prescriptions);
+            }
+            resetPrescriptionForm();
+
+            const safety = prescription?.safety_check;
+            if (safety?.status === 'warning') {
+                showPrescriptionAlert('error', t('patientDetail.prescriptionSafetyWarning'));
+            } else if (safety?.status === 'unavailable') {
+                showPrescriptionAlert('error', t('patientDetail.prescriptionSafetyUnavailable'));
+            } else {
+                showPrescriptionAlert('success', t('patientDetail.prescriptionCreated'));
+            }
+        } catch (err) {
+            console.error('PatientDetail: failed to create prescription', err);
+            showPrescriptionAlert('error', err?.message || t('patientDetail.noteErrorHint'));
+        } finally {
+            submitButton.classList.remove('loading');
+        }
+    }
+
     // ================= ADD NOTE FORM =================
 
     function validateNote() {
@@ -248,10 +384,13 @@ const PatientDetail = (() => {
             const res = await API.care.patientDetail(patientId);
             const data = res?.data || {};
             notes = Array.isArray(data.notes) ? data.notes : [];
+            appointments = Array.isArray(data.appointments) ? data.appointments : [];
+            prescriptions = Array.isArray(data.prescriptions) ? data.prescriptions : [];
             renderHeader(data.patient || {});
-            renderAppointments(Array.isArray(data.appointments) ? data.appointments : []);
+            renderAppointments(appointments);
             renderNotes(notes);
-            renderPrescriptions(Array.isArray(data.prescriptions) ? data.prescriptions : []);
+            populatePrescriptionAppointments();
+            renderPrescriptions(prescriptions);
         } catch (err) {
             if (err?.status === 404) {
                 document.getElementById('patientDetailContent').classList.add('hidden');
@@ -297,6 +436,18 @@ const PatientDetail = (() => {
         document.getElementById('noteFormResultCloseBtn').addEventListener('click', () => {
             document.getElementById('noteFormResult').classList.add('hidden');
         });
+        document.getElementById('addPrescriptionItemBtn').addEventListener('click', addPrescriptionItem);
+        document.getElementById('prescriptionItems').addEventListener('click', (event) => {
+            const removeButton = event.target.closest('.prescription-remove-item');
+            if (!removeButton || removeButton.disabled) return;
+            removeButton.closest('.prescription-item').remove();
+            renumberPrescriptionItems();
+        });
+        document.getElementById('prescriptionForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            submitPrescription(patientId);
+        });
+        resetPrescriptionForm();
     }
 
     return { init };
