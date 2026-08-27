@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/appointments/screens/appointments_screen.dart';
 import '../features/admin/management/screens/admin_management_screen.dart';
+import '../features/doctor_workspace/screens/doctor_patients_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -67,6 +68,7 @@ const Set<String> protectedRoutes = {
   RoutePaths.savedPlaces,
   RoutePaths.contact,
   RoutePaths.adminManagement,
+  RoutePaths.doctorPatients,
 };
 
 /// Redirect target for [location], or null to allow it.
@@ -217,8 +219,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SavedPlacesScreen(),
       ),
       GoRoute(
+        path: RoutePaths.doctorPatients,
+        builder: (context, state) => const DoctorPatientsScreen(),
+      ),
+      GoRoute(
         path: RoutePaths.adminManagement,
-        builder: (context, state) => const AdminManagementScreen(),
+        builder: (context, state) =>
+            AdminManagementScreen(initialTab: state.uri.queryParameters['tab']),
       ),
       GoRoute(
         path: RoutePaths.contact,

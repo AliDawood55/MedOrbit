@@ -20,6 +20,7 @@ import '../../appointments/utils/appointment_filters.dart';
 import '../../appointments/widgets/appointment_card.dart';
 import '../../admin/dashboard/models/admin_dashboard_stats.dart';
 import '../../admin/dashboard/providers/admin_dashboard_provider.dart';
+import '../../doctor_workspace/screens/doctor_home_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../notifications/providers/notifications_provider.dart';
 import '../../prescriptions/models/prescription_model.dart';
@@ -104,6 +105,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
     final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
     final isAdmin = role == 'admin' || role == 'super_admin';
+    final isDoctor = role == 'doctor';
     final profileAsync = ref.watch(currentUserProfileProvider);
 
     if (isAdmin) {
@@ -111,6 +113,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return _AdminHomeScreen(
         profileAsync: profileAsync,
         statsAsync: statsAsync,
+        isSuperAdmin: role == 'super_admin',
         isArabic: isArabic,
         strings: strings,
         origin: ref.watch(activeOriginProvider),
@@ -119,6 +122,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         onRetryStats: () => ref.invalidate(adminDashboardStatsProvider),
       );
     }
+    if (isDoctor) return const DoctorHomeScreen();
 
     final appointmentsAsync = ref.watch(appointmentsControllerProvider);
     final prescriptionsAsync = ref.watch(prescriptionsListProvider);
@@ -134,6 +138,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       appBar: AppBar(
         title: Text(strings.appName),
         actions: [
+          IconButton(
+            tooltip: strings.navNotifications,
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () => context.push(RoutePaths.notifications),
+          ),
+          IconButton(
+            tooltip: strings.navProfile,
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => context.push(RoutePaths.profile),
+          ),
           IconButton(
             tooltip: strings.languageToggleTooltip,
             icon: const Icon(Icons.translate_rounded),
@@ -279,6 +293,7 @@ class _AdminHomeScreen extends ConsumerWidget {
   const _AdminHomeScreen({
     required this.profileAsync,
     required this.statsAsync,
+    required this.isSuperAdmin,
     required this.isArabic,
     required this.strings,
     required this.origin,
@@ -289,6 +304,7 @@ class _AdminHomeScreen extends ConsumerWidget {
 
   final AsyncValue<UserProfileModel> profileAsync;
   final AsyncValue<AdminDashboardStats> statsAsync;
+  final bool isSuperAdmin;
   final bool isArabic;
   final AppStrings strings;
   final String origin;
@@ -302,6 +318,16 @@ class _AdminHomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(strings.appName),
         actions: [
+          IconButton(
+            tooltip: strings.navNotifications,
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () => context.push(RoutePaths.notifications),
+          ),
+          IconButton(
+            tooltip: strings.navProfile,
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => context.push(RoutePaths.profile),
+          ),
           IconButton(
             tooltip: strings.languageToggleTooltip,
             icon: const Icon(Icons.translate_rounded),
@@ -378,6 +404,16 @@ class _AdminHomeScreen extends ConsumerWidget {
                                   ),
                                   label: Text(strings.adminManagementTitle),
                                 ),
+                                if (isSuperAdmin)
+                                  OutlinedButton.icon(
+                                    onPressed: () => context.push(
+                                      RoutePaths.adminManagementPath(
+                                        tab: 'admins',
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.groups_2_outlined),
+                                    label: Text(strings.adminAdministrators),
+                                  ),
                                 OutlinedButton.icon(
                                   onPressed: () =>
                                       context.push(RoutePaths.notifications),
@@ -446,18 +482,21 @@ class _AdminStatisticsGrid extends StatelessWidget {
             strings.adminStatsUsers,
             Icons.groups_outlined,
             AppTheme.primary,
+            RoutePaths.adminManagement,
           ),
           _AdminStatData(
             stats.patients,
             strings.adminStatsPatients,
             Icons.person_outline_rounded,
             AppTheme.secondary,
+            RoutePaths.adminManagement,
           ),
           _AdminStatData(
             stats.doctors,
             strings.adminStatsDoctors,
             Icons.medical_services_outlined,
             AppTheme.accent,
+            RoutePaths.adminManagement,
           ),
           _AdminStatData(
             stats.appointmentsTotal,
@@ -506,6 +545,9 @@ class _AdminStatisticsGrid extends StatelessWidget {
                       label: tile.label,
                       icon: tile.icon,
                       color: tile.color,
+                      onTap: tile.route == null
+                          ? null
+                          : () => context.push(tile.route!),
                     ),
                   ),
               ],
@@ -518,12 +560,19 @@ class _AdminStatisticsGrid extends StatelessWidget {
 }
 
 class _AdminStatData {
-  const _AdminStatData(this.value, this.label, this.icon, this.color);
+  const _AdminStatData(
+    this.value,
+    this.label,
+    this.icon,
+    this.color, [
+    this.route,
+  ]);
 
   final Object value;
   final String label;
   final IconData icon;
   final Color color;
+  final String? route;
 }
 
 List<EnrichedAppointment> _upcomingAppointments(

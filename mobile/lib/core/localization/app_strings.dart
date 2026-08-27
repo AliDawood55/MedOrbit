@@ -288,6 +288,13 @@ class AppStrings {
   String get adminManagementTitle => _t('إدارة المنصة', 'Manage platform');
   String get adminApplications => _t('طلبات الأطباء', 'Doctor applications');
   String get adminUsers => _t('المستخدمون', 'Users');
+  String get adminAdministrators => _t('المسؤولون', 'Administrators');
+  String get adminNoAdministrators =>
+      _t('لا توجد حسابات مسؤولين', 'No administrator accounts');
+  String get adminNoAdministratorsHint => _t(
+    'ستظهر هنا حسابات المسؤولين التي يديرها المسؤول العام.',
+    'Administrator accounts managed by the super admin will appear here.',
+  );
   String get adminInvitations => _t('الدعوات', 'Invitations');
   String get adminAccessDenied =>
       _t('لا تملك صلاحية الوصول', 'You do not have access');
