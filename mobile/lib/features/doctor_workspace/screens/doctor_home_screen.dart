@@ -5,6 +5,7 @@ import '../../../../core/locale/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../routes/route_paths.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/role_header_actions.dart';
 import '../../auth/providers/auth_provider.dart';
 
 class DoctorHomeScreen extends ConsumerWidget {
@@ -19,30 +20,7 @@ class DoctorHomeScreen extends ConsumerWidget {
     return AppScaffold(
       appBar: AppBar(
         title: const Text('MedOrbit'),
-        actions: [
-          IconButton(
-            tooltip: ar ? 'الإشعارات' : 'Notifications',
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push(RoutePaths.notifications),
-          ),
-          IconButton(
-            tooltip: ar ? 'الملف الشخصي' : 'Profile',
-            icon: const Icon(Icons.account_circle_outlined),
-            onPressed: () => context.push(RoutePaths.profile),
-          ),
-          IconButton(
-            icon: const Icon(Icons.translate_rounded),
-            onPressed: () =>
-                ref.read(localeControllerProvider.notifier).toggle(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go(RoutePaths.login);
-            },
-          ),
-        ],
+        actions: const [RoleHeaderActions()],
       ),
       body: ListView(
         padding: const EdgeInsets.all(AppTheme.spaceLg),

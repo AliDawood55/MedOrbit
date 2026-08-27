@@ -9,7 +9,7 @@ import '../features/auth/providers/auth_provider.dart';
 import '../shared/widgets/app_scaffold.dart';
 import 'route_paths.dart';
 
-enum _ShellAction { language, logout }
+enum _ShellAction { home, notifications, profile, language, logout }
 
 /// Persistent bottom navigation for the five existing patient branches.
 class MainShell extends ConsumerWidget {
@@ -22,6 +22,7 @@ class MainShell extends ConsumerWidget {
     final strings = ref.watch(appStringsProvider);
     final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
     final isAdmin = role == 'admin' || role == 'super_admin';
+    final isDoctor = role == 'doctor';
     final width = MediaQuery.sizeOf(context).width;
     final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
     final compactNavigation =
@@ -32,6 +33,15 @@ class MainShell extends ConsumerWidget {
 
     Future<void> handleAction(_ShellAction action) async {
       switch (action) {
+        case _ShellAction.home:
+          context.go(RoutePaths.home);
+          return;
+        case _ShellAction.notifications:
+          context.push(RoutePaths.notifications);
+          return;
+        case _ShellAction.profile:
+          context.push(RoutePaths.profile);
+          return;
         case _ShellAction.language:
           await ref.read(localeControllerProvider.notifier).toggle();
           return;
@@ -57,7 +67,7 @@ class MainShell extends ConsumerWidget {
             ),
         ],
       ),
-      bottomNavigationBar: isAdmin
+      bottomNavigationBar: isAdmin || isDoctor
           ? null
           : SafeArea(
               top: false,
@@ -142,6 +152,39 @@ class _ShellActionsButton extends StatelessWidget {
         onSelected: onSelected,
         icon: const Icon(Icons.more_vert_rounded),
         itemBuilder: (context) => [
+          PopupMenuItem(
+            value: _ShellAction.home,
+            child: Row(
+              children: [
+                const Icon(Icons.home_outlined, size: AppTheme.iconMd),
+                const SizedBox(width: AppTheme.spaceMd),
+                Flexible(child: Text(strings.navHome)),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: _ShellAction.notifications,
+            child: Row(
+              children: [
+                const Icon(Icons.notifications_outlined, size: AppTheme.iconMd),
+                const SizedBox(width: AppTheme.spaceMd),
+                Flexible(child: Text(strings.navNotifications)),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: _ShellAction.profile,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.account_circle_outlined,
+                  size: AppTheme.iconMd,
+                ),
+                const SizedBox(width: AppTheme.spaceMd),
+                Flexible(child: Text(strings.navProfile)),
+              ],
+            ),
+          ),
           PopupMenuItem(
             value: _ShellAction.language,
             child: Row(

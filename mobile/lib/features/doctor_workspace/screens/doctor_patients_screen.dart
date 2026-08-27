@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/locale/locale_controller.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../routes/route_paths.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/error_retry_state.dart';
 import '../../../../shared/widgets/page_sections.dart';
+import '../../../../shared/widgets/role_header_actions.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/doctor_patients_provider.dart';
 
@@ -38,7 +41,15 @@ class _DoctorPatientsScreenState extends ConsumerState<DoctorPatientsScreen> {
     }
     final state = ref.watch(doctorPatientsProvider);
     return AppScaffold(
-      appBar: AppBar(title: Text(isArabic ? 'مرضاي' : 'My patients')),
+      appBar: AppBar(
+        title: Text(isArabic ? 'مرضاي' : 'My patients'),
+        leading: IconButton(
+          tooltip: isArabic ? 'الرئيسية' : 'Home',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () => context.go(RoutePaths.home),
+        ),
+        actions: const [RoleHeaderActions(compact: true)],
+      ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => ErrorRetryState(
