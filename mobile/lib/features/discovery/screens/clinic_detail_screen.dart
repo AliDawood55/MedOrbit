@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/locale/locale_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -51,9 +52,10 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
     final detail = state.selectedClinicDetail;
     final clinic = detail?.clinic;
     final error = state.clinicDetailError;
+    final ar = ref.watch(localeControllerProvider).languageCode == 'ar';
 
     return AppScaffold(
-      appBar: AppBar(title: const Text('Clinic details')),
+      appBar: AppBar(title: Text(ar ? 'تفاصيل العيادة' : 'Clinic details')),
       useSafeArea: true,
       body: RefreshIndicator(
         onRefresh: _load,
@@ -68,9 +70,9 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
                   : error != null
                       ? Card(
                           child: ErrorRetryState(
-                            title: 'Could not load clinic',
+                            title: ar ? 'تعذر تحميل العيادة' : 'Could not load clinic',
                             message: error.message,
-                            retryLabel: 'Retry',
+                            retryLabel: ar ? 'إعادة المحاولة' : 'Retry',
                             onRetry: () {
                               _load();
                             },
@@ -78,11 +80,11 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
                           ),
                         )
                       : clinic == null
-                          ? const Card(
+                          ? Card(
                               child: EmptyState(
                                 icon: Icons.local_hospital_outlined,
-                                title: 'Clinic not found',
-                                hint: 'This clinic may no longer be available.',
+                                title: ar ? 'العيادة غير موجودة' : 'Clinic not found',
+                                hint: ar ? 'قد لا تكون هذه العيادة متاحة بعد الآن.' : 'This clinic may no longer be available.',
                                 variant: EmptyStateVariant.compact,
                               ),
                             )

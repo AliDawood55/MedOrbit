@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/locale/locale_controller.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/role_header_actions.dart';
 import '../models/doctor_models.dart';
 import '../providers/discovery_provider.dart';
 import '../widgets/doctor_filter_sheet.dart';
@@ -20,8 +22,12 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(discoveryControllerProvider);
+    final ar = ref.watch(localeControllerProvider).languageCode == 'ar';
     return AppScaffold(
-      appBar: AppBar(title: const Text('Doctor directory')),
+      appBar: AppBar(
+        title: Text(ar ? 'دليل الأطباء' : 'Doctor directory'),
+        actions: const [RoleHeaderActions(compact: true)],
+      ),
       useSafeArea: true,
       keyboardAware: true,
       body: RefreshIndicator(
@@ -33,7 +39,7 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
             ResponsiveContent(
               maxWidth: 960,
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const PageIntro(title: 'Find a doctor', subtitle: 'Browse doctors listed by healthcare facilities around Nablus.', icon: Icons.person_search_outlined),
+                PageIntro(title: ar ? 'ابحث عن طبيب' : 'Find a doctor', subtitle: ar ? 'تصفح الأطباء المدرجين لدى المؤسسات الصحية في نابلس.' : 'Browse doctors listed by healthcare facilities around Nablus.', icon: Icons.person_search_outlined),
                 const SizedBox(height: AppTheme.spaceLg),
                 Card(child: Padding(padding: const EdgeInsets.all(AppTheme.spaceLg), child: AppTextField(label: 'Search doctors', hintText: 'Name or specialty', controller: _search, prefixIcon: const Icon(Icons.search_rounded), suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: _clear, icon: const Icon(Icons.close_rounded), tooltip: 'Clear search'), onChanged: _onSearch))),
                 const SizedBox(height: AppTheme.spaceLg),
