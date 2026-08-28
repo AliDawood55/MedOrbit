@@ -121,7 +121,7 @@ router.get('/me/patients/:patientId', authenticate, authorize('doctor'), async (
     if (!related) return error(res, 'Patient not found', 404, 'NOT_FOUND');
 
     const patientResult = await db.query(
-      `SELECT p.id, u.email, pr.first_name_ar, pr.last_name_ar, pr.first_name_en, pr.last_name_en,
+      `SELECT p.id, u.id AS user_id, u.email, pr.first_name_ar, pr.last_name_ar, pr.first_name_en, pr.last_name_en,
               pr.phone, pr.profile_image_url, pr.date_of_birth, pr.gender
        FROM medorbit.patients p
        JOIN medorbit.users u ON u.id = p.user_id
