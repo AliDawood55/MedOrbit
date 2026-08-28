@@ -1,15 +1,3 @@
-/**
- * Virtual Doctor TTS — regression test for the `cfg is not defined` crash.
- *
- * activeSessionId() used to reference a module-level `cfg` that was never
- * declared anywhere in virtual-doctor-tts.js (no init(), no cfg variable).
- * That threw a ReferenceError on the very first speak() call, before the
- * authenticated /api/virtual-doctor/speak request was ever sent. Because
- * speak() is fail-soft, the crash was swallowed and surfaced only as
- * "doctor voice unavailable" — so this test actually executes the module
- * (not just regex-matches its source) and asserts a real request goes out
- * carrying the session id from VirtualDoctorSession.
- */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -94,7 +82,7 @@ function loadTts({ sessionId, fetchImpl }) {
 }
 
 (async () => {
-    // --- A: active session — the crash reproduction case ------------------
+
     {
         const { mod, fetchCalls } = loadTts({ sessionId: 'session-abc123' });
 
@@ -123,8 +111,7 @@ function loadTts({ sessionId, fetchImpl }) {
         );
     }
 
-    // --- B: no active session — activeSessionId() must stay safe ----------
-    {
+{
         const { mod, fetchCalls } = loadTts({ sessionId: null });
         let threw = null;
         let result;
@@ -138,8 +125,7 @@ function loadTts({ sessionId, fetchImpl }) {
         check('result is still ok:true', !!result && result.ok === true, JSON.stringify(result));
     }
 
-    // --- C: VirtualDoctorSession itself missing — still must not throw ----
-    {
+{
         const { mod } = loadTts({ sessionId: undefined });
         let threw = null;
         try {
