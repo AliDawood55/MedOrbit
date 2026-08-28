@@ -18,20 +18,13 @@
     <link rel="stylesheet" href="../src/css/ai-tools.css">
     <link rel="stylesheet" href="../src/css/avatar-preview.css">
     <link rel="stylesheet" href="../src/css/billing.css">
-    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
-         below is an external file and an external file can 404, be blocked or
-         time out, and a gate that never loads hides nothing. These lines
-         cannot go missing on their own. They hide protected markup from the
-         first paint; the gate clears the attribute once it has verified the
-         session, and the watchdog leaves for Home if the gate never arrives. -->
     <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
     <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
-    <!-- Global authentication gate: must load in <head>, before any
-         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
+
     <script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
-  <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
+<a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
 
     <header class="app-header">
         <a class="header-brand" id="brandLink" href="home.html">
@@ -60,7 +53,7 @@
             <p data-i18n="consult.subtitle">تحدّث بشكل طبيعي — الطبيب يستمع ويجيب دون الحاجة للضغط على أي زر.</p>
         </div>
 
-        <!-- Pre-consultation gate: the one and only click in the whole flow. -->
+        
         <section class="consult-start-card" id="startCard">
             <i class="fas fa-microphone-lines consult-start-icon"></i>
             <h2 data-i18n="consult.startHeading">استشارة صوتية</h2>
@@ -76,10 +69,7 @@
             </div>
         </section>
 
-        <!-- Kept OUTSIDE the consultation shell on purpose: a denied
-             microphone means the shell never opens, and an error rendered
-             inside it would be invisible — the user would click Start and see
-             nothing happen at all. -->
+        
         <div class="mic-error consult-error" id="micError" role="alert" hidden>
             <i class="fas fa-triangle-exclamation"></i>
             <div class="mic-error-body">
@@ -101,8 +91,7 @@
                     <span class="status-label" id="statusLabel" data-i18n="consult.stateIdle">جاهز</span>
                     <span class="status-timer" id="statusTimer"></span>
                 </div>
-                <!-- Voice indicator. Driven by the same state names the status
-                     strip uses (see setStatus) — no separate state system. -->
+                
                 <div class="voice-stage state-idle" id="voiceStage">
                     <div class="voice-orb" aria-hidden="true">
                         <span class="voice-orb-glow"></span>
@@ -138,7 +127,7 @@
 
                 <div class="mic-status" id="micStatus" aria-live="polite" hidden></div>
 
-                <!-- Speech failed but the consultation carries on in text. -->
+                
                 <div class="tts-warning" id="ttsWarning" role="status" hidden>
                     <i class="fas fa-volume-xmark"></i>
                     <div>
@@ -147,7 +136,6 @@
                     </div>
                 </div>
 
-                <!-- Consultation result -->
                 <div class="consult-summary" id="summaryPanel" hidden>
                     <div class="consult-summary-head">
                         <i class="fas fa-clipboard-check"></i>
@@ -236,9 +224,7 @@
             els.statusStrip.className = 'avatar-status-strip state-' + entry[2];
             els.statusLabel.setAttribute('data-i18n', entry[0]);
             els.statusLabel.textContent = tr(entry[0], entry[1]);
-            // The voice indicator reuses the strip's own state vocabulary
-            // (idle | listening | capturing | thinking | speaking) so there is
-            // exactly one source of truth for what the UI is showing.
+            
             if (els.voiceStage) {
                 const speakingAloud = els.statusStrip.classList.contains('is-speaking-aloud');
                 els.voiceStage.className = 'voice-stage state-' + entry[2] +
@@ -306,19 +292,12 @@
             els.micError.hidden = false;
             els.micErrorMsg.textContent = tr(detail.key, 'Microphone error.');
             els.micErrorHelp.hidden = !detail.showHelp;
-            // A fatal error killed the mic, so offer an explicit way back in
-            // rather than leaving a hands-free page with no hands.
+            
             els.btnRetryMic.hidden = !detail.fatal;
             logLine('ERROR [' + detail.code + '] ' + (detail.detail || ''));
         }
 
-        /**
-         * Cooldown / upgrade panel for the Voice Doctor.
-         *
-         * Counts down toward an absolute UTC instant the backend returned. The
-         * countdown is cosmetic — the backend re-checks eligibility on every
-         * /start, so a tampered clock or an edited DOM buys nothing.
-         */
+        
         let voicePaywallTimer = null;
 
         function formatRemaining(ms) {
@@ -351,7 +330,7 @@
                 + (nextFreeAt ? '<div class="voice-paywall__countdown" id="voicePaywallCountdown">—</div>' : '')
                 + (upgradeAvailable
                     ? '<button type="button" class="voice-paywall__upgrade" data-action="upgrade">'
-                      + (isAr ? 'الترقية إلى Pro' : 'Upgrade to Pro') + '</button>'
+                    + (isAr ? 'الترقية إلى Pro' : 'Upgrade to Pro') + '</button>'
                     : '');
 
             if (voicePaywallTimer) clearInterval(voicePaywallTimer);
@@ -385,9 +364,6 @@
 
         document.addEventListener('click', (event) => {
             if (!event.target.closest('[data-action="upgrade"]')) return;
-            // Open the pricing dialog in place, and come back HERE after a
-            // successful checkout rather than stranding the user on the
-            // billing page when what they wanted was a consultation.
             if (typeof BillingUI !== 'undefined') {
                 BillingUI.openPricing({ returnPath: 'avatar-preview.html' });
             } else {
@@ -402,9 +378,6 @@
         }
 
         // ================= speech output =================
-
-        /** Only true while TTS audio is actually playing — this is what makes
-         *  the indicator show its waveform rather than a plain pulse. */
         function setSpeakingAloud(on) {
             els.statusStrip.classList.toggle('is-speaking-aloud', !!on);
             if (els.voiceStage) els.voiceStage.classList.toggle('is-speaking-aloud', !!on);
@@ -422,17 +395,10 @@
             els.subtitleText.textContent = '';
         }
 
-        /**
-         * Speak one doctor reply. Resolves when the audio finishes, when the
-         * patient interrupts, or when speech fails — never blocks the
-         * consultation, which is why the result is inspected rather than
-         * awaited for success.
-         */
         async function speakReply(text, lang) {
             if (!ttsEnabled) return;
             const startedAt = performance.now();
 
-            // Mic stays live but harder to trigger, so the patient can cut in.
             VirtualDoctorSTT.setGateMode('bargein');
 
             const result = await VirtualDoctorTTS.speak(text, lang, {
@@ -445,7 +411,6 @@
                     }
                 },
                 onError: (detail) => {
-                    // One notice is enough; do not nag on every turn.
                     els.ttsWarning.hidden = false;
                     logLine('TTS error: ' + (detail.detail || detail.key));
                 },
@@ -457,8 +422,7 @@
 
             if (result && result.interrupted) logLine('Speech interrupted by patient');
             if (result && result.ok === false) {
-                // Fall back to a reading beat so the reply does not vanish
-                // instantly when there is no audio to pace it.
+                
                 await new Promise((r) => setTimeout(r, 700));
             }
         }
@@ -469,8 +433,6 @@
             VirtualDoctorTTS.stop();
             hideSubtitle();
             setSpeakingAloud(false);
-            // Hand the mic back at once rather than waiting for the session
-            // state to catch up, so the interrupting sentence is not clipped.
             VirtualDoctorSTT.setGateMode('open');
         }
 
@@ -488,9 +450,9 @@
                 [tr('consult.fieldName', 'Name'), profile.name || '—'],
                 [tr('consult.fieldAge', 'Age'), profile.age != null ? String(profile.age) : '—'],
                 [tr('consult.fieldComplaint', 'Chief complaint'),
-                 profile.chief_complaint_description || result.chiefComplaint || '—'],
+                profile.chief_complaint_description || result.chiefComplaint || '—'],
                 [tr('consult.fieldSpecialty', 'Recommended specialty'),
-                 (lang === 'ar' ? result.specialtyAr : result.specialtyEn) || '—']
+                (lang === 'ar' ? result.specialtyAr : result.specialtyEn) || '—']
             ];
             els.summaryGrid.innerHTML = '';
             rows.forEach(([label, value]) => {
@@ -521,27 +483,17 @@
                 a.click();
                 return;
             }
-
-            // Known-broken PDF renderer: say so plainly and keep the summary.
             els.reportUnavailable.hidden = false;
             els.btnDownloadReport.disabled = res.reason === 'pdf_unavailable';
             logLine('Report unavailable (' + res.reason + '): ' + (res.detail || ''));
         }
 
-        // ================= wiring =================
-
         async function beginConsultation() {
             clearError();
             els.btnStartConsult.disabled = true;
-
-            // Browsers only allow programmatic audio after a user gesture, and
-            // the greeting plays well after this click — prime the element now
-            // while the gesture is still in scope.
             const unlocked = await VirtualDoctorTTS.unlock();
             if (!unlocked) logLine('Audio autoplay not unlocked; speech may be blocked');
 
-            // Kick both model loads off now, before the permission prompt, so
-            // they run behind the greeting rather than delaying the first turn.
             VirtualDoctorSTT.warmup();
             VirtualDoctorTTS.warmup().then((status) => {
                 if (!status) {
@@ -554,7 +506,7 @@
             const started = await VirtualDoctorSTT.start();
             if (!started) {
                 els.btnStartConsult.disabled = false;
-                return;   // onError already surfaced the reason
+                return;   
             }
 
             els.startCard.hidden = true;
@@ -574,21 +526,6 @@
                 sessionActive = false;
             }
         }
-
-        /**
-         * Mic/speech/UI cleanup happens first and does not wait on the
-         * network — the user should not stand around with a live microphone
-         * while the server call is in flight. VirtualDoctorSession.end()
-         * clears its own local state (including the session id) synchronously
-         * before awaiting the request, so a stray re-entry here already has
-         * nothing to end.
-         *
-         * Start stays disabled until the end request settles: the visual
-         * start card can come back immediately, but a new consultation must
-         * not be able to reach the server before the old one's /end does —
-         * otherwise a still-active grant could resume the very session the
-         * user just chose to end.
-         */
         async function endConsultation() {
             sessionActive = false;
             VirtualDoctorSTT.stop();
@@ -611,11 +548,7 @@
             if (result.ended) {
                 logLine('Consultation ended');
             } else if (result.reason === 'error') {
-                // Local state is already clear and Start is usable again, but
-                // the server grant may still be active — the next /start can
-                // legitimately RESUME this same consultation rather than
-                // create a new one, until backend stale-grant cleanup runs.
-                // That is expected recovery behavior here, not a bug.
+                
                 logLine('Consultation ended locally; server cleanup failed: ' + (result.detail || ''));
             }
         }
@@ -646,8 +579,7 @@
                 onLevel: (level, capturing) => {
                     els.micLevelFill.style.width = Math.round(level * 100) + '%';
                     els.micLevelFill.classList.toggle('is-capturing', !!capturing);
-                    // Feed the live mic level to the orb so it genuinely reacts
-                    // to the voice instead of running a canned animation.
+                    
                     if (els.voiceStage) {
                         els.voiceStage.style.setProperty('--level', level.toFixed(3));
                     }
@@ -657,7 +589,7 @@
                     addBubble('patient', result.text, result.language);
                     logLine('Heard (' + result.processingSeconds + 's stt): "' + result.text + '"');
                     turnStartedAt = performance.now();
-                    VirtualDoctorSTT.setGateMode('closed');   // doctor takes the floor
+                    VirtualDoctorSTT.setGateMode('closed');   
                     VirtualDoctorSession.submit(result.text);
                 },
                 onBargeIn: onBargeIn,
@@ -667,16 +599,12 @@
             VirtualDoctorSession.init({
                 onState: ({ state }) => {
                     setStatus(state);
-                    // The doctor's turn is over the moment the session goes
-                    // back to 'listening' — that is when the patient gets the
-                    // microphone back. Without this the consultation would
-                    // freeze after the first answer.
+                    
                     if (state === 'listening' && sessionActive) {
                         VirtualDoctorSTT.setGateMode('open');
                     }
                 },
-                // Returning the promise makes the session hold the floor until
-                // the doctor has actually finished speaking.
+                
                 onDoctorTurn: ({ text, meta }) => {
                     const lang = VirtualDoctorSession.getLanguage();
                     addBubble('doctor', text, lang);
@@ -696,20 +624,32 @@
                     offerReport();
                     logLine('Consultation complete — urgency=' + result.urgencyLevel);
                 },
-                // Entitlement states are product states, not faults. The
-                // server decides eligibility and supplies the instant the next
-                // free consultation unlocks; this only renders it.
-                onPaywall: ({ code, nextFreeAt, upgradeAvailable }) => {
+                
+                onPaywall:({ code, nextFreeAt, upgradeAvailable }) => {
                     sessionActive = false;
                     VirtualDoctorSTT.stop();
+                    VirtualDoctorTTS.stop();
                     hideSubtitle();
+                    stopTimer();
                     setMicStatus('');
+
+                    els.consultShell.hidden = true;
+                    els.startCard.hidden = false;
+                    els.btnStartConsult.disabled = false;
+                    setStatus('idle');
+
                     showVoicePaywall({ code, nextFreeAt, upgradeAvailable });
-                    logLine('Consultation blocked [' + code + ']'
-                        + (nextFreeAt ? ' until ' + nextFreeAt : ''));
+                    if (upgradeAvailable && typeof BillingUI !== 'undefined') {
+                        BillingUI.openPricing({ 
+                            returnPath: 'avatar-preview.html' ,
+                            reason: code
+                        });
+                    }
+
+                    logLine('Consultation blocked [' + code + ']' + (nextFreeAt ? ' until ' + nextFreeAt : ''));
                 },
-                // A refresh or a dropped connection rejoins the SAME
-                // consultation rather than spending another free session.
+
+
                 onResumed: ({ sessionId }) => {
                     logLine('Resumed existing consultation ' + sessionId);
                 },
