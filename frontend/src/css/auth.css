@@ -204,6 +204,23 @@
     display: none;
 }
 
+/* Shown only after a password-valid login identifies an unverified account.
+   Keeping this action out of the default form avoids account enumeration. */
+.auth-verification-action {
+    margin-top: 18px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid var(--warning, #f59e0b);
+    border-radius: var(--r-md);
+    background: var(--bg-soft);
+}
+
+.auth-verification-action p {
+    margin: 0 0 10px;
+    color: var(--text-soft);
+    font-size: 13px;
+}
+
 /* === Status page (verify-email) === */
 .auth-status {
     text-align: center;
