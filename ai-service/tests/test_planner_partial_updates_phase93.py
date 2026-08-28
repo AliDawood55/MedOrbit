@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from virtual_doctor import interview_engine, planner, reasoning, reasoning_engine
+from virtual_doctor import interview_engine, planner, reasoning
 from virtual_doctor.reasoning_engine import prolog_engine
 from tests.test_symbolic_planner_phase2 import _fake_session, _handle
 

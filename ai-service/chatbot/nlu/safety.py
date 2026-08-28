@@ -1,5 +1,5 @@
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 class MedicalSafetyLayer:
@@ -9,7 +9,6 @@ class MedicalSafetyLayer:
     Always takes priority over other NLU processing.
     """
 
-    # Critical emergency patterns — ALWAYS bypass normal routing
     EMERGENCY_PATTERNS_AR = [
         r"(الم\s+(صدر|قلب|راس\s+شديد))",
         r"(صعوبة\s+(تنفس|في\s+التنفس))",
@@ -32,19 +31,12 @@ class MedicalSafetyLayer:
         r"(emergency|urgent|immediate\s+help|call\s+ambulance)",
     ]
 
-    # Urgent but not immediately life-threatening
     URGENT_PATTERNS_AR = [
         r"(كسر|خلع|التواء\s+شديد)",
         r"(حرارة\s+مرتفعة|حرارة\s+عالية|حمى\s+شديدة)",
         r"(الم\s+شديد|وجع\s+مستمر|ألم\s+لا\s+يحتمل)",
         r"(تقيؤ\s+دم|دم\s+في\s+البراز|نزيف\s+داخلي)",
-        # Hematuria: mirrors the existing English "blood in urine" alternative
-        # above, which had no Arabic equivalent. Anchored to a urine-context
-        # word every time so it can never match "دم" alone.
         r"(دم\s+في\s+البول|دم\s+بالبول|بول\s+مع\s+دم|تبول\s+دم)",
-        # Sudden/severe ("thunderclap") headache — a distinct red-flag pattern
-        # from the generic "الم شديد" above, since "صداع" does not share a
-        # root with "الم"/"وجع" and so is not covered by it.
         r"(صداع\s+شديد\s+فجأة|صداع\s+مفاجئ\s+شديد|صداع\s+شديد\s+ومفاجئ|أسوأ\s+صداع|اسوأ\s+صداع)",
         r"(ضغط\s+مرتفع\s+جداً|ارتفاع\s+ضغط\s+خطر)",
         r"(سكر\s+مرتفع|ارتفاع\s+سكر|هبوط\s+سكر)",
@@ -60,18 +52,8 @@ class MedicalSafetyLayer:
         r"(uncontrollable\s+bleeding)",
     ]
 
-    # The single combined pattern (from EMERGENCY_PATTERNS_AR above) whose
-    # alternatives are the bare words "طوارئ"/"حالة طارئة"/"إسعاف"/"اسعاف" —
-    # the only pattern the informational-ER-place exemption below is allowed
-    # to suppress. No other emergency pattern (real symptoms, self-reports)
-    # is ever affected by it.
     _EMERGENCY_WORD_PATTERN = r"(طوارئ|حالة\s+طارئة|إسعاف|اسعاف)"
 
-    # Distinguishes "the emergency department" as a place/service (a
-    # location or wayfinding query) from a personal emergency being
-    # reported. Matches ONLY the department-as-place phrasing "قسم
-    # الطوارئ"/"غرفة الطوارئ" — never bare "طوارئ" or "حالة طارئة" alone,
-    # which must always still bypass routing on their own.
     _ER_PLACE_PATTERN = re.compile(r"قسم\s+الطوارئ|غرفة\s+الطوارئ", re.IGNORECASE)
 
     def __init__(self):
@@ -124,7 +106,6 @@ class MedicalSafetyLayer:
 
         matched_patterns = []
 
-        # Check emergency patterns first (highest priority)
         for pattern in self.emergency_re:
             match = pattern.search(text)
             if match:
@@ -134,16 +115,9 @@ class MedicalSafetyLayer:
                     "pattern": pattern.pattern
                 })
 
-        # Narrow exemption: a query that only names the emergency
-        # department as a place ("قسم الطوارئ") rather than reporting an
-        # actual emergency continues to normal intent routing instead of
-        # bypassing it. See _is_informational_er_place_query for the exact,
-        # narrow condition — any real symptom or self-reported emergency
-        # matched alongside it still bypasses routing as before.
         if self._is_informational_er_place_query(text, matched_patterns):
             matched_patterns = []
 
-        # If emergency detected, return immediately
         if matched_patterns:
             return {
                 "is_emergency": True,
@@ -154,7 +128,6 @@ class MedicalSafetyLayer:
                 "bypass_intent_routing": True
             }
 
-        # Check urgent patterns
         for pattern in self.urgent_re:
             match = pattern.search(text)
             if match:
@@ -174,7 +147,6 @@ class MedicalSafetyLayer:
                 "bypass_intent_routing": False
             }
 
-        # Check entities for emergency signals
         if entities:
             symptoms = entities.get("symptoms", [])
             emergency_symptoms = {"chest_pain", "breathing", "severe_bleeding", "unconscious"}
@@ -188,7 +160,6 @@ class MedicalSafetyLayer:
                     "bypass_intent_routing": True
                 }
 
-        # Normal case
         return {
             "is_emergency": False,
             "is_urgent": False,
@@ -234,12 +205,10 @@ class MedicalSafetyLayer:
     def get_emergency_keywords(self) -> List[str]:
         """Get all emergency keywords for quick pre-checking."""
         keywords = [
-            # Arabic
             "طوارئ", "اسعاف", "إسعاف", "حالة طارئة", "خطر", "انقاذ",
             "نوبة قلبية", "جلطة", "سكتة", "نزيف", "غيبوبة",
             "صعوبة تنفس", "ضيق تنفس", "فقدان وعي",
             "انتحار", "تسمم", "جرعة زائدة",
-            # English
             "emergency", "ambulance", "urgent", "heart attack", "stroke",
             "can't breathe", "unconscious", "bleeding", "suicide",
             "overdose", "poisoning", "severe pain"

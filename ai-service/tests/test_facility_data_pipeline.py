@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import sys
 import tempfile
 import unittest
@@ -169,7 +168,7 @@ class DeduplicationAndProvenanceTests(unittest.TestCase):
             "source_record_id": "official-1",
             "match_osm_ids": ["node:1"],
         })
-        canonical, candidates, conflicts = deduplicate([osm, official])
+        canonical, candidates, _ = deduplicate([osm, official])
         self.assertEqual(len(canonical), 1)
         self.assertEqual(canonical[0]["verification_status"], "verified")
         self.assertEqual(len(canonical[0]["source_evidence"]), 2)

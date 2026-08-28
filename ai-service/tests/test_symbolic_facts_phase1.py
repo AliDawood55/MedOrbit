@@ -37,9 +37,6 @@ def _subjects(result, predicate):
     return {f.subject for f in result.facts if f.predicate == predicate}
 
 
-# ===========================================================================
-# 1. The canonical vocabulary tracks the rest of the service
-# ===========================================================================
 
 class TestVocabularyDoesNotDriftFromTheService(unittest.TestCase):
     """vocabulary.py restates two sets that already exist elsewhere, to keep it
@@ -58,9 +55,6 @@ class TestVocabularyDoesNotDriftFromTheService(unittest.TestCase):
                          {"routine": 1, "urgent": 2, "emergency": 3})
 
 
-# ===========================================================================
-# 2. Arabic and English fold to the same canonical atom
-# ===========================================================================
 
 class TestArabicAndEnglishNormalization(unittest.TestCase):
     def test_arabic_surface_forms_map_to_canonical_english_atoms(self):
@@ -114,9 +108,6 @@ class TestArabicAndEnglishNormalization(unittest.TestCase):
         self.assertIsNone(vocabulary.canonical_symptom("quantum entanglement"))
 
 
-# ===========================================================================
-# 3. Symptom facts: present, absent, uncertain
-# ===========================================================================
 
 class TestSymptomFacts(unittest.TestCase):
     def test_entity_symptoms_become_present_facts(self):
@@ -168,9 +159,6 @@ class TestSymptomFacts(unittest.TestCase):
         self.assertTrue(all("vocabulary" in r.reason for r in result.rejected))
 
 
-# ===========================================================================
-# 4. Slots and knowledge state
-# ===========================================================================
 
 class TestSlotFacts(unittest.TestCase):
     def test_recognised_slot_values_keep_their_meaning(self):
@@ -256,9 +244,6 @@ class TestPatientAttributes(unittest.TestCase):
         self.assertEqual(result.rejected, ())
 
 
-# ===========================================================================
-# 5. Malformed input never raises
-# ===========================================================================
 
 class TestMalformedInputDegradesInsteadOfRaising(unittest.TestCase):
     def test_wrong_types_everywhere_still_return_a_factset(self):
@@ -284,9 +269,6 @@ class TestMalformedInputDegradesInsteadOfRaising(unittest.TestCase):
         self.assertEqual(result.rejected, ())
 
 
-# ===========================================================================
-# 6. The deterministic safety floor enters as a fact — invariant S1
-# ===========================================================================
 
 class TestDeterministicSafetyIsMirroredAsFact(unittest.TestCase):
     def _facts_for(self, text, lang="ar"):
@@ -341,9 +323,6 @@ class TestDeterministicSafetyIsMirroredAsFact(unittest.TestCase):
                          {"emergency"})
 
 
-# ===========================================================================
-# 7. Session keys
-# ===========================================================================
 
 class TestSessionKeys(unittest.TestCase):
     def test_a_uuid_becomes_a_safe_atom(self):

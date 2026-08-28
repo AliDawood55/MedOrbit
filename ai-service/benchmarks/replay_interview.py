@@ -108,20 +108,8 @@ def classify(turn, complaint, legacy, symbolic_topic) -> str:
         return "SAME"
 
     if expected is None:
-        # expected-None covers two situations: the interview is complete, and
-        # no clinical topic is relevant yet (intake unfinished).
-        #
-        # When symbolic declines and legacy does not, that is NOT scored as a
-        # symbolic win, even though symbolic matches the expectation. The
-        # comparison here is between _next_unfilled_slot and interview.pl, but
-        # the legacy SYSTEM gates intake upstream of the planner entirely
-        # (interview_engine._next_intake_reply), so it never reaches a clinical
-        # question in that state either. Claiming a win would be scoring a
-        # helper out of the context that protects it.
         if symbolic_topic is None:
             return "BOTH_ACCEPTABLE"
-        # Symbolic proposing a topic where none was expected is a real
-        # mismatch, and `expected_mismatch` records it separately.
         return "BOTH_ACCEPTABLE"
 
     if symbolic_topic == expected:
@@ -159,9 +147,6 @@ def run() -> Dict[str, Any]:
             if symbolic != turn["expected_topic"]:
                 violations["expected_mismatch"].append(
                     f"{case}: expected={turn['expected_topic']} symbolic={symbolic}")
-            # A required slot must never be skipped: if the planner says the
-            # interview is complete while a declared slot is unfilled, that is a
-            # missing mandatory question.
             if decision.available and decision.complete and (set(declared) - answered):
                 violations["missing_required"].append(
                     f"{case}: complete with unfilled {sorted(set(declared) - answered)}")
@@ -184,7 +169,6 @@ def run() -> Dict[str, Any]:
                 "query_ms": round(decision.query_ms, 3),
             })
 
-    # Paired adaptivity: same complaint, different known facts, different question.
     pairs = []
     index_by_id = {t["id"]: t for t in TRAJECTORIES}
     for left, right, turn_index in PAIRS:

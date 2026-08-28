@@ -29,11 +29,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "benchmarks"))
 from virtual_doctor import understanding
 from virtual_doctor.reasoning_engine import vocabulary
 
-# benchmarks/ is development tooling and is deliberately NOT copied into the
-# runtime image (verified: `ls benchmarks` fails inside medorbit-ai-service).
-# Skipping rather than failing keeps the suite runnable against the shipped
-# image, while still enforcing every guard wherever the repo is checked out —
-# which is everywhere the prompt could actually be edited.
 try:
     from understanding_corpus import CATEGORIES, CORPUS, DEV, HELD_OUT, SAFETY_ATOMS
     _HAVE_CORPUS = True

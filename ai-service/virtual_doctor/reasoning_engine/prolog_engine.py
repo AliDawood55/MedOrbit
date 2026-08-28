@@ -50,55 +50,18 @@ logger = logging.getLogger("medorbit-ai.virtual_doctor.reasoning_engine")
 
 _RULES_DIR = Path(__file__).resolve().parent / "rules"
 
-# Loaded in order, into the ONE governed engine — Phase 2 adds interview.pl
-# alongside base.pl rather than standing up a second engine, so the lock, the
-# session scope and the allow-list continue to cover everything.
-# safety.pl, contradictions.pl and differential.pl are appended as their phases
-# land.
 RULE_FILES = ("base.pl", "interview.pl", "safety.pl", "contradictions.pl")
 
-# A single query returning more than this means a rule is wrong, not that the
-# consultation is unusually rich. Bounds memory on a runaway result set.
-# minimum=1: passed as pyswip maxresult; 0 would return no solutions ever.
 MAX_RESULTS = env_int("VD_SYMBOLIC_MAX_RESULTS", 500, minimum=1)
 
-# Bounded execution, introduced in Phase 3 with the first genuinely
-# combinational rules.
-#
-# INFERENCES, NOT WALL-CLOCK. call_with_time_limit/2 was the obvious choice and
-# was rejected on evidence: it lives in library(time), which the container's
-# swi-prolog-core package does not ship — verified, `source_sink
-# 'library(time)' does not exist` on SWI 9.2.9 in the built image, while it
-# works on the host's full 10.0.2 install. Using it would have meant upgrading
-# the image to swi-prolog-nox (2 packages -> 19) purely for a timer.
-#
-# call_with_inference_limit/3 is a CORE built-in, verified present and
-# identical on both 9.2.9 (container) and 10.0.2 (host). It also happens to be
-# the better bound here: an inference count is deterministic and reproducible,
-# where a wall-clock limit turns a loaded CI machine into a flaky test.
-#
-# Measured on both: an infinite loop is cut off in ~2ms, the cut-off surfaces
-# as a normal solution rather than an exception, the engine stays healthy, and
-# facts asserted beforehand remain retractable — which is what lets session
-# cleanup still run in `finally`.
-#
-# 200k is ~4 orders of magnitude above a real turn (a full safety+interview
-# turn is a few hundred inferences), so it can only ever catch a rule that has
-# genuinely run away.
-# minimum=1: interpolated into call_with_inference_limit/3, whose contract
-# requires a positive integer budget.
 INFERENCE_LIMIT = env_int("VD_SYMBOLIC_INFERENCE_LIMIT", 200000, minimum=1)
 
-# Returned by call_with_inference_limit/3 when the goal was cut off.
 INFERENCE_LIMIT_EXCEEDED = "inference_limit_exceeded"
 
 
 class PrologBudgetExceeded(RuntimeError):
     """A goal exceeded the inference budget and was cut off."""
 
-# Reentrant so a session scope can hold the lock across the queries made
-# inside it — that is what makes cross-session fact interleaving impossible
-# rather than merely cleaned up afterwards.
 _LOCK = threading.RLock()
 
 _prolog: Any = None
@@ -138,8 +101,6 @@ def _load_engine() -> None:
             path = _RULES_DIR / name
             if not path.is_file():
                 raise FileNotFoundError(f"rule file missing: {path}")
-            # POSIX separators: SWI-Prolog treats a backslash as an escape in
-            # a quoted path, so a Windows path must not be passed verbatim.
             engine.consult(path.as_posix())
             consulted.append(name)
     except Exception as exc:  # noqa: BLE001
@@ -224,18 +185,6 @@ def enabled() -> bool:
     return os.environ.get("VD_SYMBOLIC", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
-# Phase 2 rollout, gated UNDER the master switch. Naming follows the project's
-# existing VD_* / string-mode convention (VD_PLANNER=llm|static), rather than a
-# second boolean, because three states are genuinely needed:
-#
-#   off      symbolic interview reasoning does not run at all
-#   shadow   it runs, its choice is compared with the existing planner's and
-#            the divergence is logged — the existing planner still controls
-#            everything the patient sees                        (the default)
-#   active   the symbolic topic controls WHAT is asked; the LLM only words it
-#
-# Default "shadow" so that turning on VD_SYMBOLIC alone can never change a
-# consultation; reaching `active` takes a second, deliberate setting.
 INTERVIEW_MODES = ("off", "shadow", "active")
 INTERVIEW_MODE_DEFAULT = "shadow"
 
@@ -258,14 +207,6 @@ def interview_active() -> bool:
     return interview_mode() == "active"
 
 
-# Phase 3 rollout, independent of the interview flag and gated under the same
-# master switch. Same three states, same safe default, same "garbage falls back
-# to shadow, never active" rule.
-#
-#   off      symbolic safety reasoning does not run
-#   shadow   it runs and its verdict is logged and compared; patient-facing
-#            urgency is entirely unaffected                     (the default)
-#   active   its verdict joins the urgency merge, where it can only ESCALATE
 SAFETY_MODES = ("off", "shadow", "active")
 SAFETY_MODE_DEFAULT = "shadow"
 
@@ -288,16 +229,6 @@ def safety_active() -> bool:
     return safety_mode() == "active"
 
 
-# Phase 4 rollout, independent of the interview and safety flags. Same three
-# states, same safe default, same "invalid falls back to shadow".
-#
-#   off      symbolic contradiction reasoning does not run
-#   shadow   it runs and is compared with the Python correction layer, which
-#            stays authoritative for everything patient-facing   (the default)
-#   active   its decision may VALIDATE a normalised correction candidate.
-#            Even then Prolog never mutates anything — Python still applies the
-#            profile update, the confirmation state, the correction_history
-#            append, the persistence and the reply.
 CORRECTION_MODES = ("off", "shadow", "active")
 CORRECTION_MODE_DEFAULT = "shadow"
 
@@ -319,9 +250,6 @@ def correction_active() -> bool:
     return correction_mode() == "active"
 
 
-# ---------------------------------------------------------------------------
-# Goal construction — the only place a goal string is assembled
-# ---------------------------------------------------------------------------
 
 def _bind(template: str, atoms: Dict[str, Any]) -> str:
     """Substitute validated atoms into a static template.
@@ -380,9 +308,6 @@ def _raw_query(goal: str, *, bounded: bool = True) -> List[Dict[str, Any]]:
     for row in engine.query(executed, maxresult=MAX_RESULTS):
         row = dict(row)
         if row.pop("_VdBudget", None) == INFERENCE_LIMIT_EXCEEDED:
-            # Cut off mid-goal. Whatever was collected is a partial answer to a
-            # rule that misbehaved, so it is discarded rather than returned —
-            # a truncated safety trace is worse than an admitted failure.
             raise PrologBudgetExceeded(
                 f"goal exceeded {INFERENCE_LIMIT} inferences: {goal[:80]}"
             )
@@ -400,9 +325,6 @@ def query(template: str, /, **atoms: Any) -> List[Dict[str, Any]]:
         return _raw_query(_bind(template, atoms))
 
 
-# ---------------------------------------------------------------------------
-# Session scope
-# ---------------------------------------------------------------------------
 
 class SessionHandle:
     """Query interface bound to one session's facts.

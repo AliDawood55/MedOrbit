@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 
 class SynonymEngine:
@@ -31,17 +31,14 @@ class SynonymEngine:
         """Build reverse maps from any synonym to its canonical form."""
         self.synonym_to_canonical = {}
 
-        # Arabic synonyms
         for canonical, variants in self.arabic_synonyms.items():
             for variant in variants:
                 normalized = self._normalize_key(variant)
                 self.synonym_to_canonical[normalized] = canonical
 
-        # Medical synonyms
         for canonical, variants in self.medical_synonyms.items():
             for variant in variants:
                 normalized = self._normalize_key(variant)
-                # Medical takes priority if conflict
                 self.synonym_to_canonical[normalized] = canonical
 
     def _build_resolve_text_lookup(self) -> None:
@@ -96,12 +93,10 @@ class SynonymEngine:
 
         result = text.lower()
 
-        # First try multi-word synonyms (precomputed, sorted by length descending)
         for phrase, canonical in self._multi_word_phrases:
             if phrase in result:
                 result = result.replace(phrase, canonical)
 
-        # Then single-word synonyms (word boundary check for English)
         for word, pattern, canonical in self._single_word_lookup:
             if word in result:
                 result = pattern.sub(canonical, result)
@@ -112,11 +107,9 @@ class SynonymEngine:
         """Get all synonyms for a canonical form."""
         results = []
 
-        # Check Arabic synonyms
         if canonical in self.arabic_synonyms:
             results.extend(self.arabic_synonyms[canonical])
 
-        # Check medical synonyms
         if canonical in self.medical_synonyms:
             results.extend(self.medical_synonyms[canonical])
 
@@ -140,14 +133,13 @@ class SynonymEngine:
         for phrase, canonical in self.synonym_to_canonical.items():
             if phrase in text_lower:
                 confidence = len(phrase) / len(text_lower) if text_lower else 0
-                confidence = min(confidence + 0.5, 1.0)  # Base boost for exact match
+                confidence = min(confidence + 0.5, 1.0)
                 matches.append({
                     "canonical": canonical,
                     "matched_phrase": phrase,
                     "confidence": round(confidence, 4)
                 })
 
-        # Sort by confidence descending
         matches.sort(key=lambda x: x["confidence"], reverse=True)
         return matches
 
@@ -161,7 +153,6 @@ class SynonymEngine:
         synonyms = self.get_synonyms(resolved)
 
         if synonyms:
-            # Add top 3 synonyms
             expanded = resolved
             for syn in synonyms[:3]:
                 if syn != resolved:

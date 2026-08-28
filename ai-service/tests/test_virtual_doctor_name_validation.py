@@ -68,9 +68,6 @@ async def _run_turn(message, fake_session, planner_result=None):
     return result, next_session
 
 
-# ===========================================================================
-# 1. The reported bug: a transcribed sentence is never stored as a name
-# ===========================================================================
 
 class TestTranscribedSentenceIsNotStoredAsName(unittest.IsolatedAsyncioTestCase):
     async def test_reported_sentence_asks_to_repeat_and_stores_nothing(self):
@@ -79,11 +76,9 @@ class TestTranscribedSentenceIsNotStoredAsName(unittest.IsolatedAsyncioTestCase)
         result, next_session = await _run_turn("سوف ندخل في اسمي", fake_session)
 
         profile = json.loads(next_session["patient_profile"])
-        self.assertNotIn("name", profile)                     # never stored
-        self.assertIn("أخبرني باسمك الأول", result["reply"])   # asks to repeat
-        # The garbled text is NOT echoed back at the patient.
+        self.assertNotIn("name", profile)
+        self.assertIn("أخبرني باسمك الأول", result["reply"])
         self.assertNotIn("سوف ندخل", result["reply"])
-        # No yes/no confirmation: the next turn will be a name, not a yes/no.
         self.assertNotIn("pending_confirmation", profile)
 
     def test_unit_suspicious_name_flags_sentences_and_medical_text(self):
@@ -94,9 +89,6 @@ class TestTranscribedSentenceIsNotStoredAsName(unittest.IsolatedAsyncioTestCase)
                     interview_engine._is_suspicious_name(interview_engine._extract_name(bad)))
 
 
-# ===========================================================================
-# 1b. Follow-up: greeting/generic-noun noise words (name blocklist gap)
-# ===========================================================================
 
 class TestGreetingAndGenericNounsAreNotStoredAsName(unittest.IsolatedAsyncioTestCase):
     """Follow-up fix: after the sentence-detection fix above shipped, single-
@@ -127,9 +119,6 @@ class TestGreetingAndGenericNounsAreNotStoredAsName(unittest.IsolatedAsyncioTest
                     interview_engine._is_suspicious_name(interview_engine._extract_name(bad)))
 
 
-# ===========================================================================
-# 2. Real names still pass untouched
-# ===========================================================================
 
 class TestRealNamesAreAccepted(unittest.IsolatedAsyncioTestCase):
     async def test_simple_name_is_stored_and_interview_continues(self):
@@ -139,7 +128,7 @@ class TestRealNamesAreAccepted(unittest.IsolatedAsyncioTestCase):
             profile_updates={"name": "علي"}, source="intake",
         )
 
-        result, next_session = await _run_turn("علي", fake_session, plan)
+        _, next_session = await _run_turn("علي", fake_session, plan)
 
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(profile.get("name"), "علي")
@@ -156,7 +145,7 @@ class TestRealNamesAreAccepted(unittest.IsolatedAsyncioTestCase):
             profile_updates={"name": "عمر"}, source="intake",
         )
 
-        result, next_session = await _run_turn("عمر", fake_session, plan)
+        _, next_session = await _run_turn("عمر", fake_session, plan)
 
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(profile.get("name"), "عمر")
@@ -174,9 +163,6 @@ class TestRealNamesAreAccepted(unittest.IsolatedAsyncioTestCase):
                     interview_engine._is_suspicious_name(interview_engine._extract_name(good)))
 
 
-# ===========================================================================
-# 3. Borderline single word keeps the existing echo-and-confirm behaviour
-# ===========================================================================
 
 class TestBorderlineNameStillEchoesForConfirmation(unittest.IsolatedAsyncioTestCase):
     async def test_single_odd_word_is_echoed_with_yes_no_confirmation(self):
@@ -190,9 +176,6 @@ class TestBorderlineNameStillEchoesForConfirmation(unittest.IsolatedAsyncioTestC
         self.assertEqual(profile["pending_confirmation"]["field"], "name")
 
 
-# ===========================================================================
-# 4. No infinite repeat loop
-# ===========================================================================
 
 class TestNameRepeatDoesNotLoopForever(unittest.IsolatedAsyncioTestCase):
     async def test_gives_up_after_cap_and_marks_the_name_unconfirmed(self):
@@ -202,8 +185,6 @@ class TestNameRepeatDoesNotLoopForever(unittest.IsolatedAsyncioTestCase):
             result, session = await _run_turn("سوف ندخل في اسمي", session)
             self.assertIn("أخبرني باسمك الأول", result["reply"])
 
-        # One more garbled answer: accept it, but never as a confirmed fact,
-        # and move the interview on to the age question.
         result, session = await _run_turn("سوف ندخل في اسمي", session)
         profile = json.loads(session["patient_profile"])
 
@@ -212,9 +193,6 @@ class TestNameRepeatDoesNotLoopForever(unittest.IsolatedAsyncioTestCase):
         self.assertIn("name", profile["uncertain_fields"])
 
 
-# ===========================================================================
-# 5. Age phase is unaffected by a non-numeric answer (no crash)
-# ===========================================================================
 
 class TestAgePhaseHandlesNonNumericAnswer(unittest.IsolatedAsyncioTestCase):
     async def test_non_numeric_age_reasks_without_crashing(self):

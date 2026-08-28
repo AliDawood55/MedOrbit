@@ -73,9 +73,6 @@ def facts_for(result, **kwargs):
     )
 
 
-# ===========================================================================
-# 1. Schema and parsing
-# ===========================================================================
 
 class TestSchema(unittest.TestCase):
     def test_observation_rejects_a_symptom_outside_the_vocabulary(self):
@@ -142,9 +139,6 @@ class TestJsonHandling(unittest.TestCase):
         self.assertIsNone(understanding._extract_json("x" * (understanding.MAX_PAYLOAD_CHARS + 10)))
 
 
-# ===========================================================================
-# 2. Negation, uncertainty and the difference between them
-# ===========================================================================
 
 class TestPolarity(unittest.TestCase):
     def test_present(self):
@@ -258,9 +252,6 @@ class TestContradictoryOutput(unittest.TestCase):
                 self.assertEqual(set(), first & second)
 
 
-# ===========================================================================
-# 3. The vocabulary is never extended
-# ===========================================================================
 
 class TestVocabularyIsClosed(unittest.TestCase):
     def test_an_unknown_symptom_is_rejected(self):
@@ -312,9 +303,6 @@ class TestVocabularyIsClosed(unittest.TestCase):
         self.assertLessEqual(len(r.symptoms), understanding.MAX_SYMPTOMS)
 
 
-# ===========================================================================
-# 4. Diagnosis is refused structurally
-# ===========================================================================
 
 class TestNoDiagnosis(unittest.TestCase):
     def test_a_condition_key_is_never_read(self):
@@ -337,7 +325,6 @@ class TestNoDiagnosis(unittest.TestCase):
     def test_an_urgency_key_is_forbidden(self):
         r = parse_understanding({"urgency": "emergency", "symptoms": ["headache"]})
         self.assertIn("urgency", r.forbidden_keys)
-        # And it changes nothing about what was understood.
         self.assertEqual(("headache",), r.present_symptoms)
 
     def test_understanding_exposes_no_urgency_field_at_all(self):
@@ -361,16 +348,13 @@ class TestNoDiagnosis(unittest.TestCase):
         self.assertIn("NEVER invent a symptom", prompt)
 
 
-# ===========================================================================
-# 5. Security red team
-# ===========================================================================
 
 HOSTILE_SYMPTOMS = [
-    "X",                                   # an unbound Prolog variable
+    "X",
     "Evil",
     "_Anything",
-    "x). halt. (",                         # a goal fragment
-    "chest_pain), halt, f(p,symptom,x",    # the Phase 0 audit payload
+    "x). halt. (",
+    "chest_pain), halt, f(p,symptom,x",
     "fever'), assert(urgency(s,emergency)), f('",
     "urgency(S,emergency)",
     "red_flag(s, emergency, x, [])",
@@ -378,7 +362,7 @@ HOSTILE_SYMPTOMS = [
     "fever, halt",
     "fever.\nhalt.",
     "fever\x00",
-    "fever‮",                         # bidi override
+    "fever‮",
     "fever‏",
     "a" * 5000,
     "",
@@ -456,7 +440,7 @@ class TestRedTeam(unittest.TestCase):
         blob = json.dumps(r.as_log_fields(), ensure_ascii=False)
         self.assertNotIn("Ahmad", blob)
         self.assertNotIn("Al-Sayed", blob)
-        self.assertIn("name", blob)  # the FIELD is logged, the value is not
+        self.assertIn("name", blob)
 
 
 @_needs_engine
@@ -490,9 +474,6 @@ class TestRedTeamReachesRealProlog(unittest.TestCase):
         self.assertEqual((), verdict.red_flags)
 
 
-# ===========================================================================
-# 6. Reachability — the four latent safety rules
-# ===========================================================================
 
 class TestLatentAtomProvenance(unittest.TestCase):
     """Every newly reachable atom must trace to approved MedOrbit sources.
@@ -581,9 +562,6 @@ class TestNewlyReachableSafetyRules(unittest.TestCase):
         self.assertEqual((), verdict.red_flags)
 
 
-# ===========================================================================
-# 7. Safety can only be raised, never lowered
-# ===========================================================================
 
 @_needs_engine
 class TestUnderstandingCannotLowerSafety(unittest.TestCase):
@@ -634,9 +612,6 @@ class TestUnderstandingCannotLowerSafety(unittest.TestCase):
         self.assertEqual("emergency", verdict.urgency)
 
 
-# ===========================================================================
-# 8. Rollout
-# ===========================================================================
 
 class TestRollout(unittest.TestCase):
     def test_default_is_off(self):
@@ -717,9 +692,6 @@ class TestModeAffectsFactsCorrectly(unittest.TestCase):
         self.assertTrue(deterministic <= set(enriched.facts))
 
 
-# ===========================================================================
-# 9. Model failure always degrades to legacy extraction
-# ===========================================================================
 
 class _Response:
     def __init__(self, payload, status=200):
@@ -886,9 +858,6 @@ class TestEngineObservationDegrades(unittest.TestCase):
             self.assertIsNone(result)
 
 
-# ===========================================================================
-# 10. Divergence logging is PHI-free
-# ===========================================================================
 
 class TestDivergenceLogging(unittest.TestCase):
     def test_divergence_reports_set_arithmetic_over_canonical_atoms(self):
@@ -945,9 +914,6 @@ class TestDivergenceLogging(unittest.TestCase):
         self.assertIn("turns", interview_engine.understanding_divergence_counters())
 
 
-# ===========================================================================
-# 11. Corrections stay Python's job
-# ===========================================================================
 
 class TestCorrections(unittest.TestCase):
     def test_an_age_correction_candidate_is_typed(self):
@@ -993,9 +959,6 @@ class TestCorrections(unittest.TestCase):
         self.assertEqual(before, profile)
 
 
-# ===========================================================================
-# 12. Phase boundary — Phase 5 stays deferred
-# ===========================================================================
 
 class TestPhaseBoundary(unittest.TestCase):
     def test_differential_pl_does_not_exist(self):
@@ -1016,8 +979,6 @@ class TestPhaseBoundary(unittest.TestCase):
                             "understanding.py")
         with open(path, encoding="utf-8") as handle:
             source = handle.read()
-        # It may DISCUSS conditions in prose about refusing them; what it must
-        # not do is carry a condition list.
         self.assertNotIn("CONDITIONS", source)
         self.assertNotIn("condition(", source)
 

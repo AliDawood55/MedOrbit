@@ -19,8 +19,6 @@ from typing import Any
 import requests
 
 
-# OSM tag values -> MedOrbit's existing DB-compatible facility vocabulary.
-# The original tag dictionary is retained on every returned record.
 TYPE_MAP = {
     "hospital": "hospital",
     "clinic": "clinic",
@@ -65,7 +63,7 @@ class OSMCollector:
     ) -> None:
         self.places: list[dict[str, Any]] = []
         self.endpoints = endpoints
-        self.url = endpoints[0]  # Backward compatibility for existing callers.
+        self.url = endpoints[0]
         self.cache_dir = Path(cache_dir) if cache_dir else Path(__file__).with_name("cache")
         self.cache_max_age_hours = cache_max_age_hours
         self.session = session or requests.Session()

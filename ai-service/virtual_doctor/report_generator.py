@@ -16,7 +16,6 @@ this module's control, not something pip alone can provide on Windows.
 import asyncio
 import json
 import logging
-import os
 import subprocess
 import sys
 import uuid
@@ -29,8 +28,6 @@ from db import get_pool
 
 logger = logging.getLogger(__name__)
 
-# NOTE: weasyprint is deliberately NOT imported here. It is loaded only inside
-# pdf_worker.py, which runs as a child process — see PDF_ISOLATION below.
 
 _MODULE_DIR = Path(__file__).resolve().parent
 _ASSETS_DIR = _MODULE_DIR / "assets"
@@ -47,10 +44,6 @@ def _ensure_report_output_dirs() -> None:
     _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     (_REPORTS_DIR.parent / ".gitignore").write_text("*\n!.gitignore\n", encoding="utf-8")
 
-# Presentation only. Each urgency level gets a foreground/background/border
-# triplet so the level reads as a colour-coded band (green -> amber -> red)
-# rather than a single flat pill, and stays legible when printed greyscale
-# because the active step is also the only bordered one.
 _URGENCY_STYLE = {
     "routine": {"fg": "#1c6b45", "bg": "#e8f4ed", "border": "#a8d5bd"},
     "urgent": {"fg": "#9a6206", "bg": "#fdf4e3", "border": "#e6c98a"},
@@ -59,7 +52,6 @@ _URGENCY_STYLE = {
 _URGENCY_NEUTRAL = {"fg": "#55666f", "bg": "#f1f4f6", "border": "#d5dee3"}
 _URGENCY_ORDER = ("routine", "urgent", "emergency")
 
-# Likelihood chips in the differential table, strongest first.
 _LIKELIHOOD_COLOR = {
     "high": {"fg": "#b3261e", "bg": "#fceded"},
     "medium": {"fg": "#9a6206", "bg": "#fdf4e3"},
@@ -130,7 +122,6 @@ _LABELS = {
             "in-person care rather than relying on this report."
         ),
         "no_data": "Not collected in this interview.",
-        # --- presentation-only strings added with the report redesign ---
         "platform": "MedOrbit",
         "platform_tagline": "Smart Health Platform",
         "doc_kind": "Consultation Report",
@@ -177,7 +168,6 @@ _LABELS = {
             "طارئة، يرجى طلب الرعاية الطبية الفورية شخصياً بدلاً من الاعتماد على هذا التقرير."
         ),
         "no_data": "لم يتم جمعها خلال هذه المقابلة.",
-        # --- presentation-only strings added with the report redesign ---
         "platform": "MedOrbit",
         "platform_tagline": "منصة طبية ذكية",
         "doc_kind": "تقرير استشارة",
@@ -201,16 +191,6 @@ _LABELS = {
     },
 }
 
-# Identity fields belong in the patient-information block, not the symptoms
-# table. Without "name" here the patient's name was listed as a symptom, and
-# "age" was silently dropped altogether because it is an int, not a str.
-#
-# pending_confirmation/confirmed_fields/uncertain_fields (the STT
-# Confirmation + Clinical Correction Layer's bookkeeping, interview_engine
-# ._apply_confirmation_layer) were already excluded here incidentally — they
-# are dicts, and the symptoms_summary comprehension below only keeps str
-# values. Listed explicitly now instead, so that stays true by design rather
-# than by accident of value type.
 _EXCLUDED_PROFILE_KEYS = {
     "chief_complaint_description",
     "associated_symptoms_detected",
@@ -221,10 +201,6 @@ _EXCLUDED_PROFILE_KEYS = {
     "uncertain_fields",
 }
 
-# Report Uncertainty labels: a present-but-not-yet-verified STT fact must
-# never render identically to a confirmed one (Virtual Doctor Report
-# Uncertainty batch). Short and parenthetical, matching the report's
-# existing terse label style (_URGENCY_LABEL, _LIKELIHOOD_LABEL above).
 _UNCERTAIN_LABEL = {"ar": "غير مؤكد", "en": "unconfirmed"}
 _PENDING_LABEL = {"ar": "بانتظار التأكيد", "en": "pending confirmation"}
 
@@ -316,11 +292,6 @@ async def build_report_data(session_id: str) -> Optional[Dict[str, Any]]:
         "symptoms_summary": symptoms_summary,
         "detected_symptoms": profile.get("associated_symptoms_detected", []),
         "differential": differential.get("conditions", []),
-        # Report Uncertainty batch: passed through so _render_html() can mark
-        # present-but-not-yet-verified STT facts instead of rendering them
-        # identically to confirmed ones. Additive — every existing report_data
-        # consumer keeps working unchanged; these three keys are new, nothing
-        # existing was renamed or removed.
         "confirmed_fields": profile.get("confirmed_fields", {}),
         "uncertain_fields": profile.get("uncertain_fields", {}),
         "pending_confirmation": profile.get("pending_confirmation"),
@@ -329,9 +300,6 @@ async def build_report_data(session_id: str) -> Optional[Dict[str, Any]]:
         "recommended_specialty_name_ar": specialty_row["name_ar"] if specialty_row else None,
         "recommended_next_step": differential.get("next_step"),
         "ai_confidence": differential.get("confidence"),
-        # Textbook passages the reasoning phase retrieved to ground the
-        # differential (reasoning.py -> differential JSONB). Absent on sessions
-        # created before RAG grounding existed, hence the default.
         "sources": differential.get("sources", []),
     }
 
@@ -374,13 +342,8 @@ def _render_html(report: Dict[str, Any]) -> str:
     labels = _LABELS[lang]
     slot_labels = _SLOT_LABELS[lang]
     direction = "rtl" if lang == "ar" else "ltr"
-    # Physical sides are resolved once here rather than using CSS logical
-    # properties (border-inline-start etc.), whose WeasyPrint support is
-    # uneven — "start" is the side text flows from in this language.
     start = "right" if lang == "ar" else "left"
     end = "left" if lang == "ar" else "right"
-    # Arabic is cursive: letter-spacing pulls joined glyphs apart, so the
-    # small-caps tracking used on Latin labels is disabled for AR.
     tracking = "0.3pt" if lang == "en" else "0"
 
     urgency = report["urgency_level"]
@@ -389,9 +352,6 @@ def _render_html(report: Dict[str, Any]) -> str:
 
     specialty_name = report["recommended_specialty_name_ar" if lang == "ar" else "recommended_specialty_name_en"]
 
-    # Every value below is ultimately transcribed patient speech or LLM output
-    # going into an HTML template. Escaping keeps a stray "&" or "<" from
-    # producing malformed markup (and silently mangling the report).
     def esc(value: Any) -> str:
         return html_escape(str(value), quote=False) if value is not None else ""
 
@@ -427,14 +387,7 @@ def _render_html(report: Dict[str, Any]) -> str:
         )
         if info.get("age") is not None else ""
     )
-    # `gender` is not part of build_report_data today — the interview engine
-    # never asks for it. Reading it optionally keeps the field in the layout
-    # (standard on a medical report) and lets it fill itself in if the engine
-    # ever starts collecting it, with no change needed here.
     gender_display = labeled("gender", info.get("gender"))
-    # "2026-08-01 08:52:40" is two neutral digit runs separated by a space, so
-    # in an RTL paragraph bidi reorders them and the time renders before the
-    # date. Marking timestamps as an LTR run keeps them readable in Arabic.
     interview_raw = esc((info.get("interview_date") or "")[:19].replace("T", " "))
     interview_display = f"<span class='ltr'>{interview_raw}</span>" if interview_raw else ""
 
@@ -445,8 +398,6 @@ def _render_html(report: Dict[str, Any]) -> str:
         for k, v in report["symptoms_summary"].items()
     ) or f"<tr><td colspan='2' class='muted pad'>{labels['no_data']}</td></tr>"
 
-    # detected_symptoms has been in the report payload all along but the old
-    # template never rendered it; it appears here as chips under the table.
     detected = [s for s in (report.get("detected_symptoms") or []) if str(s).strip()]
     detected_block = ""
     if detected:
@@ -482,18 +433,11 @@ def _render_html(report: Dict[str, Any]) -> str:
             f"<div class='meter'><div class='meter-fill' style='width:{pct}%'></div></div></div>"
         )
 
-    # Textbook passages the RAG retrieval fed to the LLM. Cited by page so a
-    # clinician can check the source; renders nothing at all when the session
-    # predates RAG grounding or retrieval found nothing above threshold.
     sources = [s for s in (report.get("sources") or []) if isinstance(s, dict)]
     references_block = ""
     if sources:
         items = ""
         for ref in sources:
-            # NB: do NOT name these `start`/`end` — those hold the physical
-            # direction sides ("left"/"right") used throughout the stylesheet
-            # below, and shadowing them turns every border-/padding-/margin-
-            # {start} rule into garbage (`margin-59: 6pt`).
             first_page, last_page = ref.get("page_start"), ref.get("page_end")
             if first_page and last_page and last_page != first_page:
                 page_label, page_value = labels["page_many"], f"{first_page}-{last_page}"
@@ -501,9 +445,6 @@ def _render_html(report: Dict[str, Any]) -> str:
                 page_label, page_value = labels["page_one"], str(first_page)
             else:
                 page_label = page_value = ""
-            # Only the numerals go in the LTR run. Putting the Arabic label
-            # ("ص.") inside it too mixes a strong-RTL character with digits in
-            # one isolated span, which is exactly the case bidi reorders.
             pages = (
                 f"{page_label} <span class='ltr'>{page_value}</span>" if page_value else ""
             )
@@ -518,8 +459,6 @@ def _render_html(report: Dict[str, Any]) -> str:
             f"<ul class='ref-list'>{items}</ul></div>"
         )
 
-    # The three levels are always shown, with only the active one filled in, so
-    # the reader sees where this consultation sits on the scale.
     urgency_steps = ""
     for level in _URGENCY_ORDER:
         step = _URGENCY_STYLE[level]
@@ -925,8 +864,6 @@ def _render_pdf_isolated(html_string: str, pdf_path: Path) -> None:
     if proc.returncode != 0:
         detail = (proc.stderr or "").strip().splitlines()
         detail = detail[-1] if detail else f"exit code {proc.returncode}"
-        # A native abort exits with an NTSTATUS code rather than raising, so
-        # name the one we already know about instead of leaving a bare number.
         native = {
             3221226356: "0xC0000374 STATUS_HEAP_CORRUPTION in the WeasyPrint/Pango "
                         "native stack — known environment issue, tracked separately",
@@ -978,7 +915,6 @@ async def generate_report(
 
     html_string = _render_html(report)
     pdf_path = _REPORTS_DIR / f"{report['report_id']}.pdf"
-    # subprocess.run blocks; keep it off the event loop.
     await asyncio.to_thread(_render_pdf_isolated, html_string, pdf_path)
 
     pool = await get_pool()

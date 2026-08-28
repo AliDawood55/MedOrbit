@@ -1,10 +1,9 @@
 import json
 import os
-import re
 import time
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
-from chatbot.utils.text_normalizer import normalize_text, detect_language
+from chatbot.utils.text_normalizer import normalize_text
 from chatbot.nlu.normalizer import TextNormalizer
 from chatbot.nlu.synonyms import SynonymEngine
 from chatbot.nlu.tokens import Tokenizer
@@ -26,7 +25,6 @@ class EntityExtractor:
     def __init__(self):
         self.entities = self._load_entities()
         
-        # NLU modules
         self.normalizer = TextNormalizer()
         self.synonyms = SynonymEngine()
         self.tokenizer = Tokenizer()
@@ -61,32 +59,23 @@ class EntityExtractor:
         if not text:
             return self._empty_result(text)
 
-        # Step 1: Full normalization (spell + dialect + standard)
         normalized_info = self.normalizer.normalize_with_metadata(text)
         normalized = normalized_info["normalized"]
         lang = normalized_info["language"]
 
-        # Step 2: Tokenize
         tokens = self.tokenizer.tokenize(normalized)
-        tokens_with_pos = self.tokenizer.tokenize_with_positions(text)
         ngrams = self.tokenizer.extract_ngrams(tokens, min_n=1, max_n=3)
 
-        # Step 3: Synonym resolution
         resolved_text = self.synonyms.resolve_text(normalized)
-        resolved_tokens = self.synonyms.resolve_tokens(tokens)
 
-        # Step 4: Build extracted entity structure
         extracted = self._empty_result(text)
         extracted["language"] = "arabic" if lang == "ar" else "english"
         extracted["was_corrected"] = normalized_info["was_corrected"]
         extracted["was_dialect"] = normalized_info["was_dialect"]
 
-        # ============================================
-        # 5. DETECT SPECIALTIES (via ngrams + synonyms)
-        # ============================================
         if "specialties" in self.entities:
             for key, langs in self.entities["specialties"].items():
-                for lang_key, words in langs.items():
+                for words in langs.values():
                     for word in words:
                         word_norm = normalize_text(word)
                         if word_norm in normalized or word_norm in ' '.join(ngrams):
@@ -95,7 +84,6 @@ class EntityExtractor:
                             if not extracted["specialty"]:
                                 extracted["specialty"] = key
 
-        # Also check resolved text for specialty matches
         for canonical in self.synonyms.get_all_canonical_forms():
             if canonical in resolved_text:
                 if canonical not in extracted["specialties"]:
@@ -103,13 +91,9 @@ class EntityExtractor:
                 if not extracted["specialty"]:
                     extracted["specialty"] = canonical
 
-        # ============================================
-        # 6. DETECT FACILITY TYPE
-        # ============================================
         type_candidates = {"clinic", "hospital", "pharmacy", "laboratory", 
                           "radiology", "dental", "emergency", "optical", "vaccination"}
         
-        # Check ngrams
         for ngram in ngrams:
             canonical = self.synonyms.resolve(ngram)
             if canonical in type_candidates:
@@ -118,10 +102,9 @@ class EntityExtractor:
                 if not extracted["type"]:
                     extracted["type"] = canonical
 
-        # Check original entity file
         if "types" in self.entities:
             for key, langs in self.entities["types"].items():
-                for lang_key, words in langs.items():
+                for words in langs.values():
                     for word in words:
                         word_norm = normalize_text(word)
                         if word_norm in normalized:
@@ -130,19 +113,15 @@ class EntityExtractor:
                             if not extracted["type"]:
                                 extracted["type"] = key
 
-        # ============================================
-        # 7. DETECT SYMPTOMS
-        # ============================================
         if "symptoms" in self.entities:
             for key, langs in self.entities["symptoms"].items():
-                for lang_key, words in langs.items():
+                for words in langs.values():
                     for word in words:
                         word_norm = normalize_text(word)
                         if word_norm in normalized:
                             if key not in extracted["symptoms"]:
                                 extracted["symptoms"].append(key)
 
-        # Also check resolved text for symptom synonyms
         for ngram in ngrams:
             canonical = self.synonyms.resolve(ngram)
             symptom_keys = {"headache", "fever", "cough", "fatigue", "dizziness", "nausea",
@@ -151,37 +130,29 @@ class EntityExtractor:
                 if canonical not in extracted["symptoms"]:
                     extracted["symptoms"].append(canonical)
 
-        # ============================================
-        # 8. DETECT LOCATION
-        # ============================================
         if "locations" in self.entities:
             for key, langs in self.entities["locations"].items():
-                for lang_key, words in langs.items():
+                for words in langs.values():
                     for word in words:
                         word_norm = normalize_text(word)
                         if word_norm in normalized:
                             extracted["location"] = key
 
-        # Check ngrams for location
         for ngram in ngrams:
             if ngram.lower() in ("nabulus", "nablus", "نابلس"):
                 extracted["location"] = "nablus"
             elif ngram.lower() in ("rafidia", "رفيديا"):
                 extracted["location"] = "rafidia"
 
-        # ============================================
-        # 9. DETECT MEDICATIONS
-        # ============================================
         if "medications" in self.entities:
             for key, langs in self.entities["medications"].items():
-                for lang_key, words in langs.items():
+                for words in langs.values():
                     for word in words:
                         word_norm = normalize_text(word)
                         if word_norm in normalized:
                             if key not in extracted["medications"]:
                                 extracted["medications"].append(key)
 
-        # Check resolved text for medication synonyms
         for ngram in ngrams:
             canonical = self.synonyms.resolve(ngram)
             med_keys = {"paracetamol", "ibuprofen", "aspirin", "amoxicillin", "omeprazole", "metformin", "insulin"}
@@ -189,9 +160,6 @@ class EntityExtractor:
                 if canonical not in extracted["medications"]:
                     extracted["medications"].append(canonical)
 
-        # ============================================
-        # 10. DETECT SERVICES
-        # ============================================
         if "services" in self.entities:
             service_words = self.entities["services"].get("ar", []) + self.entities["services"].get("en", [])
             for word in service_words:
@@ -200,24 +168,16 @@ class EntityExtractor:
                     if word not in extracted["services"]:
                         extracted["services"].append(word)
 
-        # ============================================
-        # 11. DETECT NUMERIC VALUES
-        # ============================================
         numbers = self.tokenizer.extract_numbers(text)
         if numbers:
             extracted["numbers"] = numbers
-            # Extract specific values
             for num in numbers:
                 if num["type"] == "ordinal":
                     extracted["ordinal_index"] = num["value"]
 
-        # ============================================
-        # 12. CONTEXTUAL RESOLUTION
-        # ============================================
         if context:
             context_resolved = self.context_resolver.resolve(text, context)
             
-            # Merge context-resolved entities (don't override newly extracted)
             for key, value in context_resolved.items():
                 if key.startswith("_"):
                     continue
@@ -234,12 +194,10 @@ class EntityExtractor:
                             extracted[key].append(item)
                             extracted["_inherited"] = True
 
-            # Mark as follow-up
             if context_resolved.get("is_follow_up"):
                 extracted["is_follow_up"] = True
                 extracted["_inherited"] = True
 
-            # Handle navigation override
             if context_resolved.get("intent_override") == "show_route":
                 extracted["_intent_override"] = "show_route"
 

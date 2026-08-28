@@ -62,15 +62,8 @@ from typing import Optional, Set, Tuple
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.config")
 
-# One warning per (variable, offending value). These are read at module import,
-# so in production this fires at most once per process anyway — the guard
-# matters only if a call site ever moves to per-request reads, where an
-# unchanged bad value would otherwise log on every turn.
 _warned: Set[Tuple[str, str]] = set()
 
-# Hostile values are not echoed. The variable NAME and the default are what an
-# operator needs to fix the problem; the value they typed is already in their
-# own configuration, and a 10,000-character payload in a log line helps nobody.
 _MAX_LOGGED_NAME = 64
 
 
@@ -92,8 +85,6 @@ def _raw(name: str) -> Optional[str]:
     value = os.environ.get(name)
     if value is None:
         return None
-    # A variable set to "" or whitespace is an operator clearing it, not a
-    # value. Treated as unset rather than as malformed, so it does not warn.
     stripped = value.strip()
     return stripped or None
 

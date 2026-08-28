@@ -100,9 +100,6 @@ async def _run_turn(message, fake_session, planner_result=None):
     return result, next_session, run_planner_mock
 
 
-# ===========================================================================
-# 1. Suspicious name requires confirmation
-# ===========================================================================
 
 class TestSuspiciousNameRequiresConfirmation(unittest.IsolatedAsyncioTestCase):
     async def test_object_word_heard_as_name_asks_confirmation_not_stored(self):
@@ -117,12 +114,9 @@ class TestSuspiciousNameRequiresConfirmation(unittest.IsolatedAsyncioTestCase):
         persisted_profile = json.loads(next_session["patient_profile"])
         self.assertIn("pending_confirmation", persisted_profile)
         self.assertEqual(persisted_profile["pending_confirmation"]["field"], "name")
-        self.assertNotIn("name", persisted_profile)  # not stored, confirmed or not
+        self.assertNotIn("name", persisted_profile)
 
 
-# ===========================================================================
-# 2. Normal name proceeds normally
-# ===========================================================================
 
 class TestNormalNameProceedsNormally(unittest.IsolatedAsyncioTestCase):
     async def test_ordinary_name_stored_without_confirmation(self):
@@ -136,7 +130,7 @@ class TestNormalNameProceedsNormally(unittest.IsolatedAsyncioTestCase):
 
         run_planner_mock.assert_called_once()
         ctx = run_planner_mock.call_args.args[0]
-        self.assertEqual(ctx.message, "علي")  # unchanged — not suspicious
+        self.assertEqual(ctx.message, "علي")
         self.assertIn("علي", result["reply"])
 
         persisted_profile = json.loads(next_session["patient_profile"])
@@ -144,9 +138,6 @@ class TestNormalNameProceedsNormally(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(persisted_profile.get("name"), "علي")
 
 
-# ===========================================================================
-# 3. Misheard headache chief complaint asks confirmation
-# ===========================================================================
 
 class TestMisheardHeadacheAsksConfirmation(unittest.IsolatedAsyncioTestCase):
     async def test_asr_garbled_headache_asks_confirmation_not_shock(self):
@@ -159,16 +150,13 @@ class TestMisheardHeadacheAsksConfirmation(unittest.IsolatedAsyncioTestCase):
         self.assertIn("هل تقصد صداع شديد بدأ فجأة؟", result["reply"])
         self.assertNotIn("صدمة", result["reply"])
         run_planner_mock.assert_not_called()
-        self.assertIsNone(result.get("differential"))  # no final diagnosis yet
+        self.assertIsNone(result.get("differential"))
 
         persisted_profile = json.loads(next_session["patient_profile"])
         self.assertEqual(persisted_profile["pending_confirmation"]["field"], "chief_complaint")
         self.assertEqual(persisted_profile["pending_confirmation"]["heard"], "عندي صدق شديد فجأة")
 
 
-# ===========================================================================
-# 4. Confirmed correction applies
-# ===========================================================================
 
 class TestConfirmedCorrectionApplies(unittest.IsolatedAsyncioTestCase):
     async def test_yes_applies_suggested_headache_and_continues(self):
@@ -184,7 +172,7 @@ class TestConfirmedCorrectionApplies(unittest.IsolatedAsyncioTestCase):
 
         run_planner_mock.assert_called_once()
         ctx = run_planner_mock.call_args.args[0]
-        self.assertEqual(ctx.message, "صداع شديد بدأ فجأة")  # resolved value, not "نعم"
+        self.assertEqual(ctx.message, "صداع شديد بدأ فجأة")
 
         self.assertEqual(result["chief_complaint"], "headache")
         self.assertIn(headache_question, result["reply"])
@@ -194,9 +182,6 @@ class TestConfirmedCorrectionApplies(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(persisted_profile["confirmed_fields"]["chief_complaint"])
 
 
-# ===========================================================================
-# 5. User correction applies
-# ===========================================================================
 
 class TestUserCorrectionApplies(unittest.IsolatedAsyncioTestCase):
     async def test_rejection_with_correction_uses_corrected_text(self):
@@ -214,7 +199,7 @@ class TestUserCorrectionApplies(unittest.IsolatedAsyncioTestCase):
 
         run_planner_mock.assert_called_once()
         ctx = run_planner_mock.call_args.args[0]
-        self.assertEqual(ctx.message, "صداع شديد")  # the corrected text
+        self.assertEqual(ctx.message, "صداع شديد")
 
         self.assertIn(headache_question, result["reply"])
 
@@ -223,9 +208,6 @@ class TestUserCorrectionApplies(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(persisted_profile["chief_complaint_description"], "صداع شديد")
 
 
-# ===========================================================================
-# 6. ASR fatigue correction
-# ===========================================================================
 
 class TestAsrFatigueCorrection(unittest.IsolatedAsyncioTestCase):
     async def test_meaningless_word_corrected_before_storage(self):
@@ -235,22 +217,19 @@ class TestAsrFatigueCorrection(unittest.IsolatedAsyncioTestCase):
             chief_complaint="generic", source="static",
         )
 
-        result, next_session, run_planner_mock = await _run_turn(
+        _, next_session, run_planner_mock = await _run_turn(
             "أشعر بإرهاف وتعب شديد", fake_session, plan,
         )
 
         run_planner_mock.assert_called_once()
         ctx = run_planner_mock.call_args.args[0]
         self.assertIn("إرهاق", ctx.message)
-        self.assertNotIn("إرهاف", ctx.message)  # meaningless word never reaches the planner
+        self.assertNotIn("إرهاف", ctx.message)
 
         persisted_profile = json.loads(next_session["patient_profile"])
         self.assertNotIn("إرهاف", persisted_profile.get("chief_complaint_description", ""))
 
 
-# ===========================================================================
-# 7. Flank/urinary vocabulary preserved as clinically relevant
-# ===========================================================================
 
 class TestFlankUrinaryVocabularyPreserved(unittest.IsolatedAsyncioTestCase):
     async def test_unrecognized_flank_terms_get_focused_question_not_generic(self):
@@ -262,7 +241,7 @@ class TestFlankUrinaryVocabularyPreserved(unittest.IsolatedAsyncioTestCase):
 
         run_planner_mock.assert_not_called()
         self.assertIn("الخاصرة", result["reply"])
-        self.assertNotIn("منذ متى وأنت تعاني من هذا؟", result["reply"])  # the generic flow's question
+        self.assertNotIn("منذ متى وأنت تعاني من هذا؟", result["reply"])
 
         persisted_profile = json.loads(next_session["patient_profile"])
         terms = persisted_profile["uncertain_fields"]["clinical_terms"]
@@ -272,16 +251,12 @@ class TestFlankUrinaryVocabularyPreserved(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(next_session["phase"], "interviewing")
 
 
-# ===========================================================================
-# 8. No infinite confirmation loop
-# ===========================================================================
 
 class TestNoInfiniteConfirmationLoop(unittest.IsolatedAsyncioTestCase):
     async def test_two_unclear_replies_falls_back_instead_of_looping_forever(self):
         fake_session = _fake_session(phase="intake")
         _, pending_session, _ = await _run_turn("درج", fake_session)
 
-        # First unclear reply: a simpler repeat question, still pending.
         retry_result, retry_session, retry_planner_mock = await _run_turn(
             "ايش قصدك؟", pending_session,
         )
@@ -290,8 +265,6 @@ class TestNoInfiniteConfirmationLoop(unittest.IsolatedAsyncioTestCase):
         retry_profile = json.loads(retry_session["patient_profile"])
         self.assertEqual(retry_profile["pending_confirmation"]["attempts"], 1)
 
-        # Second unclear reply: gives up rather than asking a third time —
-        # proceeds with the originally-heard name, marked unconfirmed.
         final_result, final_session, final_planner_mock = await _run_turn(
             "مش فاهم عليك", retry_session,
         )
@@ -300,7 +273,7 @@ class TestNoInfiniteConfirmationLoop(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("pending_confirmation", final_profile)
         self.assertEqual(final_profile["name"], "درج")
         self.assertFalse(final_profile["confirmed_fields"]["name"])
-        self.assertIn("كم عمرك", final_result["reply"])  # interview keeps moving
+        self.assertIn("كم عمرك", final_result["reply"])
 
 
 if __name__ == "__main__":

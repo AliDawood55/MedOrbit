@@ -21,10 +21,7 @@ from typing import Any, Iterable
 from osm_transform import (
     ARABIC_RE,
     clean_display_text,
-    normalize_arabic_key,
-    normalize_english_key,
     normalize_name_key,
-    normalize_phone,
     normalize_specialties,
     normalize_url,
     resolve_names,

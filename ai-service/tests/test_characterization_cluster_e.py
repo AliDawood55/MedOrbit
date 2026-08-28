@@ -66,23 +66,16 @@ class TestClusterECardiFalsePositive(unittest.TestCase):
         cls.classifier = IntentClassifier()
 
     def test_cardiologist_no_longer_a_false_positive_emergency(self):
-        # FIXED by Cluster E1: the broken " Cardi" alternative was replaced
-        # with "cardiac\s+arrest". Asking for a cardiologist no longer
-        # matches any emergency pattern.
         result = self.safety.check("I need a cardiologist")
         self.assertEqual(result["severity"], "normal")
         self.assertFalse(result["bypass_intent_routing"])
         self.assertEqual(result["matched_patterns"], [])
 
     def test_cardiologist_no_longer_short_circuits_intent_classification(self):
-        # Confirms the normal classification pipeline (Steps 4-10) now runs
-        # for this input instead of being short-circuited by safety.py.
         result = self.classifier.classify("I need a cardiologist")
         self.assertNotEqual(result["intent"], "emergency")
 
     def test_cardiac_arrest_is_protected_by_the_new_alternative(self):
-        # The replacement phrase itself must fire — this is the specific,
-        # complete phrase " Cardi" was almost certainly meant to represent.
         result = self.safety.check("I think he is in cardiac arrest")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
@@ -91,8 +84,6 @@ class TestClusterECardiFalsePositive(unittest.TestCase):
         self.assertEqual(matched["pattern"], r"(cardiac\s+arrest|heart\s+attack|stroke|severe\s+bleeding)")
 
     def test_true_heart_attack_remains_protected(self):
-        # Same combined pattern's "heart\s+attack" alternative — must
-        # remain firing after the " Cardi" fragment was replaced.
         result = self.safety.check("I think I am having a heart attack")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
@@ -118,49 +109,32 @@ class TestClusterEPoisoningSubstringFalsePositive(unittest.TestCase):
         cls.safety = MedicalSafetyLayer()
 
     def test_hospital_emergency_department_no_longer_matches_the_poison_bug(self):
-        # FIXED by Cluster E2: the "سم " substring bug (embedded in "قسم")
-        # no longer fires for this input. Separately, Cluster I's
-        # informational-ER-place exemption (see
-        # TestClusterEHospitalEmergencyPolicyQuestion below) means the
-        # "طوارئ" match is now also exempted at the safety.py layer for
-        # this specific place-naming phrasing — so safety.check() itself
-        # now returns "normal" with no matched patterns at all.
         result = self.safety.check("قسم الطوارئ في المستشفى")
         self.assertEqual(result["severity"], "normal")
         self.assertEqual(result["matched_patterns"], [])
 
     def test_body_word_no_longer_a_false_positive_emergency(self):
-        # FIXED: "جسم" (body) followed by a space — unrelated to poisoning.
         result = self.safety.check("جسم كامل")
         self.assertEqual(result["severity"], "normal")
         self.assertEqual(result["matched_patterns"], [])
 
     def test_name_word_no_longer_a_false_positive_emergency(self):
-        # FIXED: "اسم" (name) followed by a space — asked in virtually
-        # every intake/onboarding flow. This was the highest real-world
-        # blast radius of the confirmed false positives.
         result = self.safety.check("اسم كامل")
         self.assertEqual(result["severity"], "normal")
         self.assertEqual(result["matched_patterns"], [])
 
     def test_fee_or_drawing_word_no_longer_a_false_positive_emergency(self):
-        # FIXED: "رسم" (fee/drawing) followed by a space — unrelated to
-        # poisoning.
         result = self.safety.check("رسم توضيحي")
         self.assertEqual(result["severity"], "normal")
         self.assertEqual(result["matched_patterns"], [])
 
     def test_standalone_poison_word_is_still_protected(self):
-        # The intended, legitimate use of the bare "سم" alternative — a
-        # real standalone poison word — must still fire after the fix.
         result = self.safety.check("سم قاتل")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
         self.assertEqual(result["matched_patterns"][0]["matched"], "سم ")
 
     def test_true_poisoning_remains_protected(self):
-        # The "تسمم" alternative — a real poisoning word — must remain
-        # firing after the fix.
         result = self.safety.check("تسمم غذائي")
         self.assertEqual(result["severity"], "emergency")
         self.assertTrue(result["bypass_intent_routing"])
@@ -193,29 +167,16 @@ class TestClusterEHospitalEmergencyPolicyQuestion(unittest.TestCase):
         cls.classifier = IntentClassifier()
 
     def test_hospital_emergency_department_query_now_classifies_correctly(self):
-        # FIXED by Cluster I2: classify() no longer force-returns
-        # "emergency" for this input. hospital_emergency's own existing
-        # keywords ("طوارئ", "قسم الطوارئ") provide enough signal to win
-        # normal ranking outright once the Step 9 override stops
-        # short-circuiting before ranking runs.
         result = self.classifier.classify("قسم الطوارئ في المستشفى")
         self.assertEqual(result["intent"], "hospital_emergency")
         self.assertAlmostEqual(result["confidence"], 0.5854, places=3)
         self.assertEqual(sorted(result["matched_keywords"]), sorted(["طوارئ", "قسم الطوارئ"]))
 
     def test_true_arabic_emergency_word_alone_remains_protected(self):
-        # The bare word "طوارئ" alone (no "قسم" prefix) — must remain
-        # firing after the fix, since the exemption only applies to the
-        # department-as-place phrasing, never to the bare word by itself.
         result = self.classifier.classify("طوارئ")
         self.assertEqual(result["intent"], "emergency")
 
     def test_symptom_reported_at_er_place_still_forces_emergency(self):
-        # A real symptom co-occurring with the ER-place phrasing must still
-        # force emergency — the exemption only fires when "طوارئ" is the
-        # SOLE matched emergency keyword. Here safety.py's own bypass fires
-        # first (severe bleeding is its own protected pattern), so this
-        # never even reaches classifier.py's Step 9 exemption logic.
         result = self.classifier.classify("عندي نزيف شديد بقسم الطوارئ")
         self.assertEqual(result["intent"], "emergency")
 

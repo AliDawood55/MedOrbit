@@ -51,7 +51,6 @@ def main():
             dropped_no_name += 1
             continue
 
-        # Decision 3: classify name_raw by script, then backfill the empty side.
         if not name_ar and not name_en and name_raw:
             if ARABIC_RE.search(name_raw):
                 name_ar = name_raw
@@ -63,7 +62,6 @@ def main():
         if not name_en and name_ar:
             name_en = name_ar
 
-        # Decision 2: null out the known-broken addr:city value.
         address = r["address"] or None
         if r["osm_id"] == BROKEN_ADDR_OSM_ID and address == "addr:city":
             address = None
@@ -98,7 +96,6 @@ def main():
         by_type[t] = by_type.get(t, 0) + 1
     print("Final counts per type:", by_type)
 
-    # ---- Write SQL ----
     lines = []
     lines.append("-- 08_clinics_nablus_osm.sql")
     lines.append("-- Real clinic/pharmacy/hospital data for Nablus, collected from OpenStreetMap")

@@ -4,10 +4,8 @@ MedOrbit NLU Pipeline — Comprehensive Test Suite
 
 import sys
 import os
-import json
 import time
 import unittest
-from collections import defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -38,13 +36,11 @@ class TestNormalizer(unittest.TestCase):
     def test_spell_correction_misspelled_hospital(self):
         result = self.normalizer.normalize_with_metadata("مستشفا")
         self.assertTrue(result["was_corrected"])
-        # After normalization: ى→ي, so "مستشفى" becomes "مستشفي"
         self.assertIn("مستشفي", result["normalized"])
 
     def test_spell_correction_pharmacy(self):
         result = self.normalizer.normalize_with_metadata("صيدليه")
         self.assertTrue(result["was_corrected"])
-        # After normalization: ة→ه, so "صيدلية" becomes "صيدليه"
         self.assertIn("صيدليه", result["normalized"])
 
     def test_spell_correction_english_hospital(self):
@@ -660,8 +656,6 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(r["entities"]["type"], "hospital")
 
     def test_pharmacy_search_bare_proximity_phrasing(self):
-        # No "أقرب" here — relies on bare "قريب"/"قريبة" keywords so this
-        # doesn't lose to the competing find_pharmacy intent.
         r = self._run_pipeline("بدي صيدلية قريبة")
         self.assertEqual(r["intent"]["intent"], "find_nearest")
         self.assertEqual(r["entities"]["type"], "pharmacy")

@@ -55,7 +55,6 @@ def _register_cuda_libraries() -> bool:
     except ImportError:
         return False
 
-    # Namespace package: __file__ is None, so __path__ is the way in.
     roots = list(getattr(nvidia, "__path__", []))
     if not roots:
         return False
@@ -67,7 +66,7 @@ def _register_cuda_libraries() -> bool:
             if not os.path.isdir(path):
                 continue
             found = True
-            if hasattr(os, "add_dll_directory"):   # Windows only
+            if hasattr(os, "add_dll_directory"):
                 try:
                     os.add_dll_directory(path)
                 except OSError:
@@ -101,46 +100,12 @@ def _preload_shared_objects(directory: str) -> None:
             except OSError:
                 retry.append(lib)
         if len(retry) == len(pending):
-            break  # no progress; the rest are genuinely unloadable
+            break
         pending = retry
 
 
 _CUDA_LIBS_REGISTERED = _register_cuda_libraries()
 
-# --- Configuration (env-overridable so model size can be tuned per machine) ---
-#
-# MODEL SIZE IS CHOSEN PER DEVICE, because the right answer genuinely differs.
-#
-# 'medium' is the accuracy choice: Arabic is the accuracy bottleneck, not
-# English — measured on real FLEURS ar_eg speech, 'small' scored 21.4% WER
-# against 'medium' at 7.1%. That rationale still stands and is why CUDA keeps
-# 'medium'.
-#
-# But on CPU 'medium' is not affordable. Measured on this container (20 cores,
-# int8, language hint supplied, real bilingual speech):
-#
-#     medium   en 2.99s   ar 3.10s      <- blows a 2s conversational budget
-#     small    en 1.10s   ar 1.15s
-#     base     en 0.45s   ar 0.47s
-#
-# On GPU 'medium' costs ~0.6s, so there is no trade to make there. On CPU there
-# is, and a 3s pause after every answer is not a consultation. So: CUDA gets
-# 'medium' (fast AND accurate), CPU falls back to 'small' (the smallest step
-# down that still meets the latency budget — 'base' is faster still but visibly
-# drops words, e.g. "ما اسمك" -> "ماسم").
-#
-# This also self-heals: fix the CUDA driver and the accurate model comes back
-# automatically, with no config change.
-#
-# VD_STT_MODEL still forces one size on every device (back-compatible);
-# VD_STT_MODEL_CPU / VD_STT_MODEL_CUDA tune a single path.
-# SIZE IS ALSO LANGUAGE-AWARE ON CPU, because the accuracy cliff is not
-# symmetric. 'small' is fine for English but genuinely fails on Arabic — real
-# users reported it not understanding a spoken name, which matches the FLEURS
-# ar_eg numbers above (21.4% vs 7.1% WER). English keeps 'small' and stays
-# ~1.1s; Arabic pays ~3.3s for a transcript that is actually usable. A wrong
-# transcript is not faster, it is just wrong: it silently corrupts the symptom
-# text feeding triage, retrieval and the differential.
 MODEL_SIZE_OVERRIDE = os.getenv("VD_STT_MODEL")
 MODEL_SIZE_CUDA = os.getenv("VD_STT_MODEL_CUDA", "medium")
 MODEL_SIZE_CPU_AR = os.getenv("VD_STT_MODEL_CPU_AR", "medium")
@@ -159,49 +124,26 @@ def _model_size_for(device: str, language: Optional[str] = None) -> str:
     if device == "cuda":
         return MODEL_SIZE_CUDA
     return MODEL_SIZE_CPU_EN if language == "en" else MODEL_SIZE_CPU_AR
-# "auto" prefers CUDA and falls back to CPU; force with "cuda" / "cpu".
-#
-# This matters far more than it looks: Whisper pads every utterance to a fixed
-# 30s encoder window, so a 2-second answer costs almost the same as a 12-second
-# one. Measured on this project's hardware, 'medium' on a 2s utterance takes
-# ~7.8s on CPU versus ~0.6s on CUDA — the difference between a conversation
-# and a form. Hands-free turn-taking is only viable on the GPU path.
 DEVICE = os.getenv("VD_STT_DEVICE", "auto")
 COMPUTE_TYPE = os.getenv("VD_STT_COMPUTE", "auto")
-CPU_THREADS = int(os.getenv("VD_STT_CPU_THREADS", "0"))  # 0 = let CTranslate2 decide
+CPU_THREADS = int(os.getenv("VD_STT_CPU_THREADS", "0"))
 BEAM_SIZE = int(os.getenv("VD_STT_BEAM_SIZE", "5"))
 
-# This module is bilingual by design; Whisper can detect ~99 languages, but a
-# short/noisy clip sometimes lands on a neighbour of Arabic (fa/ur) or English
-# (cy/nl). Anything outside this set is snapped back to the closest of the two.
 SUPPORTED_LANGUAGES = ("ar", "en")
 
 SAMPLE_RATE = 16000
 MAX_AUDIO_BYTES = 25 * 1024 * 1024
 MAX_AUDIO_SECONDS = 120
 
-# A hard ceiling on decoding one utterance. Whisper can occasionally get stuck
-# emitting repetitive segments on a short/noisy clip; without a ceiling that
-# wedges the single worker thread below and every later turn queues behind it
-# forever, which is exactly the "stuck on 'transcribing'" report. The deadline
-# is checked between segments, so the worker always returns and the queue
-# always drains. It deliberately does NOT cover model loading — a first-run
-# weight download legitimately takes minutes and must not be killed.
 TRANSCRIBE_TIMEOUT = float(os.getenv("VD_STT_TIMEOUT", "10"))
 
-# One entry per loaded size; ar and en can resolve to different models.
 _models: Dict[str, Any] = {}
 _model_lock = threading.Lock()
 _load_error: Optional[str] = None
-# Resolved once the first model loads — "auto" is not an answer.
 _active_device: Optional[str] = None
 _active_compute: Optional[str] = None
 _device_fallback_reason: Optional[str] = None
 
-# A CTranslate2 model must not run concurrent transcriptions from several
-# threads, and on CPU parallel requests would only thrash the same cores, so
-# every transcription is serialised through a single worker thread. It still
-# runs off the event loop, which is the part that matters for FastAPI.
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vd-stt")
 
 
@@ -236,7 +178,7 @@ def _build_model(size: str, device: str, compute_type: str):
     )
     silence = np.zeros(SAMPLE_RATE, dtype="float32")
     segments, _ = model.transcribe(silence, language="en", vad_filter=False, beam_size=1)
-    list(segments)  # force the generator; this is where cuBLAS/cuDNN would blow up
+    list(segments)
     return model
 
 
@@ -256,7 +198,6 @@ def _get_model(language: Optional[str] = None):
     """
     global _load_error, _active_device, _active_compute, _device_fallback_reason
 
-    # Fast path: runtime already known and this size already resident.
     if _active_device is not None:
         cached = _models.get(_model_size_for(_active_device, language))
         if cached is not None:
@@ -285,8 +226,6 @@ def _get_model(language: Optional[str] = None):
                 _load_error = f"{type(exc).__name__}: {exc}"
                 logger.exception("Whisper model failed to load")
                 raise
-            # auto mode: CUDA is unusable on this machine, fall back to CPU.
-            # The size can change with the device, so recompute it.
             _device_fallback_reason = f"{type(exc).__name__}: {exc}"
             device, compute = "cpu", ("int8" if COMPUTE_TYPE == "auto" else COMPUTE_TYPE)
             size = _model_size_for(device, language)
@@ -317,16 +256,11 @@ def _get_model(language: Optional[str] = None):
 
 def get_status() -> Dict[str, Any]:
     """Cheap, non-blocking status — lets the UI warn about a slow first call."""
-    # "auto" optimistically resolves to CUDA, but reporting a CUDA model on a
-    # box with no CUDA libraries present would just be wrong.
     device = _active_device or (
         "cpu" if (DEVICE == "auto" and not _CUDA_LIBS_REGISTERED) else _resolve_device()[0]
     )
     by_language = {lang: _model_size_for(device, lang) for lang in SUPPORTED_LANGUAGES}
     return {
-        # Kept a plain string for backwards compatibility: the size used when
-        # no language hint is given (the conservative choice). Per-language
-        # detail is in model_by_language.
         "model": _model_size_for(device, None),
         "model_by_language": by_language,
         "models_loaded": sorted(_models),
@@ -362,8 +296,6 @@ def _pick_supported_language(info) -> tuple[str, bool]:
 def _transcribe_sync(data: bytes, language: Optional[str]) -> Dict[str, Any]:
     from faster_whisper.audio import decode_audio
 
-    # Decode once to a float32 waveform so a language-snap retry does not have
-    # to re-demux the container.
     try:
         audio = decode_audio(io.BytesIO(data), sampling_rate=SAMPLE_RATE)
     except Exception as exc:  # noqa: BLE001 - any PyAV failure means "not usable audio"
@@ -376,22 +308,16 @@ def _transcribe_sync(data: bytes, language: Optional[str]) -> Dict[str, Any]:
     if duration > MAX_AUDIO_SECONDS:
         raise AudioTooLongError(f"{duration:.0f}s exceeds the {MAX_AUDIO_SECONDS}s limit")
 
-    # Loading happens before the clock starts: a first-run weight download can
-    # take minutes and must not count against the decode deadline.
     model = _get_model(language)
 
     common = dict(
         beam_size=BEAM_SIZE,
-        vad_filter=True,               # trims the silence around a click-to-record clip
-        condition_on_previous_text=False,  # short utterances; avoids repeat-loop hallucinations
+        vad_filter=True,
+        condition_on_previous_text=False,
     )
 
     started = time.time()
     deadline = started + TRANSCRIBE_TIMEOUT
-    # `transcribe` runs language detection eagerly and returns `info` before
-    # any audio is decoded — the returned generator is lazy. Deciding the
-    # language *before* consuming it means a snap costs one extra detection
-    # pass, not a whole wasted transcription.
     segments, info = model.transcribe(audio, language=language, **common)
 
     language_snapped = False
@@ -409,10 +335,6 @@ def _transcribe_sync(data: bytes, language: Optional[str]) -> Dict[str, Any]:
     else:
         detected_language = language
 
-    # Consume the lazy generator with the deadline checked between segments.
-    # This is real, cooperative cancellation inside the worker: abandoning the
-    # future from the caller would leave this thread spinning and, with a
-    # single-worker executor, block every subsequent turn indefinitely.
     parts = []
     timed_out = False
     for segment in segments:
@@ -428,8 +350,6 @@ def _transcribe_sync(data: bytes, language: Optional[str]) -> Dict[str, Any]:
 
     text = "".join(parts).strip()
 
-    # Nothing usable AND over budget is a failure the caller must surface, not
-    # an empty string to silently swallow.
     if timed_out and not text:
         raise TranscriptionTimeout(
             f"no speech decoded within {TRANSCRIBE_TIMEOUT:.0f}s"
@@ -444,8 +364,6 @@ def _transcribe_sync(data: bytes, language: Optional[str]) -> Dict[str, Any]:
         "language_was_snapped": language_snapped,
         "audio_seconds": round(duration, 2),
         "processing_seconds": round(time.time() - started, 2),
-        # The size that actually served this request — with per-language
-        # selection this differs between turns of the same consultation.
         "model": _model_size_for(_active_device or "cpu", language),
     }
 
