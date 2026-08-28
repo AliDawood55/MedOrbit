@@ -1,18 +1,3 @@
-/**
- * Global authentication gate — route matrix and return-path security.
- *
- * Two jobs:
- *  1. Make it hard to add an unauthenticated product page by accident. Every
- *     .html under frontend/public is enumerated from disk (not from a list in
- *     this file), so a page added tomorrow shows up here tomorrow and has to be
- *     classified deliberately.
- *  2. Exercise the real sanitizeReturnPath() from auth-gate.js against actual
- *     open-redirect payloads, rather than asserting on its source text.
- *
- * Runs on plain node, no browser: auth-gate.js is evaluated in a vm with a DOM
- * stub small enough to boot it on home.html (the public path, where the module
- * installs no shield and issues no requests).
- */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -39,10 +24,6 @@ function frontendFile(relativePath) {
 }
 
 console.log('\nGlobal authentication gate tests\n');
-
-// =====================================================================
-// Load AuthGate in a DOM stub
-// =====================================================================
 
 function loadAuthGate(pathname = '/public/home.html', search = '') {
     const listeners = {};
@@ -137,8 +118,7 @@ function loadAuthGate(pathname = '/public/home.html', search = '') {
 
     const source = frontendFile('src/js/auth-gate.js');
     vm.createContext(sandbox);
-    // `const AuthGate = ...` is a lexical binding, so it never lands on the
-    // sandbox global — take the script's completion value instead.
+
     return vm.runInContext(source + '\n;AuthGate;', sandbox, { filename: 'auth-gate.js' });
 }
 
@@ -150,10 +130,6 @@ try {
     check('auth-gate.js boots on home.html without a DOM/API', false, err.message);
     process.exit(1);
 }
-
-// =====================================================================
-// A. Route matrix — every page on disk, classified
-// =====================================================================
 
 const pagesOnDisk = fs.readdirSync(frontendPath('public'))
     .filter((f) => f.endsWith('.html'))
@@ -187,13 +163,11 @@ check('every remaining page is PROTECTED',
     actualProtected.length === pagesOnDisk.length - EXPECTED_PUBLIC.length - EXPECTED_AUTH_FLOW.length,
     `${actualProtected.length} protected of ${pagesOnDisk.length}`);
 
-// The point of the policy: forgetting to classify a page fails closed.
 check('an unlisted future page defaults to PROTECTED',
     AuthGate.classify('brand-new-feature.html') === 'PROTECTED');
 check('a bare directory request resolves to a PROTECTED page, not Home',
     AuthGate.classify('') === 'PROTECTED');
 
-// The gate can only hide what it is loaded on.
 const missingGate = pagesOnDisk.filter((p) => {
     const html = frontendFile(path.join('public', p));
     const headEnd = html.indexOf('</head>');
@@ -206,11 +180,6 @@ const duplicateGate = pagesOnDisk.filter((p) =>
     (frontendFile(path.join('public', p)).match(/src="\.\.\/src\/js\/auth-gate\.js"/g) || []).length !== 1);
 check('no page loads the gate twice', duplicateGate.length === 0, duplicateGate.join(', '));
 
-// --- Invitation acceptance is authenticated, not admin-only ---------------
-// POST /api/admin/invitations/accept requires authenticate and deliberately
-// NOT authorizeAdmin: an invited account is not an admin yet, which is the
-// whole point of an invitation. Marking the page admin-only here would
-// describe a backend restriction that does not exist.
 check('admin-invitation-accept.html is PROTECTED (a session is required)',
     AuthGate.classify('admin-invitation-accept.html') === 'PROTECTED');
 check('admin-invitation-accept.html carries no admin/super_admin restriction',
@@ -220,10 +189,6 @@ check('super_admin-only invitation management is still marked super_admin-only',
     JSON.stringify(AuthGate.ROLE_RESTRICTED['admin-invitations.html']) === '["super_admin"]',
     JSON.stringify(AuthGate.ROLE_RESTRICTED['admin-invitations.html']));
 
-// --- admin-users.html is registered, not just deny-by-default -------------
-// classify() already fails closed for an unlisted page, so there was never an
-// auth bypass here — but an unlisted page is also absent from KNOWN_PAGES,
-// which silently broke the post-login return trip back to it.
 check('admin-users.html is PROTECTED',
     AuthGate.classify('admin-users.html') === 'PROTECTED');
 check('admin-users.html carries the admin/super_admin role-matrix entry',
@@ -234,91 +199,92 @@ check('sanitizeReturnPath accepts admin-users.html as a return destination',
 check('sanitizeReturnPath preserves query and hash on admin-users.html',
     AuthGate.sanitizeReturnPath('admin-users.html?role=doctor#users') === 'admin-users.html?role=doctor#users');
 
-// The map is documentation and test-matrix input. The moment the gate reads it
-// to decide anything, route metadata has become a frontend authorization
-// system — which is exactly what the backend already owns.
 const gateSourceForRoles = frontendFile('src/js/auth-gate.js');
 check('ROLE_RESTRICTED is never consulted to allow or deny a page',
     !/ROLE_RESTRICTED\s*\[/.test(gateSourceForRoles) &&
     !/in\s+ROLE_RESTRICTED/.test(gateSourceForRoles) &&
     !/ROLE_RESTRICTED\.\w/.test(gateSourceForRoles),
     'the gate defines and exports the map, and must never read it');
-// Landing after a successful login is navigation convenience, not an access
-// decision.  The backend and each protected page remain responsible for
-// authorization. Keep this guard focused on the gate's route classification.
+
 const gateClassificationSource = gateSourceForRoles.slice(0, gateSourceForRoles.indexOf('function defaultLandingPage'));
 check('the gate makes no role decision while classifying a requested page',
     !/\.role\s*===|\.role\s*!==|includes\(.*\.role/.test(gateClassificationSource));
 
-// --- Fail-closed shell: the gate can only hide what actually loads ---------
-// auth-gate.js is an external file, so it can 404, be blocked, or be cut off
-// mid-parse. Each protected page therefore raises the same shield inline,
-// where nothing can drop it, plus a watchdog that leaves for Home if the gate
-// never reports itself ready. Home and the auth-flow pages must NOT carry it —
-// they are supposed to render for a guest.
 const GUEST_RENDERABLE = new Set(EXPECTED_PUBLIC.concat(EXPECTED_AUTH_FLOW));
 const protectedOnDisk = pagesOnDisk.filter((p) => !GUEST_RENDERABLE.has(p));
 
 const missingShield = protectedOnDisk.filter((p) => {
     const html = frontendFile(path.join('public', p));
     const headEnd = html.indexOf('</head>');
-    const shield = html.indexOf('data-auth-gate="pending"');
-    return shield === -1 || headEnd === -1 || shield > headEnd;
+    const rootState = html.indexOf('data-auth-gate="pending"');
+    const shieldRule = html.indexOf('html[data-auth-gate="pending"]');
+    return rootState === -1 || shieldRule === -1 || headEnd === -1 ||
+        rootState > headEnd || shieldRule > headEnd;
 });
-check('every protected page raises the shield inline, inside <head>',
+check('every protected page declares its fail-closed state and shield before protected markup',
     missingShield.length === 0, missingShield.join(', '));
 
-const missingWatchdog = protectedOnDisk.filter((p) =>
-    !frontendFile(path.join('public', p)).includes('__medorbitAuthGateReady'));
-check('every protected page carries the gate-never-loaded watchdog',
-    missingWatchdog.length === 0, missingWatchdog.join(', '));
+const missingBootstrap = protectedOnDisk.filter((p) => {
+    const html = frontendFile(path.join('public', p));
+    return !html.includes('src="../src/js/auth-bootstrap.js"');
+});
+check('every protected page loads the gate-never-loaded bootstrap',
+    missingBootstrap.length === 0, missingBootstrap.join(', '));
+
+const duplicateBootstrap = protectedOnDisk.filter((p) => {
+    const html = frontendFile(path.join('public', p));
+    return (html.match(/src="\.\.\/src\/js\/auth-bootstrap\.js"/g) || []).length !== 1;
+});
+check('every protected page loads the auth bootstrap exactly once',
+    duplicateBootstrap.length === 0, duplicateBootstrap.join(', '));
 
 const guestBlocked = Array.from(GUEST_RENDERABLE).filter((p) =>
-    frontendFile(path.join('public', p)).includes('data-auth-gate="pending"'));
+    /data-auth-gate="pending"|src="\.\.\/src\/js\/auth-bootstrap\.js"/
+        .test(frontendFile(path.join('public', p))));
 check('Home and the auth-flow pages are never shielded',
     guestBlocked.length === 0, guestBlocked.join(', '));
 
 const bootstrapTooLate = protectedOnDisk.filter((p) => {
     const html = frontendFile(path.join('public', p));
-    return html.indexOf('__medorbitAuthGateReady') > html.indexOf('src="../src/js/auth-gate.js"');
+    const bootstrap = html.indexOf('src="../src/js/auth-bootstrap.js"');
+    const gate = html.indexOf('src="../src/js/auth-gate.js"');
+    return bootstrap === -1 || gate === -1 || bootstrap > gate;
 });
-check('the inline shield runs before the gate is even requested',
+check('the synchronous auth bootstrap runs before the gate is requested',
     bootstrapTooLate.length === 0, bootstrapTooLate.join(', '));
 
-// One rule, deliberately written twice — so assert the two copies agree.
+const deferredBootstrap = protectedOnDisk.filter((p) => {
+    const html = frontendFile(path.join('public', p));
+    const tag = html.match(/<script\b[^>]*auth-bootstrap\.js[^>]*>/i)?.[0] || '';
+    return /\b(?:async|defer)\b/i.test(tag);
+});
+check('the auth bootstrap is never async or deferred',
+    deferredBootstrap.length === 0, deferredBootstrap.join(', '));
+
 const INLINE_SHIELD_RULE = 'html[data-auth-gate="pending"] body>*:not([data-auth-ui])';
-check('the inline shield and the gate\'s own shield hide the same elements',
+check('the HTML shield and the gate\'s own shield hide the same elements',
     /html\[data-auth-gate="pending"\] body > \*:not\(\[data-auth-ui\]\)/
         .test(frontendFile('src/js/auth-gate.js')) &&
     protectedOnDisk.every((p) => frontendFile(path.join('public', p)).includes(INLINE_SHIELD_RULE)));
 
-// The watchdog is a last resort, not a second opinion: it must stand down for
-// a gate that did load (including one sitting in its network-retry state) and
-// for the reset/verify hand-off redirect-guard.js performs on index.html.
-const watchdog = frontendFile('public/dashboard.html')
-    .split('\n').find((line) => line.includes('__medorbitAuthGateReady')) || '';
+const watchdog = frontendFile('src/js/auth-bootstrap.js');
 check('the watchdog stands down once the gate reports itself ready',
-    /if\(window\.__medorbitAuthGateReady\|\|window\.__medorbitNavigatingAway\)return;/.test(watchdog));
+    /if\s*\(\s*window\.__medorbitAuthGateReady\s*\|\|\s*window\.__medorbitNavigatingAway\s*\)\s*\{\s*return;\s*\}/.test(watchdog));
 check('the watchdog waits for load, with a timeout only as a backstop',
-    /addEventListener\('load'/.test(watchdog) && /setTimeout\(f,20000\)/.test(watchdog));
+    /addEventListener\(\s*'load'/.test(watchdog) && /setTimeout\(\s*f\s*,\s*20000\s*\)/.test(watchdog));
 check('the watchdog fails closed to Home instead of revealing the page',
-    /location\.replace\('home\.html\?auth=unavailable/.test(watchdog) &&
+    /location\.replace\(\s*'home\.html\?auth=unavailable&next='/.test(watchdog) &&
     !/removeAttribute/.test(watchdog));
 check('the watchdog carries the intended destination to Home for the sanitizer',
-    /next='\+encodeURIComponent\(location\.pathname\.split\('\/'\)\.pop\(\)\+location\.search\)/.test(watchdog));
+    /'home\.html\?auth=unavailable&next='\s*\+\s*encodeURIComponent\(\s*location\.pathname\.split\(\s*'\/'\s*\)\.pop\(\)\s*\+\s*location\.search\s*\)/.test(watchdog));
 check('the gate publishes its ready flag only after installing itself',
     /window\.__medorbitAuthGateReady = true;[\s\S]{0,40}return \{/.test(frontendFile('src/js/auth-gate.js')));
 
-// index.html's reset/verify hand-off must still win the race with the gate.
 const indexHtml = frontendFile('public/index.html');
 check('redirect-guard.js still loads before the gate on index.html',
     indexHtml.indexOf('redirect-guard.js') < indexHtml.indexOf('auth-gate.js'));
 check('redirect-guard.js signals the gate to stand down during its hand-off',
     /__medorbitNavigatingAway\s*=\s*true/.test(frontendFile('src/js/redirect-guard.js')));
-
-// =====================================================================
-// B. Return-path sanitizer — open-redirect payloads
-// =====================================================================
 
 const MUST_REJECT = [
     ['absolute https URL', 'https://evil.example'],
@@ -376,10 +342,6 @@ MUST_ACCEPT.forEach(([label, value, expected]) => {
 check('every protected page is a valid return destination',
     AuthGate.PROTECTED.every((p) => AuthGate.sanitizeReturnPath(p) === p));
 
-// --- Invitation and email links survive the round trip --------------------
-// A guest opening an invitation link is bounced to Home, signs in, and has to
-// land back on the invitation with the token intact. The token is base64url,
-// so the sanitizer must carry '-' and '_' through without repairing anything.
 const INVITE_TOKEN = 'Zm9v-QmFy_YmF6.9';
 const inviteUrl = `admin-invitation-accept.html?token=${INVITE_TOKEN}`;
 
@@ -397,8 +359,6 @@ check('a token-bearing value cannot become a javascript: destination',
     AuthGate.sanitizeReturnPath(`javascript:x='${inviteUrl}'`) === null);
 AuthGate.clearIntendedDestination();
 
-// verify-email / reset-password are AUTH_FLOW: they must open for a guest,
-// token and all, because the whole point is that nobody is signed in yet.
 check('verify-email.html opens without a session',
     AuthGate.classify('verify-email.html') === 'AUTH_FLOW');
 check('reset-password.html opens without a session',
@@ -408,10 +368,6 @@ check('reset-password.html opens without a session',
         AuthGate.sanitizeReturnPath(`${page}?token=${INVITE_TOKEN}`) === null,
         'bouncing back into the auth flow after signing in is a loop, not a destination');
 });
-
-// =====================================================================
-// C. One sanitizer, reused — no second redirect validator
-// =====================================================================
 
 const apiSource = frontendFile('src/js/api.js');
 const authSource = frontendFile('src/js/auth.js');
@@ -433,10 +389,6 @@ check('sanitizeReturnPath is defined exactly once in the codebase',
     !/function sanitizeReturnPath/.test(googleSource) &&
     !/function sanitizeReturnPath/.test(apiSource));
 
-// =====================================================================
-// D. Session verification is real, deduplicated, and fails closed
-// =====================================================================
-
 check('the gate verifies against the server, not localStorage',
     /API\.users\.me\(\)/.test(gateSource));
 check('a stored token alone never resolves a protected page',
@@ -456,7 +408,6 @@ check('denial leaves no protected URL in history',
 check('the auth prompt strips its own query params to avoid a Back loop',
     /history\.replaceState/.test(gateSource));
 
-// The no-flash shield.
 check('the shield is installed during head parse, before body exists',
     /if \(isProtectedPage\) installShield\(\);/.test(gateSource));
 check('the shield rule ships with the script rather than a stylesheet',
@@ -464,13 +415,8 @@ check('the shield rule ships with the script rather than a stylesheet',
 check('the gate has a safe failure state instead of a permanently blank page',
     /renderStatusPanel\('offline'\)/.test(gateSource) && /authGate\.retry/.test(gateSource));
 
-// Per-page guards stay, but only one of them redirects.
 check('API.requireAuth defers its redirect to the gate when the gate is loaded',
     /if \(typeof AuthGate !== 'undefined'\) return false;/.test(apiSource));
-
-// =====================================================================
-// E. Navigation interception is delegated, not per link
-// =====================================================================
 
 check('navigation is intercepted by one delegated capture-phase listener',
     /document\.addEventListener\('click', handleDocumentClick, true\)/.test(gateSource));
@@ -480,25 +426,18 @@ check('cross-origin and non-http links are left alone',
     /url\.origin !== window\.location\.origin/.test(gateSource));
 
 const homeHtml = frontendFile('public/home.html');
+const homePageSource = frontendFile('src/js/pages/home.js');
 check('the Home hero search routes through the gate instead of navigating',
-    /AuthGate\.navigate\(/.test(homeHtml) &&
-    !/window\.location\.href = target/.test(homeHtml));
+    /AuthGate\.navigate\(/.test(homePageSource) &&
+    !/window\.location\.href = target/.test(homePageSource));
 check('Home adds no per-link auth handlers',
-    !/addEventListener\('click'[\s\S]{0,200}openModal/.test(homeHtml));
+    !/addEventListener\('click'[\s\S]{0,200}openModal/.test(homePageSource));
 
-// The shared Layout still renders the full product nav for guests (teaser
-// navigation) — interception, not removal, is what keeps them out.
 const layoutSource = frontendFile('src/js/layout.js');
 ['feed.html', 'index.html', 'find-doctors.html', 'find-clinics.html', 'contact.html', 'symptom-checker.html']
     .forEach((href) => check(`guest nav still advertises ${href}`, layoutSource.includes(`'${href}'`)));
 check('logout returns to Home', /API\.logout\(\)[\s\S]{0,120}home\.html/.test(layoutSource));
 
-// =====================================================================
-// F. Modal contract: Google reuse, accessibility, i18n
-// =====================================================================
-
-// Comments in the gate legitimately name the flow it delegates to, so strip
-// them before asserting that the flow itself is not duplicated in code.
 const gateCode = gateSource
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '');
@@ -515,9 +454,10 @@ check('the Google client id still comes from the backend config endpoint',
 check('GoogleSignIn.init stays backward compatible for login/register',
     /function init\(containerId, options\)/.test(googleSource) &&
     /handlers = options \|\| \{\}/.test(googleSource));
-['public/login.html', 'public/register.html'].forEach((p) => {
-    check(`${path.basename(p)} still calls GoogleSignIn.init with one argument`,
-        /GoogleSignIn\.init\('googleSignInBtn'\)/.test(frontendFile(p)));
+['login', 'register'].forEach((pageName) => {
+    check(`${pageName}.html still calls GoogleSignIn.init with one argument`,
+        /GoogleSignIn\.init\('googleSignInBtn'\)/
+            .test(frontendFile(`src/js/pages/${pageName}.js`)));
 });
 
 check('the dialog is announced to assistive technology',
@@ -555,12 +495,13 @@ check('the modal renders its copy from i18n, not hardcoded Arabic',
 
 const loginHtml = frontendFile('public/login.html');
 const registerHtml = frontendFile('public/register.html');
+const registerPageSource = frontendFile('src/js/pages/register.js');
 check('the doctor option appears in the sign-up area',
     /href="register\.html\?intent=doctor"/.test(loginHtml) &&
     /data-i18n="auth\.doctorSignUp"/.test(loginHtml));
 check('the doctor sign-up intent explains the protected application next step',
     /id="doctorApplicationIntro"/.test(registerHtml) &&
-    /get\('intent'\) === 'doctor'/.test(registerHtml));
+    /get\('intent'\) === 'doctor'/.test(registerPageSource));
 check('role-specific landing pages are selected only after a shared login',
     /case 'doctor':[\s\S]{0,100}'my-schedule\.html'/.test(gateSource) &&
     /case 'admin':[\s\S]{0,100}'analytics\.html'/.test(gateSource) &&
@@ -570,7 +511,6 @@ check('role-specific landing pages are selected only after a shared login',
     /AuthGate\.defaultLandingPage\(res\?\.data\?\.user\)/.test(authSource) &&
     /AuthGate\.defaultLandingPage\(res\?\.data\?\.user\)/.test(googleSource));
 
-// RTL/dark-mode surfaces live in the shared stylesheet, on tokens.
 const componentsCss = frontendFile('src/css/components.css');
 check('modal styles use theme tokens so dark mode follows automatically',
     /\.auth-modal \{[\s\S]{0,400}var\(--bg-card\)/.test(componentsCss));
@@ -582,18 +522,12 @@ check('the modal cannot overflow the viewport on mobile',
     /\.auth-modal \{[\s\S]{0,400}max-width: 400px/.test(componentsCss) &&
     /max-height: calc\(100vh - 40px\)/.test(componentsCss));
 
-// =====================================================================
-// G. No frontend caller suppresses auth on a now-protected endpoint
-// =====================================================================
-
 const AUTH_FLOW_FILES = new Set(['auth.js', 'google-signin.js', 'api.js']);
 const offenders = fs.readdirSync(frontendPath('src/js'))
     .filter((f) => f.endsWith('.js') && !AUTH_FLOW_FILES.has(f))
     .filter((f) => /auth:\s*false/.test(frontendFile(path.join('src/js', f))));
 check('no product-data call opts out of the Authorization header',
     offenders.length === 0, offenders.join(', '));
-
-// =====================================================================
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 process.exit(failed === 0 ? 0 : 1);
