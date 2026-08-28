@@ -1,19 +1,12 @@
-/**
- * MedOrbit v2 - Feedback
- * POST /api/feedback (backend/src/routes/feedback.routes.js) — any
- * authenticated user, user_id resolved server-side from the JWT.
- */
 const Feedback = (() => {
 
-    let recommendValue = null; // 'yes' | 'no' | null (optional)
+    let recommendValue = null;
 
     function t(key) {
         return typeof I18n !== 'undefined' ? I18n.t(key) : key;
     }
 
-    // ================= STAR RATING WIDGET =================
-
-    function paintStars(widget, upTo) {
+function paintStars(widget, upTo) {
         widget.querySelectorAll('.star-btn').forEach((btn) => {
             const val = Number(btn.dataset.star);
             btn.classList.toggle('filled', val <= upTo);
@@ -54,16 +47,14 @@ const Feedback = (() => {
         });
     }
 
-    // ================= RECOMMEND TOGGLE =================
-
-    function initRecommendToggle() {
+function initRecommendToggle() {
         const wrap = document.getElementById('recommendToggle');
         wrap.querySelectorAll('.recommend-btn').forEach((btn) => {
             btn.setAttribute('aria-pressed', 'false');
             btn.addEventListener('click', () => {
                 const val = btn.dataset.value;
                 if (recommendValue === val) {
-                    // Click again to deselect — this field is optional.
+
                     recommendValue = null;
                 } else {
                     recommendValue = val;
@@ -76,9 +67,7 @@ const Feedback = (() => {
         });
     }
 
-    // ================= COMMENT CHAR COUNT =================
-
-    function initCommentCounter() {
+function initCommentCounter() {
         const input = document.getElementById('commentInput');
         const counter = document.getElementById('charCount');
         input.addEventListener('input', () => {
@@ -86,9 +75,7 @@ const Feedback = (() => {
         });
     }
 
-    // ================= SUBMIT =================
-
-    function collectFormData() {
+function collectFormData() {
         return {
             overallRating: Number(document.getElementById('overallStars').dataset.value) || 0,
             categoryRatings: {
@@ -178,9 +165,7 @@ const Feedback = (() => {
         document.getElementById('feedbackFormWrap').classList.remove('hidden');
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         if (!API.requireAuth()) return;
 
         document.querySelectorAll('.star-rating').forEach(initStarWidget);

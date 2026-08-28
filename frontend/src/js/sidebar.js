@@ -1,9 +1,3 @@
-/**
- * MedOrbit v2 - Conversation Sidebar
- * Lists, opens, renames, deletes, and searches the logged-in user's
- * conversations via /api/conversations. Hidden entirely for anonymous
- * users — chat itself still works without an account.
- */
 const Sidebar = (() => {
 
     let conversations = [];
@@ -45,9 +39,7 @@ const Sidebar = (() => {
         return ar ? `منذ ${diffD} يوم` : `${diffD}d ago`;
     }
 
-    // ================= VISIBILITY (auth-gated) =================
-
-    function updateVisibility() {
+function updateVisibility() {
         const app = document.getElementById('app');
         const p = panel();
         const toggleBtn = document.getElementById('sidebarToggleBtn');
@@ -67,9 +59,7 @@ const Sidebar = (() => {
         }
     }
 
-    // ================= DATA =================
-
-    async function refresh() {
+async function refresh() {
         if (!isEnabled()) return;
 
         if (activeController) activeController.abort();
@@ -104,9 +94,7 @@ const Sidebar = (() => {
         }
     }
 
-    // ================= RENDER =================
-
-    function render() {
+function render() {
         const list = document.getElementById('sidebarList');
         if (!list) return;
 
@@ -153,9 +141,7 @@ const Sidebar = (() => {
         });
     }
 
-    // ================= ACTIONS =================
-
-    function openConversation(id) {
+function openConversation(id) {
         if (typeof Chat !== 'undefined' && Chat.loadConversation) {
             Chat.loadConversation(id);
         }
@@ -183,9 +169,8 @@ const Sidebar = (() => {
 
             const newTitle = input.value.trim();
             if (newTitle && newTitle !== current) {
-                // Optimistic: show the new title immediately, roll back only
-                // if the server actually rejects it.
-                conversation.title = newTitle;
+
+conversation.title = newTitle;
                 render();
                 try {
                     await API.conversations.rename(conversation.id, newTitle);
@@ -235,16 +220,12 @@ const Sidebar = (() => {
             el.classList.toggle('active', el.dataset.id === activeId);
         });
 
-        // A brand-new conversation (first message of a "new chat") won't be
-        // in the list yet — pick it up.
-        if (activeId && !conversations.some((c) => c.id === activeId)) {
+if (activeId && !conversations.some((c) => c.id === activeId)) {
             refresh();
         }
     }
 
-    // ================= COLLAPSE (desktop) / DRAWER (mobile) =================
-
-    function toggleCollapse() {
+function toggleCollapse() {
         document.getElementById('app')?.classList.toggle('sidebar-collapsed');
     }
 
@@ -273,9 +254,7 @@ const Sidebar = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         updateVisibility();
 
         document.getElementById('sidebarNewBtn')?.addEventListener('click', () => {

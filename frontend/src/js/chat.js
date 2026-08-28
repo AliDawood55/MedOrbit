@@ -4,22 +4,14 @@ const Chat = (() => {
     let activeController = null;
     let conversationId = null;
 
-    /**
-     * Identifier for one logical user message.
-     *
-     * crypto.randomUUID is available in every browser this app supports; the
-     * fallback exists only so a non-secure-context dev server still works.
-     */
-    function newRequestId() {
+function newRequestId() {
         if (window.crypto?.randomUUID) return window.crypto.randomUUID();
         return 'cmid-' + Date.now() + '-' + Math.random().toString(16).slice(2, 10);
     }
 
-    // Cache last places for follow-up commands (show_route)
-    let lastPlaces = [];
+let lastPlaces = [];
 
-    // Max attempts to wait for user location before giving up
-    const MAX_LOCATION_WAIT_ATTEMPTS = 10;
+const MAX_LOCATION_WAIT_ATTEMPTS = 10;
     const LOCATION_WAIT_INTERVAL_MS = 500;
 
     function init() {
@@ -31,12 +23,7 @@ const Chat = (() => {
         return (document.documentElement.lang || 'ar') === 'ar';
     }
 
-    /**
-     * Sets the active conversation and notifies the rest of the app
-     * (the conversation sidebar listens for this to update its active
-     * highlight and refresh the list) without coupling chat.js to sidebar.js.
-     */
-    function setConversationId(id) {
+function setConversationId(id) {
         conversationId = id || null;
         window.dispatchEvent(new CustomEvent('chat:conversationChanged', {
             detail: { conversationId }
@@ -55,17 +42,12 @@ const Chat = (() => {
         renderWelcome();
         hideSuggestions();
 
-        // Clear map
-        if (MapApp?.clearResults) {
+if (MapApp?.clearResults) {
             MapApp.clearResults();
         }
     }
 
-    /**
-     * Loads a past conversation (from the sidebar) and replays its
-     * messages + last known places into the chat panel and map.
-     */
-    async function loadConversation(id) {
+async function loadConversation(id) {
         if (!id || isProcessing) return;
 
         const el = document.getElementById('chatMessages');
@@ -128,9 +110,8 @@ const Chat = (() => {
 
         if (!text || isProcessing) return;
 
-        // Abort previous request if still pending
-        if (activeController) {
-            try { activeController.abort(); } catch (e) { /* ignore */ }
+if (activeController) {
+            try { activeController.abort(); } catch (e) {   }
         }
 
         activeController = API.makeCancellable();
@@ -149,10 +130,7 @@ const Chat = (() => {
 
         showTyping();
 
-        // Never silently drop location: if a fix is already in, use it; if
-        // one is actively resolving, wait briefly rather than send without
-        // it; otherwise proceed without coords and say so in the reply.
-        let loc = null;
+let loc = null;
         let locationPending = false;
         if (typeof Location !== 'undefined') {
             const state = Location.getState();
@@ -165,12 +143,7 @@ const Chat = (() => {
 
         try {
 
-            // Stable identity for this logical message, generated once and
-            // reused if the request has to be retried. It is what lets the
-            // backend recognise a retry after a network timeout as the same
-            // message rather than a second one — so a dropped response cannot
-            // cost the user two of their free messages.
-            const payload = { message: text, client_message_id: newRequestId() };
+const payload = { message: text, client_message_id: newRequestId() };
 
             if (conversationId) {
                 payload.conversationId = conversationId;
@@ -196,20 +169,15 @@ const Chat = (() => {
 
             hideTyping();
 
-            // Track conversation ID (also lets the sidebar pick up new/updated conversations)
-            if (data?.conversationId) {
+if (data?.conversationId) {
                 setConversationId(data.conversationId);
             }
 
             appendBotMessage(data);
 
-            // Server-computed quota state. The composer renders exactly this
-            // and never derives a count of its own.
-            if (data?.quota) ChatQuota.apply(data.quota);
+if (data?.quota) ChatQuota.apply(data.quota);
 
-            // If we sent without coords, tell the user why results (if any)
-            // aren't distance-ranked — never fail silently.
-            if (!payload.latitude) {
+if (!payload.latitude) {
                 appendLocationNote(locationPending);
             }
 
@@ -217,12 +185,9 @@ const Chat = (() => {
 
             hideTyping();
 
-            // Don't show error if request was intentionally aborted
-            if (err.name === 'AbortError') return;
+if (err.name === 'AbortError') return;
 
-            // An exhausted free allowance is a product state, not a fault.
-            // History stays readable; only the composer is paywalled.
-            if (err.code === 'FREE_QUOTA_EXHAUSTED') {
+if (err.code === 'FREE_QUOTA_EXHAUSTED') {
                 ChatQuota.lock(err.details || {});
                 return;
             }
@@ -261,75 +226,56 @@ const Chat = (() => {
         const doctors = Array.isArray(data?.doctors) ? data.doctors : [];
         const suggestions = Array.isArray(data?.suggestions) ? data.suggestions : [];
 
-        // Render bot text reply
-        if (reply) {
+if (reply) {
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message bot';
             msgDiv.innerHTML = '<div class="message-bubble">' + escape(reply).replace(/\n/g, '<br/>') + '</div>';
             el.appendChild(msgDiv);
         }
 
-        // ============================================
-        // UPDATE CACHED PLACES
-        // Only update cache when new places arrive
-        // ============================================
-        if (places.length > 0) {
+if (places.length > 0) {
             lastPlaces = places;
         }
 
-        // ============================================
-        // RENDER MAP MARKERS + CARDS
-        // ============================================
-        if (places.length > 0) {
+if (places.length > 0) {
 
             if (!opts.skipMapUpdate) {
-                // Render markers on map
+
                 if (MapApp?.renderPlaces) {
                     MapApp.renderPlaces(places);
                 }
 
-                // Highlight first place
-                if (MapApp?.highlightPlace) {
+if (MapApp?.highlightPlace) {
                     MapApp.highlightPlace(places[0]);
                 }
 
-                // Draw route to first place (with safe location waiting)
-                if (MapApp?.drawRoute) {
+if (MapApp?.drawRoute) {
                     drawRouteSafely(places[0]);
                 }
             }
 
-            // Render clickable cards
-            renderPlaceCards(el, places);
+renderPlaceCards(el, places);
 
         } else if (intent === 'show_route' && lastPlaces.length > 0) {
 
-            // show_route without new places — reuse cached places
-            if (!opts.skipMapUpdate && MapApp?.renderPlaces) {
+if (!opts.skipMapUpdate && MapApp?.renderPlaces) {
                 MapApp.renderPlaces(lastPlaces);
             }
 
             renderPlaceCards(el, lastPlaces);
 
-            // Draw route to first cached place
-            if (!opts.skipMapUpdate && MapApp?.drawRoute) {
+if (!opts.skipMapUpdate && MapApp?.drawRoute) {
                 drawRouteSafely(lastPlaces[0]);
             }
         }
 
-        // ============================================
-        // RENDER DOCTOR CARDS
-        // ============================================
-        if (doctors.length > 0) {
+if (doctors.length > 0) {
             renderDoctorCards(el, doctors);
         }
 
         scroll(el);
 
-        // ============================================
-        // SUGGESTION CHIPS (for the latest bot reply only)
-        // ============================================
-        renderSuggestions(suggestions);
+renderSuggestions(suggestions);
     }
 
     function renderPlaceCards(container, places) {
@@ -380,11 +326,7 @@ const Chat = (() => {
         container.appendChild(cardsContainer);
     }
 
-    /**
-     * Renders doctor result cards (find_doctor intent).
-     * Purely informational for now — doctor profile pages land in a later phase.
-     */
-    function renderDoctorCards(container, doctors) {
+function renderDoctorCards(container, doctors) {
 
         if (!doctors || doctors.length === 0) return;
 
@@ -424,10 +366,7 @@ const Chat = (() => {
         container.appendChild(cardsContainer);
     }
 
-    /**
-     * Renders tappable suggestion chips for the latest bot reply.
-     */
-    function renderSuggestions(suggestions) {
+function renderSuggestions(suggestions) {
         const el = document.getElementById('quickReplies');
         if (!el) return;
 
@@ -455,11 +394,7 @@ const Chat = (() => {
         el.innerHTML = '';
     }
 
-    /**
-     * Safely draw route — waits (briefly) for a location fix via the shared
-     * Location module instead of polling MapApp directly.
-     */
-    async function drawRouteSafely(destination) {
+async function drawRouteSafely(destination) {
 
         if (!destination || destination.lat == null || destination.lng == null) return;
         if (typeof Location === 'undefined' || typeof MapApp === 'undefined') return;
@@ -484,12 +419,7 @@ const Chat = (() => {
         }
     }
 
-    /**
-     * Shown whenever a message was sent without coordinates, so the user
-     * understands why results (if any) aren't distance-ranked, instead of
-     * the location just silently being missing.
-     */
-    function appendLocationNote(wasPending) {
+function appendLocationNote(wasPending) {
         const el = document.getElementById('chatMessages');
         if (!el) return;
 

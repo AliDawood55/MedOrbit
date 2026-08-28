@@ -1,12 +1,3 @@
-/**
- * MedOrbit v2 - My Appointments
- * GET /api/appointments returns raw appointment rows (doctor_id/clinic_id
- * only, no joined names) — this module enriches each row with a display
- * name by calling the existing public GET /doctors/:id and GET /clinics/:id
- * endpoints once per unique id. Tabs (upcoming/past/cancelled) are computed
- * client-side from status + scheduled_date since there's no dedicated
- * endpoint per bucket.
- */
 const MyAppointments = (() => {
 
     const STATUS_KEY = {
@@ -79,13 +70,7 @@ const MyAppointments = (() => {
     function toDateOnlyStr(v) {
         if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
 
-        // scheduled_date (a DATE column) round-trips through the backend as a
-        // UTC instant built from the server's local midnight, so it can land
-        // a few hours on either side of the UTC day boundary (e.g. local
-        // midnight at UTC+3 serializes as "...T21:00:00.000Z" the day
-        // before). Rounding to the nearest day recovers the intended
-        // calendar date regardless of the server's offset.
-        const d = new Date(v);
+const d = new Date(v);
         d.setUTCHours(d.getUTCHours() + 12);
         return d.toISOString().slice(0, 10);
     }
@@ -105,9 +90,7 @@ const MyAppointments = (() => {
             && ['scheduled','confirmed','in_progress'].includes(a.status);
     }
 
-    // ================= LOAD + ENRICH =================
-
-    async function enrich(appts) {
+async function enrich(appts) {
         const doctorIds = [...new Set(appts.map((a) => a.doctor_id).filter(Boolean))]
             .filter((id) => !state.doctorCache.has(id));
         const clinicIds = [...new Set(appts.map((a) => a.clinic_id).filter(Boolean))]
@@ -154,9 +137,7 @@ const MyAppointments = (() => {
         }
     }
 
-    // ================= CLASSIFY / SORT =================
-
-    function classify(a) {
+function classify(a) {
         if (a.status === 'cancelled') return 'cancelled';
         const isPastDate = toDateOnlyStr(a.scheduled_date) < todayKey();
         if (a.status === 'completed' || a.status === 'no_show' || isPastDate) return 'past';
@@ -172,9 +153,7 @@ const MyAppointments = (() => {
         return tab === 'upcoming' ? sorted : sorted.reverse();
     }
 
-    // ================= RENDER =================
-
-    function renderCard(a) {
+function renderCard(a) {
         const doctor = state.doctorCache.get(a.doctor_id);
         const clinic = state.clinicCache.get(a.clinic_id);
         const doctorLabel = doctor ? doctorName(doctor) : ('#' + String(a.doctor_id || '').slice(0, 8));
@@ -244,9 +223,7 @@ const MyAppointments = (() => {
         });
     }
 
-    // ================= CANCEL MODAL =================
-
-    function openCancelModal(id) {
+function openCancelModal(id) {
         const backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
         backdrop.innerHTML =
@@ -304,9 +281,7 @@ const MyAppointments = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         if (!API.requireAuth()) return;
 
         document.getElementById('apptTabs')?.addEventListener('click', (e) => {

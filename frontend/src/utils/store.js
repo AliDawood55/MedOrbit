@@ -1,8 +1,3 @@
-/**
- * MedOrbit v2 - Storage Wrapper
- * localStorage with namespacing + JSON serialization
- */
-
 const Store = {
     PREFIX: 'medorbit_v2_',
 
@@ -30,8 +25,7 @@ const Store = {
         localStorage.removeItem(this.PREFIX + key);
     },
 
-    // Common helpers
-    getTheme() {
+getTheme() {
         return this.get('theme', 'light');
     },
     setTheme(theme) {
@@ -39,7 +33,7 @@ const Store = {
     },
 
     getLang() {
-        return this.get('lang', null); // null = auto-detect
+        return this.get('lang', null);
     },
     setLang(lang) {
         return this.set('lang', lang);

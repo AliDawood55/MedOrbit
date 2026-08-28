@@ -1,11 +1,3 @@
-/**
- * MedOrbit v2 - Health Feed (feed.html)
- *
- * GET /feed/posts (paginated, cursor-based) — backend/src/services/recommendation.service.js.
- * Composer publishes via the existing doctor endpoint POST /doctors/me/posts
- * (same call doctor-posts.html uses) — there is no patient-authored-post
- * endpoint, so the composer only renders for accounts with role 'doctor'.
- */
 const SocialFeed = (() => {
 
     const PAGE_SIZE = 10;
@@ -23,9 +15,7 @@ const SocialFeed = (() => {
     const pendingLikes = new Set();
     const pendingFollows = new Set();
 
-    // ================= HELPERS =================
-
-    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const isAr = () => document.documentElement.dir === 'rtl';
     const t = (key) => (typeof I18n !== 'undefined' ? I18n.t(key) : key);
 
@@ -92,19 +82,14 @@ const SocialFeed = (() => {
         return { signal: controller.signal, clear: () => clearTimeout(timer) };
     }
 
-    // ================= RENDER: POST CARD =================
-
-    function avatarInitial(d) {
+function avatarInitial(d) {
         return esc((doctorName(d) || 'D').trim().charAt(0).toUpperCase() || 'D');
     }
 
     function avatarMarkup(d) {
         if (d.profile_image_url) {
-            // data-avatar-fallback lets attachAvatarFallbacks() swap in the
-            // initial if the stored URL turns out to be unreachable — a
-            // missing URL is already handled below, but a broken one isn't
-            // known until the browser actually tries to load it.
-            return `<img src="${esc(API.assetUrl(d.profile_image_url))}" alt="" data-avatar-fallback="${avatarInitial(d)}">`;
+
+return `<img src="${esc(API.assetUrl(d.profile_image_url))}" alt="" data-avatar-fallback="${avatarInitial(d)}">`;
         }
         return avatarInitial(d);
     }
@@ -181,9 +166,7 @@ const SocialFeed = (() => {
         document.getElementById('feedError').classList.toggle('hidden', !show);
     }
 
-    // ================= LOAD FEED (resilient) =================
-
-    async function load(reset = false) {
+async function load(reset = false) {
         if (loading) return;
         loading = true;
 
@@ -198,7 +181,7 @@ const SocialFeed = (() => {
         showSkeleton(reset);
 
         const query = { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) };
-        const maxAttempts = 2; // one retry, GET only — never applied to like/follow/comment/publish
+        const maxAttempts = 2;
         let lastErr = null;
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -240,9 +223,7 @@ const SocialFeed = (() => {
         }
     }
 
-    // ================= LIKE =================
-
-    function updateLikeButton(btn, post) {
+function updateLikeButton(btn, post) {
         btn.classList.toggle('liked', !!post.liked_by_me);
         btn.setAttribute('aria-pressed', String(!!post.liked_by_me));
         const span = btn.querySelector('span');
@@ -279,9 +260,7 @@ const SocialFeed = (() => {
         }
     }
 
-    // ================= FOLLOW =================
-
-    async function handleFollow(btn) {
+async function handleFollow(btn) {
         if (!requireLogin()) return;
         const doctorId = btn.dataset.follow;
         if (pendingFollows.has(doctorId)) return;
@@ -317,9 +296,7 @@ const SocialFeed = (() => {
         }
     }
 
-    // ================= COMMENTS =================
-
-    function renderComments(postId, panel, comments) {
+function renderComments(postId, panel, comments) {
         const rows = comments.map(c => {
             const author = isAr()
                 ? `${c.first_name_ar || ''} ${c.last_name_ar || ''}`.trim()
@@ -396,16 +373,7 @@ const SocialFeed = (() => {
         if (!nowHidden) loadComments(postId, panel);
     }
 
-    // ================= VIEW TRACKING =================
-
-    // >=1025px: posts scroll inside #feedStream (the app-shell mode — see
-    // social.css), so that's the real scrolling viewport and must be the
-    // observer root. <=1024px: the page itself scrolls normally, so the
-    // root has to be the browser viewport (root: null). Kept as a single
-    // matchMedia query (not a scattered innerWidth check) so every place
-    // that needs "which mode are we in" reads the same source of truth, and
-    // kept literally in sync with the .feed-shell breakpoint in social.css.
-    const feedDesktopMedia = (typeof window.matchMedia === 'function')
+const feedDesktopMedia = (typeof window.matchMedia === 'function')
         ? window.matchMedia('(min-width: 1025px)')
         : null;
 
@@ -415,14 +383,7 @@ const SocialFeed = (() => {
             : null;
     }
 
-    // IntersectionObserver.root can't be changed after construction, so a
-    // breakpoint crossing has to disconnect the old observer and build a
-    // fresh one with the new root — this is also just the normal
-    // wire()/render() path (called on every list re-render already), so
-    // wiring it to the media query's change event reuses the exact same
-    // disconnect-then-reobserve-current-elements logic instead of adding a
-    // second code path.
-    function observeViews() {
+function observeViews() {
         viewObserver?.disconnect();
         if (!API.isAuthenticated() || typeof IntersectionObserver === 'undefined') {
             viewObserver = null;
@@ -452,9 +413,7 @@ const SocialFeed = (() => {
         observeViews();
     }
 
-    // ================= COMPOSER (doctor accounts only — see file header) =================
-
-    function composerDisplayName(profile) {
+function composerDisplayName(profile) {
         const name = isAr()
             ? [profile.first_name_ar, profile.last_name_ar].filter(Boolean).join(' ')
             : [profile.first_name_en, profile.last_name_en].filter(Boolean).join(' ');
@@ -487,11 +446,8 @@ const SocialFeed = (() => {
             await API.care.createPost({
                 category: categorySelect.value,
                 body: bodyValue,
-                // The feed composer is a quick single-field update (per the
-                // requested design) but POST /doctors/me/posts requires a
-                // title — derive one from the body instead of adding a
-                // second input the design doesn't call for.
-                title: bodyValue.slice(0, 140),
+
+title: bodyValue.slice(0, 140),
                 isPublished: true
             });
 
@@ -515,12 +471,7 @@ const SocialFeed = (() => {
     async function initComposer() {
         if (!API.isAuthenticated()) return;
 
-        // Cheap local gate first — the session-cached user already carries a
-        // role, so most visitors (patients) skip the extra request entirely.
-        // Doctors still get an authoritative /users/me fetch below, both for
-        // the true role check and for the bilingual name + avatar it has
-        // that the cached session user doesn't.
-        const cachedUser = API.getUser();
+const cachedUser = API.getUser();
         if (cachedUser && cachedUser.role !== 'doctor') return;
 
         const state = await AuthGate.verifySession();
@@ -536,9 +487,7 @@ const SocialFeed = (() => {
         wireComposerExpansion();
     }
 
-    // Compact single-line trigger by default; expands to reveal the
-    // category/publish row while focused or while a draft is in progress.
-    function wireComposerExpansion() {
+function wireComposerExpansion() {
         const composer = document.getElementById('feedComposer');
         const bodyInput = document.getElementById('composerBody');
 
@@ -563,9 +512,7 @@ const SocialFeed = (() => {
         attachAvatarFallbacks(avatarEl);
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         document.getElementById('feedMore').addEventListener('click', () => load(false));
         document.getElementById('feedRetryBtn').addEventListener('click', () => load(true));
 
@@ -574,12 +521,7 @@ const SocialFeed = (() => {
             renderComposerIdentity();
         });
 
-        // Crossing the 1025px breakpoint changes which element actually
-        // scrolls (#feedStream vs. the document) — rebuild the view-tracking
-        // observer with the correct root instead of leaving a stale one
-        // pointed at a viewport that no longer applies. observeViews()
-        // itself is a no-op for guests, so this is safe unconditionally.
-        feedDesktopMedia?.addEventListener('change', observeViews);
+feedDesktopMedia?.addEventListener('change', observeViews);
 
         initComposer();
         load(true);

@@ -1,9 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - AI Tools
-   Symptom Checker, Drug Interaction Checker, Report Summarizer.
-   Talks directly to the AI service on the current host, not the backend.
-   =========================================== */
-
 .tool-header {
     text-align: center;
     max-width: 640px;
@@ -45,7 +39,6 @@
     padding: 24px;
 }
 
-/* === Disclaimer === */
 .disclaimer-banner {
     max-width: 640px;
     margin: 0 auto 20px;
@@ -72,7 +65,6 @@
     margin-top: 1px;
 }
 
-/* === Auth prompt (anonymous visitors only) === */
 .auth-prompt-banner {
     max-width: 640px;
     margin: 0 auto 16px;
@@ -113,7 +105,6 @@
     color: var(--text);
 }
 
-/* === Chip Input === */
 .chip-input-group {
     display: flex;
     gap: 8px;
@@ -221,7 +212,6 @@
     font-size: 15px;
 }
 
-/* === Loading state === */
 .tool-loading {
     max-width: 640px;
     margin: 0 auto;
@@ -245,7 +235,6 @@
     margin-top: 6px;
 }
 
-/* === Error state === */
 .tool-error {
     max-width: 640px;
     margin: 0 auto;
@@ -274,7 +263,6 @@
     line-height: 1.6;
 }
 
-/* === Triage Result === */
 .triage-banner {
     max-width: 640px;
     margin: 0 auto 20px;
@@ -358,7 +346,6 @@
     font-weight: 700;
 }
 
-/* === Drug Interaction Severity Groups === */
 .severity-group {
     margin-bottom: 20px;
 }
@@ -456,7 +443,6 @@
     color: var(--text);
 }
 
-/* === Upload Dropzone === */
 .upload-dropzone {
     max-width: 640px;
     margin: 0 auto 20px;
@@ -534,7 +520,6 @@
     color: var(--text-mute);
 }
 
-/* === Summary Tabs === */
 .summary-tabs {
     max-width: 640px;
     margin: 0 auto 12px;
@@ -647,13 +632,6 @@
     }
 }
 
-/* ===========================================
-   Symptom Checker — Phase 4 Wave E1
-   Scoped to .symptom-checker-page only. ai-tools.css is shared with
-   drug-checker.html / report-summary.html (E2/E3, not yet reviewed) —
-   do not extend these selectors beyond this page. See src/css/README.md.
-   =========================================== */
-
 .symptom-checker-page {
     max-width: 640px;
     padding-block: 32px 60px;
@@ -680,9 +658,6 @@
     box-shadow: var(--shadow-xs);
 }
 
-/* Input + Add composition: input shrinks safely, Add stays a fixed,
-   always-tappable secondary action (not just under the 1024px breakpoint
-   components.css uses for the generic .btn tap-target rule). */
 .symptom-checker-page .chip-input-group input {
     min-width: 0;
 }
@@ -758,14 +733,6 @@
     }
 }
 
-/* ===========================================
-   Drug Interaction Checker — Phase 4 Wave E2
-   Scoped to .drug-checker-page only. ai-tools.css is shared with
-   symptom-checker.html (E1, already reviewed) / report-summary.html
-   (E3, not yet reviewed) — do not extend these selectors beyond this
-   page. See src/css/README.md.
-   =========================================== */
-
 .drug-checker-page {
     max-width: 640px;
     padding-block: 32px 60px;
@@ -792,9 +759,6 @@
     box-shadow: var(--shadow-xs);
 }
 
-/* Input + Add composition: input shrinks safely, Add stays a fixed,
-   always-tappable secondary action (not just under the 1024px breakpoint
-   components.css uses for the generic .btn tap-target rule). */
 .drug-checker-page .chip-input-group input {
     min-width: 0;
 }
@@ -836,7 +800,6 @@
     padding-inline: 20px;
 }
 
-/* === Interaction results === */
 .drug-checker-page .severity-group-title {
     flex-wrap: wrap;
     min-width: 0;
@@ -880,13 +843,6 @@
     }
 }
 
-/* ===========================================
-   Report Summarizer — Phase 4 Wave E3
-   Scoped to .report-summary-page only. ai-tools.css is shared with
-   symptom-checker.html / drug-checker.html (E1/E2, already reviewed) —
-   do not extend these selectors beyond this page. See src/css/README.md.
-   =========================================== */
-
 .report-summary-page {
     max-width: 640px;
     padding-block: 32px 60px;
@@ -914,7 +870,6 @@
     margin: 0 auto 20px;
 }
 
-/* === Dropzone === */
 .report-summary-page .upload-dropzone {
     box-shadow: var(--shadow-xs);
 }
@@ -930,7 +885,6 @@
     overflow-wrap: break-word;
 }
 
-/* === Selected file chip === */
 .report-summary-page .upload-file-chip {
     box-shadow: var(--shadow-xs);
 }
@@ -963,7 +917,6 @@
     padding-inline: 20px;
 }
 
-/* === Summary tabs / content === */
 .report-summary-page .summary-tab:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;

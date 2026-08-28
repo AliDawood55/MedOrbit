@@ -1,21 +1,18 @@
 const MapApp = (() => {
 
-    // ===== DEFAULT =====
-    const DEFAULT_CENTER = [32.2211, 35.2544];
+const DEFAULT_CENTER = [32.2211, 35.2544];
     const DEFAULT_ZOOM = 13;
 
     let map = null;
     let clusterGroup = null;
 
-    // ===== STATE =====
-    let userLocation = null;
+let userLocation = null;
     let userMarker = null;
     let clinicMarkers = [];
     let routeLayer = null;
     let activeHighlight = null;
 
-    // ===== CATEGORY ICONS (matches the filter bar + marker-pin CSS classes) =====
-    const CATEGORY_ICONS = {
+const CATEGORY_ICONS = {
         clinic: 'fa-hospital',
         dental: 'fa-tooth',
         pharmacy: 'fa-pills',
@@ -37,8 +34,7 @@ const MapApp = (() => {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : (document.documentElement.lang || 'ar')) === 'ar';
     }
 
-    // ================= INIT =================
-    function init() {
+function init() {
 
         map = L.map('map', {
             center: DEFAULT_CENTER,
@@ -50,8 +46,7 @@ const MapApp = (() => {
             { maxZoom: 19 }
         ).addTo(map);
 
-        // Cluster nearby markers instead of dumping dozens of overlapping pins
-        if (typeof L.markerClusterGroup === 'function') {
+if (typeof L.markerClusterGroup === 'function') {
             clusterGroup = L.markerClusterGroup({
                 showCoverageOnHover: false,
                 spiderfyOnMaxZoom: true,
@@ -60,9 +55,7 @@ const MapApp = (() => {
             map.addLayer(clusterGroup);
         }
 
-        // Location is owned by the shared Location module — this just
-        // reflects whatever state it reports (GPS fix, manual pick, error).
-        if (typeof Location !== 'undefined') {
+if (typeof Location !== 'undefined') {
             Location.onChange(onLocationChange);
             setTimeout(() => Location.locate(false), 500);
         }
@@ -70,9 +63,7 @@ const MapApp = (() => {
         map.on('click', onMapClick);
     }
 
-    // ================= USER LOCATION (driven by the shared Location module) =================
-
-    function onLocationChange(state) {
+function onLocationChange(state) {
         if (!state.coords) return;
 
         userLocation = state.coords;
@@ -94,11 +85,7 @@ const MapApp = (() => {
 
     let pickModeActive = false;
 
-    /**
-     * Arms a one-time map click to set the user's location manually —
-     * triggered from the location picker's "pick on map" option.
-     */
-    function enablePickMode() {
+function enablePickMode() {
         pickModeActive = true;
         if (map) map.getContainer().style.cursor = 'crosshair';
     }
@@ -117,8 +104,7 @@ const MapApp = (() => {
         return userLocation;
     }
 
-    // ================= MARKER ICON + POPUP =================
-    function buildMarkerIcon(type) {
+function buildMarkerIcon(type) {
         const cls = CATEGORY_ICONS[type] ? type : 'healthcare';
         return L.divIcon({
             className: 'custom-marker',
@@ -171,8 +157,7 @@ const MapApp = (() => {
         );
     }
 
-    // ================= MARKERS =================
-    function clearClinicMarkers() {
+function clearClinicMarkers() {
 
         if (clusterGroup) {
             clusterGroup.clearLayers();
@@ -237,8 +222,7 @@ const MapApp = (() => {
             clinicMarkers.push(marker);
         });
 
-        // Fit bounds to show all markers
-        fitToMarkers();
+fitToMarkers();
     }
 
     function fitToMarkers() {
@@ -247,8 +231,7 @@ const MapApp = (() => {
 
         const group = L.featureGroup(clinicMarkers);
 
-        // Include user marker in bounds if available
-        if (userMarker) {
+if (userMarker) {
             group.addLayer(userMarker);
         }
 
@@ -258,13 +241,11 @@ const MapApp = (() => {
         });
     }
 
-    // ================= MAP ACTIONS =================
-    function highlightPlace(place) {
+function highlightPlace(place) {
 
         if (!place || place.lat == null || place.lng == null) return;
 
-        // Remove previous highlight marker
-        if (activeHighlight) {
+if (activeHighlight) {
             map.removeLayer(activeHighlight);
             activeHighlight = null;
         }
@@ -272,8 +253,7 @@ const MapApp = (() => {
         const lat = Number(place.lat);
         const lng = Number(place.lng);
 
-        // Create a highlighted marker (distinct from regular markers)
-        activeHighlight = L.marker([lat, lng], {
+activeHighlight = L.marker([lat, lng], {
             zIndexOffset: 500,
             icon: L.divIcon({
                 className: 'highlight-marker',
@@ -325,14 +305,11 @@ const MapApp = (() => {
                 return;
             }
 
-            // Convert GeoJSON coordinates [lng, lat] to Leaflet [lat, lng]
-            const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
 
-            // Remove old route
-            clearRoute();
+clearRoute();
 
-            // Draw new route
-            routeLayer = L.polyline(coords, {
+routeLayer = L.polyline(coords, {
                 color: '#2563EB',
                 weight: 5,
                 opacity: 0.85,
@@ -340,12 +317,10 @@ const MapApp = (() => {
                 lineJoin: 'round'
             }).addTo(map);
 
-            // Route info
-            const distanceKm = (data.routes[0].distance / 1000).toFixed(2);
+const distanceKm = (data.routes[0].distance / 1000).toFixed(2);
             const durationMin = (data.routes[0].duration / 60).toFixed(0);
 
-            // Show route info popup at destination
-            const isAr = isArLang();
+const isAr = isArLang();
             const popupText = isAr
                 ? '📏 ' + distanceKm + ' كم — ⏱ ' + durationMin + ' دقيقة'
                 : '📏 ' + distanceKm + ' km — ⏱ ' + durationMin + ' min';
@@ -369,26 +344,18 @@ const MapApp = (() => {
         }
     }
 
-    // Category filter stub — for future implementation
-    function setCategoryFilter(category) {
-        // Placeholder: will be implemented when filter bar
-        // is connected to direct DB queries
-        console.log('MapApp: Category filter set to', category);
+function setCategoryFilter(category) {
+
+console.log('MapApp: Category filter set to', category);
     }
 
-    /**
-     * Recomputes the map's rendered size — needed after the mobile
-     * chat/map view toggle un-hides the map panel (Leaflet can't size
-     * a container that was display:none when it initialized).
-     */
-    function invalidateSize() {
+function invalidateSize() {
         if (map) {
             setTimeout(() => map.invalidateSize(), 50);
         }
     }
 
-    // ================= HELPERS =================
-    function escapeHtml(text) {
+function escapeHtml(text) {
         if (!text) return '';
         return String(text)
             .replace(/&/g, '&amp;')
@@ -397,8 +364,7 @@ const MapApp = (() => {
             .replace(/"/g, '&quot;');
     }
 
-    // ================= PUBLIC =================
-    return {
+return {
         init,
         recenter,
         getUserLocation,

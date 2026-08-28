@@ -1,14 +1,6 @@
-/**
- * MedOrbit v2 - Drug Interaction Checker
- * Uses the authenticated backend gateway: POST /api/ai/drug-interactions.
- * The browser never receives the AI service address or internal credential.
- */
 const DrugChecker = (() => {
 
-    // The actual seeded medorbit.medications rows — quick-add chips that
-    // reliably match real medication records (Aspirin + Warfarin has a
-    // known interaction in the seed data, good for demoing severity groups).
-    const COMMON_MEDICATIONS = [
+const COMMON_MEDICATIONS = [
         { en: 'Paracetamol', ar: 'باراسيتامول' },
         { en: 'Aspirin', ar: 'أسبرين' },
         { en: 'Warfarin', ar: 'وارفارين' },
@@ -56,27 +48,19 @@ const DrugChecker = (() => {
 
     function interactionDescription(interaction) {
         const description = interaction.description || '';
-        // The curated aspirin/warfarin safety record is translated here for
-        // the legacy web client. Other server-provided clinical prose remains
-        // unchanged until the reference-data format carries both languages.
-        if (/^Severe - increased bleeding risk\./i.test(description)) {
+
+if (/^Severe - increased bleeding risk\./i.test(description)) {
             return t('drugChecker.bleedingRiskWarning');
         }
         return description;
     }
 
-    // ================= QUICK CHIPS =================
-
-    function renderQuickChips() {
+function renderQuickChips() {
         const el = document.getElementById('quickChips');
         if (!el) return;
         const ar = isAr();
 
-        // The backend matches medication_names against both name_en and
-        // name_ar, so the displayed label and the submitted value can be
-        // the same string regardless of UI language — no mismatch between
-        // what the button shows and what actually gets added as a chip.
-        el.innerHTML = COMMON_MEDICATIONS.map(m => {
+el.innerHTML = COMMON_MEDICATIONS.map(m => {
             const label = ar ? m.ar : m.en;
             return '<button type="button" class="quick-chip" data-value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</button>';
         }).join('');
@@ -86,9 +70,7 @@ const DrugChecker = (() => {
         });
     }
 
-    // ================= SUBMIT =================
-
-    async function submit() {
+async function submit() {
         FormAlert.clear();
         const medications = chipInput.getItems();
 
@@ -114,9 +96,7 @@ const DrugChecker = (() => {
         }
     }
 
-    // ================= RENDER: STATES =================
-
-    function showLoading() {
+function showLoading() {
         document.getElementById('formSection')?.classList.add('hidden');
         const result = document.getElementById('resultSection');
         if (!result) return;
@@ -211,9 +191,7 @@ const DrugChecker = (() => {
         document.getElementById('formSection')?.classList.remove('hidden');
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         chipInput = ChipInput.create({
             inputId: 'medInput',
             addBtnId: 'addMedBtn',

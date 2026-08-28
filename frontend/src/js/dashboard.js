@@ -1,12 +1,3 @@
-/**
- * MedOrbit v2 - Dashboard (hub)
- * Built only from endpoints that actually exist and actually work:
- * GET /users/me, GET /conversations, GET /appointments, GET /notifications,
- * and GET /doctors/me/schedule for the doctor's own appointment preview.
- * Prescriptions/medical-records have their own dedicated pages — see
- * my-prescriptions.html / my-records.html. Every other page in
- * frontend/public is reachable from here via QUICK_GROUPS below.
- */
 const Dashboard = (() => {
 
     let profile = null;
@@ -31,15 +22,7 @@ const Dashboard = (() => {
         no_show: 'badge-danger'
     };
 
-    // ================= QUICK ACTION GROUPS =================
-    // Every page in frontend/public that a logged-in user can meaningfully
-    // navigate to from a hub lives here, grouped the way the task asked:
-    // Care, AI Tools, My Data, Other. doctor.html/clinic.html are excluded
-    // on purpose — they're detail pages reached via an ?id= from
-    // find-doctors.html/find-clinics.html, not standalone hub destinations.
-    // Auth pages (login/register/forgot-password/reset-password/verify-email)
-    // and home.html are pre-login and out of scope for a post-login hub.
-    const QUICK_GROUPS = [
+const QUICK_GROUPS = [
         {
             id: 'care',
             icon: 'fa-briefcase-medical',
@@ -140,10 +123,8 @@ const Dashboard = (() => {
 
     function toDateOnlyStr(v) {
         if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-        // See my-appointments.js for why this rounds instead of truncates:
-        // scheduled_date (a DATE column) can round-trip as a UTC instant
-        // shifted a few hours off the true calendar day.
-        const d = new Date(v);
+
+const d = new Date(v);
         d.setUTCHours(d.getUTCHours() + 12);
         return d.toISOString().slice(0, 10);
     }
@@ -166,9 +147,7 @@ const Dashboard = (() => {
         return ar ? `منذ ${diffD} يوم` : `${diffD}d ago`;
     }
 
-    // ================= WELCOME HEADER =================
-
-    function displayName() {
+function displayName() {
         if (!profile) return '';
         const n = isAr()
             ? [profile.first_name_ar, profile.last_name_ar].filter(Boolean).join(' ')
@@ -204,9 +183,7 @@ const Dashboard = (() => {
         return ['admin', 'super_admin'].includes(profile?.role);
     }
 
-    // ================= ROLE-AWARE SECTIONS =================
-
-    function applyRoleAwareness() {
+function applyRoleAwareness() {
         const doctor = isDoctor();
 
         const statTile = document.getElementById('statApptTile');
@@ -215,18 +192,13 @@ const Dashboard = (() => {
         if (viewAll) viewAll.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
         document.getElementById('dashboardBookAppointment')?.classList.toggle('hidden', doctor);
 
-        // Appointment booking/listing is patient-scoped (doctors have no
-        // patients row) — show the explanatory notice instead of an empty
-        // list that would otherwise look broken for a doctor account.
-        document.getElementById('apptDoctorNotice')?.classList.add('hidden');
+document.getElementById('apptDoctorNotice')?.classList.add('hidden');
         document.getElementById('apptEmpty')?.classList.add('hidden');
         document.getElementById('apptSkeleton')?.classList.remove('hidden');
         document.getElementById('apptList')?.classList.add('hidden');
     }
 
-    // ================= QUICK ACTION GROUPS: RENDER =================
-
-    function tileVisible(tile) {
+function tileVisible(tile) {
         if (tile.adminOnly && !isAdmin()) return false;
         if (tile.superAdminOnly && profile?.role !== 'super_admin') return false;
         if (tile.patientOnly && profile?.role !== 'patient') return false;
@@ -236,15 +208,8 @@ const Dashboard = (() => {
     }
 
     function renderTile(tile) {
-        // Text is embedded directly via tk() rather than data-i18n + a
-        // follow-up I18n.apply() pass — I18n.apply() dispatches a global
-        // 'languageChanged' event, which this same module already listens
-        // for; calling it synchronously from inside the initial load()
-        // sequence re-entered that listener mid-load and raced the real
-        // notifications fetch (a stat count-up would get stuck at 0 whenever
-        // that empty-data re-render's animation frame landed after the real
-        // one). Direct text embedding sidesteps the whole event entirely.
-        return (
+
+return (
             '<a class="quick-tile hover-lift" href="' + tile.href + '"' + (tile.id ? ' id="' + tile.id + '"' : '') + '>' +
                 '<div class="quick-tile-icon"><i class="fas ' + tile.icon + '"></i></div>' +
                 '<div class="quick-tile-text">' +
@@ -260,7 +225,7 @@ const Dashboard = (() => {
         if (!tiles.length) return '';
 
         const state = Store.get('dashboardGroupState', {});
-        const expanded = state[group.id] !== false; // default: expanded
+        const expanded = state[group.id] !== false;
 
         return (
             '<div class="quick-group" data-group-id="' + group.id + '">' +
@@ -302,14 +267,7 @@ const Dashboard = (() => {
         Store.set('dashboardGroupState', state);
     }
 
-    // ================= SEARCH FILTER =================
-    // Client-side only — filters the quick-action tiles (and hides an
-    // entire group panel if nothing in it matches). While actively
-    // searching, matching groups are force-expanded so results are never
-    // hidden behind a collapsed section; clearing the search restores each
-    // group's saved localStorage preference.
-
-    function initSearchFilter() {
+function initSearchFilter() {
         const input = document.getElementById('dashboardSearch');
         const noResults = document.getElementById('dashboardSearchEmpty');
 
@@ -346,9 +304,7 @@ const Dashboard = (() => {
         });
     }
 
-    // ================= PROFILE COMPLETENESS =================
-
-    const COMPLETENESS_FIELDS = [
+const COMPLETENESS_FIELDS = [
         { key: 'avatar_url', ar: 'صورة الملف الشخصي', en: 'Profile photo' },
         { key: 'phone', ar: 'رقم الهاتف', en: 'Phone number' },
         { key: 'gender', ar: 'الجنس', en: 'Gender' },
@@ -378,9 +334,7 @@ const Dashboard = (() => {
         }
     }
 
-    // ================= UPCOMING APPOINTMENTS =================
-
-    function classifyUpcoming(a) {
+function classifyUpcoming(a) {
         if (a.status === 'cancelled' || a.status === 'completed' || a.status === 'no_show') return false;
         return toDateOnlyStr(a.scheduled_date) >= todayKey();
     }
@@ -461,9 +415,7 @@ const Dashboard = (() => {
         }
     }
 
-    // ================= NOTIFICATIONS =================
-
-    function renderNotifItem(n) {
+function renderNotifItem(n) {
         const title = isAr() ? (n.title_ar || n.title_en) : (n.title_en || n.title_ar);
         const message = isAr() ? (n.message_ar || n.message_en) : (n.message_en || n.message_ar);
         const unread = !n.is_read;
@@ -579,9 +531,7 @@ const Dashboard = (() => {
         if (!expanded) Motion.staggerIn(document.getElementById('notifMoreList'), '.dashboard-notif-item');
     }
 
-    // ================= RECENT CONVERSATIONS =================
-
-    function renderConversations(conversations) {
+function renderConversations(conversations) {
         const list = document.getElementById('conversationsList');
         const empty = document.getElementById('conversationsEmpty');
         if (!list || !empty) return;
@@ -709,9 +659,7 @@ const Dashboard = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    async function load() {
+async function load() {
         document.getElementById('dashLoading')?.classList.remove('hidden');
         document.getElementById('dashError')?.classList.remove('error');
         document.getElementById('dashContent')?.classList.add('hidden');
@@ -727,9 +675,7 @@ const Dashboard = (() => {
             renderQuickGroups();
             document.getElementById('dashContent')?.classList.remove('hidden');
 
-            // Independent, non-blocking — one failing section shouldn't take
-            // down the rest of an already-rendered dashboard.
-            loadAppointments();
+loadAppointments();
             loadNotifications();
             loadConversations();
         } catch (err) {

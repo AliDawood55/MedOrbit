@@ -1,21 +1,3 @@
-/**
- * MedOrbit — the billing page.
- *
- * Renders subscription state that the server decided, and offers the three
- * actions a subscriber actually has: stop auto-renew, start it again, and
- * switch between monthly and annual at the next renewal.
- *
- * Every fact on this page arrives from /api/billing/subscription or
- * /api/billing/entitlements. Nothing is cached in localStorage, nothing is
- * kept in a cookie, and no state here is trusted on the way back — the
- * buttons send an intent and then re-read what the backend did with it. A
- * user who edits this page's variables changes what they see and nothing
- * else, because the composer, the consultation and the checkout all re-check
- * server-side.
- *
- * Dates are rendered from absolute UTC instants the backend supplied, so two
- * devices in different timezones show the same renewal date.
- */
 const Billing = (() => {
 
     let subscription = null;
@@ -28,8 +10,7 @@ const Billing = (() => {
 
     function el(id) { return document.getElementById(id); }
 
-    /** Format a server timestamp in the reader's locale. Never re-derives it. */
-    function formatDate(value) {
+function formatDate(value) {
         if (!value) return '—';
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) return '—';
@@ -42,31 +23,14 @@ const Billing = (() => {
         }
     }
 
-    /**
-     * Whole days between now and a server deadline.
-     *
-     * The browser clock is only used for the *distance*; whether access has
-     * actually ended is decided by the backend on every request. A skewed
-     * clock makes this number slightly wrong and changes nothing else.
-     */
-    function daysUntil(value) {
+function daysUntil(value) {
         if (!value) return null;
         const ms = new Date(value).getTime() - Date.now();
         if (Number.isNaN(ms)) return null;
         return Math.max(Math.ceil(ms / 86400000), 0);
     }
 
-    // -----------------------------------------------------------------
-    // State classification
-    // -----------------------------------------------------------------
-
-    /**
-     * The nine states this page can be in.
-     *
-     * Derived from the server's status plus its timestamps — never stored,
-     * so it cannot go stale, and never sent anywhere.
-     */
-    function classify() {
+function classify() {
         if (!subscription || !subscription.status) return 'free';
         if (subscription.status === 'past_due') return 'past_due';
         if (subscription.status === 'canceled') return 'canceled';
@@ -132,11 +96,7 @@ const Billing = (() => {
         }),
     };
 
-    // -----------------------------------------------------------------
-    // Rendering
-    // -----------------------------------------------------------------
-
-    function renderStatus() {
+function renderStatus() {
         const state = classify();
         const info = (STATUS_TEXT[state] || STATUS_TEXT.free)();
         const planName = subscription?.plan_code && subscription.plan_code !== 'free'
@@ -208,23 +168,15 @@ const Billing = (() => {
         }
 
         if (state === 'past_due') {
-            // No card form, here or anywhere. "Update payment method" leads to
-            // the provider's own management surface; in the sandbox that is
-            // this page, which is the honest answer rather than a fake form.
-            buttons.unshift(`<button type="button" class="btn btn-primary" data-billing-action="update-payment">${
+
+buttons.unshift(`<button type="button" class="btn btn-primary" data-billing-action="update-payment">${
                 esc(t('billing.updatePayment', 'Update payment method', 'تحديث طريقة الدفع'))}</button>`);
         }
 
         host.innerHTML = buttons.join('');
     }
 
-    /**
-     * Usage, straight from the entitlement snapshot.
-     *
-     * A Pro subscriber sees "unlimited" because the server said unlimited,
-     * not because the page decided a Pro user should not see a counter.
-     */
-    function renderUsage() {
+function renderUsage() {
         const host = el('billingUsage');
         if (!host || !entitlements) return;
 
@@ -266,8 +218,7 @@ const Billing = (() => {
             </div>`;
     }
 
-    /** Human-readable labels for the canonical event vocabulary. */
-    const HISTORY_LABELS = {
+const HISTORY_LABELS = {
         'checkout.completed': () => t('billing.evtStarted', 'Subscription started', 'بدأ الاشتراك'),
         'subscription.activated': () => t('billing.evtStarted', 'Subscription started', 'بدأ الاشتراك'),
         'subscription.renewed': () => t('billing.evtRenewed', 'Renewal successful', 'تم التجديد بنجاح'),
@@ -297,15 +248,7 @@ const Billing = (() => {
         }).join('')}</ul>`;
     }
 
-    /**
-     * "This is a sandbox" stated on the page itself, not only in the dialog.
-     *
-     * Sourced from the backend's own answer rather than a build flag, so it
-     * cannot say "simulated" while the process is doing something else. A
-     * page that can take money and a page that cannot must never look the
-     * same.
-     */
-    function renderSandboxNotice() {
+function renderSandboxNotice() {
         const host = el('billingSandboxNotice');
         if (!host) return;
         const markup = BillingUI.sandboxNotice(config);
@@ -313,15 +256,7 @@ const Billing = (() => {
         host.innerHTML = markup;
     }
 
-    /**
-     * Developer controls, shown only when the backend reports a sandbox.
-     *
-     * Note what is not offered: anything that creates a subscription. These
-     * simulate what a provider would do to an EXISTING one — a renewal, a
-     * declined card, a recovery. Becoming Pro still requires going through
-     * checkout, in the sandbox exactly as in production.
-     */
-    function renderSandboxTools() {
+function renderSandboxTools() {
         const host = el('billingSandbox');
         if (!host) return;
 
@@ -349,8 +284,7 @@ const Billing = (() => {
             </div>`;
     }
 
-    /** Banner for the state the user came back from checkout in. */
-    function renderReturnBanner() {
+function renderReturnBanner() {
         const host = el('billingBanner');
         if (!host) return;
 
@@ -364,21 +298,14 @@ const Billing = (() => {
         host.className = `billing-banner billing-banner--${state === 'success' ? 'good' : 'neutral'}`;
         host.setAttribute('role', 'status');
         host.textContent = state === 'success'
-            // Deliberately worded as an observation, not a confirmation. This
-            // page cannot know a payment succeeded — only the backend does,
-            // and the status card above it reflects what the backend actually
-            // recorded.
-            ? t('billing.returnSuccess', 'Checkout finished. Your plan below reflects what was processed.',
+
+? t('billing.returnSuccess', 'Checkout finished. Your plan below reflects what was processed.',
                 'انتهت عملية الدفع. تعرض خطتك أدناه ما تمت معالجته فعليًا.')
             : t('billing.returnCanceled', 'Checkout was canceled. Nothing was charged.',
                 'تم إلغاء عملية الدفع. لم يتم خصم أي مبلغ.');
     }
 
-    // -----------------------------------------------------------------
-    // Actions
-    // -----------------------------------------------------------------
-
-    async function reload() {
+async function reload() {
         const [subRes, entRes, cfgRes, histRes] = await Promise.all([
             API.billing.subscription().catch(() => null),
             API.billing.entitlements().catch(() => null),
@@ -435,10 +362,8 @@ const Billing = (() => {
                     withBusy(button, () => API.billing.changePlan(action.dataset.plan));
                     break;
                 case 'update-payment':
-                    // No card fields exist in MedOrbit. In the sandbox the
-                    // provider's management surface is this page; with a real
-                    // provider this becomes a redirect to their hosted portal.
-                    Toast.info(t('billing.updatePaymentSandbox',
+
+Toast.info(t('billing.updatePaymentSandbox',
                         'A payment provider is not connected yet, so there is no payment method to update.',
                         'لم يتم ربط مزود دفع بعد، لذلك لا توجد طريقة دفع لتحديثها.'));
                     break;
