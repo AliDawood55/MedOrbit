@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
+import '../../../shared/widgets/role_header_actions.dart';
 import '../models/my_report_item.dart';
 import '../providers/my_reports_provider.dart';
 import '../widgets/my_report_card.dart';
@@ -23,7 +24,10 @@ class MyReportsScreen extends ConsumerWidget {
     final reload = ref.read(myReportsControllerProvider.notifier).load;
 
     return AppScaffold(
-      appBar: AppBar(title: Text(strings.myReportsTitle)),
+      appBar: AppBar(
+        title: Text(strings.myReportsTitle),
+        actions: const [RoleHeaderActions(compact: true)],
+      ),
       useSafeArea: true,
       body: Column(
         children: [
