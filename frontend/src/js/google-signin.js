@@ -1,24 +1,3 @@
-/**
- * MedOrbit v2 - Google Sign-In
- * Renders the official Google Identity Services button into a container on
- * login.html / register.html, exchanges the returned ID token for a normal
- * MedOrbit session via POST /auth/google, and stores it through the exact
- * same API.setSession() path as password login — so everything downstream
- * (auth:changed listeners, redirect-after-login) behaves identically
- * regardless of which method the user signed in with.
- *
- * init(containerId) keeps its original behaviour verbatim (alert box + the
- * page's own ?redirect=). init(containerId, handlers) lets a host — currently
- * the global auth gate's "sign in to continue" modal — take over what happens
- * after the credential is exchanged, without a second Google implementation:
- * the script loading, client-id fetch, GIS initialisation, POST /auth/google
- * exchange and API.setSession() are all still the ones below.
- *
- *   onSuccess()            replaces the default alert + redirect
- *   onError(message)       replaces the default error alert
- *   onUnavailable()        replaces hiding the surrounding .oauth-block when
- *                          Google is not configured or its script fails
- */
 const GoogleSignIn = (() => {
     let initialized = false;
     let renderedContainerId = null;
@@ -27,12 +6,7 @@ const GoogleSignIn = (() => {
     let currentHl = null;
     let handlers = {};
 
-    // Single source of truth is the backend's GOOGLE_CLIENT_ID (.env) —
-    // fetched once from GET /api/config rather than duplicated into a
-    // static frontend file. It's a public OAuth client identifier, not a
-    // secret, so shipping it to the browser is fine; the duplication was
-    // the actual problem.
-    function fetchClientId() {
+function fetchClientId() {
         if (!clientIdPromise) {
             clientIdPromise = API.get('/config', null, { auth: false, cacheTTL: 5 * 60 * 1000 })
                 .then((res) => res?.data?.googleClientId || null)
@@ -55,11 +29,7 @@ const GoogleSignIn = (() => {
         msg.textContent = message;
     }
 
-    // Only ever reached for a destination that AuthGate.sanitizeReturnPath()
-    // has accepted as a real, same-directory MedOrbit page — an attacker-
-    // supplied ?redirect=https://evil.example resolves to null here and falls
-    // back to the default landing page.
-    function safeRedirect() {
+function safeRedirect() {
         if (typeof AuthGate === 'undefined') return null;
         return AuthGate.readIntendedDestination();
     }
@@ -101,8 +71,7 @@ const GoogleSignIn = (() => {
         const container = document.getElementById(containerId);
         if (!container || typeof google === 'undefined' || !google.accounts?.id) return;
 
-        // Re-render from scratch each time theme/language changes.
-        container.innerHTML = '';
+container.innerHTML = '';
         google.accounts.id.renderButton(container, {
             type: 'standard',
             theme: document.body.dataset.theme === 'dark' ? 'filled_black' : 'outline',
@@ -111,11 +80,8 @@ const GoogleSignIn = (() => {
             text: 'continue_with',
             logo_alignment: 'center',
             width: Math.min(container.clientWidth || 320, 400)
-            // No `locale` here — confirmed empirically that GIS ignores a
-            // per-button locale override and instead derives the button's
-            // displayed language from the `hl` query param on the gsi/client
-            // script URL itself (see loadGisScript below).
-        });
+
+});
     }
 
     function loadGisScript(hl) {
@@ -131,11 +97,7 @@ const GoogleSignIn = (() => {
         });
     }
 
-    // (Re)loads the GIS script pinned to the given language, then
-    // (re)initializes and renders the button. Needed both on first load and
-    // whenever the UI language toggles, since `hl` is fixed for the
-    // lifetime of a loaded script instance.
-    async function setup(containerId, clientId, hl) {
+async function setup(containerId, clientId, hl) {
         currentHl = hl;
         initialized = false;
 
@@ -165,9 +127,7 @@ const GoogleSignIn = (() => {
         renderButton(containerId);
     }
 
-    // Not configured / not loadable — hide the whole block (button + divider)
-    // rather than show a broken button, unless the host wants to handle it.
-    function reportUnavailable() {
+function reportUnavailable() {
         if (typeof handlers.onUnavailable === 'function') {
             handlers.onUnavailable();
             return;

@@ -1,23 +1,9 @@
-/* ===========================================
-   MedOrbit v2 - Admin Social Moderation
-   (admin-social.html)
-
-   Loads after social.css, which is shared with the modernized feed/social
-   surfaces. Every rule here is scoped to body.admin-social-page so nothing
-   leaks onto other consumers of that file.
-   =========================================== */
-
-/* social.css's .social-shell sets max-width but no margin — this page loads
-   neither listing.css nor any other stylesheet that centers .page-container,
-   so the flex item (body.site-page's column) stretches to the container's
-   cross-start edge instead of centering within the viewport. */
 body.admin-social-page .social-shell {
     width: 100%;
     max-width: 900px;
     margin-inline: auto;
 }
 
-/* === Page header === */
 body.admin-social-page .social-hero {
     margin: 20px 0;
     padding-block-end: 16px;
@@ -42,7 +28,6 @@ body.admin-social-page #adminSocialSubtitle {
     overflow-wrap: anywhere;
 }
 
-/* === Alert === */
 body.admin-social-page #moderationAlert:empty {
     display: none;
 }
@@ -51,7 +36,6 @@ body.admin-social-page #moderationAlert {
     overflow-wrap: anywhere;
 }
 
-/* === Section cards === */
 body.admin-social-page .moderation-section {
     background: var(--bg-card);
 }
@@ -62,7 +46,6 @@ body.admin-social-page .moderation-heading h2 {
     margin: 0;
 }
 
-/* === Filters === */
 body.admin-social-page #postModerationFilter,
 body.admin-social-page #commentModerationFilter {
     min-height: 44px;
@@ -89,8 +72,6 @@ body.admin-social-page #commentModerationFilter:focus-visible {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* Native select controls default to a light popup regardless of page theme
-   unless color-scheme tells the browser this control is dark. */
 body[data-theme="dark"].admin-social-page #postModerationFilter,
 body[data-theme="dark"].admin-social-page #commentModerationFilter {
     color-scheme: dark;
@@ -102,7 +83,6 @@ body[data-theme="dark"].admin-social-page #commentModerationFilter option {
     color: var(--text);
 }
 
-/* === Moderation items === */
 body.admin-social-page .moderation-item {
     background: var(--bg-card);
     display: grid;
@@ -126,7 +106,6 @@ body.admin-social-page .moderation-item small {
     overflow-wrap: anywhere;
 }
 
-/* === Actions === */
 body.admin-social-page .moderation-actions .btn {
     min-height: 44px;
 }

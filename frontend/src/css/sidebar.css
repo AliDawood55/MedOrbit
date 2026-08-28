@@ -1,8 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Conversation Sidebar
-   JWT-gated conversation list (history, rename, delete, search)
-   =========================================== */
-
 .sidebar-panel {
     display: flex;
     flex-direction: column;
@@ -135,7 +130,6 @@
     color: var(--text);
 }
 
-/* === Responsive: touch tap targets === */
 @media (max-width: 1024px) {
     .sidebar-item-btn {
         width: 44px;
@@ -171,7 +165,6 @@
     font-size: 12.5px;
 }
 
-/* === Grid integration: reserve a column only when the sidebar is enabled === */
 #app.sidebar-enabled .app-main {
     grid-template-columns: 260px 440px 1fr;
 }
@@ -188,16 +181,12 @@
     display: none;
 }
 
-/* === Mobile: sidebar becomes a slide-in drawer instead of a grid column === */
 @media (max-width: 768px) {
     #app.sidebar-enabled .app-main {
         grid-template-columns: 1fr;
     }
 
-    /* Mobile uses the slide-in drawer (.sidebar-open on the panel itself)
-       instead of the desktop collapse mechanism — always keep it in the
-       DOM/flex flow here so the transform-based drawer can show it. */
-    #app.sidebar-enabled.sidebar-collapsed .sidebar-panel {
+#app.sidebar-enabled.sidebar-collapsed .sidebar-panel {
         display: flex;
     }
 

@@ -1,7 +1,3 @@
-/**
- * MedOrbit v2 - Theme Module (light / dark)
- * Shared across every page.
- */
 const Theme = (() => {
     let current = Store.getTheme() || 'light';
 

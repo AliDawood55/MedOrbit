@@ -1,20 +1,3 @@
-/**
- * MedOrbit v2 - Patient Detail (one patient's file, as seen by their doctor)
- *
- * GET /doctors/me/patients/:patientId (backend/src/routes/doctor.routes.js)
- * — the doctor id is resolved server-side from the JWT, and every request
- * is gated on a real doctor<->patient relationship check (an appointment
- * must exist between them) that runs before any patient data is queried.
- * A patient id with no such relationship 404s, same as one that doesn't
- * exist at all, so a doctor probing random ids learns nothing.
- *
- * Medical-record authoring on this page submits through the canonical
- * POST /api/medical-records (backend/src/routes/medicalRecord.routes.js)
- * rather than doctor.routes.js's notes endpoint, so every field the form
- * collects is one the backend actually persists (including appointment_id,
- * symptoms, treatment_plan, prognosis, doctor_notes — none of which the
- * notes endpoint accepted).
- */
 const PatientDetail = (() => {
 
     const STATUS_KEY = {
@@ -94,9 +77,7 @@ const PatientDetail = (() => {
         '</div>';
     }
 
-    // ================= RENDER =================
-
-    function renderHeader(p) {
+function renderHeader(p) {
         const header = document.getElementById('patientHeader');
         if (!header) return;
         const name = escapeHtml(patientName(p));
@@ -172,26 +153,7 @@ const PatientDetail = (() => {
         });
     }
 
-    // ================= EDIT / DELETE MEDICAL RECORD =================
-    // Both mutate through PUT/DELETE /api/medical-records/:id (backend/src/
-    // routes/medicalRecord.routes.js), which the backend scopes to records
-    // owned by the calling doctor (doctor_id match) — every record in this
-    // timeline already satisfies that, since GET /doctors/me/patients/:id
-    // filters its notes query by doctor_id AND patient_id too.
-    //
-    // PUT there is full-field, not partial: it always overwrites diagnosis,
-    // treatment_plan, clinical_notes, doctor_notes, vitals and is_draft from
-    // the request body, so an omitted field would be persisted as NULL. The
-    // notes list backing this timeline doesn't carry every one of those
-    // fields (vitals is missing), so edit always loads the canonical record
-    // via GET /api/medical-records/:id first and round-trips its vitals
-    // unchanged rather than risk wiping it.
-    //
-    // record_type/chief_complaint/symptoms/prognosis are NOT columns the PUT
-    // query touches, so they stay read-only here (visible on the card, not
-    // editable in this form).
-
-    function openEditRecordModal(id) {
+function openEditRecordModal(id) {
         const backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
         backdrop.innerHTML =
@@ -383,9 +345,7 @@ const PatientDetail = (() => {
         }).join('') + '</div>';
     }
 
-    // ================= PRESCRIPTION COMPOSER =================
-  
-      function renderAppointmentOptions(list) {
+function renderAppointmentOptions(list) {
         const select = document.getElementById('noteAppointment');
         const btn = document.getElementById('noteSubmitBtn');
         if (!select) return;
@@ -541,9 +501,7 @@ const PatientDetail = (() => {
         }
     }
 
-    // ================= ADD NOTE FORM =================
-
-    function validateRecord() {
+function validateRecord() {
         const appointmentId = document.getElementById('noteAppointment').value;
         if (!appointmentId) return t('patientDetail.errorAppointmentRequired');
         const complaint = document.getElementById('noteChiefComplaint').value.trim();
@@ -621,18 +579,7 @@ const PatientDetail = (() => {
         btn.disabled = false;
     }
 
-    // ================= CREATE PRESCRIPTION FORM =================
-    // Submits through POST /api/prescriptions (backend/src/routes/prescription.routes.js).
-    // Unlike medical-record creation, this contract requires patient_id
-    // explicitly — sourced from the server-returned patient object (never
-    // a URL/editable field) — plus appointment_id from this doctor's real
-    // appointments with this patient. The backend re-verifies both before
-    // writing anything, so this is a UX guard, not the authorization
-    // boundary. Item fields mirror medorbit.prescription_items' NOT NULL
-    // columns exactly (medication_name_ar/en, dosage, frequency, quantity);
-    // duration/instructions are nullable there, so they stay optional here.
-
-    function renderRxAppointmentOptions(list) {
+function renderRxAppointmentOptions(list) {
         const select = document.getElementById('rxAppointment');
         const submitBtn = document.getElementById('rxSubmitBtn');
         const addBtn = document.getElementById('rxAddItemBtn');
@@ -825,9 +772,7 @@ const PatientDetail = (() => {
         btn.disabled = false;
     }
 
-    // ================= LOAD =================
-
-    async function loadPatient(patientId) {
+async function loadPatient(patientId) {
         try {
             const res = await API.care.patientDetail(patientId);
             const data = res?.data || {};
@@ -854,9 +799,7 @@ const PatientDetail = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    async function init() {
+async function init() {
         if (!API.requireAuth()) return;
 
         const patientId = getPatientIdFromUrl();
@@ -876,7 +819,7 @@ const PatientDetail = (() => {
         }
 
         document.getElementById('patientDetailContent').classList.remove('hidden');
-        //resetRxItems();
+
         loadPatient(patientId);
 
         document.getElementById('noteSubmitBtn').addEventListener('click', submitRecord);
@@ -901,8 +844,7 @@ const PatientDetail = (() => {
         resetPrescriptionForm();
     }
 
-    // Replaces a broken profile image with the patient initials.
-    function avatarFallback(img) {
+function avatarFallback(img) {
         img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
     }
     return { init, __avatarFallback: avatarFallback };

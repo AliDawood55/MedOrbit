@@ -1,14 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Listing & Profile Pages
-   Shared by find-doctors.html, find-clinics.html,
-   doctor.html, and clinic.html.
-   =========================================== */
-
-/* === List + Map split view (find-clinics.html) ===
-   Reuses the .app / .app-header / .filter-bar / .app-main shell classes
-   from main.css (same app-shell chrome as index.html) — these two classes
-   just give the two .app-main panels honest names instead of borrowing
-   chat-specific ones. */
 .list-panel {
     display: flex;
     flex-direction: column;
@@ -46,13 +35,6 @@
     height: 100%;
 }
 
-/* === find-clinics.html mobile hybrid ===
-   Below 768px this page still starts from .app-shell's fixed viewport, but
-   that's only correct while the map is showing (a Leaflet map needs an
-   explicit height, not document flow). In list view, drop the lock so the
-   whole page — header, filter bar, list — scrolls normally like every other
-   content page. body.mobile-map-active (toggled by the mobileViewToggle
-   handler in find-clinics.html) tracks which mode we're in. */
 @media (max-width: 768px) {
     html.clinics-shell:not(.mobile-map-active),
     body.clinics-shell:not(.mobile-map-active) {
@@ -92,21 +74,12 @@
 }
 
 .page-container {
-    /* Without an explicit width, this flex item (direct child of
-       body.site-page's flex column) can fail to stretch before a nested
-       `repeat(auto-fit, minmax(...))` grid resolves its track count —
-       the grid then locks in a single narrow column (using a shrink-to-fit
-       hypothetical width instead of the real available width), which in
-       turn caps this element's own rendered width far below max-width.
-       Forcing width:100% up front removes the ambiguity. */
-    width: 100%;
+
+width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 28px 20px 60px;
 }
-
-/* .page-header lives in components.css — every page with a title block uses
-   it, not just the listing pages. */
 
 .back-link {
     display: inline-flex;
@@ -128,10 +101,6 @@
     transform: scaleX(-1);
 }
 
-/* === Recommended Doctors (find-doctors.html only) ===
-   Reads as a personalized secondary discovery surface, not a second page
-   header: smaller heading with an accent bar, tighter subtitle, and a
-   bottom rule that separates it from the ordinary catalogue below. */
 .recommended-section {
     margin-bottom: 32px;
     padding-bottom: 28px;
@@ -166,17 +135,12 @@
     margin-top: 2px;
 }
 
-/* Ties the recommendation reason badge back to the doctor info it explains,
-   instead of it floating as one more badge among others. Scoped to the
-   recommended surface only — the ordinary catalogue's accepting-patients
-   badge keeps its existing look. */
 .recommended-section .entity-card-badges {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px dashed var(--border);
 }
 
-/* === Filter Toolbar === */
 .filter-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -251,7 +215,6 @@
     flex-shrink: 0;
 }
 
-/* === Collapsible section (mobile only — see @media block below) === */
 .filter-toggle-btn {
     display: none;
     align-items: center;
@@ -275,14 +238,12 @@
     display: contents;
 }
 
-/* === Grid === */
 .entity-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 16px;
 }
 
-/* === Entity Card (doctor / clinic) === */
 .entity-card {
     display: flex;
     flex-direction: column;
@@ -293,9 +254,6 @@
     transition: all var(--t-base);
 }
 
-/* Subtle lift only — the card itself isn't a link (only the CTA below is),
-   so hover/focus here must read as "there's more info," not "this whole
-   box is clickable." */
 .entity-card:hover,
 .entity-card:focus-within {
     box-shadow: var(--shadow-md);
@@ -378,9 +336,6 @@
     flex-wrap: wrap;
 }
 
-/* Doctor-discovery-only avatar polish. Scoped under .find-doctors-page so
-   it never reaches book-appointment.html's doctor picker, which reuses the
-   bare .entity-avatar class for a much smaller list item. */
 .find-doctors-page .entity-avatar {
     box-shadow: 0 4px 10px color-mix(in srgb, var(--primary) 22%, transparent);
 }
@@ -395,10 +350,6 @@
     width: 100%;
 }
 
-/* .pagination / .pagination-btn live in components.css, including their
-   44px touch-target rule. */
-
-/* === Error state (reuses .empty-state layout from components.css) === */
 .error-state {
     text-align: center;
     padding: 40px 20px;
@@ -411,7 +362,6 @@
     display: block;
 }
 
-/* === Profile Header (doctor.html / clinic.html) === */
 .profile-header {
     display: flex;
     gap: 20px;
@@ -494,7 +444,6 @@
     flex-shrink: 0;
 }
 
-/* === Profile Tabs (doctor.html: About / Availability / Reviews / Posts) === */
 .profile-tabs {
     display: flex;
     gap: 4px;
@@ -534,7 +483,6 @@
     display: block;
 }
 
-/* === Profile Layout (two columns: content + sidebar) === */
 .profile-layout {
     display: grid;
     grid-template-columns: 1fr 320px;
@@ -571,7 +519,6 @@
     line-height: 1.7;
 }
 
-/* === Weekly Schedule Grid === */
 .schedule-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -617,7 +564,6 @@
     color: var(--text-faint);
 }
 
-/* === Services / Insurance chip lists === */
 .chip-list {
     display: flex;
     flex-wrap: wrap;
@@ -633,7 +579,6 @@
     font-weight: 500;
 }
 
-/* === Reviews === */
 .review-item {
     padding: 14px 0;
     border-bottom: 1px solid var(--border);
@@ -667,7 +612,6 @@
     line-height: 1.6;
 }
 
-/* === Sub-item list (doctors at a clinic / clinics for a doctor) === */
 .sub-item {
     display: flex;
     align-items: center;
@@ -697,7 +641,6 @@
     margin-top: 2px;
 }
 
-/* === Mini Map === */
 .mini-map {
     width: 100%;
     height: 220px;
@@ -705,7 +648,6 @@
     overflow: hidden;
 }
 
-/* === Responsive === */
 @media (max-width: 768px) {
     .profile-layout {
         grid-template-columns: 1fr;
@@ -724,10 +666,7 @@
         min-height: 44px;
     }
 
-    /* Filter toolbar (find-doctors.html): search stays visible, everything
-       else collapses behind a "Filters" toggle instead of always taking
-       vertical space. */
-    .filter-toggle-btn {
+.filter-toggle-btn {
         display: flex;
     }
 
@@ -779,17 +718,6 @@
         font-size: 24px;
     }
 }
-
-/* ===========================================
-   Clinic Profile Modernization (Phase 4 / B2a)
-   Scoped under .clinic-profile-page (set on clinic.html's <main>) so this
-   visual pass never reaches the shared .profile-* / .sub-item / .chip-list
-   classes used by doctor.html, find-doctors.html, or find-clinics.html.
-   .schedule-grid is intentionally left unscoped here beyond what's already
-   generic above — doctor-profile.css defines its own competing
-   .schedule-grid; consolidating that dual ownership is deferred (see B2a
-   report), not solved by this section.
-   =========================================== */
 
 .clinic-profile-page .profile-header {
     padding: clamp(20px, 4vw, 32px);
@@ -856,7 +784,6 @@
     font-size: 13px;
 }
 
-/* Operating hours */
 .clinic-profile-page .schedule-day {
     border: 1px solid transparent;
 }
@@ -870,13 +797,11 @@
     font-style: italic;
 }
 
-/* Services / insurance chips */
 .clinic-profile-page .chip-list .chip {
     border: 1px solid var(--border);
     background: var(--bg-soft);
 }
 
-/* Doctors sub-list */
 .clinic-profile-page .sub-item {
     text-decoration: none;
     color: inherit;
@@ -906,7 +831,6 @@
     overflow-wrap: anywhere;
 }
 
-/* Mini-map */
 .clinic-profile-page .mini-map {
     border: 1px solid var(--border);
 }
@@ -920,16 +844,6 @@
     }
 }
 
-/* ===========================================
-   Clinic Discovery Modernization (Phase 4 / B2b-1)
-   List panel / clinic cards / search / filter-bar visual polish only.
-   Everything here is scoped under .clinics-shell so it never reaches the
-   shared .list-panel/.entity-card/.filter-chip rules used by other listing
-   or chat surfaces. Map/marker/location-picker styling is out of scope
-   (B2b-2) — see map.css, untouched.
-   =========================================== */
-
-/* --- List panel header / search --- */
 .clinics-shell .list-panel-header {
     padding: 14px 16px;
     background: var(--bg-elevated);
@@ -968,7 +882,6 @@
     color: var(--text);
 }
 
-/* --- List panel content surface --- */
 .clinics-shell .list-panel-content {
     padding: 12px 14px;
 }
@@ -982,8 +895,6 @@
     border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
 }
 
-/* Clinic names / addresses can run long — wrap instead of the shared
-   single-line ellipsis truncation so nothing important gets clipped. */
 .clinics-shell .list-panel .entity-card-title {
     white-space: normal;
     overflow: hidden;
@@ -1007,13 +918,11 @@
     display: flex;
 }
 
-/* --- Loading / empty / error states --- */
 .clinics-shell .list-panel .empty-state,
 .clinics-shell .list-panel .error-state {
     padding: 48px 20px;
 }
 
-/* --- Filter bar --- */
 .clinics-shell .filter-chip {
     padding: 9px 15px;
     min-height: 40px;

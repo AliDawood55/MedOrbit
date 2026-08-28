@@ -62,9 +62,7 @@ const ContactPage=(()=>{
         errorNode.classList.add('hidden');
     }
 
-    // Mirrors the real server-side limits in backend/src/services/contact.service.js
-    // so the user sees the same rule before submitting, not after a round trip.
-    function validate(){
+function validate(){
         let firstInvalidId=null;
         const fail=(fieldId,errorId,message)=>{setFieldError(fieldId,errorId,message);if(!firstInvalidId)firstInvalidId=fieldId;};
 
