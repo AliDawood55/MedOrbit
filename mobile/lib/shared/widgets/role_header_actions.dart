@@ -7,8 +7,9 @@ import '../../core/localization/app_strings.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../routes/route_paths.dart';
 
-/// Common signed-in header controls. Compact mode keeps narrow workspace
-/// headers usable while preserving language and logout inside the overflow.
+/// Common signed-in dashboard controls. Compact mode is deliberately empty:
+/// sub-pages keep only their normal back/home control, while full controls
+/// remain on each role's main dashboard.
 class RoleHeaderActions extends ConsumerWidget {
   const RoleHeaderActions({super.key, this.compact = false});
   final bool compact;
@@ -46,47 +47,6 @@ class RoleHeaderActions extends ConsumerWidget {
         children: [notification, profile, language, logout],
       );
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        notification,
-        profile,
-        PopupMenuButton<_HeaderAction>(
-          tooltip: strings.moreActionsTooltip,
-          onSelected: (action) async {
-            if (action == _HeaderAction.language) {
-              await ref.read(localeControllerProvider.notifier).toggle();
-            } else {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go(RoutePaths.login);
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: _HeaderAction.language,
-              child: Row(
-                children: [
-                  const Icon(Icons.translate_rounded),
-                  const SizedBox(width: 12),
-                  Text(strings.languageToggleTooltip),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: _HeaderAction.logout,
-              child: Row(
-                children: [
-                  const Icon(Icons.logout_rounded),
-                  const SizedBox(width: 12),
-                  Text(strings.logoutTooltip),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
+    return const SizedBox.shrink();
   }
 }
-
-enum _HeaderAction { language, logout }

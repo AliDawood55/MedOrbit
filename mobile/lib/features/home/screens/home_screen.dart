@@ -14,6 +14,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/role_header_actions.dart';
+import '../../../shared/widgets/role_general_navigation.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../appointments/models/enriched_appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
@@ -161,6 +162,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       origin: ref.watch(activeOriginProvider),
                       onRetry: () => ref.invalidate(currentUserProfileProvider),
                     ),
+                    const SizedBox(height: AppTheme.spaceXl),
+                    const RoleGeneralNavigation(role: 'patient'),
                     const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
                       title: strings.dashboardStatisticsTitle,
@@ -315,6 +318,10 @@ class _AdminHomeScreen extends ConsumerWidget {
                       onRetry: onRetry,
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
+                    RoleGeneralNavigation(
+                      role: isSuperAdmin ? 'super_admin' : 'admin',
+                    ),
+                    const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
                       title: strings.adminMobileDashboardTitle,
                       subtitle: strings.adminDashboardSubtitle,
@@ -326,6 +333,14 @@ class _AdminHomeScreen extends ConsumerWidget {
                       onRetry: onRetryStats,
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
+                    SectionHeader(
+                      title: isSuperAdmin
+                          ? (isArabic ? 'مساحة عمل المشرف العام' : 'Super administrator workspace')
+                          : (isArabic ? 'مساحة عمل المشرف' : 'Administrator workspace'),
+                      subtitle: isArabic
+                          ? 'إدارة المنصة مع الحفاظ على حدود صلاحيات حسابك.'
+                          : 'Manage the platform while preserving your account permission boundaries.',
+                    ),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(AppTheme.spaceXl),
@@ -365,22 +380,6 @@ class _AdminHomeScreen extends ConsumerWidget {
                                     icon: const Icon(Icons.groups_2_outlined),
                                     label: Text(strings.adminAdministrators),
                                   ),
-                                OutlinedButton.icon(
-                                  onPressed: () =>
-                                      context.push(RoutePaths.notifications),
-                                  icon: const Icon(
-                                    Icons.notifications_outlined,
-                                  ),
-                                  label: Text(strings.navNotifications),
-                                ),
-                                OutlinedButton.icon(
-                                  onPressed: () =>
-                                      context.push(RoutePaths.profile),
-                                  icon: const Icon(
-                                    Icons.person_outline_rounded,
-                                  ),
-                                  label: Text(strings.navProfile),
-                                ),
                               ],
                             ),
                           ],
