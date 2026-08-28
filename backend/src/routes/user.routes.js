@@ -51,6 +51,7 @@ router.get(
             p.phone,
             p.gender,
             p.profile_image_url AS avatar_url,
+            p.updated_at AS profile_updated_at,
             p.address,
             p.city
 
