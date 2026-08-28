@@ -1,8 +1,3 @@
-/**
- * MedOrbit v2 - Account / Profile Page
- * GET/PUT /api/users/me, PUT /api/users/me/preferences, POST /api/users/me/avatar,
- * POST /api/auth/change-password — all via the shared API module (backend on :3001).
- */
 const Profile = (() => {
 
     let profile = null;
@@ -43,9 +38,7 @@ const Profile = (() => {
         btn.disabled = loading;
     }
 
-    // ================= LOAD =================
-
-    async function load() {
+async function load() {
         document.getElementById('loadingState')?.classList.remove('hidden');
         document.getElementById('errorState')?.classList.add('hidden');
         document.getElementById('profileContent')?.classList.add('hidden');
@@ -117,9 +110,7 @@ const Profile = (() => {
         renderLangOptions();
     }
 
-    // ================= AVATAR UPLOAD =================
-
-    const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
     async function handleAvatarSelect(file) {
         clearAlert('formAlert');
@@ -146,9 +137,7 @@ const Profile = (() => {
         }
     }
 
-    // ================= PROFILE FORM =================
-
-    async function submitProfile(e) {
+async function submitProfile(e) {
         e.preventDefault();
         clearAlert('formAlert');
 
@@ -182,8 +171,7 @@ const Profile = (() => {
                 phone: body.phone, gender: body.gender, address: body.address, city: body.city
             });
 
-            // Keep the header chip's cached name in sync without forcing a re-login.
-            const cachedUser = API.getUser();
+const cachedUser = API.getUser();
             if (cachedUser) {
                 API.setSession({ user: { ...cachedUser, name: displayName() } });
             }
@@ -198,9 +186,7 @@ const Profile = (() => {
         }
     }
 
-    // ================= LANGUAGE PREFERENCE =================
-
-    function renderLangOptions() {
+function renderLangOptions() {
         const lang = isAr() ? 'ar' : 'en';
         ['ar', 'en'].forEach(code => {
             const opt = document.getElementById(code === 'ar' ? 'langOptionAr' : 'langOptionEn');
@@ -223,14 +209,11 @@ const Profile = (() => {
             await API.users.updatePreferences({ language: lang });
         } catch (err) {
             console.error('Profile: failed to save language preference', err);
-            // Non-critical — the UI already reflects the chosen language locally,
-            // it just won't be remembered as the account default server-side.
-        }
+
+}
     }
 
-    // ================= CHANGE PASSWORD =================
-
-    function wirePasswordStrength() {
+function wirePasswordStrength() {
         const pwInput = document.getElementById('newPassword');
         const strengthEl = document.getElementById('pwStrength');
         if (!pwInput || !strengthEl) return;
@@ -282,11 +265,7 @@ const Profile = (() => {
         try {
             await API.post('/auth/change-password', { currentPassword, newPassword });
 
-            // The backend revokes every session (incl. this one's refresh token)
-            // on a successful password change — the current access token would
-            // keep working until it naturally expires, but silently. Force a
-            // clean re-login now instead of leaving that surprise for later.
-            showAlert('passwordAlert', t('profile.passwordChanged'), 'success');
+showAlert('passwordAlert', t('profile.passwordChanged'), 'success');
             document.querySelectorAll('#passwordForm input, #passwordForm button').forEach(el => { el.disabled = true; });
 
             setTimeout(() => {
@@ -301,9 +280,7 @@ const Profile = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         if (!API.requireAuth()) return;
 
         document.getElementById('retryLoadBtn')?.addEventListener('click', load);

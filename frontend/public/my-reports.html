@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html data-auth-gate="pending" lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,17 +18,11 @@
     <link rel="stylesheet" href="../src/css/listing.css">
     <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/reports.css">
-    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
-         below is an external file and an external file can 404, be blocked or
-         time out, and a gate that never loads hides nothing. These lines
-         cannot go missing on their own. They hide protected markup from the
-         first paint; the gate clears the attribute once it has verified the
-         session, and the watchdog leaves for Home if the gate never arrives. -->
-    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
-    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
-    <!-- Global authentication gate: must load in <head>, before any
-         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
-    <script src="../src/js/auth-gate.js"></script>
+
+<style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script src="../src/js/auth-bootstrap.js"></script>
+
+<script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
@@ -81,14 +75,12 @@
 
             <p class="report-generated-at" id="reportGeneratedAt"></p>
 
-            <!-- Personal info — GET /users/me -->
-            <section class="report-section card" style="padding:18px;">
+<section class="report-section card" style="padding:18px;">
                 <div class="report-section-title"><i class="fas fa-user"></i> <span data-i18n="reports.personalInfo">المعلومات الشخصية</span></div>
                 <div class="report-info-grid" id="reportInfoGrid"></div>
             </section>
 
-            <!-- Appointments — GET /appointments -->
-            <section class="report-section card" style="padding:18px;">
+<section class="report-section card" style="padding:18px;">
                 <div class="report-section-title"><i class="fas fa-calendar-check"></i> <span data-i18n="reports.appointmentsHistory">سجل المواعيد</span></div>
                 <div class="report-stats-row" id="apptStatsRow"></div>
                 <div class="report-list" id="apptReportList"></div>
@@ -98,8 +90,7 @@
                 </p>
             </section>
 
-            <!-- AI consultations — GET /conversations -->
-            <section class="report-section card" style="padding:18px;">
+<section class="report-section card" style="padding:18px;">
                 <div class="report-section-title"><i class="fas fa-comments"></i> <span data-i18n="reports.aiConsultations">استشارات المساعد الذكي</span></div>
                 <div class="report-stats-row" id="convoStatsRow"></div>
                 <div class="report-list" id="convoReportList"></div>
@@ -109,8 +100,7 @@
                 </p>
             </section>
 
-            <!-- Saved places — GET /users/me/saved-places -->
-            <section class="report-section card" style="padding:18px;">
+<section class="report-section card" style="padding:18px;">
                 <div class="report-section-title"><i class="fas fa-map-pin"></i> <span data-i18n="reports.savedPlaces">الأماكن المحفوظة</span></div>
                 <div class="report-list" id="placesReportList"></div>
                 <p class="report-unavailable hidden" id="placesReportEmpty">
@@ -119,8 +109,7 @@
                 </p>
             </section>
 
-            <!-- Prescriptions & medical records — no API, never faked -->
-            <section class="report-section card" style="padding:18px;">
+<section class="report-section card" style="padding:18px;">
                 <div class="report-section-title"><i class="fas fa-file-medical"></i> <span data-i18n="reports.otherData">بيانات أخرى</span></div>
                 <p class="report-unavailable">
                     <i class="fas fa-lock"></i>
@@ -148,11 +137,6 @@
     <script src="../src/js/layout.js"></script>
     <script src="../src/js/my-reports.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Layout.init();
-            MyReports.init();
-        });
-    </script>
+    <script src="../src/js/pages/my-reports.js"></script>
 </body>
 </html>

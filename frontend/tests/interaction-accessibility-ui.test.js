@@ -73,7 +73,6 @@ function test(name, fn) {
 
 console.log('interaction-accessibility-ui');
 
-// 1. Shared prefers-reduced-motion rule exists in main.css
 test('main.css defines a shared prefers-reduced-motion baseline', () => {
     const css = read('main.css');
     assert.ok(/@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(css));
@@ -84,7 +83,6 @@ test('main.css defines a shared prefers-reduced-motion baseline', () => {
     assert.ok(/\.toast\b/.test(block), 'toast entrance motion should be addressed');
 });
 
-// 2. Spinner/loading reduced-motion coverage exists
 test('components.css stops spinner animation under reduced motion, without removing the element', () => {
     const css = read('components.css');
     const blocks = extractAllMediaBlocks(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{/);
@@ -102,7 +100,6 @@ test('components.css skeleton loader keeps its existing reduced-motion override'
     assert.ok(blocks.some((b) => /\.skeleton\b/.test(b)));
 });
 
-// 3. Care search has a visible focus replacement when outline is removed
 test('care.css search input removes native outline but the wrapper gets a focus-within ring', () => {
     const css = read('care.css');
     const inputBlock = extractBlock(css, /\.care-search-bar \.search-field input/);
@@ -117,7 +114,6 @@ test('care.css search input removes native outline but the wrapper gets a focus-
     );
 });
 
-// 4. Notifications navigable item has strong focus-visible treatment
 test('notifications.css navigable item has a real outline on :focus-visible', () => {
     const css = read('notifications.css');
     const blocks = extractAllBlocks(css, /\.notif-page-item\.navigable:focus-visible/);
@@ -126,7 +122,6 @@ test('notifications.css navigable item has a real outline on :focus-visible', ()
     assert.ok(strongOutlineBlock, 'at least one :focus-visible block should set a real (non-zero) outline');
 });
 
-// 5. Confirmed small chat/sidebar/dashboard controls get >=44px touch hit-area
 test('chat.css enlarges .input-clear to 44px under the touch breakpoint', () => {
     const css = read('chat.css');
     const block = extractMediaBlock(css, /@media\s*\(max-width:\s*1024px\)\s*\{/);
@@ -154,7 +149,6 @@ test('dashboard.css enlarges .dashboard-item-btn to 44px under the touch breakpo
     assert.ok(/width:\s*44px/.test(btn) && /height:\s*44px/.test(btn));
 });
 
-// 6. Map interactive controls already have touch-target coverage
 test('map.css interactive controls already meet the 44px touch target', () => {
     const css = read('map.css');
     const mapControlBtn = extractBlock(css, /\.map-control-btn(?![\w-])/);
@@ -170,7 +164,6 @@ test('map.css interactive controls already meet the 44px touch target', () => {
     assert.ok(/\.location-menu-item,\s*\n?\s*\.location-district-btn\s*\{[^}]*min-height:\s*44px/.test(mobileMenuBlock));
 });
 
-// 7. Decorative small elements are not accidentally globally enlarged
 test('decorative map elements (markers, clusters) are not given touch-target sizing', () => {
     const css = read('map.css');
     const markerPin = extractBlock(css, /\.marker-pin(?![\w-])/);
@@ -189,7 +182,6 @@ test('sidebar/dashboard rename inputs (non-interactive-button decorative-adjacen
     assert.ok(!/min-height:\s*44px/.test(renameInput), 'rename input is a text field, not a touch button');
 });
 
-// 8. Global focus-visible rule still exists
 test('main.css keeps the global :focus-visible contract', () => {
     const css = read('main.css');
     assert.ok(
@@ -198,8 +190,6 @@ test('main.css keeps the global :focus-visible contract', () => {
     );
 });
 
-// Conditional-fix files: verify focus behavior is genuinely already acceptable
-// (they already carry a :focus ring, so no outline: none regression exists)
 for (const [file, selector] of [
     ['ai-tools.css', '.chip-input-group input'],
     ['appointments.css', '.wizard-textarea'],

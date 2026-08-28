@@ -22,18 +22,15 @@ const nginxConf = fs.readFileSync(NGINX_CONF, 'utf8');
 const homeHtml = fs.readFileSync(path.join(PUBLIC_DIR, 'home.html'), 'utf8');
 const htmlFiles = fs.readdirSync(PUBLIC_DIR).filter((f) => f.endsWith('.html'));
 
-// 1. home.html is the unique explicitly indexable HTML path in nginx policy
 const indexEntries = [...nginxConf.matchAll(/\/public\/([\w.-]+\.html)\s+"index, follow"/g)].map((m) => m[1]);
 assert(indexEntries.length === 1 && indexEntries[0] === 'home.html', 'home.html is the unique "index, follow" entry in nginx.conf');
 
-// 2 & 3. nginx bare-root redirect points to /public/home.html, not index.html
 const rootBlockMatch = nginxConf.match(/location\s*=\s*\/\s*\{([^}]*)\}/);
 assert(!!rootBlockMatch, 'nginx.conf has a location = / block');
 const rootBlock = rootBlockMatch ? rootBlockMatch[1] : '';
 assert(/return\s+\d+\s+\/public\/home\.html\s*;/.test(rootBlock), 'bare-root redirect target is /public/home.html');
 assert(!/return\s+\d+\s+\/public\/index\.html\s*;/.test(rootBlock), 'bare-root redirect no longer targets /public/index.html');
 
-// 4. home.html metadata presence
 function hasTag(html, regex) {
     return regex.test(html);
 }
@@ -53,7 +50,6 @@ assert(hasTag(homeHtml, /<meta\s+name=["']twitter:card["']\s+content=["'][^"']+[
 assert(hasTag(homeHtml, /<meta\s+name=["']twitter:title["']\s+content=["'][^"']+["']/), 'home.html has twitter:title');
 assert(hasTag(homeHtml, /<meta\s+name=["']twitter:description["']\s+content=["'][^"']+["']/), 'home.html has twitter:description');
 
-// 5. no fabricated/placeholder domains in home social metadata
 const bannedPatterns = [/localhost/i, /127\.0\.0\.1/, /medorbit\.(com|ps|io|app)/i, /example\.com/i];
 const socialMetaBlockMatches = homeHtml.match(/<meta\s+(?:property|name)=["'](?:og:|twitter:)[^"']*["'][^>]*>/g) || [];
 for (const tag of socialMetaBlockMatches) {
@@ -62,7 +58,6 @@ for (const tag of socialMetaBlockMatches) {
     }
 }
 
-// 6. canonical: if present, must not use a fabricated/localhost origin
 const canonicalMatch = homeHtml.match(/<link\s+rel=["']canonical["']\s+href=["']([^"']*)["']/);
 if (canonicalMatch) {
     const href = canonicalMatch[1];
@@ -73,7 +68,6 @@ if (canonicalMatch) {
     console.log('INFO: canonical link deferred (no confirmed production origin) — acceptable per spec');
 }
 
-// og:url must not be present with a fabricated domain (deferred entirely is fine)
 const ogUrlMatch = homeHtml.match(/<meta\s+property=["']og:url["']\s+content=["']([^"']*)["']/);
 if (ogUrlMatch) {
     const content = ogUrlMatch[1];
@@ -84,14 +78,12 @@ if (ogUrlMatch) {
     console.log('INFO: og:url deferred (no confirmed production origin) — acceptable per spec');
 }
 
-// 7. every public HTML file contains exactly one favicon link
 for (const file of htmlFiles) {
     const html = fs.readFileSync(path.join(PUBLIC_DIR, file), 'utf8');
     const matches = html.match(/<link\s+rel=["']icon["'][^>]*href=["']favicon\.svg["'][^>]*>/g) || [];
     assert(matches.length === 1, `${file} has exactly one favicon link (found ${matches.length})`);
 }
 
-// 8 & 9. favicon.svg exists, is valid local SVG, no external references
 assert(fs.existsSync(FAVICON), 'frontend/public/favicon.svg exists');
 if (fs.existsSync(FAVICON)) {
     const svgContent = fs.readFileSync(FAVICON, 'utf8');
@@ -100,7 +92,6 @@ if (fs.existsSync(FAVICON)) {
     assert(!/https?:\/\//i.test(withoutNamespaceDecls), 'favicon.svg contains no external http/https resource references (xmlns namespace URIs excluded)');
 }
 
-// 10. protected HTML files were not made indexable
 const protectedFiles = htmlFiles.filter((f) => f !== 'home.html');
 for (const file of protectedFiles) {
     const uri = `/public/${file}`;

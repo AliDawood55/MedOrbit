@@ -1,22 +1,9 @@
-/* ===========================================
-   MedOrbit v2 - Admin Contact Messages Inbox
-   (admin-contact-messages.html)
-
-   Loads after experience.css, which this page shares with contact.html.
-   Every rule here is scoped to body.admin-contact-messages-page so nothing
-   leaks onto other experience.css consumers.
-   =========================================== */
-
-/* experience.css's .experience-page sets max-width but no margin — this page
-   doesn't load listing.css (the usual source of .page-container centering),
-   so the shell stretches and clips flush to one side instead of centering. */
 body.admin-contact-messages-page .experience-page {
     width: 100%;
     max-width: 1040px;
     margin-inline: auto;
 }
 
-/* === Page header === */
 body.admin-contact-messages-page .experience-heading {
     padding-block-end: 16px;
     margin-block: 4px 20px;
@@ -34,7 +21,6 @@ body.admin-contact-messages-page #adminContactSubtitle {
     line-height: 1.6;
 }
 
-/* === Inbox shell === */
 body.admin-contact-messages-page .admin-inbox {
     box-shadow: var(--shadow-xs, var(--shadow-sm));
 }
@@ -43,7 +29,6 @@ body.admin-contact-messages-page .admin-inbox-list {
     background: var(--bg);
 }
 
-/* === Toolbar === */
 body.admin-contact-messages-page .admin-inbox-toolbar {
     align-items: center;
     gap: 10px;
@@ -75,10 +60,6 @@ body.admin-contact-messages-page #contactStatusFilter:focus-visible {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* Native select controls default to a light popup regardless of page theme
-   unless color-scheme tells the browser this control is dark. Without it,
-   the closed control still picks up --bg/--text correctly, but the dropdown
-   popup and its options render as unreadable white-on-white. */
 body[data-theme="dark"].admin-contact-messages-page #contactStatusFilter {
     color-scheme: dark;
 }
@@ -102,7 +83,6 @@ body.admin-contact-messages-page #refreshContactList:focus-visible {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* === Contact list === */
 body.admin-contact-messages-page .contact-list-item {
     border-inline-start: 3px solid transparent;
     transition: background-color .15s ease, border-color .15s ease;
@@ -118,7 +98,6 @@ body.admin-contact-messages-page .contact-list-item:focus-visible {
     box-shadow: inset 0 0 0 2px var(--primary);
 }
 
-/* === Empty / loading state (unstyled by this page's other stylesheets) === */
 body.admin-contact-messages-page .profile-compact-empty {
     display: grid;
     justify-items: center;
@@ -134,7 +113,6 @@ body.admin-contact-messages-page .profile-compact-empty i {
     color: var(--text-faint, var(--text-mute));
 }
 
-/* === Detail pane === */
 body.admin-contact-messages-page .contact-detail-header h2 {
     font-size: 18px;
     font-weight: 800;
@@ -146,9 +124,6 @@ body.admin-contact-messages-page .contact-detail-meta span {
     overflow-wrap: anywhere;
 }
 
-/* Contact messages are free-form, user-submitted, and often mix Arabic and
-   English — plaintext bidi lets each run establish its own direction
-   instead of inheriting the page's dir="rtl". */
 body.admin-contact-messages-page .contact-message-body {
     unicode-bidi: plaintext;
 }
@@ -161,7 +136,6 @@ body.admin-contact-messages-page .contact-detail-actions .btn {
     min-height: 44px;
 }
 
-/* === Pagination === */
 body.admin-contact-messages-page .contact-pager {
     flex-wrap: wrap;
 }

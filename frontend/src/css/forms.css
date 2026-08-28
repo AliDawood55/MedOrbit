@@ -1,9 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Form Components
-   Shared input/label/toggle styles for auth pages,
-   account/profile forms, and other data-entry pages.
-   =========================================== */
-
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -94,7 +88,6 @@
     color: var(--primary);
 }
 
-/* === Password strength meter === */
 .pw-strength {
     display: flex;
     gap: 4px;
@@ -120,7 +113,6 @@
     line-height: 1.5;
 }
 
-/* === Radio group (e.g. gender) === */
 .radio-group {
     display: flex;
     gap: 10px;

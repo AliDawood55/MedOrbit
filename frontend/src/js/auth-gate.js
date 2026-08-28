@@ -1,49 +1,7 @@
-/**
- * MedOrbit v2 - Global Authentication Gate
- *
- * ONE source of truth for "who is allowed to see which page". Loaded as the
- * first script in <head> on every page under frontend/public, so it can hide
- * protected markup before the browser paints it.
- *
- * Policy (deny by default):
- *   PUBLIC_HOME  home.html only — the public product landing page.
- *   AUTH_FLOW    the minimum pages needed to sign in / create / recover an
- *                account. Authentication infrastructure, not product content.
- *   PROTECTED    every other page under frontend/public, including pages that
- *                do not exist yet: an unknown page name is treated as
- *                protected, so a new product page is guarded the day it is
- *                created rather than the day someone remembers to list it.
- *
- * Lifecycle on a protected page:
- *   head parse   classify page -> data-auth-gate="pending" + critical CSS
- *                (protected markup is never painted)
- *   DOMContent   verify the session against the server, once per page load
- *   verified     attribute removed -> page becomes visible
- *   rejected     session cleared -> location.replace to home.html + modal
- *   unreachable  "checking your session" panel with Retry; the session is NOT
- *                erased and protected markup stays hidden
- *
- * A gate that fails to load hides nothing, so each protected page also carries
- * a few inline lines in <head> that raise the same shield and set a watchdog.
- * They cannot 404 the way this file can. If this module never reports itself
- * ready, the watchdog sends the browser to Home instead of revealing the page.
- * That covers the shell only: the HTML itself is still a public static file,
- * and the data inside it is protected by the API, not by this shield.
- *
- * A token sitting in localStorage proves nothing, so the gate never treats it
- * as proof. The only thing that opens a protected page is a 200 from
- * GET /api/users/me through the shared API client (which owns the single
- * refresh-token retry). Backend authentication/authorization stays
- * authoritative for data — this module governs page presentation only.
- */
 const AuthGate = (() => {
     'use strict';
 
-    // ================= PAGE REGISTRY =================
-    // Listing a page here does NOT make it public. Only the two explicit
-    // classifications below are reachable without a verified session.
-
-    const PUBLIC_HOME = 'home.html';
+const PUBLIC_HOME = 'home.html';
 
     const AUTH_FLOW = [
         'login.html',
@@ -53,10 +11,7 @@ const AuthGate = (() => {
         'verify-email.html'
     ];
 
-    // Known product pages. Kept as a list purely so the return-path sanitizer
-    // and the automated route matrix can enumerate real destinations —
-    // classification itself is "not PUBLIC_HOME and not AUTH_FLOW".
-    const PROTECTED = [
+const PROTECTED = [
         'admin-contact-messages.html',
         'admin-doctor-applications.html',
         'admin-invitation-accept.html',
@@ -66,11 +21,8 @@ const AuthGate = (() => {
         'analytics.html',
         'avatar-preview.html',
         'billing.html',
-        // The sandbox checkout stands in for a provider-hosted page, but it
-        // is served from our own origin and reads a checkout attempt scoped
-        // to the caller — so it is protected like any other page. A signed-out
-        // browser has nothing to see there.
-        'billing-sandbox.html',
+
+'billing-sandbox.html',
         'book-appointment.html',
         'clinic.html',
         'contact.html',
@@ -101,29 +53,15 @@ const AuthGate = (() => {
         'symptom-checker.html'
     ];
 
-    /**
-     * Roles each protected page is meant for, where the page and its backend
-     * routes already restrict by role. Documentation and test-matrix input
-     * ONLY — the gate deliberately does not enforce it, because authorization
-     * belongs to the backend and to the existing per-page checks. Being
-     * authenticated is not the same as being allowed; this module answers only
-     * the first question and must never be read as answering the second.
-     */
-    const ROLE_RESTRICTED = {
+const ROLE_RESTRICTED = {
         'analytics.html': ['admin', 'super_admin'],
         'admin-contact-messages.html': ['admin', 'super_admin'],
         'admin-doctor-applications.html': ['admin', 'super_admin'],
         'admin-social.html': ['admin', 'super_admin'],
         'admin-users.html': ['admin', 'super_admin'],
         'admin-invitations.html': ['super_admin'],
-        // admin-invitation-accept.html is deliberately absent. Its backend
-        // route (POST /api/admin/invitations/accept) requires authenticate but
-        // NOT authorizeAdmin: the whole point of an invitation is that the
-        // invited account is not an admin yet. It is PROTECTED — you must be
-        // signed in as the invited account — and nothing more. Listing it here
-        // would describe a restriction the backend does not have, and would be
-        // the first step towards a frontend authorization system.
-        'doctor-posts.html': ['doctor'],
+
+'doctor-posts.html': ['doctor'],
         'doctor-profile-edit.html': ['doctor'],
         'my-patients.html': ['doctor'],
         'my-schedule.html': ['doctor'],
@@ -148,59 +86,36 @@ const AuthGate = (() => {
     function classify(pageName) {
         if (pageName === PUBLIC_HOME) return CLASS_PUBLIC_HOME;
         if (AUTH_FLOW.indexOf(pageName) !== -1) return CLASS_AUTH_FLOW;
-        return CLASS_PROTECTED; // deny by default, unknown pages included
+        return CLASS_PROTECTED;
     }
 
     function currentPage() {
         const last = window.location.pathname.split('/').pop();
-        // A bare directory URL resolves to the app's entry point, which is the
-        // chat app (index.html) — a protected page, not Home.
-        return last || 'index.html';
+
+return last || 'index.html';
     }
 
     function currentReturnPath() {
         return currentPage() + window.location.search + window.location.hash;
     }
 
-    // ================= RETURN-PATH SANITIZER =================
-    // The single validator for every ?redirect= / intended-destination value in
-    // the app (global gate, auth modal, password login, Google sign-in).
-    // Anything that is not a bare, known, same-directory MedOrbit page is
-    // rejected outright rather than repaired.
-
-    const SANITIZER_BASE = 'https://medorbit.invalid/public/';
+const SANITIZER_BASE = 'https://medorbit.invalid/public/';
     const SANITIZER_ORIGIN = 'https://medorbit.invalid';
     const SANITIZER_DIR = '/public/';
 
-    /**
-     * @returns {string|null} "page.html?query#hash" when the value is a safe
-     * in-app destination, otherwise null. Callers MUST treat null as "no
-     * destination" and fall back to their own default — never to the raw input.
-     */
-    function sanitizeReturnPath(raw) {
+function sanitizeReturnPath(raw) {
         if (typeof raw !== 'string') return null;
 
         const value = raw.trim();
         if (!value || value.length > 512) return null;
 
-        // Control characters, including the \t \n \r that browsers strip from a
-        // URL before parsing it — which is how "java\nscript:" style payloads
-        // survive a naive scheme check.
-        if (/[\x00-\x1F\x7F]/.test(value)) return null;
+if (/[\x00-\x1F\x7F]/.test(value)) return null;
 
-        // Any explicit scheme: javascript:, data:, http:, https:, vbscript:, ...
-        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return null;
+if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return null;
 
-        // Protocol-relative ("//evil.example") and the backslash variants some
-        // browsers normalise to "//".
-        if (/^[/\\]{2}/.test(value)) return null;
+if (/^[/\\]{2}/.test(value)) return null;
 
-        // Only a bare page filename is a valid destination — no directories, no
-        // traversal, no percent-encoding. Checked on the raw value before any
-        // URL normalisation, because normalisation is exactly what turns
-        // "../public/dashboard.html" or "%2e%2e%2fadmin.html" into something
-        // that looks local. A legitimate caller never produces either.
-        const pathPart = value.split(/[?#]/)[0];
+const pathPart = value.split(/[?#]/)[0];
         if (!/^[A-Za-z0-9._-]+\.html$/.test(pathPart)) return null;
 
         let url;
@@ -213,24 +128,17 @@ const AuthGate = (() => {
         if (url.origin !== SANITIZER_ORIGIN) return null;
 
         const dir = url.pathname.slice(0, url.pathname.lastIndexOf('/') + 1);
-        if (dir !== SANITIZER_DIR) return null; // ../ traversal, subdirectories
+        if (dir !== SANITIZER_DIR) return null;
 
         const pageName = url.pathname.slice(dir.length);
-        if (!KNOWN_PAGES.has(pageName)) return null; // deny by default
+        if (!KNOWN_PAGES.has(pageName)) return null;
 
-        // Bouncing back into the auth flow after signing in is a loop, not a
-        // destination.
-        if (classify(pageName) === CLASS_AUTH_FLOW) return null;
+if (classify(pageName) === CLASS_AUTH_FLOW) return null;
 
         return pageName + url.search + url.hash;
     }
 
-    /**
-     * The intended destination for the current sign-in attempt: the ?redirect=
-     * parameter first (so existing login.html?redirect=... links keep working),
-     * then whatever the gate stashed when it bounced someone.
-     */
-    function readIntendedDestination() {
+function readIntendedDestination() {
         const params = new URLSearchParams(window.location.search);
         const fromQuery = sanitizeReturnPath(params.get('redirect') || params.get('next'));
         if (fromQuery) return fromQuery;
@@ -248,7 +156,7 @@ const AuthGate = (() => {
             if (safe) sessionStorage.setItem(NEXT_STORAGE_KEY, safe);
             else sessionStorage.removeItem(NEXT_STORAGE_KEY);
         } catch {
-            // Private mode / storage disabled: ?redirect= still carries it.
+
         }
         return safe;
     }
@@ -257,24 +165,17 @@ const AuthGate = (() => {
         try {
             sessionStorage.removeItem(NEXT_STORAGE_KEY);
         } catch {
-            /* nothing to clean up */
+
         }
     }
 
-    /**
-     * Where an authenticated user lands when there is no safe intended
-     * destination. Authentication is shared by every account type; the role
-     * changes only the useful first page, never what the account may access.
-     */
-    function isDoctorApplicationIntent() {
+function isDoctorApplicationIntent() {
         return new URLSearchParams(window.location.search).get('intent') === 'doctor';
     }
 
     function defaultLandingPage(user) {
-        // Public registration deliberately creates a patient account. This
-        // explicit sign-up intent is the only client-side convenience: the
-        // protected application route and server still decide eligibility.
-        if (user?.role === 'patient' && isDoctorApplicationIntent()) {
+
+if (user?.role === 'patient' && isDoctorApplicationIntent()) {
             return 'doctor-application.html';
         }
         switch (user?.role) {
@@ -289,15 +190,13 @@ const AuthGate = (() => {
         }
     }
 
-    // ================= PAGE STATE =================
-
-    const thisPage = currentPage();
+const thisPage = currentPage();
     const pageClass = classify(thisPage);
     const isProtectedPage = pageClass === CLASS_PROTECTED;
 
-    let verifyPromise = null;     // in-flight GET /users/me for this page load
-    let verifiedUser = null;      // last server-confirmed identity
-    let sessionState = 'unknown'; // unknown | valid | invalid | unreachable
+    let verifyPromise = null;
+    let verifiedUser = null;
+    let sessionState = 'unknown';
 
     const scriptDir = (() => {
         const src = document.currentScript && document.currentScript.src;
@@ -305,12 +204,7 @@ const AuthGate = (() => {
         return src.slice(0, src.lastIndexOf('/') + 1);
     })();
 
-    // ================= NO-FLASH SHIELD =================
-    // Injected by this script rather than declared in a stylesheet, so the rule
-    // cannot arrive late (or not at all) relative to the attribute that uses
-    // it. Elements the gate owns carry [data-auth-ui] and stay visible.
-
-    function installShield() {
+function installShield() {
         const style = document.createElement('style');
         style.id = 'authGateShield';
         style.textContent =
@@ -335,12 +229,7 @@ const AuthGate = (() => {
 
     if (isProtectedPage) installShield();
 
-    // ================= STATUS PANEL =================
-    // The safe failure state: shown instead of protected content when the
-    // session cannot be verified (backend down, request failed). Never
-    // presented as a credential problem — an outage is not a rejected identity.
-
-    function tr(key, fallbackAr, fallbackEn) {
+function tr(key, fallbackAr, fallbackEn) {
         if (typeof I18n !== 'undefined' && typeof I18n.t === 'function') {
             const value = I18n.t(key);
             if (value && value !== key) return value;
@@ -431,26 +320,12 @@ const AuthGate = (() => {
         document.body.appendChild(panel);
     }
 
-    // ================= SESSION VERIFICATION =================
-
-    function hasStoredSession() {
+function hasStoredSession() {
         if (typeof API === 'undefined') return false;
         return !!(API.getAccessToken() || API.getRefreshToken());
     }
 
-    /**
-     * Verifies the session against the server, at most once per page load.
-     * Every caller shares the same in-flight promise, so a page that boots
-     * several components still issues a single GET /users/me.
-     *
-     * Expired access tokens are deliberately not handled here: API.request()
-     * already refreshes once on a 401 and retries, and clears the session when
-     * the refresh itself fails. Duplicating that would create a second token
-     * system with its own bugs.
-     *
-     * @returns {Promise<'valid'|'invalid'|'unreachable'>}
-     */
-    function verifySession(options) {
+function verifySession(options) {
         const force = !!(options && options.force);
         if (force) verifyPromise = null;
         if (verifyPromise) return verifyPromise;
@@ -461,9 +336,7 @@ const AuthGate = (() => {
                 return sessionState;
             }
 
-            // No credentials at all — a definitive "not signed in" that needs no
-            // network round trip.
-            if (!hasStoredSession()) {
+if (!hasStoredSession()) {
                 verifiedUser = null;
                 sessionState = 'invalid';
                 return sessionState;
@@ -475,18 +348,13 @@ const AuthGate = (() => {
                 sessionState = 'valid';
             } catch (err) {
                 if (err && (err.status === 401 || err.status === 403)) {
-                    // The server rejected the identity: forged token, deleted or
-                    // disabled user, authorization-version bump, or a refresh
-                    // that failed. Clearing the session here is correct.
-                    verifiedUser = null;
+
+verifiedUser = null;
                     sessionState = 'invalid';
                     API.clearSession();
                 } else {
-                    // Everything else — 5xx, 429, or no status at all because the
-                    // fetch never completed (offline, DNS, refused, CORS). The
-                    // session may well be fine, so it is kept; the page stays
-                    // closed until we actually know.
-                    sessionState = 'unreachable';
+
+sessionState = 'unreachable';
                 }
             }
 
@@ -503,26 +371,18 @@ const AuthGate = (() => {
         ]);
     }
 
-    // ================= DENY =================
-
-    function denyToHome(reason) {
+function denyToHome(reason) {
         const intended = rememberIntendedDestination(currentReturnPath());
         const params = new URLSearchParams();
         params.set('auth', reason);
         if (intended) params.set('next', intended);
 
-        // replace(), not assign(): the protected URL must not stay in history,
-        // or Back from Home would bounce straight into the gate again.
-        window.location.replace(PUBLIC_HOME + '?' + params.toString());
+window.location.replace(PUBLIC_HOME + '?' + params.toString());
     }
 
-    // ================= PROTECTED PAGE BOOT =================
+async function resolveProtectedPage() {
 
-    async function resolveProtectedPage() {
-        // redirect-guard.js owns this load (a password-reset / verify-email
-        // link landing on index.html); it has already started navigating to the
-        // dedicated auth page, so the gate must not race it.
-        if (window.__medorbitNavigatingAway) return;
+if (window.__medorbitNavigatingAway) return;
 
         if (typeof API === 'undefined') {
             raiseShield('blocked');
@@ -550,48 +410,31 @@ const AuthGate = (() => {
         renderStatusPanel('offline');
     }
 
-    // ================= PUBLIC / AUTH-FLOW PAGE BOOT =================
+async function resolvePublicPage() {
 
-    async function resolvePublicPage() {
-        // Home and the auth pages render for everyone. A stored session is
-        // still confirmed in the background so the header, the CTA state and
-        // the navigation interception below reflect reality rather than a
-        // leftover token — reusing the same deduplicated request, not an extra one.
-        if (typeof API === 'undefined' || !hasStoredSession()) return;
+if (typeof API === 'undefined' || !hasStoredSession()) return;
 
         const state = await verifySession();
         if (state === 'invalid') {
-            // API.clearSession() has already fired auth:changed, so Layout has
-            // re-rendered itself as a signed-out header.
-            document.dispatchEvent(new CustomEvent('authgate:signedout'));
+
+document.dispatchEvent(new CustomEvent('authgate:signedout'));
         }
     }
 
-    // ================= NAVIGATION INTERCEPTION =================
-    // One capture-phase listener for the whole document. Desktop nav, mobile
-    // drawer, footer, hero actions, feature cards, the user menu, and any link
-    // a page renders later all pass through here — there is nothing to wire up
-    // per link, and a link added tomorrow is covered automatically.
+function isSignedInEnough() {
 
-    function isSignedInEnough() {
-        // Presentation-level check only. 'valid' is server-confirmed; a bare
-        // stored token is optimistically allowed to navigate because the
-        // destination page runs this same gate and will bounce it if the
-        // session turns out to be bad. Nothing is disclosed either way — the
-        // backend authorises the data, not this function.
-        if (sessionState === 'valid') return true;
+if (sessionState === 'valid') return true;
         if (sessionState === 'invalid') return false;
         return hasStoredSession();
     }
 
-    /** Resolves an <a href> to a same-directory page name, or null. */
-    function pageFromAnchor(anchor) {
+function pageFromAnchor(anchor) {
         const raw = anchor.getAttribute('href');
         if (!raw) return null;
 
         const trimmed = raw.trim();
         if (!trimmed || trimmed.charAt(0) === '#') return null;
-        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) return null; // mailto:, tel:, http:, ...
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) return null;
 
         let url;
         try {
@@ -626,15 +469,7 @@ const AuthGate = (() => {
         requireAuthFor(name + url.search + url.hash, anchor);
     }
 
-    /**
-     * Programmatic equivalent of clicking a protected link, for navigation a
-     * page computes in JS (the Home hero search picks its destination from a
-     * dropdown, so there is no href to intercept).
-     *
-     * @returns {boolean} true if navigation happened, false if the auth modal
-     * opened instead.
-     */
-    function navigate(destination, trigger) {
+function navigate(destination, trigger) {
         const safe = sanitizeReturnPath(destination);
         if (!safe) return false;
 
@@ -653,9 +488,7 @@ const AuthGate = (() => {
         openModal({ intended: safe, trigger });
     }
 
-    // ================= AUTH MODAL =================
-
-    let modalEl = null;
+let modalEl = null;
     let modalPreviousFocus = null;
     let modalIntended = null;
     let googleLoaderPromise = null;
@@ -690,10 +523,7 @@ const AuthGate = (() => {
         dialog.setAttribute('aria-labelledby', 'authModalTitle');
         dialog.setAttribute('aria-describedby', 'authModalDesc');
 
-        // Static, developer-authored markup only — no user or URL data reaches
-        // innerHTML here; the destination is written through the href property
-        // of an element resolved by id (see applyModalLinks).
-        dialog.innerHTML =
+dialog.innerHTML =
             '<button type="button" class="auth-modal-close" id="authModalClose" data-i18n-aria="authModal.close" aria-label="Close">' +
                 '<i class="fas fa-times" aria-hidden="true"></i>' +
             '</button>' +
@@ -750,9 +580,7 @@ const AuthGate = (() => {
         const last = items[items.length - 1];
         const active = document.activeElement;
 
-        // The Google button lives in a cross-origin iframe, so focus can leave
-        // the list entirely; wrapping from the known ends keeps the trap intact.
-        if (event.shiftKey && (active === first || !modalEl.contains(active))) {
+if (event.shiftKey && (active === first || !modalEl.contains(active))) {
             event.preventDefault();
             last.focus();
         } else if (!event.shiftKey && active === last) {
@@ -789,7 +617,7 @@ const AuthGate = (() => {
         setModalAlert(opts.message);
 
         modalEl.hidden = false;
-        // Next frame, so the opening transition actually runs.
+
         requestAnimationFrame(() => modalEl.classList.add('open'));
 
         if (typeof Dom !== 'undefined' && typeof Dom.lockScroll === 'function') Dom.lockScroll();
@@ -819,13 +647,7 @@ const AuthGate = (() => {
         modalPreviousFocus = null;
     }
 
-    /**
-     * Mounts the existing Google Identity Services implementation into the
-     * modal. Reused verbatim: same script loader, same GET /api/config client
-     * id, same POST /api/auth/google exchange, same API.setSession. Only the
-     * post-success destination is supplied by the gate.
-     */
-    async function mountGoogleButton() {
+async function mountGoogleButton() {
         if (googleMounted) return;
 
         const ok = await loadGoogleSignIn();
@@ -860,9 +682,7 @@ const AuthGate = (() => {
         if (divider) divider.classList.add('hidden');
     }
 
-    // ================= HOME ENTRY POINT =================
-
-    function handleHomeAuthPrompt() {
+function handleHomeAuthPrompt() {
         if (pageClass !== CLASS_PUBLIC_HOME) return;
 
         const params = new URLSearchParams(window.location.search);
@@ -871,20 +691,13 @@ const AuthGate = (() => {
 
         const intended = sanitizeReturnPath(params.get('next')) || readIntendedDestination();
 
-        // Strip the prompt parameters from the URL so a refresh, or Back from
-        // somewhere else, does not re-trigger the modal. replaceState reuses
-        // the single history entry that the gate's location.replace() created,
-        // which is what keeps Back from looping between Home and the protected
-        // page.
-        try {
+try {
             window.history.replaceState(null, '', window.location.pathname + window.location.hash);
         } catch {
-            /* file:// and similar: leaving the query in place is harmless */
+
         }
 
-        // Someone who is already signed in and simply followed a stale link
-        // should not be nagged; an expired session always explains itself.
-        if (reason !== 'expired' && isSignedInEnough()) return;
+if (reason !== 'expired' && isSignedInEnough()) return;
 
         openModal({
             intended,
@@ -894,13 +707,11 @@ const AuthGate = (() => {
         });
     }
 
-    // ================= SESSION LOSS DURING A PAGE'S LIFETIME =================
-
-    function handleAuthChanged() {
+function handleAuthChanged() {
         if (typeof API === 'undefined') return;
 
         if (API.isAuthenticated()) {
-            // A fresh sign-in on this page: let the next check re-confirm it.
+
             if (sessionState === 'invalid') {
                 sessionState = 'unknown';
                 verifyPromise = null;
@@ -908,25 +719,19 @@ const AuthGate = (() => {
             return;
         }
 
-        // The session went away — most often API.refreshAccessToken() giving up
-        // and calling clearSession(). On a protected page that leaves a dead
-        // shell that will only produce more 401s, so leave immediately with the
-        // current location preserved as the return destination.
-        verifiedUser = null;
+verifiedUser = null;
         sessionState = 'invalid';
         verifyPromise = null;
 
         if (!isProtectedPage) return;
-        // Boot is still deciding; letting it finish avoids a double redirect.
+
         if (document.documentElement.getAttribute('data-auth-gate') === 'pending') return;
 
         raiseShield('pending');
         denyToHome('expired');
     }
 
-    // ================= BOOT =================
-
-    function boot() {
+function boot() {
         try {
             document.addEventListener('click', handleDocumentClick, true);
             window.addEventListener('auth:changed', handleAuthChanged);
@@ -938,10 +743,8 @@ const AuthGate = (() => {
                 resolvePublicPage();
             }
         } catch {
-            // Never leave a protected page permanently blank because of a bug in
-            // this module: fall back to the retry state, which is honest about
-            // what happened and keeps the content hidden.
-            if (isProtectedPage) {
+
+if (isProtectedPage) {
                 raiseShield('blocked');
                 renderStatusPanel('offline');
             }
@@ -954,15 +757,10 @@ const AuthGate = (() => {
         boot();
     }
 
-    // Set last, so it means "this module parsed and installed itself", not
-    // merely "the file started downloading". The inline bootstrap in each
-    // protected page's <head> watches this flag: if the gate never arrives —
-    // 404, blocked request, a parse error partway through — the bootstrap
-    // leaves for Home rather than exposing the page it is shielding.
-    window.__medorbitAuthGateReady = true;
+window.__medorbitAuthGateReady = true;
 
     return {
-        // classification
+
         PUBLIC_HOME: PUBLIC_HOME,
         AUTH_FLOW: AUTH_FLOW,
         PROTECTED: PROTECTED,
@@ -970,18 +768,18 @@ const AuthGate = (() => {
         classify: classify,
         currentPage: currentPage,
         pageClassification: () => pageClass,
-        // return-path security
+
         sanitizeReturnPath: sanitizeReturnPath,
         readIntendedDestination: readIntendedDestination,
         rememberIntendedDestination: rememberIntendedDestination,
         clearIntendedDestination: clearIntendedDestination,
         defaultLandingPage: defaultLandingPage,
         isDoctorApplicationIntent: isDoctorApplicationIntent,
-        // session
+
         verifySession: verifySession,
         getVerifiedUser: () => verifiedUser,
         getSessionState: () => sessionState,
-        // navigation + UI
+
         navigate: navigate,
         requireAuthFor: requireAuthFor,
         openModal: openModal,

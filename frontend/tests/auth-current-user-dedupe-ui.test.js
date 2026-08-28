@@ -1,21 +1,3 @@
-/**
- * Redundant current-user fetch elimination (Phase 5, P5D1).
- *
- * auth-gate.js is the single authoritative caller of GET /users/me per page
- * load (verifySession() dedupes in-flight calls). Protected page controllers
- * that only need the currently verified identity must reuse that result via
- * AuthGate.verifySession() / AuthGate.getVerifiedUser() instead of issuing
- * their own API.users.me() call, which would double the request.
- *
- * A handful of API.users.me() calls remain deliberately — a fresh server
- * round trip is required right after an identity-changing mutation (e.g. an
- * avatar upload) that AuthGate's cached verifiedUser would not reflect. Those
- * are allowlisted below with the reason they stay.
- *
- * Static source scan only, no DOM/vm: this is a data-flow property of the
- * source text (who calls API.users.me()), not of runtime behavior already
- * covered by auth-gate-ui.test.js.
- */
 const fs = require('fs');
 const path = require('path');
 
@@ -47,10 +29,6 @@ function countMatches(source, pattern) {
 
 console.log('\nRedundant current-user request elimination tests\n');
 
-// =====================================================================
-// auth-gate.js remains the sole authoritative caller
-// =====================================================================
-
 console.log('auth-gate.js authoritative verification');
 {
     const source = jsFile('auth-gate.js');
@@ -61,10 +39,6 @@ console.log('auth-gate.js authoritative verification');
     check('getVerifiedUser returns the stored identity directly (no .data wrapper)',
         /getVerifiedUser:\s*\(\)\s*=>\s*verifiedUser/.test(source));
 }
-
-// =====================================================================
-// Protected page controllers: init-time duplicates removed
-// =====================================================================
 
 console.log('\nProtected page controllers use AuthGate instead of a second /users/me fetch');
 
@@ -94,10 +68,6 @@ for (const name of dedupedPages) {
     check(`${name}: uses AuthGate.getVerifiedUser()`, /AuthGate\.getVerifiedUser\(\)/.test(source));
 }
 
-// =====================================================================
-// Retained API.users.me() calls: explicitly allowlisted with a reason
-// =====================================================================
-
 console.log('\nRetained API.users.me() calls are documented freshness exceptions');
 
 const allowlist = {
@@ -116,16 +86,12 @@ for (const [name, { count }] of Object.entries(allowlist)) {
         /AuthGate\.verifySession\(\)/.test(source) && /AuthGate\.getVerifiedUser\(\)/.test(source));
 }
 
-// =====================================================================
-// Full-repo inventory: every API.users.me() occurrence is accounted for
-// =====================================================================
-
 console.log('\nFull-repo inventory');
 {
     const jsDir = path.resolve(__dirname, '..', 'src', 'js');
     const files = fs.readdirSync(jsDir).filter((f) => f.endsWith('.js'));
 
-    const expectedTotal = 1 /* auth-gate.js */ + Object.values(allowlist).reduce((sum, { count }) => sum + count, 0);
+    const expectedTotal = 1   + Object.values(allowlist).reduce((sum, { count }) => sum + count, 0);
     let total = 0;
     const unexpected = [];
 
@@ -143,8 +109,6 @@ console.log('\nFull-repo inventory');
     check(`total API.users.me() occurrences across src/js == ${expectedTotal}`, total === expectedTotal, `found ${total}`);
     check('no unexpected/undocumented API.users.me() occurrences', unexpected.length === 0, unexpected.join(', '));
 }
-
-// =====================================================================
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

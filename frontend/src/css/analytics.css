@@ -1,8 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Analytics (analytics.html)
-   =========================================== */
-
-/* === Page shell === */
 body.analytics-page .page-container {
     max-width: 1300px;
 }
@@ -17,7 +12,6 @@ body.analytics-page .page-container {
     margin-top: 4px;
 }
 
-/* === Loading state === */
 #analyticsLoading {
     display: flex;
     flex-direction: column;
@@ -34,12 +28,8 @@ body.analytics-page .page-container {
 }
 
 .chart-card {
-    /* Without this, a CSS grid item defaults to min-width:auto and won't
-       shrink below its content's intrinsic size — Chart.js's canvas (sized
-       at whatever the viewport was at initial render) would then force the
-       whole grid track, and the page, wider than the viewport on a resize
-       to a narrower breakpoint. */
-    min-width: 0;
+
+min-width: 0;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
@@ -48,8 +38,6 @@ body.analytics-page .page-container {
     transition: border-color var(--t-fast), box-shadow var(--t-fast);
 }
 
-/* Static cards, not navigation — a subtle surface change on hover, no lift,
-   so they don't read as clickable. */
 .chart-card:hover {
     border-color: var(--border);
     box-shadow: var(--shadow-sm);
@@ -114,7 +102,6 @@ body.analytics-page .page-container {
     display: none;
 }
 
-/* === Access restricted (non-admin) === */
 .analytics-restricted {
     text-align: center;
     padding: 60px 20px;
@@ -149,8 +136,6 @@ body.analytics-page .page-container {
     min-height: 44px;
 }
 
-/* Distinct from the restricted state — a load failure, not an
-   authorization boundary — without the alarming full-error treatment. */
 #analyticsLoadError {
     border-top: 3px solid var(--danger);
 }
@@ -165,12 +150,6 @@ body.analytics-page .page-container {
     }
 }
 
-/* ===========================================
-   Summary tiles — the scalar totals GET /api/dashboard/stats returns.
-   Charts on this page need dimensions the endpoint does not provide, so these
-   totals are shown plainly rather than forced into a chart that would
-   mislabel them.
-   =========================================== */
 .analytics-kpis {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));

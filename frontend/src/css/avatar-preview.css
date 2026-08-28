@@ -1,10 +1,3 @@
-﻿/* ===========================================
-   MedOrbit v2 - Virtual Doctor Avatar Preview
-   Standalone spike page â€” polished shell, not yet wired to the interview
-   engine. Reuses main.css/components.css/ai-tools.css tokens throughout;
-   this file only covers what's unique to the avatar stage + status strip.
-   =========================================== */
-
 .avatar-shell {
     max-width: 960px;
     margin: 0 auto;
@@ -24,7 +17,6 @@
     box-shadow: var(--shadow-md);
 }
 
-/* === Status strip === */
 .avatar-status-strip {
     display: flex;
     align-items: center;
@@ -50,12 +42,10 @@
     transition: color var(--t-base);
 }
 
-/* idle: calm, no motion */
 .avatar-status-strip.state-idle .status-indicator-dot {
     background: var(--text-faint);
 }
 
-/* thinking: amber, gentle pulse */
 .avatar-status-strip.state-thinking .status-indicator-dot {
     background: var(--warning);
     animation: statusPulse 1s ease-in-out infinite;
@@ -67,8 +57,6 @@
     color: var(--warning);
 }
 
-/* speaking: primary blue, steady pulse (mirrors the existing chat-header
-   status-dot / avatar-pulse idiom used elsewhere in the app) */
 .avatar-status-strip.state-speaking .status-indicator-dot {
     background: var(--primary);
     box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5);
@@ -88,14 +76,6 @@
     .status-indicator-dot { animation: none !important; }
 }
 
-/* ===========================================
-   Voice indicator (replaces the former 3D avatar stage)
-
-   One circular orb whose appearance is driven by the SAME state names the
-   status strip uses — idle | listening | capturing | thinking | speaking —
-   plus `is-speaking-aloud` while TTS audio is actually playing. Pure CSS: no
-   canvas, no WebGL, no per-frame JS.
-   =========================================== */
 .voice-stage {
     position: relative;
     height: 480px;
@@ -108,10 +88,7 @@
         radial-gradient(ellipse 70% 60% at 50% 40%, var(--primary-50) 0%, transparent 70%),
         linear-gradient(180deg, var(--bg-soft) 0%, var(--bg-card) 100%);
 
-    /* Live microphone level (0..1), pushed in from the STT onLevel callback.
-       Everything reactive reads this, so the orb responds to the real voice
-       rather than replaying a fixed animation. */
-    --level: 0;
+--level: 0;
     --orb-size: 168px;
     --orb-from: #2563EB;
     --orb-to: #7C3AED;
@@ -136,7 +113,6 @@
     grid-area: 1 / 1;
 }
 
-/* Soft outer bloom */
 .voice-orb-glow {
     width: 100%;
     height: 100%;
@@ -148,7 +124,6 @@
     transition: transform 120ms ease-out, opacity var(--t-base);
 }
 
-/* Solid gradient centre */
 .voice-orb-core {
     width: 58%;
     height: 58%;
@@ -161,7 +136,6 @@
     transition: transform 110ms ease-out, box-shadow var(--t-base);
 }
 
-/* Expanding rings, only animated in the reactive states */
 .voice-orb-ring {
     width: 72%;
     height: 72%;
@@ -179,7 +153,6 @@
     transition: color var(--t-base);
 }
 
-/* --- Waveform bars: shown only while the doctor is actually speaking --- */
 .voice-wave {
     display: none;
     align-items: center;
@@ -197,7 +170,6 @@
     background: rgba(255, 255, 255, 0.92);
 }
 
-/* ---------- idle: a calm, static glow ---------- */
 .voice-stage.state-idle .voice-orb-core {
     background: linear-gradient(145deg, #93a7c9 0%, #a99ec9 100%);
     box-shadow: 0 6px 20px rgba(100, 116, 139, 0.28),
@@ -205,7 +177,6 @@
 }
 .voice-stage.state-idle .voice-orb-glow { opacity: 0.55; }
 
-/* ---------- listening: slow breathing, mic is open ---------- */
 .voice-stage.state-listening .voice-orb-core {
     animation: voiceBreathe 2.6s ease-in-out infinite;
 }
@@ -217,7 +188,6 @@
     animation-delay: 1.3s;
 }
 
-/* ---------- capturing: the patient is speaking, orb tracks the level ------ */
 .voice-stage.state-capturing .voice-orb-ring {
     border-color: rgba(124, 58, 237, 0.55);
     animation: voiceRipple 1.1s ease-out infinite;
@@ -225,14 +195,12 @@
 .voice-stage.state-capturing .voice-orb-ring--slow { animation-delay: 0.55s; }
 .voice-stage.state-capturing .voice-label { color: var(--primary); }
 
-/* ---------- thinking: subtle, unhurried pulse ---------- */
 .voice-stage.state-thinking .voice-orb-core {
     animation: voiceThink 1.5s ease-in-out infinite;
 }
 .voice-stage.state-thinking .voice-label { color: #b45309; }
 [data-theme="dark"] .voice-stage.state-thinking .voice-label { color: var(--warning); }
 
-/* ---------- speaking: waveform replaces the plain core ---------- */
 .voice-stage.state-speaking .voice-label,
 .voice-stage.is-speaking-aloud .voice-label { color: var(--primary); }
 
@@ -275,14 +243,12 @@
     .voice-wave i {
         animation: none !important;
     }
-    /* Without motion the state must still read: the label text and colour
-       change, and the speaking state keeps its bars at a fixed height. */
-    .voice-stage.is-speaking-aloud .voice-wave i { height: 50%; }
+
+.voice-stage.is-speaking-aloud .voice-wave i { height: 50%; }
     .voice-stage.state-listening .voice-orb-ring,
     .voice-stage.state-capturing .voice-orb-ring { opacity: 0.5; }
 }
 
-/* === Controls card === */
 .avatar-controls-card {
     width: 280px;
     flex-shrink: 0;
@@ -316,14 +282,6 @@
     flex: 1;
 }
 
-/* ===========================================
-   Hands-free consultation
-   =========================================== */
-
-/* The browser's own `[hidden] { display: none }` comes from the UA stylesheet,
-   so any class below that sets `display` outranks it and would leave these
-   panels permanently on screen. Restate it for everything toggled via the
-   `hidden` attribute here. */
 .consult-start-card[hidden],
 .avatar-shell[hidden],
 .consult-panel [hidden],
@@ -336,8 +294,6 @@
     display: none !important;
 }
 
-/* The error banner sits outside the consultation shell so it is visible from
-   the start screen too — see the comment in avatar-preview.html. */
 .consult-error {
     max-width: 560px;
     margin: 16px auto 0;
@@ -377,7 +333,6 @@
     color: var(--danger);
 }
 
-/* === Start gate === */
 .consult-start-card {
     max-width: 560px;
     margin: 0 auto;
@@ -421,7 +376,6 @@
     border-radius: 999px;
 }
 
-/* === Status strip states === */
 .status-timer {
     margin-inline-start: auto;
     font-family: Consolas, "SF Mono", monospace;
@@ -431,14 +385,12 @@
     color: var(--text-mute);
 }
 
-/* listening: calm green, slow breath â€” the mic is open but nobody is talking */
 .avatar-status-strip.state-listening .status-indicator-dot {
     background: var(--success, #16a34a);
     animation: statusPulse 2s ease-in-out infinite;
 }
 .avatar-status-strip.state-listening .status-label { color: var(--success, #16a34a); }
 
-/* capturing: the patient is actively speaking â€” brighter, faster */
 .avatar-status-strip.state-capturing .status-indicator-dot {
     background: var(--danger, #ef4444);
     animation: micDotBlink 0.9s ease-in-out infinite;
@@ -450,23 +402,20 @@
     50%      { opacity: 0.35; transform: scale(0.8); }
 }
 
-/* === Speaking aloud: strip turns primary-blue and the dot pulses === */
 .avatar-status-strip.is-speaking-aloud .status-indicator-dot {
     background: var(--primary);
     animation: statusPulse 1.1s infinite;
 }
 .avatar-status-strip.is-speaking-aloud .status-label { color: var(--primary); }
 
-/* A speaker glyph so "speaking" is not conveyed by colour alone. */
 .avatar-status-strip.is-speaking-aloud .status-label::after {
-    content: "\f028";                 /* fa-volume-high */
+    content: "\f028";
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
     margin-inline-start: 8px;
     font-size: 11px;
 }
 
-/* === Subtitles, overlaid on the avatar stage === */
 .subtitle-bar {
     position: absolute;
     inset-inline: 12px;
@@ -504,7 +453,6 @@
     word-break: break-word;
 }
 
-/* === TTS failure notice === */
 .tts-warning {
     margin-top: 12px;
     display: flex;
@@ -524,7 +472,6 @@
 .tts-warning [lang="ar"] { direction: rtl; text-align: right; }
 .tts-warning [lang="en"] { direction: ltr; text-align: left; }
 
-/* === Live input level, under the avatar stage === */
 .mic-level-track {
     height: 4px;
     background: var(--bg-soft);
@@ -542,7 +489,6 @@
     background: linear-gradient(90deg, var(--success, #16a34a), var(--warning, #f59e0b));
 }
 
-/* === Conversation panel === */
 .consult-panel {
     width: 340px;
     flex-shrink: 0;
@@ -596,7 +542,6 @@
     color: var(--text);
 }
 
-/* === Status / error === */
 .mic-status {
     margin-top: 12px;
     font-size: 13px;
@@ -623,9 +568,6 @@
 .mic-error-body { min-width: 0; flex: 1; }
 .mic-error-msg { margin: 0; font-size: 13.5px; font-weight: 600; }
 
-/* A permission block can only be undone in browser chrome, so the recovery
-   steps are shown in BOTH languages regardless of the active UI language â€”
-   the person who has to read them may not be the one who set the toggle. */
 .mic-error-help {
     margin-top: 8px;
     padding-top: 8px;
@@ -641,7 +583,6 @@
 
 .mic-error .btn { margin-top: 10px; }
 
-/* === Consultation summary === */
 .consult-summary {
     margin-top: 16px;
     padding: 14px;
@@ -700,8 +641,6 @@
 .consult-report-actions { margin-top: 14px; }
 .consult-report-actions .btn { width: 100%; }
 
-/* When the renderer is unavailable the button is disabled in JS; make that
-   visible, otherwise it reads as clickable and invites pointless retries. */
 .consult-report-actions .btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -734,14 +673,12 @@
     .subtitle-speaker {
         animation: none !important;
     }
-    /* Without motion the state must still be unmistakable: colour, label and
-       the running timer all still change. */
-    .avatar-status-strip.state-capturing .status-indicator-dot {
+
+.avatar-status-strip.state-capturing .status-indicator-dot {
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35);
     }
 }
 
-/* === Responsive === */
 @media (max-width: 900px) {
     .avatar-shell {
         flex-direction: column;
@@ -776,14 +713,6 @@
         width: 100%;
     }
 }
-
-/* =====================================================================
-   Voice Doctor cooldown / upgrade panel
-   ---------------------------------------------------------------------
-   Shown only after a consultation ends or when the allowance is spent.
-   Nothing about payment appears during a consultation — a patient mid-
-   symptom-description should not be sold to.
-   ===================================================================== */
 
 .voice-paywall {
     display: flex;

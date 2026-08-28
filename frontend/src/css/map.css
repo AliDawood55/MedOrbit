@@ -1,7 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Map & Custom Markers
-   =========================================== */
-
 .map-panel {
     position: relative;
     height: 100%;
@@ -15,7 +11,6 @@
     z-index: 1;
 }
 
-/* === Custom Markers === */
 .custom-marker {
     background: transparent !important;
     border: none !important;
@@ -58,7 +53,6 @@
     transform: rotate(45deg) scale(1.15);
 }
 
-/* User location (blue/green) */
 .marker-pin.user {
     background: var(--secondary);
     z-index: 999;
@@ -78,7 +72,6 @@
     100% { transform: scale(2.2); opacity: 0; }
 }
 
-/* Categories */
 .marker-pin.clinic {
     background: var(--cat-clinic);
 }
@@ -107,14 +100,6 @@
     display: none;
 }
 
-/* === Marker Clusters (leaflet.markercluster) ===
-   Plugin default CSS keeps the outer .marker-cluster box at a fixed 40x40
-   anchor (verified against the loaded MarkerCluster.Default.css) and only
-   varies color between the small/medium/large classes — the inner div's
-   own size is what visually communicates density, offset by an equal
-   margin on all sides so the anchor point stays centered. We follow the
-   same box-model trick, just with MedOrbit tokens instead of the plugin's
-   green/yellow/orange defaults. */
 .marker-cluster {
     background: transparent;
     transition: transform var(--t-fast);
@@ -169,7 +154,6 @@
     font-size: 13px;
 }
 
-/* === Map Controls (Floating) === */
 .map-controls {
     position: absolute;
     bottom: 24px;
@@ -214,11 +198,6 @@
     border-color: var(--primary);
 }
 
-/* === Location Picker (shared: index.html + find-clinics.html) ===
-   Centers the pill without a `transform` on this container — a transform
-   here would make it a containing block for the mobile bottom-sheet's
-   position:fixed below, anchoring the sheet to this small box instead of
-   the viewport. */
 .location-picker {
     position: absolute;
     top: 16px;
@@ -296,7 +275,6 @@
     box-shadow: var(--shadow-lg);
     padding: 8px;
 }
- 
 
 .location-menu.open {
     display: block;
@@ -378,8 +356,6 @@
     outline-offset: 2px;
 }
 
-/* === Mobile: the location menu becomes a bottom sheet instead of a small
-   anchored dropdown (which would clip against a narrow map panel) === */
 @media (max-width: 768px) {
     .location-menu-backdrop {
         display: none;
@@ -421,7 +397,6 @@
     }
 }
 
-/* === Status Pill === */
 .map-status {
     position: absolute;
     top: 16px;
@@ -489,7 +464,6 @@
 
 .map-status.info i { color: white; }
 
-/* === Empty State Overlay === */
 .map-empty {
     position: absolute;
     inset: 0;
@@ -531,7 +505,6 @@
     line-height: 1.6;
 }
 
-/* === Leaflet Popup Override === */
 .leaflet-popup-content-wrapper {
     border-radius: var(--r-md) !important;
     box-shadow: var(--shadow-xl) !important;
@@ -653,7 +626,6 @@
     padding: 7px 8px;
 }
 
-/* === Attribution override === */
 .leaflet-control-attribution {
     background: var(--bg-elevated) !important;
     color: var(--text-mute) !important;
@@ -688,9 +660,6 @@
     }
 }
 
-/* === Reduced Motion (map-specific cosmetic animation only) ===
-   Leaflet's own pan/zoom/tile transitions are untouched — only decorative
-   CSS animations/transitions defined in this file are suppressed. */
 @media (prefers-reduced-motion: reduce) {
     .marker-pin {
         transition: none;

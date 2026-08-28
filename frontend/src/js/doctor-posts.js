@@ -1,12 +1,3 @@
-/**
- * MedOrbit v2 - Doctor Posts (management)
- *
- * GET/POST /doctors/me/posts, PUT/DELETE /doctors/me/posts/:postId
- * (backend/src/routes/doctor.routes.js) — doctor_id resolved server-side
- * from the JWT for every operation; PUT/DELETE additionally verify the
- * post belongs to the calling doctor (id + doctor_id match in the WHERE
- * clause) before touching it.
- */
 const DoctorPosts = (() => {
 
     const CATEGORY_KEY = {
@@ -51,9 +42,7 @@ const DoctorPosts = (() => {
         return (isAr() ? p.title_ar : p.title_en) || p.title_ar || p.title_en || '';
     }
 
-    // ================= LIST =================
-
-    async function loadPosts() {
+async function loadPosts() {
         const el = document.getElementById('postsList');
         if (!el) return;
         el.innerHTML = renderSkeleton();
@@ -138,9 +127,7 @@ const DoctorPosts = (() => {
         );
     }
 
-    // ================= FORM (create + edit) =================
-
-    function showForm() {
+function showForm() {
         editingPostId = null;
         resetForm();
         document.getElementById('postFormTitle').textContent = t('doctorPosts.newPost');
@@ -252,9 +239,7 @@ const DoctorPosts = (() => {
         document.getElementById('postFormResult').classList.remove('hidden');
     }
 
-    // ================= DELETE =================
-
-    function openDeleteModal(id) {
+function openDeleteModal(id) {
         const backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
         backdrop.innerHTML =
@@ -304,9 +289,7 @@ const DoctorPosts = (() => {
         }
     }
 
-    // ================= ROLE GATE + INIT =================
-
-    async function init() {
+async function init() {
         if (!API.requireAuth()) return;
 
         const state = await AuthGate.verifySession();

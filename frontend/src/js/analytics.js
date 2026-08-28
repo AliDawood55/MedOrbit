@@ -1,17 +1,8 @@
-/**
- * MedOrbit v2 - Analytics
- * Wires analytics.html to the real admin endpoint: GET /api/dashboard/stats.
- * See api.js for the full response contract. Every number rendered here is
- * either a real aggregate from that response or an honest "unavailable" /
- * "no data yet" state — never a placeholder or fabricated value.
- */
 const Analytics = (() => {
 
     const charts = {};
-    // The untouched payload from the last successful load, kept so the KPI
-    // tiles and charts can be rebuilt in the other language/theme without a
-    // second network call.
-    let rawStats = null;
+
+let rawStats = null;
 
     const ROLE_LABEL_KEYS = {
         patient: 'analytics.rolePatient',
@@ -79,9 +70,7 @@ const Analytics = (() => {
         return key ? t(key) : String(level || '');
     }
 
-    // Week-start ISO dates (e.g. "2026-05-25") from the backend, formatted as
-    // a short localized date for the chart's x-axis.
-    function formatWeekLabel(iso) {
+function formatWeekLabel(iso) {
         const date = new Date(iso + 'T00:00:00Z');
         if (Number.isNaN(date.getTime())) return iso;
         try {
@@ -93,20 +82,11 @@ const Analytics = (() => {
         }
     }
 
-    // ================= ANALYTICS SECTION ACCESS =================
-    // Each chart's backend section is one of: undefined (older/partial
-    // payload), { error: true } (that one query failed server-side), or
-    // { data: {...} } (real result, possibly with zero counts). This never
-    // throws — every render function below treats "no usable data" and "the
-    // section errored" as distinct, correctly-labelled states rather than
-    // collapsing them into one misleading empty chart.
-    function analyticsSection(key) {
+function analyticsSection(key) {
         return rawStats?.analytics?.[key];
     }
 
-    // ================= SUMMARY TILES =================
-
-    function buildSummary(data) {
+function buildSummary(data) {
         const users = data.users || {};
         const appointments = data.appointments || {};
         const records = data.medical_records || {};
@@ -128,7 +108,7 @@ const Analytics = (() => {
             {
                 icon: 'fa-star', tone: 'warning',
                 label: label('متوسط تقييم الأطباء', 'Avg doctor rating'),
-                // null when no doctor has been rated yet — show a dash, not 0.
+
                 value: rating, text: rating == null ? '—' : rating.toFixed(2)
             }
         ];
@@ -159,9 +139,7 @@ const Analytics = (() => {
         )).join('');
     }
 
-    // ================= THEME =================
-
-    function themeColors() {
+function themeColors() {
         const cs = getComputedStyle(document.documentElement);
         const v = (name) => cs.getPropertyValue(name).trim();
         return {
@@ -192,11 +170,7 @@ const Analytics = (() => {
         };
     }
 
-    // state: null (hide overlay, chart is showing real non-zero data),
-    // 'empty' (section loaded but genuinely has zero data), or
-    // 'unavailable' (section errored server-side, or the payload is missing
-    // it entirely).
-    function toggleOverlay(key, state) {
+function toggleOverlay(key, state) {
         const overlay = document.getElementById('overlay' + key);
         if (!overlay) return;
 
@@ -224,13 +198,7 @@ const Analytics = (() => {
         }
     }
 
-    // ================= CHART RENDERERS =================
-    // Each renderer resolves its own section from rawStats, decides which of
-    // the three states applies (real data / empty / unavailable), and only
-    // constructs a Chart.js instance for the first case — an errored or
-    // missing section never gets a chart built from placeholder data.
-
-    function renderAppointmentsOverTime() {
+function renderAppointmentsOverTime() {
         const section = analyticsSection('appointmentsOverTime');
         destroy('appointments');
 
@@ -433,15 +401,7 @@ const Analytics = (() => {
         renderClinicTypes();
     }
 
-    // ================= LOAD-ERROR BANNER =================
-    // A failure here means the whole GET /api/dashboard/stats request never
-    // came back (auth expired mid-session, server error, network down) — a
-    // single response with distinct, honest messaging per cause, never the
-    // generic per-chart "awaiting data" text.
-
-    // Kept so a language toggle while the banner is showing can retranslate
-    // its message without needing a fresh failed request to regenerate it.
-    let lastLoadError = undefined;
+let lastLoadError = undefined;
 
     function loadErrorMessage(err) {
         if (!err || err.status == null) return t('analytics.loadErrorNetwork');
@@ -475,9 +435,7 @@ const Analytics = (() => {
         }
     }
 
-    // ================= LOAD =================
-
-    async function loadStats() {
+async function loadStats() {
         try {
             const res = await API.analytics.dashboardStats();
             rawStats = res?.data || null;
@@ -490,9 +448,7 @@ const Analytics = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    async function init() {
+async function init() {
         if (!API.requireAuth()) return;
 
         const state = await AuthGate.verifySession();
