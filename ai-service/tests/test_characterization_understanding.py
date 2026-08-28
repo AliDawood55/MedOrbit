@@ -53,8 +53,6 @@ def severity(text):
     return _safety.check(text).get("severity")
 
 
-# The four rules/safety.pl clauses the extractor cannot reach. Imported by the
-# Phase 6 tests so both files cannot disagree about what "latent" means.
 LATENT_SAFETY_ATOMS = ("hematuria", "seizure", "unconscious", "severe_bleeding")
 
 
@@ -72,7 +70,6 @@ class TestPolarityIsLost(unittest.TestCase):
         for name, result in results.items():
             self.assertEqual(["fever"], result,
                              f"{name}: extractor no longer reports plain ['fever']")
-        # The actual finding: every one of them is the same value.
         self.assertEqual(1, len({tuple(r) for r in results.values()}),
                          "the extractor has gained polarity — Phase 6's premise has changed")
 
@@ -81,8 +78,6 @@ class TestPolarityIsLost(unittest.TestCase):
         self.assertEqual(["fever"], canonical("ما عندي حرارة"))
 
     def test_a_correction_yields_both_the_old_and_the_new_symptom(self):
-        # "No, not a headache, chest pain" — the extractor reports both,
-        # because it has no way to represent the retraction.
         self.assertEqual(["chest_pain", "headache"],
                          canonical("لا، مش صداع، ألم في الصدر"))
 
@@ -137,7 +132,6 @@ class TestLatentSafetyRulesAreUnreachable(unittest.TestCase):
         """
         self.assertEqual([], canonical("there is blood in my urine"))
         self.assertEqual("normal", severity("there is blood in my urine"))
-        # ... while the Arabic phrasing is caught by the deterministic layer.
         self.assertEqual("urgent", severity("في دم في البول"))
 
 

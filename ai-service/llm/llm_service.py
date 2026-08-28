@@ -24,7 +24,6 @@ def generate_response(message: str, context: str, lang: str = "ar", entities: Op
     6. Respond in the correct language (Arabic or English)
     """
     
-    # Parse the context if it's JSON
     context_data = {}
     try:
         context_data = json.loads(context) if isinstance(context, str) else context
@@ -35,13 +34,11 @@ def generate_response(message: str, context: str, lang: str = "ar", entities: Op
         )
         context_data = {"raw": str(context)}
 
-    # Build the appropriate system prompt based on context type
     if lang == "ar":
         system_prompt = _build_arabic_prompt(context_data)
     else:
         system_prompt = _build_english_prompt(context_data)
 
-    # Build the full prompt
     prompt = f"""{system_prompt}
 
 ---
@@ -76,7 +73,6 @@ Instructions for response:
         data = response.json()
         reply = data.get("response", "").strip()
 
-        # Fallback if empty
         if not reply:
             logger.warning(
                 "generate_response: provider %s returned an empty reply — using fallback text",

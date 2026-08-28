@@ -58,98 +58,33 @@ from .config import env_float, env_int
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.planner")
 
-# Which planner the engine uses. The dynamic planner is now the default — the
-# static flow is demoted to the emergency fallback it was always meant to
-# become. Set VD_PLANNER=static to pin the old deterministic behaviour, which
-# is also exactly what every consultation degrades to if Ollama is unreachable.
 PLANNER_NAME = os.environ.get("VD_PLANNER", "llm").strip().lower()
 
-# The per-turn planner is deliberately NOT the diagnosis model. qwen2:7b is
-# 4.4GB and does not fit a 4GB card (it partially offloads and costs ~5s a
-# call); a 3B model fits alongside Whisper and answers in a fraction of that.
-# reasoning.py keeps qwen2:7b for the single final differential, where one
-# slower, stronger pass is worth paying for.
 PLANNER_MODEL = os.environ.get("VD_PLANNER_MODEL", "qwen2.5:3b")
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 PLANNER_CHAT_URL = os.environ.get(
     "OLLAMA_CHAT_URL", OLLAMA_URL.replace("/api/generate", "/api/chat")
 )
-# exclusive_min=0: passed to requests(timeout=), which rejects <= 0.
 PLANNER_TIMEOUT = env_float("VD_PLANNER_TIMEOUT", 25.0, minimum=0.0,
                             exclusive_min=True)
 PLANNER_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "1h")
 
-# Hard stop on CLINICAL questions (intake excluded). A JSON flow cannot run
-# away — it has N slots and then it is done. A model can, and qwen2.5:3b
-# observably does: left to itself it kept interviewing past turn 8 and asked
-# "does the pain happen while sleeping?" three times in a row.
-#
-# 6 is roughly what the static flows ask (3-4 slots) plus room for the planner
-# to follow a thread, and it keeps a voice consultation to a sane length.
-# minimum=1: compared as `turn_index >= MAX_INTERVIEW_TURNS`, so 0 would
-# force diagnosis before a single clinical question was asked.
 MAX_INTERVIEW_TURNS = env_int("VD_PLANNER_MAX_TURNS", 6, minimum=1)
 
-# A question is "already asked" if it normalises identically or overlaps this
-# much by token. Small models re-ask with trivial rewording, which the prompt
-# instruction alone does not prevent.
-# 0.6, not 0.7: observed "ما إذا كان الألم يزداد عند الاستلقاء أو الجلوس؟" followed
-# by "هل الألم يزداد عند الاستلقاء أو الجلوس؟" — the same question with a different
-# interrogative — scoring exactly 0.60 and slipping through a 0.7 gate. A false
-# positive here only costs one static fallback question, so erring tight is
-# cheap; a false negative is a visibly repetitive doctor.
-# Bounded to [0, 1]: compared against a token-overlap ratio whose codomain
-# is exactly that. Outside it, repeat detection becomes a constant — and at
-# the permissive end that silently disables it.
 _REPEAT_SIMILARITY = env_float("VD_PLANNER_REPEAT_SIMILARITY", 0.6,
                                minimum=0.0, maximum=1.0)
 
-# Natural termination, not the turn cap. Root-caused by direct A/B probing
-# (5 runs per variant, same underlying facts throughout):
-#
-#   ALREADY ESTABLISHED: {...4 findings...} + abstract rule text   -> ready 0/5
-#   the SAME facts + one explicit sentence "you now have a complete
-#   picture, this is enough for a preliminary assessment"          -> ready 5/5
-#
-# A 3B model does not reliably infer "I have enough" from a JSON dict plus an
-# abstract instruction — it needs to be told, in a sentence, that the picture
-# is complete. Wording the turn-limit line as a "backstop, not a target" was
-# tested too and made no measurable difference (4/5 vs 5/5) — the limit framing
-# was never the blocker, the missing narrative cue was.
-#
-# So termination is now driven by two independent things:
-#   1. This nudge: once COMPLETENESS_MIN_FINDINGS distinct findings exist (and
-#      at least COMPLETENESS_MIN_TURNS clinical questions have been asked, so a
-#      lucky first answer can't end the interview instantly), the prompt states
-#      outright that the picture looks complete and invites the model to stop.
-#      The model still decides — it can ask one more if it judges that
-#      necessary — so this encourages rather than forces.
-#   2. MAX_INTERVIEW_TURNS: the hard, code-enforced backstop for whatever the
-#      nudge does not catch (an unusual complaint, a model that keeps
-#      declining). This never depended on the model at all and is unchanged.
-# minimum=0 on both: zero is meaningful (the nudge applies immediately).
 COMPLETENESS_MIN_FINDINGS = env_int("VD_PLANNER_COMPLETENESS_MIN_FINDINGS", 3, minimum=0)
 COMPLETENESS_MIN_TURNS = env_int("VD_PLANNER_COMPLETENESS_MIN_TURNS", 2, minimum=0)
 
-# Findings are clamped to this vocabulary before they are stored. The PDF's
-# _SLOT_LABELS and the frontend's profile panel both render by key, so an
-# invented key would degrade to a raw identifier in the report. Anything the
-# model reports outside this set is kept, but namespaced under "other".
 KNOWN_FINDING_KEYS = {
     "duration", "severity", "location", "location_character", "character",
     "radiation", "triggers", "appearance", "exposure", "associated_symptoms",
 }
 
-# The planner may only ever choose a complaint the rest of the system knows:
-# the flows, the RAG anchors and the VARCHAR(100) column all assume these.
 CANONICAL_COMPLAINTS = set(retrieval.COMPLAINT_ANCHORS)
 
-# Deterministic uncertainty/non-answer vocabulary. Matching is deliberately
-# whole-utterance after the service's existing normalization: "not sure, but it
-# is severe" still contains useful information and must not be erased merely
-# because it includes an uncertainty phrase. Compact forms cover common Arabic
-# ASR spacing differences ("ما بتذكر" / "مابتذكر") without fuzzy semantics.
 _NON_ANSWER_SURFACES = (
     "لا أعرف", "ما بعرف", "مش عارف", "لا أعلم", "مش متأكد", "غير متأكد",
     "ما بتذكر", "لا أتذكر", "نسيت", "مش قادر أحدد", "ما بقدر أحدد", "يمكن",
@@ -182,9 +117,6 @@ def _is_non_answer(text: object, lang: Optional[str] = None) -> bool:
     )
 
 
-# ---------------------------------------------------------------------------
-# Contract
-# ---------------------------------------------------------------------------
 
 @dataclass
 class PlannerInput:
@@ -198,46 +130,23 @@ class PlannerInput:
     history: List[Dict[str, str]] = field(default_factory=list)
     chunks: List[Dict[str, Any]] = field(default_factory=list)
     context_block: str = ""
-    # Doctor turns so far, counted over the WHOLE transcript rather than the
-    # memory window — see memory.doctor_turns for why that distinction is
-    # load-bearing for the turn cap.
     turn_index: int = 0
     asked_questions: List[str] = field(default_factory=list)
-    # Optional, deterministic-safety-layer-derived hint of what red-flag text
-    # this turn matched (see interview_engine._safety_hint_text). Nudges
-    # LLMPlanner toward asking about it next; never used to decide severity,
-    # urgency, or whether to warn — that stays entirely in interview_engine's
-    # _apply_safety_continuation(). None on every turn with no safety match,
-    # and ignored entirely by StaticPlanner.
     safety_hint: Optional[str] = None
-    # Phase 2: the canonical clinical TOPIC symbolic reasoning selected for this
-    # turn (e.g. "radiation"), never a sentence. Set only in
-    # VD_SYMBOLIC_INTERVIEW=active. When present, LLMPlanner may choose the
-    # wording but not the subject: a question that drifts to another clinical
-    # topic is replaced by the deterministic template for THIS topic.
-    # None everywhere else, so every other mode builds a byte-identical prompt.
     required_topic: Optional[str] = None
-    # Doctor turns so far, as canonical topics rather than question text.
-    # Feeds asked/2. Empty unless the symbolic interview layer is running.
     asked_topics: List[str] = field(default_factory=list)
-    # Public session id, for correlating symbolic facts and divergence logs
-    # with a consultation. Never used as a clinical input.
     session_id: Optional[str] = None
 
 
 @dataclass
 class PlannerResult:
     """What the engine should do with this turn."""
-    reply: Optional[str]                                   # None when ready
+    reply: Optional[str]
     phase: str
     profile_updates: Dict[str, Any] = field(default_factory=dict)
     chief_complaint: Optional[str] = None
     ready_for_diagnosis: bool = False
-    source: str = "static"                                 # for logging/telemetry
-    # False means extraction completed and profile_updates contains only the
-    # accepted, fail-closed subset, but no model wording may reach a patient.
-    # SymbolicPlanner can still use those updates to choose and template the
-    # real post-turn topic. Non-symbolic callers retain the static fallback.
+    source: str = "static"
     wording_valid: bool = True
 
 
@@ -245,9 +154,6 @@ class PlannerError(Exception):
     """The planner could not produce a usable turn; the caller must fall back."""
 
 
-# ---------------------------------------------------------------------------
-# Shared intake (identity questions, deterministic in both planners)
-# ---------------------------------------------------------------------------
 
 def _intake_turn(ctx: PlannerInput, texts: Dict[str, Dict[str, str]],
                  extract_name, extract_age) -> Optional[PlannerResult]:
@@ -263,7 +169,6 @@ def _intake_turn(ctx: PlannerInput, texts: Dict[str, Dict[str, str]],
         )
     age = extract_age(ctx.message)
     if age is None:
-        # Re-ask rather than store a bad value; the patient stays in intake.
         return PlannerResult(reply=texts["ASK_AGE_RETRY"][ctx.lang], phase="intake",
                              source="intake")
     updates["age"] = age
@@ -273,9 +178,6 @@ def _intake_turn(ctx: PlannerInput, texts: Dict[str, Dict[str, str]],
     )
 
 
-# ---------------------------------------------------------------------------
-# StaticPlanner — the JSON flow, unchanged
-# ---------------------------------------------------------------------------
 
 class StaticPlanner:
     """The original slot machine. Behaviour is intentionally identical to the
@@ -287,7 +189,7 @@ class StaticPlanner:
     def __init__(self, flows, texts, helpers):
         self._flows = flows
         self._texts = texts
-        self._h = helpers  # detect_chief_complaint, next_unfilled_slot, extract_name/age
+        self._h = helpers
 
     def _flow(self, complaint: Optional[str]) -> dict:
         return self._flows.get(complaint or "generic", self._flows["generic"])
@@ -317,7 +219,6 @@ class StaticPlanner:
                 detected.update(ctx.entities["symptoms"])
                 updates["associated_symptoms_detected"] = list(detected)
         else:
-            # Already 'reasoning' or 'complete' — nothing left to fill.
             return PlannerResult(reply=self._texts["WRAP_UP"][ctx.lang], phase=phase,
                                  source=self.name)
 
@@ -334,9 +235,6 @@ class StaticPlanner:
         )
 
 
-# ---------------------------------------------------------------------------
-# LLMPlanner — dynamic questioning grounded in retrieved context
-# ---------------------------------------------------------------------------
 
 _SYSTEM = {
     "en": (
@@ -357,31 +255,6 @@ _SYSTEM = {
     ),
 }
 
-# A DEDICATED, minimal call for the readiness decision — not folded into the
-# main question-asking call above. Root-caused via direct A/B (repeated 5-6x
-# per variant, same underlying facts throughout):
-#
-#   minimal 2-field schema (next_question + ready_for_diagnosis)   ready 6/6
-#   + a "chief_complaint" field                                    ready 0/6
-#   + a "findings" field + the Rules block                         ready 0/6
-#   + chief_complaint AND Rules together                           ready 0/6
-#
-# Each addition ALONE was enough to collapse readiness to 0/6, even with the
-# exact same underlying facts and the exact same completeness cue that gets
-# 6/6 in isolation. A 3B model's readiness judgement does not survive sharing
-# a call with question-generation, finding-extraction and complaint selection
-# — there is not enough of it left once those compete for the same output.
-# Splitting the decision into this small, separate call is what makes it
-# trustworthy: 8/8 on genuinely sufficient info, 5/5-15/15 declining on sparse
-# info across several probes, discrimination confirmed in both directions —
-# not a degenerate always-true shortcut.
-#
-# Reuses _SYSTEM (the existing, already-proven persona) rather than a fresh
-# system message. A purpose-written minimal system prompt was tried first and
-# measured WORSE (1/8) than the unrelated production _SYSTEM['ar'] (8/8) on
-# the identical user content — evidently what matters here is which system
-# prompt the model responds to reliably at all, not lexical relevance to the
-# readiness task specifically.
 _READINESS_USER = {
     "en": (
         "Information collected so far: {summary}\n\n"
@@ -443,14 +316,13 @@ class LLMPlanner:
     def __init__(self, texts, helpers, validators):
         self._texts = texts
         self._h = helpers
-        self._v = validators  # text_matches_language, looks_coherent
+        self._v = validators
 
     async def plan(self, ctx: PlannerInput) -> PlannerResult:
         intake = _intake_turn(ctx, self._texts, self._h["extract_name"], self._h["extract_age"])
         if intake is not None:
             return intake
 
-        # The backstop that a JSON flow gets for free.
         if ctx.turn_index >= MAX_INTERVIEW_TURNS:
             logger.info("Planner hit the %d-turn cap — forcing diagnosis", MAX_INTERVIEW_TURNS)
             return PlannerResult(
@@ -464,12 +336,6 @@ class LLMPlanner:
         complaint = self._clamp_complaint(parsed.get("chief_complaint"), ctx)
         updates = self._store_answer(ctx, parsed.get("findings") or {})
 
-        # Readiness is decided by a SEPARATE, minimal call — see _READINESS_*
-        # above for why folding it into the call that also asks/extracts/
-        # classifies collapses its reliability to 0/6. Gated on the merged,
-        # post-this-turn state (ctx.profile + what was just extracted), so a
-        # finding reported in the SAME turn that crosses the threshold counts
-        # immediately rather than one turn late.
         merged_known = _known_summary({**ctx.profile, **updates})
         if (len(merged_known) >= COMPLETENESS_MIN_FINDINGS
                 and ctx.turn_index >= COMPLETENESS_MIN_TURNS
@@ -487,9 +353,6 @@ class LLMPlanner:
 
         question = _first_question_only(question)
         if _is_repeat(question, ctx.asked_questions, ctx.lang):
-            # Deterministic guard, not a prompt plea. Falling back hands this
-            # turn to the static flow, which always advances to an unfilled
-            # slot — so a repetitive model cannot stall the interview.
             return self._wording_failure_result(
                 ctx, updates, complaint,
                 "planner repeated a question it had already asked")
@@ -508,7 +371,6 @@ class LLMPlanner:
             chief_complaint=complaint, source=self.name,
         )
 
-    # -- helpers ------------------------------------------------------------
 
     def _wording_failure_result(
         self, ctx: PlannerInput, updates: Dict[str, Any], complaint: str,
@@ -611,17 +473,8 @@ class LLMPlanner:
             for m in ctx.history
         )
 
-        # Listed explicitly, not left implicit in the transcript: the transcript
-        # is a truncated window, so once an interview runs long the earliest
-        # questions drop out of it and a small model happily asks them again.
-        # Observed doing exactly that — the same question four times in one
-        # consultation — before this block existed.
         already_asked = "\n".join(f"- {q}" for q in ctx.asked_questions) or "- (none yet)"
 
-        # Deterministic-safety-layer-derived, never LLM-derived: this only
-        # ever nudges WHICH topic the next question covers. It cannot change
-        # severity/urgency or suppress/alter the warning text, both of which
-        # are composed entirely in interview_engine.py outside this call.
         safety_priority = (
             f"URGENT PRIORITY: the patient's answer may contain a red-flag symptom "
             f"(matched: {ctx.safety_hint}). Your next question MUST specifically "
@@ -629,20 +482,6 @@ class LLMPlanner:
             if ctx.safety_hint else ""
         )
 
-        # Arabic conversation-style guidance (Virtual Doctor Formal Arabic
-        # Voice Quality batch). Added HERE, in this per-turn user prompt,
-        # deliberately NOT in _SYSTEM["ar"] above: that system prompt is
-        # reused verbatim by _check_readiness() (see _READINESS_USER's own
-        # comment — adding fields there measurably collapsed a different
-        # call's reliability from 8/8 to 0/6). This block only ever reaches
-        # the question-generation call, never readiness, so it carries none
-        # of that documented regression risk.
-        #
-        # SUPERSEDES an earlier version of this same rule that explicitly
-        # endorsed "a light Levantine/Palestinian tone" — the later, explicit
-        # product decision was simplified formal Arabic (فصحى مبسطة) instead,
-        # after the dialect phrasing itself drew the same "not real" feedback
-        # the dialect pass was originally meant to fix.
         arabic_style_rule = (
             "- Since the target language here is Arabic, write \"next_question\" in "
             "simplified Modern Standard Arabic (فصحى مبسطة): clear, calm, and easy "
@@ -653,21 +492,12 @@ class LLMPlanner:
             if ctx.lang == "ar" else ""
         )
 
-        # Phase 2, active mode only: symbolic reasoning has already decided
-        # WHICH clinical topic this question must cover, so the model's job
-        # narrows to wording it. Emitted only when ctx.required_topic is set,
-        # which keeps the prompt byte-identical in every other mode — and the
-        # instruction is not trusted on its own: plan() clamps the result back
-        # to the topic afterwards regardless of what the model does with it.
         topic_rule = (
             f"REQUIRED TOPIC: your next question MUST be about \"{ctx.required_topic}\" "
             f"and nothing else. Do not choose a different clinical topic.\n\n"
             if ctx.required_topic else ""
         )
 
-        # No readiness field here — see _READINESS_* above for why. This call
-        # has exactly one job: the next question, plus what the patient just
-        # said. Readiness is a separate, dedicated call (_check_readiness).
         user = f"""{ctx.context_block}
 CONVERSATION SO FAR:
 {transcript}
@@ -757,13 +587,7 @@ Rules:
         return bool(isinstance(parsed, dict) and parsed.get("ready"))
 
 
-# ---------------------------------------------------------------------------
-# SymbolicPlanner — Prolog picks the topic, the wrapped planner words it
-# ---------------------------------------------------------------------------
 
-# Profile key holding the canonical topics already put to this patient. A LIST,
-# deliberately: report_generator renders every *string* profile value as a
-# clinical row, so bookkeeping stored as a string would appear in the PDF.
 ASKED_TOPICS_KEY = "symbolic_asked_topics"
 
 
@@ -812,7 +636,6 @@ class SymbolicPlanner:
         updates = result.profile_updates or {}
         accepted: Dict[str, Any] = {}
 
-        # These values are produced deterministically outside raw LLM findings.
         for key in ("chief_complaint_description", "associated_symptoms_detected"):
             if key in updates:
                 accepted[key] = updates[key]
@@ -842,18 +665,12 @@ class SymbolicPlanner:
                 continue
             if current_is_correction or raw_is_non_answer or _is_non_answer(value, ctx.lang):
                 continue
-            # Sessions created before active topic bookkeeping (and the first
-            # complaint turn) have no authoritative current topic. Preserve
-            # the existing accepted flow-slot behavior rather than guessing.
             if current_topic is None:
                 accepted[key] = value
                 continue
             if key == current_topic:
                 accepted[key] = value
                 continue
-            # Additional multi-fill slots need independent evidence in the raw
-            # utterance. One of the already-established anchors is sufficient;
-            # absence is fail-closed and the value is dropped, never reassigned.
             if reasoning_engine.vocabulary.question_matches_topic(ctx.message, key):
                 accepted[key] = value
 
@@ -913,11 +730,6 @@ class SymbolicPlanner:
             chief_complaint=ctx.chief_complaint,
             flow_slots=self._flow(ctx.chief_complaint).get("slots", []),
             asked_topics=ctx.asked_topics,
-            # safety_hint is non-None only when the deterministic layer already
-            # flagged this turn urgent/emergency (interview_engine
-            # ._safety_hint_text), so it is a sufficient signal to prioritise
-            # the red-flag follow-up. The VERDICT itself is not reconstructed
-            # here — this planner has no business holding one.
             safety_topics=(
                 (reasoning_engine.fact_builder.SAFETY_FOLLOW_UP_TOPIC,)
                 if ctx.safety_hint else ()
@@ -987,10 +799,6 @@ class SymbolicPlanner:
         except PlannerError as exc:
             error = exc
 
-        # Once a complaint is established (including by Python correction), an
-        # LLM may not silently move the session to another canonical flow. On
-        # the first complaint turn there is no established value, so the
-        # planner's already-clamped complaint remains available.
         active_ctx = ctx
         original_updates: Dict[str, Any] = {}
         original_complaint: Optional[str] = None
@@ -1008,14 +816,8 @@ class SymbolicPlanner:
         decision = await self.decide(active_ctx, effective_profile)
 
         if not decision.available:
-            # Prolog down or the query failed: run exactly the pre-Phase-2
-            # pipeline. The inner planner already ran; there is nothing to
-            # redo, and never fabricate a topic to fall back onto.
             if result is None:
                 raise error
-            # Degraded active mode is the pre-symbolic planner exactly: no
-            # active-only filtering or complaint stabilization may leak into
-            # the PrologUnavailable fallback contract.
             result.profile_updates = original_updates
             result.chief_complaint = original_complaint
             logger.info(
@@ -1027,9 +829,6 @@ class SymbolicPlanner:
         if decision.complete:
             if result is None:
                 raise error
-            # Symbolic readiness is authoritative in active mode: the
-            # interview is over when every required slot is answered, not
-            # when the inner planner feels it has enough.
             result.reply = None
             result.ready_for_diagnosis = True
             result.chief_complaint = (
@@ -1044,9 +843,6 @@ class SymbolicPlanner:
             return result
 
         if result is None:
-            # The inner planner could not produce wording. The TOPIC is still
-            # valid, so answer it deterministically rather than discarding the
-            # symbolic decision and letting a fallback pick a different one.
             template = self.template_for(
                 decision.topic, active_ctx.chief_complaint, active_ctx.lang)
             if not template:
@@ -1059,25 +855,15 @@ class SymbolicPlanner:
             ), decision.topic)
 
         if not result.wording_valid:
-            # Extraction succeeded but the model's wording did not. Decide was
-            # already run against the accepted post-turn updates above, so ask
-            # that exact Prolog-selected topic with its deterministic template.
             template = self.template_for(
                 decision.topic, active_ctx.chief_complaint, active_ctx.lang)
             if not template:
-                # Bubble the typed invalid state to the engine, which preserves
-                # the pre-symbolic static fallback contract.
                 return result
             result.reply = template
             result.wording_valid = True
             result.source = f"{self.name}:template-after-wording-failure"
             return self._record_asked(ctx, result, decision.topic)
 
-        # Symbolic readiness is authoritative in active mode: the interview
-        # is over when every required slot is answered, not when a 3B model
-        # feels it has enough. Only _check_readiness is overridden — the
-        # inner planner's TURN CAP is a backstop against a runaway
-        # interview and must keep firing, so it is honoured as-is.
         if result.ready_for_diagnosis and not result.source.endswith("turn-cap"):
             logger.info(
                 "Symbolic readiness overrides %s: %d required topic(s) still "
@@ -1124,7 +910,6 @@ def _first_question_only(text: str) -> str:
         first = cleaned.find(mark)
         if first != -1 and first + 1 < len(cleaned):
             trimmed = cleaned[:first + 1]
-            # Only trim if something substantive actually followed.
             if len(cleaned) - len(trimmed) > 3:
                 return trimmed
     return cleaned
@@ -1169,9 +954,6 @@ def _extract_json(text: str) -> Optional[dict]:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Selection
-# ---------------------------------------------------------------------------
 
 def warm() -> None:
     """Ask Ollama to load the planner model now, without blocking a caller.

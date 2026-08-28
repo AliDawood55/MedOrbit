@@ -44,8 +44,6 @@ import json
 import os
 import sys
 
-# Every library WeasyPrint pulls in for text layout. All of these must come
-# from the same root or the process is living on borrowed time.
 _CORE_DLLS = (
     "libpango-1.0-0.dll",
     "libpangoft2-1.0-0.dll",
@@ -57,8 +55,6 @@ _CORE_DLLS = (
     "libfreetype-6.dll",
 )
 
-# A root only counts if it can satisfy the whole stack; a partial match is what
-# caused the split load in the first place.
 _REQUIRED_FOR_ROOT = _CORE_DLLS
 
 _CANDIDATE_ROOTS = (
@@ -87,9 +83,6 @@ def pin_native_stack() -> str | None:
     if not chosen or not os.path.isdir(chosen):
         return None
 
-    # Both channels must agree: add_dll_directory decides where dependencies
-    # come from, PATH decides where WeasyPrint's own dlopen-by-name lands.
-    # Setting only one of them is what produced the mixed load.
     os.environ["WEASYPRINT_DLL_DIRECTORIES"] = chosen
     path = os.environ.get("PATH", "")
     if chosen.lower() not in path.lower().split(os.pathsep):
@@ -161,8 +154,6 @@ def main() -> int:
             return 2
 
     try:
-        # Imported here, not at module scope, so the parent never loads the
-        # native libraries into its own address space.
         from weasyprint import HTML
     except Exception as exc:  # noqa: BLE001
         print(f"weasyprint import failed: {type(exc).__name__}: {exc}", file=sys.stderr)
@@ -170,7 +161,6 @@ def main() -> int:
 
     info = inspect_native_stack()
     if info.get("mixed"):
-        # Refuse rather than corrupt the heap and die somewhere unrelated.
         print("MIXED NATIVE RUNTIME: " + _describe(info), file=sys.stderr)
         return 5
 

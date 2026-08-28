@@ -44,8 +44,6 @@ def apply_layer(text, profile=None, phase="interviewing", complaint="headache"):
         dict(profile if profile is not None else BASE), phase, complaint, text, "ar")
 
 
-# (case, text, expected field, expected new_value). None field with a non-None
-# result means "correction intended but under-specified".
 DETECTION_MATRIX = [
     ("name correction explicit", "لا، اسمي علي مش أحمد", "name", "علي"),
     ("age correction explicit", "لا، عمري 24 مش 23", "age", 24),
@@ -55,7 +53,6 @@ DETECTION_MATRIX = [
     ("ambiguous field", "لا، هذا غلط", None, None),
 ]
 
-# Must NOT be treated as a profile correction at all.
 NOT_CORRECTIONS = [
     ("leading no only", "لا", "a bare negation carries no replacement and no field"),
     ("weak marker only", "مش هيك", "a weak marker alone is not a correction"),
@@ -74,9 +71,6 @@ NOT_CORRECTIONS = [
 ]
 
 
-# ===========================================================================
-# 1. Detection
-# ===========================================================================
 
 class TestCorrectionDetection(unittest.TestCase):
     def test_recognised_corrections_yield_the_recorded_field_and_value(self):
@@ -102,9 +96,6 @@ class TestCorrectionDetection(unittest.TestCase):
         self.assertIsNone(detect("الألم مش شديد، متوسط"))
 
 
-# ===========================================================================
-# 2. Application, history and provenance shape
-# ===========================================================================
 
 class TestCorrectionApplication(unittest.TestCase):
     def test_a_name_correction_updates_the_profile_and_acknowledges(self):
@@ -159,9 +150,6 @@ class TestCorrectionApplication(unittest.TestCase):
         self.assertIs(profile["confirmed_fields"]["age"], True)
 
 
-# ===========================================================================
-# 3. Phase interaction
-# ===========================================================================
 
 class TestCorrectionDuringIntake(unittest.TestCase):
     def test_an_intake_correction_chains_into_the_next_intake_question(self):
@@ -202,9 +190,6 @@ class TestPendingCorrectionRetryAndGiveUp(unittest.TestCase):
         self.assertNotIn("pending_correction", profile)
 
 
-# ===========================================================================
-# 4. Confirmation is a different mechanism
-# ===========================================================================
 
 class TestConfirmationIsSeparateFromCorrection(unittest.TestCase):
     """"Did I hear X correctly?" and "the stored X is wrong" are distinct, and
@@ -223,9 +208,6 @@ class TestConfirmationIsSeparateFromCorrection(unittest.TestCase):
         self.assertNotEqual("pending_confirmation", "pending_correction")
 
 
-# ===========================================================================
-# 5. Safety interaction
-# ===========================================================================
 
 class TestSafetyStillWinsOnACorrectionTurn(unittest.TestCase):
     def test_a_turn_can_be_both_a_correction_and_a_red_flag(self):
@@ -242,9 +224,6 @@ class TestSafetyStillWinsOnACorrectionTurn(unittest.TestCase):
                         source.index('reply = f"{safety_prefix}{reply}"'))
 
 
-# ===========================================================================
-# 6. Slot cardinality, as it exists today
-# ===========================================================================
 
 class TestSlotCardinalityToday(unittest.TestCase):
     def test_identity_slots_hold_one_value(self):

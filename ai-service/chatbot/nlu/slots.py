@@ -1,6 +1,6 @@
 import time
 from collections import OrderedDict
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional
 
 
 class SlotFiller:
@@ -12,7 +12,6 @@ class SlotFiller:
     Supports conversation state management.
     """
 
-    # Required slots for each intent type
     INTENT_SLOTS = {
         "find_doctor": {
             "required": ["specialty"],
@@ -61,7 +60,6 @@ class SlotFiller:
         }
     }
 
-    # Slot descriptions for generating follow-up questions
     SLOT_DESCRIPTIONS = {
         "specialty": {
             "ar": "ما هو التخصص الطبي الذي تبحث عنه؟",
@@ -173,14 +171,12 @@ class SlotFiller:
         }
     }
 
-    # Bounded-storage settings for conversation_states (prevents unbounded
-    # process-lifetime memory growth). See ai-service audit, Phase 0.
     MAX_CONVERSATION_STATES = 1000
     CONVERSATION_STATE_TTL_SECONDS = 3600
 
     def __init__(self):
-        self.conversation_states = OrderedDict()  # conversation_id -> state dict, LRU-ordered
-        self._state_last_access: Dict[str, float] = {}  # conversation_id -> last access timestamp
+        self.conversation_states = OrderedDict()
+        self._state_last_access: Dict[str, float] = {}
 
     def _touch(self, conversation_id: str) -> None:
         """Record recent access and refresh LRU position for a conversation_id."""
@@ -219,7 +215,6 @@ class SlotFiller:
 
         slot_def = self.INTENT_SLOTS.get(intent)
         if slot_def:
-            # Check which required slots are missing
             for slot in slot_def["required"]:
                 if slot not in entities or not entities.get(slot):
                     state["missing_slots"].append(slot)
@@ -236,17 +231,14 @@ class SlotFiller:
         """
         self._evict_expired()
 
-        # Get or create state
         if conversation_id not in self.conversation_states:
             return self.initialize_state(conversation_id, intent, entities)
 
         state = self.conversation_states[conversation_id]
 
-        # Update intent if changed
         if intent != "unknown" and intent != state.get("intent"):
             state["intent"] = intent
 
-        # Merge new entities into filled slots
         for key, value in entities.items():
             if value and key not in state["filled_slots"]:
                 state["filled_slots"][key] = value
@@ -255,7 +247,6 @@ class SlotFiller:
                 if isinstance(existing, list):
                     state["filled_slots"][key] = list(set(existing + value))
 
-        # Recalculate missing slots
         state["missing_slots"] = []
         slot_def = self.INTENT_SLOTS.get(state["intent"])
         if slot_def:
@@ -285,15 +276,12 @@ class SlotFiller:
         if not slot_def:
             return None
 
-        # Find the first unfilled slot following the preferred order
         for slot in slot_def.get("follow_up_order", slot_def["required"]):
             if slot in state["missing_slots"] and slot not in state["asked_slots"]:
-                # Mark as asked
                 state["asked_slots"].add(slot)
                 self.conversation_states[conversation_id] = state
                 self._touch(conversation_id)
 
-                # Get question text
                 descriptions = self.SLOT_DESCRIPTIONS.get(slot, {})
                 question = descriptions.get("ar") if language == "ar" else descriptions.get("en")
 
@@ -345,25 +333,20 @@ class SlotFiller:
         """
         extracted = {}
 
-        # Extract numbers (age, fee, distance)
         import re
         numbers = re.findall(r'\d+', text)
         if numbers:
             extracted["numbers"] = [int(n) for n in numbers]
 
-        # Extract common patterns
         if language == "ar":
-            # Age patterns
             age_match = re.search(r'(\d+)\s*(سنة|سنه|عام)', text)
             if age_match:
                 extracted["age"] = int(age_match.group(1))
 
-            # Time patterns
             time_match = re.search(r'(\d+):(\d+)', text)
             if time_match:
                 extracted["time"] = f"{time_match.group(1)}:{time_match.group(2)}"
 
-            # Duration patterns
             duration_units = {
                 "يوم": "days", "ايام": "days", "أيام": "days",
                 "شهر": "months", "اشهر": "months", "أشهر": "months",
@@ -379,19 +362,16 @@ class SlotFiller:
                     }
                     break
         else:
-            # English age
             age_match = re.search(r'(\d+)\s*(years?|yrs?)', text)
             if age_match:
                 extracted["age"] = int(age_match.group(1))
 
-            # Duration
             dur_match = re.search(r'(\d+)\s*(day|days|week|weeks|month|months|year|years)', text)
             if dur_match:
                 val = int(dur_match.group(1))
                 unit = dur_match.group(2)
                 extracted["duration"] = {"value": val, "unit": unit}
 
-            # Money
             fee_match = re.search(r'(\d+)\s*(shekel|nis|₪|usd|\$)', text)
             if fee_match:
                 extracted["max_fee"] = int(fee_match.group(1))

@@ -42,8 +42,8 @@ import logging
 import os
 import re
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import requests
 
@@ -52,17 +52,6 @@ from .config import env_float
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.response")
 
-# --- rollout ---------------------------------------------------------------
-# Off by default: the existing planner already words questions, and turning
-# this on adds a second model call per turn. Same three-state convention as the
-# other VD_* layers; an unrecognised value is never `active`.
-#
-#   off     no model call; compose()/validate() remain available and are what
-#           interview_engine uses to assemble the reply       (the default)
-#   shadow  a bounded wording is generated and validated, the outcome is
-#           logged, and the deterministic text is what the patient sees
-#   active  a wording that passes every check is used; anything else falls
-#           back to the deterministic text
 MODES: Tuple[str, ...] = ("off", "shadow", "active")
 MODE_DEFAULT = "off"
 
@@ -86,28 +75,18 @@ def active() -> bool:
 MODEL = os.environ.get("VD_RESPONSE_MODEL", "qwen2.5:3b")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 CHAT_URL = os.environ.get("OLLAMA_CHAT_URL", OLLAMA_URL.replace("/api/generate", "/api/chat"))
-# exclusive_min=0: passed to requests(timeout=), which rejects <= 0.
 TIMEOUT = env_float("VD_RESPONSE_TIMEOUT", 20.0, minimum=0.0,
                     exclusive_min=True)
 KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "1h")
 
-# One short sentence. A wording layer that returns a paragraph has started
-# doing something other than wording.
 MAX_BODY_CHARS = 300
 
-# Both question marks, because an Arabic reply may use either.
 _QUESTION_MARKS = ("?", "؟")
 
 _ARABIC_RE = re.compile(r"[؀-ۿ]")
 _LATIN_RE = re.compile(r"[A-Za-z]")
 _CJK_RE = re.compile(r"[぀-ヿ一-鿿]")
 
-# Wording that asserts a conclusion rather than asking a question. Not a
-# medical vocabulary — a small, closed list of the phrases by which a wording
-# layer announces it has diagnosed something. Deliberately generic: the point
-# is to catch the ACT of diagnosing, which no amount of condition-name
-# blocklisting could do, since Phase 5 established MedOrbit has no condition
-# vocabulary to blocklist against.
 _DIAGNOSIS_MARKERS_EN = (
     "you have ", "you likely have", "you probably have", "this is ",
     "diagnos", "you are suffering from", "it looks like you have",
@@ -119,9 +98,6 @@ _DIAGNOSIS_MARKERS_AR = (
 )
 
 
-# ---------------------------------------------------------------------------
-# The bounded context
-# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class ResponseContext:
@@ -185,9 +161,6 @@ class BoundedResponse:
         }
 
 
-# ---------------------------------------------------------------------------
-# Composition — Python-owned, and the only place a reply is assembled
-# ---------------------------------------------------------------------------
 
 def compose(body: str, *, mandatory_warning: str = "", correction_prefix: str = "") -> str:
     """Assemble the final reply. The warning always comes first.
@@ -206,9 +179,6 @@ def compose(body: str, *, mandatory_warning: str = "", correction_prefix: str = 
     return "".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# Validation — what makes the split real
-# ---------------------------------------------------------------------------
 
 def _language_ok(text: str, lang: str) -> bool:
     """Same rule as reasoning._text_matches_language, restated rather than
@@ -266,9 +236,6 @@ def validate_body(body: Any, ctx: ResponseContext) -> Optional[str]:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Generation
-# ---------------------------------------------------------------------------
 
 _SYSTEM = {
     "ar": (
@@ -288,8 +255,6 @@ _TOPIC_INSTRUCTION = {
 }
 
 _STYLE = {
-    # Mirrors planner's approved Arabic style rule: simplified MSA, calm,
-    # concise, no dialect and no performed empathy.
     "ar": ("اكتب بالعربية الفصحى المبسطة. جملة واحدة قصيرة. "
            "بدون لهجة عامية وبدون عبارات تعاطف مبالغ فيها."),
     "en": "Write one short sentence in plain English.",
@@ -386,7 +351,6 @@ async def generate(ctx: ResponseContext) -> BoundedResponse:
                                rejected_reason=reason, elapsed_ms=elapsed)
 
     if not active():
-        # Shadow: the wording was generated and passed, and is still discarded.
         return BoundedResponse(text=ctx.fallback, source="fallback",
                                rejected_reason="shadow mode", elapsed_ms=elapsed)
 

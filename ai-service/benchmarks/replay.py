@@ -91,7 +91,6 @@ def classify(case: Dict[str, Any], row: Dict[str, Any]) -> List[str]:
     s_present = set(row["actual"]["present"])
     s_any = s_present | set(row["actual"]["absent"]) | set(row["actual"]["uncertain"])
 
-    # Present-symptom agreement, the only axis both extractors can be scored on.
     for atom in exp_present:
         in_legacy, in_structured = atom in legacy, atom in s_present
         if in_legacy and in_structured:
@@ -105,7 +104,6 @@ def classify(case: Dict[str, Any], row: Dict[str, Any]) -> List[str]:
             if atom in SAFETY_ATOMS:
                 labels.append("SAFETY_FALSE_NEGATIVE")
 
-    # Structured-only judgements.
     for atom in s_any - exp_any:
         labels.append("STRUCTURED_FALSE_POSITIVE")
         if atom in SAFETY_ATOMS:
@@ -115,8 +113,6 @@ def classify(case: Dict[str, Any], row: Dict[str, Any]) -> List[str]:
         if atom in SAFETY_ATOMS and atom in exp_present:
             labels.append("SAFETY_FALSE_NEGATIVE")
 
-    # Right symptom, wrong polarity — distinct from a miss, because the fact
-    # still reaches Prolog, just under the wrong predicate.
     for pol in ("present", "absent", "uncertain"):
         for atom in set(exp[pol]):
             if atom not in s_any:

@@ -31,7 +31,6 @@ class IntentClassifier:
         self.confidence_threshold = 0.3
         self.pattern_boost = 0.2
         
-        # NLU modules
         self.nlu = NLUPipeline()
         self.normalizer = TextNormalizer()
         self.synonyms = SynonymEngine()
@@ -45,34 +44,10 @@ class IntentClassifier:
         with open(file_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    # Characters that count as "inside a word" for boundary purposes: Latin
-    # letters, digits, and Arabic letters. A keyword must not be preceded or
-    # followed by one of these to count as a standalone-word/phrase match —
-    # otherwise a short keyword like "er" fires inside "there", or an Arabic
-    # keyword fires inside an unrelated longer word via an attached prefix
-    # (ال) or suffix.
     _WORD_BOUNDARY_CHARS = r"A-Za-z0-9؀-ۿ"
 
-    # intents.json stores Arabic keywords in their bare form ("دكتور",
-    # "عيادة", "تأمين"), but Arabic almost always attaches a proclitic
-    # directly onto the noun with no space: the definite article "ال"
-    # ("الدكتور", "العيادة", "التأمين" — "the doctor/clinic/insurance"), or
-    # the preposition "ل" ("for/to") contracted with that same article into
-    # "لل" ("للحامل" — "for the pregnant [woman]"). Without allowing these,
-    # the strict boundary rule above would block those extremely common
-    # real-world forms, which is not the intended effect of closing the
-    # embedded-substring bug — these are grammatical particles, not a
-    # different, unrelated word the way "أ" is in "أطباء". So a keyword also
-    # counts as matched when immediately preceded by one of these.
     _ARABIC_PROCLITICS = ("ال", "لل")
 
-    # Compiled boundary-safe patterns, keyed by keyword_norm. classify() runs
-    # this check for every keyword of every intent on every call, so
-    # rebuilding and recompiling the pattern string from scratch each time
-    # was measurably slower than the plain substring check it replaced.
-    # Shared at the class level (the keyword set is fixed, defined by
-    # intents.json) so the cache is warm after the first classify() call
-    # across every IntentClassifier instance.
     _keyword_pattern_cache: Dict[str, Tuple["re.Pattern", ...]] = {}
 
     @classmethod
@@ -98,12 +73,6 @@ class IntentClassifier:
             cls._keyword_pattern_cache[keyword_norm] = patterns
         return any(p.search(text) is not None for p in patterns)
 
-    # Mirrors chatbot/nlu/safety.py's own informational-ER-place exemption
-    # (same policy, same narrow phrasing) — distinguishes "the emergency
-    # department" as a place/service from a personal emergency being
-    # reported. Matches ONLY the department-as-place phrasing "قسم
-    # الطوارئ"/"غرفة الطوارئ" — never bare "طوارئ" alone, which must
-    # always still win Step 9 on its own.
     _ER_PLACE_PATTERN = re.compile(r"قسم\s+الطوارئ|غرفة\s+الطوارئ", re.IGNORECASE)
 
     def _is_informational_er_place_query(
@@ -145,11 +114,9 @@ class IntentClassifier:
         if not text:
             return self._fallback_response(text)
 
-        # Step 1: Language detection
         lang = detect_language(text)
         pipeline_log.append({"step": "language_detection", "language": lang})
 
-        # Step 2: Full normalization
         normalized_info = self.normalizer.normalize_with_metadata(text)
         normalized_text = normalized_info["normalized"]
         pipeline_log.append({
@@ -159,7 +126,6 @@ class IntentClassifier:
             "language": normalized_info["language"]
         })
 
-        # Step 3: Medical safety check — always runs first
         safety_result = self.safety.check(text)
         pipeline_log.append({"step": "safety_check", "severity": safety_result["severity"]})
         
@@ -174,33 +140,26 @@ class IntentClassifier:
                 "_processing_ms": round((time.time() - start_time) * 1000, 2)
             }
 
-        # Step 4: Tokenization + stemming
         tokens = self.tokenizer.tokenize(normalized_text)
         ngrams = self.tokenizer.extract_ngrams(tokens, min_n=1, max_n=3)
         pipeline_log.append({"step": "tokenization", "token_count": len(tokens), "ngram_count": len(ngrams)})
 
-        # Step 5: Synonym resolution
         resolved_text = self.synonyms.resolve_text(normalized_text)
-        resolved_tokens = self.synonyms.resolve_tokens(tokens)
         pipeline_log.append({"step": "synonym_resolution", "changed": resolved_text != normalized_text})
 
-        # Step 6: Keyword matching (weighted by language)
         scores = defaultdict(float)
         matched_keywords = defaultdict(list)
         matched_patterns = defaultdict(list)
 
-        # Use resolved text for matching (handles synonyms)
         match_text = resolved_text if resolved_text != normalized_text else normalized_text
         
         for intent, intent_data in self.intents.items():
             if intent == "metadata":
                 continue
             
-            # Get keywords
             keywords_ar = intent_data.get("keywords_ar", [])
             keywords_en = intent_data.get("keywords_en", [])
             
-            # Primary language keywords
             primary_keywords = keywords_ar if lang == "ar" else keywords_en
             secondary_keywords = keywords_en if lang == "ar" else keywords_ar
             all_keywords = primary_keywords + secondary_keywords
@@ -213,7 +172,6 @@ class IntentClassifier:
                     scores[intent] += weight
                     matched_keywords[intent].append(keyword)
 
-            # Also check original normalized for dialect-expanded terms
             for keyword in all_keywords:
                 keyword_norm = normalize_text(keyword)
                 if keyword_norm != keyword and self._keyword_in_text(keyword_norm, normalized_text):
@@ -222,7 +180,6 @@ class IntentClassifier:
                         scores[intent] += weight
                         matched_keywords[intent].append(keyword + "(expanded)")
 
-        # Step 7: Regex pattern matching
         for intent, intent_data in self.intents.items():
             if intent == "metadata":
                 continue
@@ -241,7 +198,6 @@ class IntentClassifier:
             "total_keywords_matched": sum(len(v) for v in matched_keywords.values())
         })
 
-        # Step 8: Context-aware boosting
         if context:
             last_intent = context.get("lastIntent")
             current_topic = context.get("currentTopic")
@@ -258,17 +214,10 @@ class IntentClassifier:
                 scores[last_intent] *= 1.3
                 pipeline_log.append({"step": "follow_up_boost", "boosted_intent": last_intent, "factor": 1.3})
 
-        # Step 9: Emergency override (double-check through entity detection)
         if "emergency" in scores and scores["emergency"] >= 1.0:
             if self._is_informational_er_place_query(
                 text, matched_keywords.get("emergency", []), matched_patterns.get("emergency", [])
             ):
-                # Informational/place query naming the ER (see
-                # _is_informational_er_place_query) — let it continue to
-                # normal ranking instead of forcing "emergency". The
-                # emergency intent is removed from contention entirely so
-                # it can't also win Step 10 purely on this same,
-                # now-exempted "طوارئ" match.
                 del scores["emergency"]
                 matched_keywords.pop("emergency", None)
                 matched_patterns.pop("emergency", None)
@@ -287,7 +236,6 @@ class IntentClassifier:
                     "_processing_ms": round((time.time() - start_time) * 1000, 2)
                 }
 
-        # Step 10: Multi-intent ranking with calibration
         if not scores:
             result = self._fallback_response(text, context)
             result["_pipeline"] = pipeline_log
@@ -317,7 +265,6 @@ class IntentClassifier:
             "_processing_ms": round((time.time() - start_time) * 1000, 2)
         }
 
-        # Apply intent-specific confidence threshold
         intent_meta = self.intents.get(best["intent"], {})
         threshold = intent_meta.get("confidence_threshold", self.confidence_threshold)
         if best["confidence"] < threshold:

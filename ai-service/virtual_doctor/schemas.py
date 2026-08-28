@@ -12,8 +12,6 @@ class StartResponse(BaseModel):
     session_id: str
     reply: str
     phase: str
-    # Echoed back so the client can pin STT to this language for every turn
-    # instead of auto-detecting — detection is unreliable on short answers.
     language: str = "en"
 
 
@@ -59,14 +57,11 @@ class TranscriptionResponse(BaseModel):
     audio_seconds: float = 0.0
     processing_seconds: float = 0.0
     model: str = ""
-    # True when decoding hit the deadline. The client uses this to tell the
-    # patient to repeat instead of silently discarding the turn.
     timed_out: bool = False
 
 
 class SttStatusResponse(BaseModel):
     model: str
-    # Per-language sizes; ar and en can resolve to different models on CPU.
     model_by_language: Dict[str, str] = {}
     models_loaded: List[str] = []
     device: str
@@ -102,11 +97,7 @@ class ReasoningHealthResponse(BaseModel):
     than inferred from silence in the logs.
     """
     enabled: bool
-    # Phase 2 rollout state: off | shadow | active. Always "off" when the
-    # master switch is off, so one field answers "is the interview symbolic?".
     interview_mode: str = "off"
-    # Phase 3 rollout state: off | shadow | active. Independent of
-    # interview_mode; also forced "off" when the master switch is off.
     safety_mode: str = "off"
     inference_limit: int = 0
     loaded: bool

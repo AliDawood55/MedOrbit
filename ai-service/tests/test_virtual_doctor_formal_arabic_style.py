@@ -27,12 +27,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from virtual_doctor import interview_engine, reasoning
 
-# The dialect words the task explicitly forbids. Checked with word
-# boundaries (see _contains_forbidden_word) so "لأ" (colloquial "no") does
-# not false-positive on "الأعراض"/"الأسئلة"/"الألم"/"الأول" — a definite
-# article "ال" immediately followed by a hamza-initial word is a substring
-# coincidence, not the dialect word, as verified during this batch's own
-# manual audit.
 _FORBIDDEN_DIALECT_WORDS = (
     "شو", "بتشعر", "احكيلي", "تمام", "مش", "خليني",
     "حكيتلي", "بدك", "لأ", "عيدلي",
@@ -51,9 +45,6 @@ def _contains_forbidden_word(text: str) -> list:
     return [w for w in _FORBIDDEN_DIALECT_WORDS if re.search(rf"\b{re.escape(w)}\b", text)]
 
 
-# Every top-level static Arabic template touched by this batch, plus the
-# pre-existing ones this batch deliberately left unchanged because they were
-# already formal-compliant (CORRECTION_APPLIED_NAME/AGE/GENERIC).
 _ALL_AR_TEMPLATES = {
     "GREETING": interview_engine.GREETING["ar"],
     "ASK_AGE": interview_engine.ASK_AGE["ar"],
@@ -79,9 +70,6 @@ _ALL_AR_TEMPLATES = {
 }
 
 
-# ===========================================================================
-# 1. No forbidden dialect word survives in any static Arabic template
-# ===========================================================================
 
 class TestNoForbiddenDialectWordsInTemplates(unittest.TestCase):
     def test_word_boundary_helper_avoids_the_laa_false_positive(self):
@@ -89,8 +77,6 @@ class TestNoForbiddenDialectWordsInTemplates(unittest.TestCase):
         not be flagged inside "الأعراض" (definite article + hamza-initial
         noun), only as an actual standalone word."""
         self.assertEqual(_contains_forbidden_word("ما الأعراض التي تشعر بها اليوم؟"), [])
-        # List order follows _FORBIDDEN_DIALECT_WORDS iteration order, not
-        # the order the words appear in the text.
         self.assertEqual(_contains_forbidden_word("لأ، مش هيك"), ["مش", "لأ"])
 
     def test_static_templates_are_free_of_dialect_words(self):
@@ -107,9 +93,6 @@ class TestNoForbiddenDialectWordsInTemplates(unittest.TestCase):
                     self.assertEqual(_contains_forbidden_word(question), [])
 
 
-# ===========================================================================
-# 2. Exact wording pins for the templates the task named explicitly
-# ===========================================================================
 
 class TestExplicitlyRequestedTemplatesMatchExactWording(unittest.TestCase):
     def test_greeting_is_formal(self):
@@ -139,9 +122,6 @@ class TestExplicitlyRequestedTemplatesMatchExactWording(unittest.TestCase):
         )
 
 
-# ===========================================================================
-# 3. LLMPlanner's per-turn Arabic style rule requires formal MSA
-# ===========================================================================
 
 class TestPlannerPromptRequiresFormalArabic(unittest.TestCase):
     def test_arabic_style_rule_mandates_msa_and_forbids_dialect(self):
@@ -182,20 +162,12 @@ class TestPlannerPromptRequiresFormalArabic(unittest.TestCase):
         self.assertIn("NOT Levantine/Palestinian dialect", prompt)
 
 
-# ===========================================================================
-# 4. reasoning.py's final Arabic recommendation reply is formal
-# ===========================================================================
 
 class TestReasoningFinalReplyIsFormal(unittest.TestCase):
     def test_final_reply_template_has_no_dialect_words(self):
         import inspect
 
         source = inspect.getsource(reasoning)
-        # Anchored on the f-string's own opening text and read FORWARD only
-        # (not backward) — the comment directly above this f-string
-        # deliberately quotes the old dialect wording it superseded
-        # ("حسب اللي حكيتلي إياه...") as historical documentation, which
-        # would false-positive a backward/window-based scan.
         anchor = 'f"بحسب المعلومات التي ذكرتها'
         self.assertIn(anchor, source)
         start = source.index(anchor)

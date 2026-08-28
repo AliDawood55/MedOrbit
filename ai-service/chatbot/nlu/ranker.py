@@ -1,10 +1,6 @@
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
-# Same boundary-safe containment check as IntentClassifier._keyword_in_text
-# (chatbot/intent/classifier.py): a negation word must be a standalone word,
-# not merely a substring embedded inside a longer token — e.g. "لا" must not
-# fire just because it appears inside "السلامة".
 _WORD_BOUNDARY_CHARS = r"A-Za-z0-9؀-ۿ"
 
 
@@ -31,7 +27,6 @@ class IntentRanker:
     Returns ranked list of possible intents with normalized confidence scores.
     """
 
-    # Base confidence weights for different match types
     MATCH_WEIGHTS = {
         "exact_keyword": 1.0,
         "fuzzy_keyword": 0.7,
@@ -42,7 +37,6 @@ class IntentRanker:
         "negation_penalty": -0.5
     }
 
-    # Intent categories for cross-category penalties
     INTENT_CATEGORIES = {
         "greeting": ["small_talk", "thanks", "bye"],
         "search": ["find_doctor", "find_nearest", "find_hospital", "find_pharmacy", "find_clinic"],
@@ -55,13 +49,11 @@ class IntentRanker:
         "emergency": ["emergency"]
     }
 
-    # Intent -> category mapping for quick lookup
     INTENT_TO_CATEGORY = {}
     for category, intents in INTENT_CATEGORIES.items():
         for intent in intents:
             INTENT_TO_CATEGORY[intent] = category
 
-    # Negation words that should penalize intent scores
     NEGATION_WORDS_AR = ["لا", "ليس", "لست", "مش", "غير", "بدون", "بلا", "ما", "لم"]
     NEGATION_WORDS_EN = ["not", "no", "don't", "dont", "doesn't", "isn't", "aren't", "without", "never"]
 
@@ -91,17 +83,14 @@ class IntentRanker:
         calibrated_scores = {}
 
         for intent, raw_score in scores.items():
-            # Start with raw score
             calibrated = raw_score
 
-            # Apply negation penalty if intent matches negative context
             has_negation = any(
                 _contains_word(text_lower, n) for n in self.NEGATION_WORDS_AR + self.NEGATION_WORDS_EN
             )
             if has_negation:
-                calibrated *= 0.5  # Reduce confidence if negation present
+                calibrated *= 0.5
 
-            # Apply cross-category penalty (same category intents compete)
             intent_category = self.INTENT_TO_CATEGORY.get(intent)
             if intent_category:
                 same_category_count = sum(
@@ -110,7 +99,6 @@ class IntentRanker:
                 if same_category_count > 1:
                     calibrated *= (1.0 / same_category_count)
 
-            # Boost for multiple keyword matches
             keywords = matched_keywords.get(intent, [])
             if len(keywords) >= 2:
                 calibrated *= 1.2
@@ -119,13 +107,11 @@ class IntentRanker:
 
             calibrated_scores[intent] = calibrated
 
-        # Normalize scores to sum to 1.0
         total = sum(calibrated_scores.values())
         if total > 0:
             for intent in calibrated_scores:
                 calibrated_scores[intent] = calibrated_scores[intent] / total
 
-        # Build ranked results
         ranked = []
         for intent, confidence in sorted(calibrated_scores.items(), key=lambda x: x[1], reverse=True):
             if confidence >= self.confidence_threshold:
@@ -136,7 +122,6 @@ class IntentRanker:
                     "is_fallback": False
                 })
 
-        # Ensure at least unknown if nothing passed threshold
         if not ranked:
             ranked.append({
                 "intent": "unknown",

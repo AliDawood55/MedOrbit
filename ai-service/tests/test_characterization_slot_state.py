@@ -33,7 +33,6 @@ class TestSlotFillerStateKeying(unittest.TestCase):
         self.slots = SlotFiller()
 
     def test_conversation_states_keyed_by_arbitrary_string(self):
-        # SlotFiller itself is agnostic to what the caller passes as conversation_id.
         self.slots.update_state("any-key", "find_doctor", {})
         self.assertIn("any-key", self.slots.conversation_states)
 
@@ -59,13 +58,10 @@ class TestSlotFillerStateKeying(unittest.TestCase):
         message = "I need a doctor"
         key = str(hash(message))
 
-        # "User A" sends this message and fills their specialty slot.
         self.slots.update_state(key, "find_doctor", {"specialty": "cardiology"})
 
-        # "User B" happens to send the exact same message text.
         self.slots.update_state(key, "find_doctor", {"location": "Ramallah"})
 
-        # Only one state exists, and it now contains a merge of both users' data.
         self.assertEqual(len(self.slots.conversation_states), 1)
         merged_state = self.slots.conversation_states[key]
         self.assertEqual(merged_state["filled_slots"]["specialty"], "cardiology")
@@ -110,10 +106,8 @@ class TestSlotFillerStateKeying(unittest.TestCase):
         self.slots.update_state("conv-2", "find_doctor", {"specialty": "dermatology"})
         self.slots.update_state("conv-3", "find_doctor", {"specialty": "neurology"})
 
-        # Touch conv-1 again so conv-2 becomes the least-recently-used entry.
         self.slots.update_state("conv-1", "find_doctor", {"location": "Nablus"})
 
-        # Inserting a 4th conversation should evict conv-2 (the LRU one).
         self.slots.update_state("conv-4", "find_doctor", {"specialty": "pediatrics"})
 
         self.assertIn("conv-1", self.slots.conversation_states)
@@ -126,11 +120,9 @@ class TestSlotFillerStateKeying(unittest.TestCase):
         self.slots.update_state("conv-old", "find_doctor", {"specialty": "cardiology"})
         self.assertIn("conv-old", self.slots.conversation_states)
 
-        # Simulate the TTL having elapsed since the last touch.
         past = time.time() - (self.slots.CONVERSATION_STATE_TTL_SECONDS + 1)
         self.slots._state_last_access["conv-old"] = past
 
-        # Any state-touching call should sweep expired entries first.
         state = self.slots.get_state_summary("conv-old")
 
         self.assertFalse(state["active"])
@@ -141,7 +133,7 @@ class TestSlotFillerStateKeying(unittest.TestCase):
         """A conversation accessed within the TTL window is not evicted."""
         self.slots.update_state("conv-active", "find_doctor", {"specialty": "cardiology"})
 
-        recent = time.time() - 10  # well within CONVERSATION_STATE_TTL_SECONDS
+        recent = time.time() - 10
         self.slots._state_last_access["conv-active"] = recent
 
         state = self.slots.get_state_summary("conv-active")
@@ -192,7 +184,6 @@ class TestSlotFillerStateKeying(unittest.TestCase):
         self.slots.clear_state("key-a")
         self.assertEqual(len(self.slots.conversation_states), 0)
 
-        # Clearing a key that was never present is a no-op, not an error.
         self.slots.clear_state("never-existed")
         self.assertEqual(len(self.slots.conversation_states), 0)
 

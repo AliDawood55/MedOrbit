@@ -37,8 +37,6 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-# Intake is a precondition for every clinical topic (interview.pl
-# depends_on(_, intake_complete)), so every trajectory starts past it.
 _INTAKE = {"name": "TEST_PATIENT", "age": 34}
 
 
@@ -63,9 +61,6 @@ def _traj(tid: str, complaint: str, turns: List[Dict[str, Any]],
 
 TRAJECTORIES: List[Dict[str, Any]] = [
 
-    # ======================================================================
-    # chest_pain — slots: duration, character, radiation, associated_symptoms
-    # ======================================================================
     _traj("chest_a", "chest_pain", [
         _turn("I have chest pain", {}, "duration", entities=["chest pain"]),
         _turn("It started two hours ago", {"duration": "two hours"}, "character",
@@ -81,9 +76,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               note="all required slots filled -> complete"),
     ], ["linear"]),
 
-    # Same complaint, DIFFERENT known facts from turn one. This is the paired
-    # counterpart of chest_a and the core adaptivity claim: the second turn must
-    # not ask what this patient already volunteered.
     _traj("chest_b", "chest_pain", [
         _turn("I have severe chest pain and shortness of breath", {}, "duration",
               entities=["chest pain", "shortness of breath"]),
@@ -97,8 +89,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               entities=["chest pain", "shortness of breath"]),
     ], ["multi_fill", "paired"]),
 
-    # Safety-flagged: Phase 3 rule is warning first, then the red-flag
-    # follow-up topic (associated_symptoms) ahead of the ordinary flow order.
     _traj("chest_safety", "chest_pain", [
         _turn("I have crushing chest pain and I cannot breathe", {},
               "associated_symptoms", entities=["chest pain", "shortness of breath"],
@@ -110,9 +100,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               note="once answered, ordinary flow order resumes"),
     ], ["safety"]),
 
-    # ======================================================================
-    # abdominal_pain — duration, location_character, associated_symptoms, triggers
-    # ======================================================================
     _traj("abd_a", "abdominal_pain", [
         _turn("My stomach hurts", {}, "duration", entities=["stomach pain"]),
         _turn("Three days", {"duration": "three days"}, "location_character",
@@ -139,9 +126,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               None, entities=["stomach pain"]),
     ], ["multi_fill", "paired"]),
 
-    # ======================================================================
-    # fever_cough — duration, severity, associated_symptoms, exposure
-    # ======================================================================
     _traj("fev_a", "fever_cough", [
         _turn("I have a fever and a cough", {}, "duration", entities=["fever", "cough"]),
         _turn("Four days", {"duration": "four days"}, "severity",
@@ -164,9 +148,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               entities=["fever"], note="paired with fev_a: different facts, different question"),
     ], ["multi_fill", "paired"]),
 
-    # ======================================================================
-    # headache — duration, severity, location, associated_symptoms
-    # ======================================================================
     _traj("head_a", "headache", [
         _turn("I have a headache", {}, "duration", entities=["headache"]),
         _turn("Since last night", {"duration": "since last night"}, "severity",
@@ -190,8 +171,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               None, entities=["headache", "nausea"]),
     ], ["multi_fill", "paired"]),
 
-    # A correction: the patient revises severity. The corrected field must NOT
-    # be treated as newly unanswered.
     _traj("head_correction", "headache", [
         _turn("Headache since yesterday, it is mild",
               {"duration": "since yesterday", "severity": "mild"}, "location",
@@ -204,9 +183,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               note="corrected field stays answered -> same next topic"),
     ], ["correction"]),
 
-    # Asked but not answered. interview.pl records asked_unanswered/2 but
-    # deliberately does NOT gate on it — current behaviour re-offers the topic,
-    # and Phase 2 preserved that. This pins the policy rather than changing it.
     _traj("head_unanswered", "headache", [
         _turn("I have a headache", {}, "duration", entities=["headache"]),
         _turn("I do not remember", {}, "duration", entities=["headache"],
@@ -214,9 +190,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               note="asked but not answered -> policy is to re-offer"),
     ], ["unanswered"]),
 
-    # ======================================================================
-    # rash — duration, appearance, location, associated_symptoms
-    # ======================================================================
     _traj("rash_a", "rash", [
         _turn("I have a rash", {}, "duration", entities=["rash"]),
         _turn("Two weeks", {"duration": "two weeks"}, "appearance", entities=["rash"]),
@@ -233,9 +206,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
                "location": "legs"}, "associated_symptoms", entities=["rash"]),
     ], ["multi_fill", "paired"]),
 
-    # ======================================================================
-    # generic — duration, severity, associated_symptoms
-    # ======================================================================
     _traj("gen_a", "generic", [
         _turn("I feel unwell", {}, "duration"),
         _turn("A week", {"duration": "a week"}, "severity"),
@@ -252,9 +222,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
               note="safety topic first even on the generic flow"),
     ], ["safety"]),
 
-    # ======================================================================
-    # Intake incomplete — every clinical topic depends on it.
-    # ======================================================================
     _traj("intake_missing", "headache", [
         {"says": "I have a headache", "profile": {"name": "TEST_PATIENT"},
          "entities": {"symptoms": ["headache"]}, "safety_flagged": None,
@@ -264,9 +231,6 @@ TRAJECTORIES: List[Dict[str, Any]] = [
 ]
 
 
-# Paired trajectories: same complaint, deliberately different known facts.
-# The acceptance criterion is that they do NOT receive the same next question
-# at the compared turn.
 PAIRS = (
     ("chest_a", "chest_b", 1),
     ("abd_a", "abd_b", 0),

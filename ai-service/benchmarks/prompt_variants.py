@@ -51,8 +51,6 @@ from __future__ import annotations
 
 from virtual_doctor import understanding
 
-# Worked examples. Written for this file, using only symptoms already in the
-# vocabulary, and phrased so none matches a held-out benchmark sentence.
 _EXAMPLES = """EXAMPLES — copy this behaviour exactly:
 
 "I have a headache"
@@ -87,29 +85,6 @@ _EXAMPLES = """EXAMPLES — copy this behaviour exactly:
 {"symptoms": []}
 """
 
-# --- v3 -------------------------------------------------------------------
-# v2 raised recall sharply (uncertain 0.33 -> 1.00, multi-symptom 0.75 -> 1.00,
-# Arabic recall 0.50 -> 1.00) and LOST precision (0.79 -> 0.63). The dev
-# failures showed exactly one cause, and it is a property of few-shot prompting
-# rather than of any particular sentence:
-#
-#     WHEN THE PATIENT MENTIONS NO SYMPTOM, THE MODEL COPIES THE EXAMPLES.
-#
-# Every v2 false positive on dev was `stomach_pain` or `headache` — the two
-# symptoms in v2's worked examples — emitted for a duration answer, an age
-# correction, a name correction and a thank-you. The example set showed the
-# model what a symptom looks like and never once showed it an empty answer, so
-# "no symptoms" was not a shape it had seen.
-#
-# v3 therefore adds the missing SHAPES, not patches for the failing phrases:
-#   * a non-clinical sentence  -> symptoms: []
-#   * a slot answer            -> symptoms: [], findings: {...}
-#   * a correction             -> symptoms: [], corrections: [...]
-#   * mixed polarity in one sentence (dev en_mixed_pd_01 lost the denial)
-#   * historical vs absent, which dev en_historical_01 confused
-#
-# None of these is tuned to a held-out sentence; a test asserts no held-out
-# text appears in whichever variant reaches production.
 
 _EXAMPLES_V3 = _EXAMPLES + """
 "I feel dizzy but I don't have any rash"
@@ -200,29 +175,6 @@ def build_v3(message: str, lang: str) -> str:
     ) + "\n" + _V3_EXTRA_RULES
 
 
-# --- v4 -------------------------------------------------------------------
-# Phase 8's expanded corpus found ONE gap that is conceptual rather than
-# lexical, and it is the most dangerous one measured so far:
-#
-#     THE MODEL DOES NOT ASK WHO THE SUBJECT IS.
-#
-# On held-out, third-party attribution scored F1 0.00 (3/3 wrong) and
-# question-not-report scored F1 0.00 (2/2 wrong):
-#
-#     "my friend has epilepsy"          -> patient has `seizure`, present
-#     "my aunt lost consciousness"      -> patient is `unconscious`, present
-#     "is blood in urine dangerous?"    -> patient has `hematuria`, present
-#
-# Each of those reaches rules/safety.pl and escalates a consultation on the
-# basis of someone else's history, or of a question the patient asked. Five of
-# the thirteen negative controls produced an invented SAFETY atom this way.
-#
-# v4 is v1 (the SHIPPED prompt) plus two sentences addressing exactly that: who
-# the subject is, and whether the utterance is a report at all. It deliberately
-# does NOT build on v3 — v3 won on dev and lost on held-out in Phase 6.5, so
-# the baseline to improve is production, not the rejected variant. No corpus
-# sentence appears in it; the rule is conceptual, so a fix here should
-# generalise or not at all.
 _V4_EXTRA_RULES = """
 - Extract ONLY what the patient says about THEMSELVES, right now. If they
   describe someone else — a relative, a friend, another patient — output no
