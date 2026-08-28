@@ -76,7 +76,6 @@ async def _handle(message, session, planner_result=None):
     return result, writes
 
 
-# Turns spanning the safety tiers plus a pinned-routine case.
 _TURNS = [
     ("عندي صداع شديد فجأة", "headache", "urgent"),
     ("عندي ضيق تنفس", "chest_pain", "emergency"),
@@ -85,9 +84,6 @@ _TURNS = [
 ]
 
 
-# ===========================================================================
-# 1. Rollout modes
-# ===========================================================================
 
 class TestSafetyRolloutModes(unittest.TestCase):
     def test_default_is_shadow_when_the_master_switch_is_on(self):
@@ -130,9 +126,6 @@ class TestSafetyRolloutModes(unittest.TestCase):
         self.assertEqual(status["inference_limit"], prolog_engine.INFERENCE_LIMIT)
 
 
-# ===========================================================================
-# 2. Shadow mode changes nothing
-# ===========================================================================
 
 class TestShadowModeIsInvisible(unittest.IsolatedAsyncioTestCase):
     async def test_every_turn_is_identical_off_versus_shadow(self):
@@ -177,9 +170,6 @@ class TestShadowModeIsInvisible(unittest.IsolatedAsyncioTestCase):
         decide.assert_not_called()
 
 
-# ===========================================================================
-# 3. Active mode escalates, never downgrades
-# ===========================================================================
 
 @_needs_engine
 class TestActiveModeOnlyEscalates(unittest.IsolatedAsyncioTestCase):
@@ -237,9 +227,6 @@ class TestActiveModeOnlyEscalates(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["urgency_level"], "emergency")
 
 
-# ===========================================================================
-# 4. The warning comes first — the Phase 2 approval condition
-# ===========================================================================
 
 class TestWarningPrecedesEverything(unittest.IsolatedAsyncioTestCase):
     async def test_the_warning_precedes_the_follow_up_question(self):
@@ -300,9 +287,6 @@ class TestWarningPrecedesEverything(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(prolog_engine.interview_active())
 
 
-# ===========================================================================
-# 5. Divergence counters
-# ===========================================================================
 
 @_needs_engine
 class TestDivergenceCounters(unittest.IsolatedAsyncioTestCase):

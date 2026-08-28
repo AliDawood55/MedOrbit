@@ -55,7 +55,6 @@ from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 from pypdf import PdfReader
 
-# ai-service/rag/ingest_book.py -> repo root is two levels up.
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 load_dotenv(_REPO_ROOT / ".env")
 
@@ -65,16 +64,11 @@ DEFAULT_OVERLAP = 200
 DEFAULT_EMBED_BATCH = 32
 DEFAULT_INSERT_BATCH = 200
 
-# Shortest chunk worth embedding. Below this it is nearly always a stray page
-# number, running header, or figure caption fragment — noise in a RAG index.
 MIN_CHUNK_CHARS = 120
 
 log = logging.getLogger("ingest_book")
 
 
-# --------------------------------------------------------------------------
-# Ollama
-# --------------------------------------------------------------------------
 
 class OllamaEmbedder:
     """Batch embedding client for a local Ollama server.
@@ -154,7 +148,6 @@ def resolve_ollama_url(explicit: Optional[str]) -> str:
     if explicit:
         candidates.append(explicit)
     else:
-        # .env's OLLAMA_URL points at /api/generate; keep only scheme://host:port.
         env_url = os.environ.get("OLLAMA_URL", "")
         if env_url:
             match = re.match(r"^(https?://[^/]+)", env_url.strip())
@@ -193,7 +186,6 @@ def assert_model_present(base_url: str, model: str) -> None:
         raise SystemExit(f"Could not list Ollama models: {exc}")
 
     names = {m.get("name", "") for m in tags.get("models", [])}
-    # Ollama reports "nomic-embed-text:latest" for a "nomic-embed-text" pull.
     if model in names or f"{model}:latest" in names:
         return
     raise SystemExit(
@@ -203,9 +195,6 @@ def assert_model_present(base_url: str, model: str) -> None:
     )
 
 
-# --------------------------------------------------------------------------
-# PDF -> text -> chunks
-# --------------------------------------------------------------------------
 
 class Chunk(NamedTuple):
     index: int
@@ -216,13 +205,11 @@ class Chunk(NamedTuple):
 
 _WS_RUN = re.compile(r"[ \t ]+")
 _BLANK_RUNS = re.compile(r"\n\s*\n\s*\n+")
-# Words split across a line break by hyphenation: "examina-\ntion" -> "examination".
 _HYPHEN_BREAK = re.compile(r"(\w)-\n(\w)")
 
 
 def normalise(text: str) -> str:
     """Flatten PDF text extraction artefacts into clean prose."""
-    # NFKC folds ligatures (ﬁ -> fi) and full-width forms that pypdf emits.
     text = unicodedata.normalize("NFKC", text)
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = _HYPHEN_BREAK.sub(r"\1\2", text)
@@ -285,7 +272,7 @@ def iter_chunks(
     from.
     """
     buffer = ""
-    marks: List[tuple[int, int]] = []  # (offset in buffer, page number)
+    marks: List[tuple[int, int]] = []
     index = 0
 
     def pages_spanned(end: int) -> tuple[int, int]:
@@ -314,8 +301,6 @@ def iter_chunks(
             if chunk:
                 yield chunk
 
-            # Keep `overlap` characters of tail as the next chunk's head so a
-            # sentence straddling the boundary stays retrievable from both.
             keep_from = max(0, cut - overlap)
             buffer = buffer[keep_from:]
             marks = [(max(0, off - keep_from), pg) for off, pg in marks if off >= keep_from] \
@@ -326,9 +311,6 @@ def iter_chunks(
         yield tail
 
 
-# --------------------------------------------------------------------------
-# Database
-# --------------------------------------------------------------------------
 
 def connect():
     """Connect using the same root .env credentials the ai-service uses."""
@@ -402,9 +384,6 @@ def insert_batch(conn, rows: list[tuple]) -> int:
     return inserted
 
 
-# --------------------------------------------------------------------------
-# Main
-# --------------------------------------------------------------------------
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -451,7 +430,6 @@ def main() -> int:
     pages = iter_pages(args.pdf, args.start_page, args.end_page)
     chunks = iter_chunks(pages, args.chunk_size, args.overlap)
 
-    # ---- dry run: chunking only -------------------------------------------
     if args.dry_run:
         count = chars = 0
         first_preview = None
@@ -471,7 +449,6 @@ def main() -> int:
                      first_preview.text[:400] + ("..." if len(first_preview.text) > 400 else ""))
         return 0
 
-    # ---- preflight ---------------------------------------------------------
     base_url = resolve_ollama_url(args.ollama_url)
     assert_model_present(base_url, args.model)
     embedder = OllamaEmbedder(base_url, args.model)
@@ -488,7 +465,6 @@ def main() -> int:
         log.info("Resuming: chunks 0-%d already stored, continuing from %d",
                  skip_through, skip_through + 1)
 
-    # ---- ingest ------------------------------------------------------------
     started = time.time()
     pending: list[Chunk] = []
     seen = inserted = skipped = 0

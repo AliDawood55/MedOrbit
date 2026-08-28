@@ -17,7 +17,6 @@ Pure function tests only — no real Piper model load, no audio synthesis, no
 network access anywhere in this file.
 """
 
-import importlib
 import os
 import sys
 import unittest
@@ -28,9 +27,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from virtual_doctor.voice import tts
 
 
-# ===========================================================================
-# 1. Repeated punctuation is collapsed
-# ===========================================================================
 
 class TestRepeatedPunctuationIsCollapsed(unittest.TestCase):
     def test_repeated_arabic_question_marks_collapse_to_one(self):
@@ -43,9 +39,6 @@ class TestRepeatedPunctuationIsCollapsed(unittest.TestCase):
         self.assertEqual(tts._normalize_arabic_tts_text("الاسم،، والعمر.."), "الاسم، والعمر.")
 
 
-# ===========================================================================
-# 2. Markdown/technical artifacts are stripped
-# ===========================================================================
 
 class TestMarkdownArtifactsAreStripped(unittest.TestCase):
     def test_bold_markers_are_removed(self):
@@ -61,9 +54,6 @@ class TestMarkdownArtifactsAreStripped(unittest.TestCase):
         )
 
 
-# ===========================================================================
-# 3. Whitespace/newlines collapse into natural sentence breaks
-# ===========================================================================
 
 class TestWhitespaceCollapses(unittest.TestCase):
     def test_multiple_newlines_become_a_single_space(self):
@@ -76,9 +66,6 @@ class TestWhitespaceCollapses(unittest.TestCase):
         self.assertEqual(tts._normalize_arabic_tts_text("مرحبًا    بك"), "مرحبًا بك")
 
 
-# ===========================================================================
-# 4. Medically important words and meaning are always preserved
-# ===========================================================================
 
 class TestMeaningIsPreserved(unittest.TestCase):
     def test_medical_terms_survive_untouched(self):
@@ -89,8 +76,6 @@ class TestMeaningIsPreserved(unittest.TestCase):
         self.assertEqual(tts._normalize_arabic_tts_text("كم عمرك؟"), "كم عمرك؟")
 
     def test_no_diacritics_are_added(self):
-        # Fatha (َ) must never appear in the output if it wasn't in the
-        # input — this function only removes/collapses noise, never adds.
         text = "هل تشعر بألم في الصدر؟"
         result = tts._normalize_arabic_tts_text(text)
         self.assertNotIn("َ", result)
@@ -101,9 +86,6 @@ class TestMeaningIsPreserved(unittest.TestCase):
         self.assertEqual(tts._normalize_arabic_tts_text("   "), "")
 
 
-# ===========================================================================
-# 5. _prepare_text wires normalization in for Arabic only
-# ===========================================================================
 
 class TestPrepareTextWiresNormalizationForArabicOnly(unittest.TestCase):
     def test_arabic_text_is_normalized_by_prepare_text(self):
@@ -111,9 +93,6 @@ class TestPrepareTextWiresNormalizationForArabicOnly(unittest.TestCase):
         self.assertEqual(prepared, "مرحبًا؟ تمام")
 
     def test_english_text_is_not_run_through_arabic_normalization(self):
-        # English already goes through _prepare_text unmodified except for
-        # the (irrelevant here) Latin-run transliteration pass; repeated
-        # punctuation in English text must NOT be touched by this batch.
         prepared = tts._prepare_text("Really???", "en")
         self.assertEqual(prepared, "Really???")
 
@@ -123,9 +102,6 @@ class TestPrepareTextWiresNormalizationForArabicOnly(unittest.TestCase):
         self.assertNotIn("MedOrbit", prepared)
 
 
-# ===========================================================================
-# 6. SynthesisConfig plumbing is a verified no-op unless configured
-# ===========================================================================
 
 class TestSynthesisConfigIsOptInOnly(unittest.TestCase):
     def test_no_env_vars_set_returns_none(self):

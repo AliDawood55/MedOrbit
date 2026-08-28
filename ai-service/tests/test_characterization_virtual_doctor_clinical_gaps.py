@@ -40,9 +40,6 @@ from chatbot.nlu.safety import MedicalSafetyLayer
 from virtual_doctor.interview_engine import FLOWS, _detect_chief_complaint
 
 
-# ===========================================================================
-# A. Arabic thunderclap / sudden-severe-headache safety fix
-# ===========================================================================
 
 class TestArabicThunderclapHeadacheSafetyFix(unittest.TestCase):
     """FIXED: a sudden, severe headache ("صداع شديد فجأة" — the classic
@@ -98,9 +95,6 @@ class TestArabicThunderclapHeadacheSafetyFix(unittest.TestCase):
         self.assertEqual(result["severity"], "normal")
 
 
-# ===========================================================================
-# B. Arabic hematuria safety fix (brings Arabic to parity with English)
-# ===========================================================================
 
 class TestArabicHematuriaSafetyFix(unittest.TestCase):
     """FIXED: "دم بالبول" / "دم في البول" (blood in urine) now escalate to
@@ -156,9 +150,6 @@ class TestArabicHematuriaSafetyFix(unittest.TestCase):
         self.assertEqual(result["severity"], "normal")
 
 
-# ===========================================================================
-# C. stomach_ache vs stomach_pain — routing fix
-# ===========================================================================
 
 class TestStomachAcheVsStomachPainRoutingFix(unittest.TestCase):
     """FIXED: flows/abdominal_pain.json's match_symptoms now accepts

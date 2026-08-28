@@ -25,7 +25,6 @@ a production consultation.
 
 import os
 import sys
-import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
@@ -53,9 +52,6 @@ def _facts(session=SESSION, **_kw):
     ]
 
 
-# ===========================================================================
-# 1. Availability and rule loading
-# ===========================================================================
 
 class TestEngineAvailability(unittest.TestCase):
     @_needs_engine
@@ -94,9 +90,6 @@ class TestEngineAvailability(unittest.TestCase):
         self.assertIn("enabled", status)
 
 
-# ===========================================================================
-# 2. Prolog unavailable — the fallback that protects a live consultation
-# ===========================================================================
 
 class TestPrologUnavailableFallback(unittest.TestCase):
     def test_reason_returns_explicit_absence_not_a_fabricated_verdict(self):
@@ -127,9 +120,6 @@ class TestPrologUnavailableFallback(unittest.TestCase):
         self.assertEqual(fields["degraded_reason"], "missing runtime")
 
 
-# ===========================================================================
-# 3. Session isolation and cleanup
-# ===========================================================================
 
 @_needs_engine
 class TestSessionIsolation(unittest.TestCase):
@@ -173,9 +163,6 @@ class TestSessionIsolation(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 4. Concurrency — the NestedQueryError class of failure
-# ===========================================================================
 
 @_needs_engine
 class TestConcurrentAccess(unittest.TestCase):
@@ -229,9 +216,6 @@ class TestConcurrentAccess(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 5. No raw Prolog object or query generator is reachable
-# ===========================================================================
 
 class TestNoRawPrologObjectIsExposed(unittest.TestCase):
     def test_package_exports_no_pyswip_objects(self):
@@ -262,9 +246,6 @@ class TestNoRawPrologObjectIsExposed(unittest.TestCase):
         self.assertEqual(rows, [{"V": 41}])
 
 
-# ===========================================================================
-# 6. The canonical urgency lattice is defined once, consistently
-# ===========================================================================
 
 @_needs_engine
 class TestCanonicalUrgencyLattice(unittest.TestCase):
@@ -302,9 +283,6 @@ class TestCanonicalUrgencyLattice(unittest.TestCase):
         self.assertEqual(rows, [{"U": "urgent", "Rule": "safety_urgent_05"}])
 
 
-# ===========================================================================
-# 7. VD_SYMBOLIC defaults to OFF
-# ===========================================================================
 
 class TestFeatureFlagDefaultsOff(unittest.TestCase):
     def test_flag_absent_means_disabled(self):

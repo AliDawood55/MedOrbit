@@ -81,41 +81,24 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         cls.classifier = IntentClassifier()
 
     def test_how_do_i_get_there_now_classifies_correctly(self):
-        # FIXED by A1. "er" no longer matches inside "there".
         result = self.classifier.classify("How do I get there")
         self.assertEqual(result["intent"], "show_route")
         self.assertEqual(result["confidence"], 0.5)
         self.assertEqual(result["matched_keywords"], ["how do I get"])
 
     def test_kaifak_now_classifies_correctly(self):
-        # FIXED by the separate "how_are_you only" bug-fix batch: added
-        # "are you" as an explicit how_are_you keyword. Combined with its
-        # pre-existing "how are you" match, this gives how_are_you 2 matched
-        # keywords (triggering the ranker's keyword-count boost), decisively
-        # outranking platform_support's single "how" match and small_talk's
-        # single "how are you" match rather than tying with them.
         result = self.classifier.classify("كيفك")
         self.assertEqual(result["intent"], "how_are_you")
         self.assertAlmostEqual(result["confidence"], 0.5455, places=3)
         self.assertEqual(sorted(result["matched_keywords"]), sorted(["how are you", "are you"]))
 
     def test_travel_time_phrase_now_classifies_correctly(self):
-        # FIXED by the separate "travel_time only" bug-fix batch: added
-        # "يستغرق الوصول" as an explicit travel_time keyword, matching the
-        # exact ngram that survives the "كم"->"how_much" dialect
-        # substitution. This outweighs platform_support's "how" match.
         result = self.classifier.classify("كم يستغرق الوصول")
         self.assertEqual(result["intent"], "travel_time")
         self.assertAlmostEqual(result["confidence"], 0.625, places=3)
         self.assertEqual(result["matched_keywords"], ["يستغرق الوصول"])
 
     def test_doctor_fee_phrase_now_classifies_correctly(self):
-        # FIXED by the separate "doctor_fee only" bug-fix batch: added
-        # "سعر كشف" and "سعر كشف الدكتور" as explicit doctor_fee keywords
-        # (targeting the ngram-fallback-matched, post-dialect-substitution
-        # form of this input), giving doctor_fee enough raw score to clear
-        # its own 0.4 confidence threshold despite competing with
-        # find_doctor/doctor_by_name/book_appointment's generic matches.
         result = self.classifier.classify("كم سعر كشف الدكتور")
         self.assertEqual(result["intent"], "doctor_fee")
         self.assertAlmostEqual(result["confidence"], 0.4643, places=3)
@@ -125,12 +108,6 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         )
 
     def test_clinic_doctors_phrase_now_classifies_correctly(self):
-        # FIXED by the separate "clinic_doctors only" bug-fix batch: added
-        # "الأطباء العيادة" as an explicit clinic_doctors keyword, matching
-        # the surviving 2-word ngram. Combined with its pre-existing "أطباء"
-        # and "الأطباء" matches, this gives clinic_doctors 3 matched
-        # keywords (vs. find_doctor's 2), decisively outranking find_doctor
-        # rather than tying with it.
         result = self.classifier.classify("من هم الأطباء في العيادة")
         self.assertEqual(result["intent"], "clinic_doctors")
         self.assertAlmostEqual(result["confidence"], 0.5143, places=3)
@@ -142,38 +119,18 @@ class TestClusterACurrentOutputs(unittest.TestCase):
         self.assertIn("find_doctor", alt_intents)
 
     def test_clinic_hours_phrase_now_classifies_correctly(self):
-        # FIXED by the separate "clinic_hours only" bug-fix batch: added
-        # "ساعات دوام" as an explicit clinic_hours keyword. Combined with the
-        # pre-existing bare "دوام" match, this gives clinic_hours 2 matched
-        # keywords (triggering the ranker's keyword-count boost), decisively
-        # outranking find_doctor/doctor_availability/clinic_info's single
-        # 1.0 matches rather than tying with them into "unknown".
         result = self.classifier.classify("ساعات دوام العيادة")
         self.assertEqual(result["intent"], "clinic_hours")
         self.assertAlmostEqual(result["confidence"], 0.4444, places=3)
         self.assertEqual(sorted(result["matched_keywords"]), sorted(["دوام", "ساعات دوام"]))
 
     def test_medication_interaction_phrase_now_classifies_acceptably(self):
-        # FIXED (reaches an accepted answer). Clean 3-way tie between
-        # medication_info, medication_interaction, and lab_result_query
-        # (still reachable via ngram fallback — (c), untouched by A1) at
-        # 0.3333 each; medication_info wins by dict order. Both
-        # medication_info and medication_interaction are within the
-        # accepted set for this input.
         result = self.classifier.classify("هل يتعارض بانادول مع الضغط")
         self.assertEqual(result["intent"], "medication_info")
         self.assertAlmostEqual(result["confidence"], 0.3333, places=3)
         self.assertEqual(result["matched_keywords"], ["بانادول"])
 
     def test_arabic_show_route_phrase_now_classifies_correctly(self):
-        # FIXED by the separate "Arabic show_route only" bug-fix batch: added
-        # "اوصل للعيادة" (matching the surviving ngram) and "how اوصل"
-        # (matching the surviving post-dialect-substitution form, since
-        # "كيف" was already legitimately replaced by "how") as explicit
-        # show_route keywords. Together these give show_route 2 matched
-        # keywords (triggering the ranker's keyword-count boost), decisively
-        # outranking find_doctor/clinic_info's shared "عيادة" match rather
-        # than merely tying with it.
         result = self.classifier.classify("كيف اوصل للعيادة")
         self.assertEqual(result["intent"], "show_route")
         self.assertAlmostEqual(result["confidence"], 0.48, places=3)
@@ -243,10 +200,6 @@ class TestArabicProcliticRegressionGuard(unittest.TestCase):
         self.assertIn(result["intent"], ["pregnancy_info", "general_medical_question"])
 
     def test_vaccination_info_with_mid_phrase_definite_article_still_matches(self):
-        # Repaired via a targeted intents.json keyword variant — see (a'')
-        # in the module docstring. "جدول التطعيمات" is now an explicit
-        # keyword for vaccination_info, alongside the original bare
-        # "جدول تطعيمات".
         result = self.classifier.classify("جدول التطعيمات")
         self.assertEqual(result["intent"], "vaccination_info")
 

@@ -49,9 +49,6 @@ def decide(profile=None, candidate=None, session=SESSION, **kw):
         fact_set, vocabulary.slug_session_key(session)), fact_set
 
 
-# ===========================================================================
-# 1. The general single-valued contradiction rule
-# ===========================================================================
 
 @_needs_engine
 class TestGeneralContradiction(unittest.TestCase):
@@ -130,9 +127,6 @@ class TestGeneralContradiction(unittest.TestCase):
             self.assertNotIn(forbidden, body)
 
 
-# ===========================================================================
-# 2. The semantic boundary
-# ===========================================================================
 
 @_needs_engine
 class TestSemanticCategories(unittest.TestCase):
@@ -197,9 +191,6 @@ class TestSemanticCategories(unittest.TestCase):
                          {"associated_symptoms"})
 
 
-# ===========================================================================
-# 3. Free text never crosses the boundary
-# ===========================================================================
 
 @_needs_engine
 class TestNoRawTextReachesProlog(unittest.TestCase):
@@ -289,9 +280,6 @@ class TestNoRawTextReachesProlog(unittest.TestCase):
                     StatedFact(session=key, slot="age", value=23, turn=bad)
 
 
-# ===========================================================================
-# 4. Provenance construction
-# ===========================================================================
 
 @_needs_engine
 class TestProvenanceBuilding(unittest.TestCase):
@@ -335,9 +323,6 @@ class TestProvenanceBuilding(unittest.TestCase):
                          set(fact_builder.PROVENANCE_IDENTITY_SLOTS))
 
 
-# ===========================================================================
-# 5. Failure behaviour
-# ===========================================================================
 
 class TestCorrectionFailureBehaviour(unittest.TestCase):
     def test_unavailable_asserts_nothing_about_the_turn(self):
@@ -404,9 +389,6 @@ class TestCorrectionFailureBehaviour(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 6. Isolation and concurrency
-# ===========================================================================
 
 @_needs_engine
 class TestCorrectionIsolationAndConcurrency(unittest.TestCase):
@@ -450,9 +432,6 @@ class TestCorrectionIsolationAndConcurrency(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 7. Rule file separation
-# ===========================================================================
 
 class TestRuleFileSeparation(unittest.TestCase):
     def _body(self, name):

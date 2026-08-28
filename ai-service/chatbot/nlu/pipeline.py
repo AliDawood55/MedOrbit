@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 from chatbot.nlu.normalizer import TextNormalizer
 from chatbot.nlu.synonyms import SynonymEngine
@@ -67,29 +67,21 @@ class NLUPipeline:
         Returns:
             Dict with processed results
         """
-        # Step 1: Normalize
         normalized_info = self.normalizer.normalize_with_metadata(text)
         normalized_text = normalized_info["normalized"]
         language = normalized_info["language"]
 
-        # Step 2: Tokenize
         tokens = self.tokenizer.tokenize(normalized_text)
-        tokens_with_pos = self.tokenizer.tokenize_with_positions(text)
         ngrams = self.tokenizer.extract_ngrams(tokens, min_n=1, max_n=3)
 
-        # Step 3: Synonym resolution
-        resolved_tokens = self.synonyms.resolve_tokens(tokens)
         resolved_text = self.synonyms.resolve_text(normalized_text)
 
-        # Step 4: Extract numbers
         numbers = self.tokenizer.extract_numbers(text)
 
-        # Step 5: Context resolution
         context_resolved = {}
         if conversation_context:
             context_resolved = self.context_resolver.resolve(text, conversation_context)
 
-        # Step 6: Medical safety check (highest priority)
         safety_result = self.safety.check(text)
         if safety_result["bypass_intent_routing"]:
             return {
@@ -108,7 +100,6 @@ class NLUPipeline:
                 "conversation_context": context_resolved
             }
 
-        # Step 7: Intent ranking with calibration
         ranked_intents = self.ranker.rank(
             intent_scores,
             matched_keywords,
@@ -118,22 +109,18 @@ class NLUPipeline:
         best_intent = self.ranker.get_best_intent(ranked_intents)
         alternatives = self.ranker.get_alternatives(ranked_intents)
 
-        # Step 8: Extract entities from resolved text
         entities = self._extract_entities(
             text, normalized_text, resolved_text, tokens, ngrams,
             numbers, context_resolved
         )
 
-        # Step 9: Entity linking (resolve to DB IDs)
         if available_data:
             entities = self.entity_linker.link_entities(entities, available_data)
 
-        # Handle intent override from context (e.g., follow-up navigation)
         final_intent = best_intent["intent"]
         if entities.get("_intent_override"):
             final_intent = entities["_intent_override"]
 
-        # Step 10: Slot filling
         slot_info = None
         if conversation_id:
             if final_intent != "unknown":
@@ -147,7 +134,6 @@ class NLUPipeline:
                     "next_question": next_question
                 }
 
-        # Step 11: Build final result
         return {
             "intent": final_intent,
             "confidence": best_intent["confidence"],
@@ -197,9 +183,7 @@ class NLUPipeline:
             "numbers": numbers if numbers else None
         }
 
-        # Check ngrams against known entities from synonym engine
         for ngram in ngrams:
-            # Check for specialty matches
             canonical = self.synonyms.resolve(ngram)
             for spec_key in self.synonyms.arabic_synonyms.keys():
                 if canonical == spec_key or ngram == spec_key:
@@ -208,7 +192,6 @@ class NLUPipeline:
                     if not entities["specialty"]:
                         entities["specialty"] = spec_key
 
-            # Check for type matches
             type_keys = {"clinic", "hospital", "pharmacy", "laboratory", "radiology", "dental", "emergency", "optical"}
             if canonical in type_keys:
                 if canonical not in entities["types"]:
@@ -216,20 +199,17 @@ class NLUPipeline:
                 if not entities["type"]:
                     entities["type"] = canonical
 
-            # Check for symptom matches
             symptom_keys = {"headache", "fever", "cough", "fatigue", "dizziness", "nausea",
                            "chest_pain", "stomach_ache", "back_pain", "insomnia", "anxiety", "skin_rash"}
             if canonical in symptom_keys:
                 if canonical not in entities["symptoms"]:
                     entities["symptoms"].append(canonical)
 
-            # Check for medication matches
             med_keys = {"paracetamol", "ibuprofen", "aspirin", "amoxicillin", "omeprazole", "metformin", "insulin"}
             if canonical in med_keys:
                 if canonical not in entities["medications"]:
                     entities["medications"].append(canonical)
 
-        # Merge context-resolved entities (don't override newly extracted)
         for key, value in context_resolved.items():
             if key.startswith("_"):
                 continue

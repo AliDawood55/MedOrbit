@@ -20,9 +20,6 @@ def retrieve_context(message: str, entities: dict) -> str:
         "available_data": []
     }
 
-    # ============================================
-    # Location context
-    # ============================================
     if entities.get("latitude") and entities.get("longitude"):
         context["search_parameters"]["user_location"] = {
             "latitude": entities["latitude"],
@@ -33,9 +30,6 @@ def retrieve_context(message: str, entities: dict) -> str:
     if entities.get("location"):
         context["entities_found"]["region"] = entities["location"]
 
-    # ============================================
-    # Facility type context
-    # ============================================
     entity_type = entities.get("type")
     if entity_type:
         type_map = {
@@ -58,9 +52,6 @@ def retrieve_context(message: str, entities: dict) -> str:
                        "distance", "rating", "services", "operating_hours", "insurance"]
         })
 
-    # ============================================
-    # Medical specialty context
-    # ============================================
     if entities.get("specialty"):
         context["type"] = "doctor_search"
         context["search_parameters"]["specialty"] = entities["specialty"]
@@ -72,9 +63,6 @@ def retrieve_context(message: str, entities: dict) -> str:
             "fields": ["name", "specialty", "rating", "fee", "experience", "clinic"]
         })
 
-    # ============================================
-    # Symptom context
-    # ============================================
     if entities.get("symptoms") and len(entities["symptoms"]) > 0:
         context["type"] = "symptom_analysis"
         context["entities_found"]["symptoms"] = entities["symptoms"]
@@ -84,9 +72,6 @@ def retrieve_context(message: str, entities: dict) -> str:
             "note": "Provide general guidance only. Never diagnose."
         })
 
-    # ============================================
-    # Medication context
-    # ============================================
     if entities.get("medications") and len(entities["medications"]) > 0:
         context["type"] = "medication_info"
         context["entities_found"]["medications"] = entities["medications"]
@@ -96,9 +81,6 @@ def retrieve_context(message: str, entities: dict) -> str:
             "note": "Provide general information only. Recommend consulting a pharmacist."
         })
 
-    # ============================================
-    # Navigation context
-    # ============================================
     if entities.get("intent") == "show_route":
         context["type"] = "navigation"
         context["available_data"].append({
@@ -106,9 +88,6 @@ def retrieve_context(message: str, entities: dict) -> str:
             "note": "User wants directions to a previously found location."
         })
 
-    # ============================================
-    # Default fallback
-    # ============================================
     if not context["available_data"]:
         context["available_data"].append({
             "type": "general",

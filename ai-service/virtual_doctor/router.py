@@ -41,9 +41,6 @@ async def internal_identity(
     return require_internal_identity(None, x_medorbit_internal_token, x_medorbit_user_id)
 
 
-# Every route on this router requires the internal credential. Browsers and
-# mobile apps cannot hold it, which is the point: the only route to the
-# Virtual Doctor is through the authenticated, entitlement-checked backend.
 router = APIRouter(
     prefix="/virtual-doctor",
     tags=["virtual-doctor"],
@@ -53,9 +50,6 @@ router = APIRouter(
 
 @router.post("/start", response_model=StartResponse)
 async def start(req: StartRequest, user_id: str = Depends(internal_identity)):
-    # req.user_id is deliberately ignored, and rejected outright if present:
-    # a client-supplied identity is exactly the forgery this boundary exists
-    # to stop. The consultation is owned by the authenticated caller.
     if req.user_id:
         raise HTTPException(status_code=403, detail="Client-supplied identity is not accepted")
     result = await engine.start_session(req.language, user_id)
@@ -67,8 +61,6 @@ async def message(req: MessageRequest, user_id: str = Depends(internal_identity)
     try:
         result = await engine.handle_message(req.session_id, req.message, owner_user_id=user_id)
     except ValueError:
-        # Someone else's session and a non-existent one are reported
-        # identically, so this cannot be used to discover which ids are real.
         raise HTTPException(status_code=404, detail="Session not found")
     return MessageResponse(**result)
 
@@ -138,9 +130,6 @@ async def create_report(session_id: str, user_id: str = Depends(internal_identit
     try:
         report = await report_generator.generate_report(session_id, owner_user_id=user_id)
     except report_generator.PdfGenerationUnavailable as exc:
-        # The consultation and its data are fine — only the PDF renderer is
-        # broken on this machine (see pdf_worker.py). 503 so the client can
-        # say "temporarily unavailable" rather than "your report failed".
         raise HTTPException(status_code=503, detail=f"pdf_unavailable: {exc}")
     if not report:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -195,10 +184,6 @@ async def transcribe(
     try:
         return TranscriptionResponse(**await stt.transcribe(data, language))
     except stt.TranscriptionTimeout as exc:
-        # Not a server error: the turn simply produced nothing usable in time.
-        # Returned as a normal 200 with empty text + timed_out so the client
-        # takes the same "please repeat that" path as any other empty result,
-        # rather than showing a scary failure or hanging.
         logger.warning("Transcription timed out: %s", exc)
         return TranscriptionResponse(
             text="",

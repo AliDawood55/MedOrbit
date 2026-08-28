@@ -34,34 +34,30 @@ class ProviderResolver:
             score = 0.0
             details = []
 
-            # Rating score (0-40 points)
             rating = float(doc.get("average_rating", doc.get("rating", 0)) or 0)
             rating_score = (rating / 5.0) * 40
             score += rating_score
             if rating >= min_rating:
                 details.append(f"rating={rating:.1f}/5")
 
-            # Experience score (0-20 points)
             experience = int(doc.get("years_of_experience", 0) or 0)
             exp_score = min(experience / 30.0, 1.0) * 20
             score += exp_score
             if experience > 0:
                 details.append(f"exp={experience}yr")
 
-            # Fee score (0-20 points) — lower is better
             fee = float(doc.get("consultation_fee", doc.get("fee", 0)) or 0)
             if fee > 0:
                 if max_fee and fee > max_fee:
                     fee_score = 0
                 else:
-                    fee_score = max(0, 20 - (fee / 50))  # Reduce by 1 per 50₪ over 0
+                    fee_score = max(0, 20 - (fee / 50))
                 score += fee_score
                 details.append(f"fee={fee:.0f}₪")
             else:
-                score += 10  # Neutral if no fee info
+                score += 10
                 details.append("fee=unknown")
 
-            # Accepting patients (0-10 points)
             accepting = doc.get("is_accepting_patients", doc.get("isAccepting", True))
             if accepting:
                 score += 10
@@ -69,14 +65,13 @@ class ProviderResolver:
             else:
                 details.append("accepting=no")
 
-            # Insurance match (0-10 points)
             doctor_insurance = doc.get("insurance_accepted", [])
             if preferred_insurance and doctor_insurance:
                 if any(preferred_insurance in ins.lower() for ins in doctor_insurance):
                     score += 10
                     details.append("insurance=match")
             else:
-                score += 5  # Neutral
+                score += 5
 
             scored.append({
                 **doc,
@@ -93,10 +88,8 @@ class ProviderResolver:
                 }
             })
 
-        # Sort by score descending
         scored.sort(key=lambda x: x["_score"], reverse=True)
 
-        # Add rank
         for i, item in enumerate(scored):
             item["_rank"] = i + 1
 
@@ -124,11 +117,10 @@ class ProviderResolver:
             score = 0.0
             details = []
 
-            # Distance score (0-40 points)
             distance_m = float(clinic.get("distance_meters", clinic.get("distance", 0)) or 0)
             distance_km = distance_m / 1000
             if distance_km <= 0.5:
-                dist_score = 40  # Very close
+                dist_score = 40
             elif distance_km <= 1.0:
                 dist_score = 35
             elif distance_km <= 2.0:
@@ -142,23 +134,20 @@ class ProviderResolver:
             score += dist_score
             details.append(f"dist={distance_km:.1f}km")
 
-            # Rating score (0-30 points)
             rating = float(clinic.get("average_rating", clinic.get("rating", 0)) or 0)
             rating_score = (rating / 5.0) * 30
             score += rating_score
             if rating:
                 details.append(f"rating={rating:.1f}")
 
-            # Insurance match (0-15 points)
             clinic_insurance = clinic.get("insurance_accepted", [])
             if preferred_insurance and clinic_insurance:
                 if any(preferred_insurance in ins.lower() for ins in clinic_insurance):
                     score += 15
                     details.append("insurance=yes")
             else:
-                score += 7  # Neutral
+                score += 7
 
-            # Service availability (0-15 points)
             clinic_services = clinic.get("services", [])
             if preferred_services and clinic_services:
                 matched = sum(1 for s in preferred_services if s.lower() in [cs.lower() for cs in clinic_services])
@@ -167,7 +156,7 @@ class ProviderResolver:
                 if matched > 0:
                     details.append(f"services={matched}/{len(preferred_services)}")
             else:
-                score += 7  # Neutral
+                score += 7
 
             scored.append({
                 **clinic,

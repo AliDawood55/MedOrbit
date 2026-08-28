@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from virtual_doctor import interview_engine, reasoning, reasoning_engine
 from virtual_doctor.reasoning_engine import fact_builder, prolog_engine, vocabulary
-from virtual_doctor.reasoning_engine.result_models import Fact, FactSet, RedFlag, SafetyVerdict
+from virtual_doctor.reasoning_engine.result_models import Fact, FactSet, SafetyVerdict
 
 from test_characterization_safety_matrix import PINNED_NEGATIVES
 
@@ -53,9 +53,6 @@ def floor(severity):
         {"type": severity, "matched": "x", "pattern": "p"}], "response": "BODY"}
 
 
-# ===========================================================================
-# 1. Red flags fire on structured facts, with evidence
-# ===========================================================================
 
 @_needs_engine
 class TestRedFlagsFromStructuredFacts(unittest.TestCase):
@@ -95,9 +92,6 @@ class TestRedFlagsFromStructuredFacts(unittest.TestCase):
         self.assertEqual(v.red_flags, ())
 
 
-# ===========================================================================
-# 2. Pinned negatives — the constraint that shaped the rule set
-# ===========================================================================
 
 @_needs_engine
 class TestPinnedNegativesStayRoutine(unittest.TestCase):
@@ -131,9 +125,6 @@ class TestPinnedNegativesStayRoutine(unittest.TestCase):
         self.assertEqual(verdict(symptoms=["fever"]).red_flags, ())
 
 
-# ===========================================================================
-# 3. The deterministic floor can never be lowered
-# ===========================================================================
 
 @_needs_engine
 class TestDeterministicFloorIsNeverLowered(unittest.TestCase):
@@ -180,9 +171,6 @@ class TestDeterministicFloorIsNeverLowered(unittest.TestCase):
                          [f.rule_id for f in backward.red_flags])
 
 
-# ===========================================================================
-# 4. Multiple rules: maximum wins, all evidence survives
-# ===========================================================================
 
 @_needs_engine
 class TestMultipleRedFlags(unittest.TestCase):
@@ -233,9 +221,6 @@ class TestMultipleRedFlags(unittest.TestCase):
                 self.assertTrue(vocabulary.is_safe_atom(flag.rule_id))
 
 
-# ===========================================================================
-# 5. The canonical merge
-# ===========================================================================
 
 class TestCanonicalUrgencyMerge(unittest.TestCase):
     def test_merge_is_a_maximum_over_the_lattice(self):
@@ -273,9 +258,6 @@ class TestCanonicalUrgencyMerge(unittest.TestCase):
                 [{"R": expected}])
 
 
-# ===========================================================================
-# 6. The LLM is not authoritative
-# ===========================================================================
 
 class TestLLMCannotDowngrade(unittest.TestCase):
     def test_llm_routine_cannot_lower_a_rule_engine_urgent(self):
@@ -297,9 +279,6 @@ class TestLLMCannotDowngrade(unittest.TestCase):
         self.assertEqual(reasoning_engine.merge_urgency("emergency", "routine"), "emergency")
 
 
-# ===========================================================================
-# 7. Failure behaviour
-# ===========================================================================
 
 class TestSafetyFailureBehaviour(unittest.TestCase):
     def test_unavailable_carries_no_urgency_at_all(self):
@@ -360,9 +339,6 @@ class TestSafetyFailureBehaviour(unittest.TestCase):
         self.assertEqual(v.red_flags, ())
 
 
-# ===========================================================================
-# 8. Bounded execution
-# ===========================================================================
 
 @_needs_engine
 class TestBoundedExecution(unittest.TestCase):
@@ -412,9 +388,6 @@ class TestBoundedExecution(unittest.TestCase):
         self.assertTrue(v.available)
 
 
-# ===========================================================================
-# 9. Security
-# ===========================================================================
 
 @_needs_engine
 class TestSafetySecurityBoundary(unittest.TestCase):
@@ -485,9 +458,6 @@ class TestSafetySecurityBoundary(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 10. Session isolation and concurrency, with safety.pl loaded
-# ===========================================================================
 
 @_needs_engine
 class TestSafetyConcurrencyAndIsolation(unittest.TestCase):
@@ -535,9 +505,6 @@ class TestSafetyConcurrencyAndIsolation(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 11. Structural separation of concerns
-# ===========================================================================
 
 class TestRuleFileSeparation(unittest.TestCase):
     def _body(self, name):

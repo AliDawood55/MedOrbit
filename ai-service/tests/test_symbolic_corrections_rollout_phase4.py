@@ -73,9 +73,6 @@ async def _handle(message, session, planner_result=None):
     return result, writes
 
 
-# ===========================================================================
-# 1. Parity with the legacy correction layer
-# ===========================================================================
 
 @_needs_engine
 class TestParityWithLegacyLayer(unittest.TestCase):
@@ -87,9 +84,6 @@ class TestParityWithLegacyLayer(unittest.TestCase):
         legacy = interview_engine._detect_profile_correction(text, dict(profile), "ar")
         legacy_field = (legacy or {}).get("field")
 
-        # Apply the legacy correction to get the post-turn state, then ask the
-        # symbolic layer about the resulting provenance — the same state a real
-        # turn would leave behind.
         applied, *_ = interview_engine._apply_correction_layer(
             dict(profile), "interviewing", "headache", text, "ar")
         decision, _ = self._decide(applied, legacy)
@@ -105,7 +99,7 @@ class TestParityWithLegacyLayer(unittest.TestCase):
     def test_recognised_corrections_agree(self):
         for case, text, field, _value in DETECTION_MATRIX:
             if field is None:
-                continue  # under-specified; covered below
+                continue
             with self.subTest(case=case):
                 legacy_field, symbolic_field = self._both(text, BASE)
                 self.assertEqual(legacy_field, field)
@@ -141,9 +135,6 @@ class TestParityWithLegacyLayer(unittest.TestCase):
         self.assertEqual(disagreements, [])
 
 
-# ===========================================================================
-# 2. Rollout modes
-# ===========================================================================
 
 class TestCorrectionRolloutModes(unittest.TestCase):
     def test_default_is_shadow_when_the_master_switch_is_on(self):
@@ -176,9 +167,6 @@ class TestCorrectionRolloutModes(unittest.TestCase):
             self.assertFalse(prolog_engine.safety_active())
 
 
-# ===========================================================================
-# 3. Shadow mode is invisible
-# ===========================================================================
 
 TURNS = [
     ("لا، عمري 24 مش 23", dict(BASE)),
@@ -240,9 +228,6 @@ class TestShadowModeIsInvisible(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, baseline)
 
 
-# ===========================================================================
-# 4. Legacy layer is untouched and still authoritative
-# ===========================================================================
 
 class TestLegacyCorrectionLayerIntact(unittest.TestCase):
     def test_every_legacy_correction_function_still_exists(self):
@@ -275,9 +260,6 @@ class TestLegacyCorrectionLayerIntact(unittest.TestCase):
         self.assertEqual(json.dumps(profile, sort_keys=True, ensure_ascii=False), snapshot)
 
 
-# ===========================================================================
-# 5. Safety and interview interaction
-# ===========================================================================
 
 class TestSafetyStillFirstOnACorrectionTurn(unittest.IsolatedAsyncioTestCase):
     async def test_the_safety_warning_precedes_the_correction_acknowledgement(self):
@@ -315,8 +297,8 @@ class TestInterviewSeesCorrectedState(unittest.TestCase):
             flow_slots=ie.FLOWS["headache"]["slots"])
         decision = reasoning_engine.decide_interview(
             fact_set, vocabulary.slug_session_key("s-iv"))
-        self.assertNotIn("duration", decision.ranked)      # not offered again
-        self.assertNotIn("duration", decision.unanswered)  # still counts as answered
+        self.assertNotIn("duration", decision.ranked)
+        self.assertNotIn("duration", decision.unanswered)
         self.assertEqual(decision.topic, "severity")
 
     def test_an_unresolved_correction_leaves_the_slot_unanswered(self):
@@ -331,9 +313,6 @@ class TestInterviewSeesCorrectedState(unittest.TestCase):
         self.assertIn("duration", decision.unanswered)
 
 
-# ===========================================================================
-# 6. Divergence counters
-# ===========================================================================
 
 @_needs_engine
 class TestCorrectionDivergenceCounters(unittest.IsolatedAsyncioTestCase):

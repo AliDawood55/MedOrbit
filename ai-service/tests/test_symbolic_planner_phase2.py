@@ -96,9 +96,6 @@ def _ctx(**kw):
     return planner.PlannerInput(**base)
 
 
-# ===========================================================================
-# 1. The symbolic topic reaches the inner planner and controls selection
-# ===========================================================================
 
 @_needs_engine
 class TestSymbolicTopicControlsSelection(unittest.IsolatedAsyncioTestCase):
@@ -107,15 +104,6 @@ class TestSymbolicTopicControlsSelection(unittest.IsolatedAsyncioTestCase):
         self.assertIn(decision.topic, interview_engine.planner.KNOWN_FINDING_KEYS)
         self.assertNotIn(" ", decision.topic)
 
-    # NOTE ON EXPECTATIONS THROUGHOUT THIS FILE
-    # Phase 9.2: the topic is decided AFTER the inner planner runs, against
-    # ctx.profile merged with its ACTUAL accepted profile_updates — never a
-    # guess at which slot the raw message fills (that guess is exactly the
-    # bug Phase 9.2 fixed: it could disagree with what the inner planner
-    # really wrote). So a _FakeInner that reports no updates leaves the
-    # profile exactly as it arrived; where a test wants to simulate "this
-    # turn's answer was extracted into slot X", it says so explicitly via
-    # profile_updates.
 
     async def test_the_topic_is_not_known_until_the_inner_planner_has_run(self):
         """The inner planner cannot be told the topic in advance — the topic
@@ -183,9 +171,6 @@ class TestSymbolicTopicControlsSelection(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.phase, "intake")
 
 
-# ===========================================================================
-# 2. The LLM may word it, not replace it
-# ===========================================================================
 
 @_needs_engine
 class TestWordingCannotSwitchTopic(unittest.IsolatedAsyncioTestCase):
@@ -231,9 +216,6 @@ class TestWordingCannotSwitchTopic(unittest.IsolatedAsyncioTestCase):
                 inner = _FakeInner(reply="something entirely unrelated")
                 symbolic = _symbolic(inner)
                 ctx = _ctx(chief_complaint=complaint, profile=dict(INTAKE))
-                # inner reports no profile_updates, so the effective profile
-                # plan() decides against is ctx.profile unchanged — matching
-                # what decide() is given explicitly here.
                 decision = await symbolic.decide(ctx, dict(INTAKE))
                 result = await symbolic.plan(ctx)
                 expected = next(s["question_ar"] for s in FLOWS[complaint]["slots"]
@@ -270,18 +252,6 @@ class TestWordingCannotSwitchTopic(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.source.endswith("template"))
 
 
-# ===========================================================================
-# 2b. Phase 9.2 — prediction/write consistency
-#
-# Phase 2 decided the topic BEFORE running the inner planner, against a
-# PREDICTED post-turn profile (next_unfilled_slot against the raw message).
-# End-to-end (Phase 9.1) that prediction disagreed with what the inner
-# planner's real extraction wrote — observed as the same radiation question
-# asked on two consecutive turns of a real consultation. This section
-# reproduces that defect directly and pins the fix: the topic is decided
-# against ctx.profile merged with the inner planner's ACTUAL accepted
-# profile_updates, never a guess.
-# ===========================================================================
 
 @_needs_engine
 class TestPredictionWriteConsistency(unittest.IsolatedAsyncioTestCase):
@@ -298,8 +268,6 @@ class TestPredictionWriteConsistency(unittest.IsolatedAsyncioTestCase):
         """
         profile = {**INTAKE, "duration": "من ساعتين"}
 
-        # T3: the inner planner mis-assigns the answer to `radiation`
-        # (character remains unfilled) — the observed real failure mode.
         t3_inner = _FakeInner(reply="شعور بضغط",
                               profile_updates={"radiation": "شاركت"})
         t3 = await _symbolic(t3_inner).plan(
@@ -311,12 +279,6 @@ class TestPredictionWriteConsistency(unittest.IsolatedAsyncioTestCase):
             f"T3 should ask about character (the genuinely unfilled slot), "
             f"got: {t3.reply!r}")
 
-        # T4: same profile shape as T3 (character still unfilled — the mis-
-        # assignment did not fix it). A planner that GUESSES would ask the
-        # identical question again; the fix asks the same (correct) topic
-        # but from the real state, not a stale prediction — and critically,
-        # the two replies must be for the SAME reason each time, not a
-        # coincidence of guesswork.
         t4_inner = _FakeInner(reply="ألم ضاغط بشكل مستمر", profile_updates={})
         t4 = await _symbolic(t4_inner).plan(
             _ctx(chief_complaint="chest_pain", profile=dict(profile)))
@@ -325,11 +287,6 @@ class TestPredictionWriteConsistency(unittest.IsolatedAsyncioTestCase):
             reasoning_engine.vocabulary.question_matches_topic(t4.reply, "character"),
             f"T4 should still ask about character, got: {t4.reply!r}")
 
-        # The regression this reproduces: with the guess-based sequencing,
-        # T3 would predict `character` filled and ask `radiation`; T4 would
-        # make the SAME wrong prediction and ask `radiation` again — a
-        # byte-identical repeat. Confirm that specific failure cannot occur:
-        # neither turn asks about radiation while character is unanswered.
         self.assertFalse(
             reasoning_engine.vocabulary.question_matches_topic(t3.reply, "radiation"))
         self.assertFalse(
@@ -401,9 +358,6 @@ class TestPredictionWriteConsistency(unittest.IsolatedAsyncioTestCase):
             profile[update_key] = update_value
 
 
-# ===========================================================================
-# 3. Readiness
-# ===========================================================================
 
 @_needs_engine
 class TestSymbolicReadiness(unittest.IsolatedAsyncioTestCase):
@@ -438,9 +392,6 @@ class TestSymbolicReadiness(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(hasattr(planner.LLMPlanner, "_check_readiness"))
 
 
-# ===========================================================================
-# 4. Failure behaviour — degrade to the existing planner
-# ===========================================================================
 
 class TestFallbackToExistingPlanner(unittest.IsolatedAsyncioTestCase):
     async def test_prolog_unavailable_delegates_to_the_inner_planner(self):
@@ -467,9 +418,6 @@ class TestFallbackToExistingPlanner(unittest.IsolatedAsyncioTestCase):
                 await _symbolic(inner).plan(_ctx())
 
 
-# ===========================================================================
-# 5. Rollout modes
-# ===========================================================================
 
 class TestRolloutModes(unittest.TestCase):
     def test_default_is_shadow_when_the_master_switch_is_on(self):
@@ -500,9 +448,6 @@ class TestRolloutModes(unittest.TestCase):
             self.assertEqual(prolog_engine.status()["interview_mode"], "shadow")
 
 
-# ===========================================================================
-# 6. End to end: shadow changes nothing, active changes selection
-# ===========================================================================
 
 def _fake_session(session_id="public-id", profile=None, phase="interviewing",
                   chief_complaint="chest_pain", language="ar"):
@@ -547,7 +492,7 @@ _TURNS = [
 
 class TestShadowModeChangesNothing(unittest.IsolatedAsyncioTestCase):
     async def test_shadow_and_off_produce_identical_turns(self):
-        for message, session, complaint in _TURNS:
+        for message, session, _ in _TURNS:
             plan = planner.PlannerResult(reply="سؤال المخطط الحالي",
                                          phase="interviewing", source="static")
             with self.subTest(message=message):
@@ -643,9 +588,6 @@ class TestActiveModeEndToEnd(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(persisted_profile[planner.ASKED_TOPICS_KEY], list)
 
 
-# ===========================================================================
-# 7. Safety behaviour is untouched by Phase 2
-# ===========================================================================
 
 class TestSafetyUnchanged(unittest.IsolatedAsyncioTestCase):
     async def test_urgency_and_warning_are_identical_in_every_mode(self):
