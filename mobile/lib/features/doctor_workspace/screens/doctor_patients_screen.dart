@@ -101,6 +101,7 @@ class _DoctorPatientsScreenState extends ConsumerState<DoctorPatientsScreen> {
                   for (final patient in list)
                     Card(
                       child: ListTile(
+                        onTap: () => context.push(RoutePaths.doctorPatientDetailPath(patient.id)),
                         leading: CircleAvatar(
                           child: Text(
                             (patient.name(isArabic).isEmpty
@@ -122,6 +123,7 @@ class _DoctorPatientsScreenState extends ConsumerState<DoctorPatientsScreen> {
                                     : 'Has an upcoming appointment')
                               : patient.email,
                         ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
                       ),
                     ),
               ],
