@@ -47,9 +47,6 @@ def order_of(complaint):
     return [s["key"] for s in FLOWS[complaint]["slots"]]
 
 
-# ===========================================================================
-# 1. Parity with the flow the system uses today
-# ===========================================================================
 
 @_needs_engine
 class TestParityWithStaticFlow(unittest.TestCase):
@@ -82,9 +79,6 @@ class TestParityWithStaticFlow(unittest.TestCase):
         self.assertEqual(decide("chest_pain", profile).topic, "character")
 
 
-# ===========================================================================
-# 2. Knowledge state: answered, asked, outstanding
-# ===========================================================================
 
 @_needs_engine
 class TestKnowledgeState(unittest.TestCase):
@@ -135,9 +129,6 @@ class TestKnowledgeState(unittest.TestCase):
                          set(order_of("headache")) - {"duration"})
 
 
-# ===========================================================================
-# 3. Relevance — the vocabulary is not the question list
-# ===========================================================================
 
 @_needs_engine
 class TestRelevanceExcludesIrrelevantTopics(unittest.TestCase):
@@ -165,9 +156,6 @@ class TestRelevanceExcludesIrrelevantTopics(unittest.TestCase):
         self.assertFalse(decision.complete)
 
 
-# ===========================================================================
-# 4. Dependencies
-# ===========================================================================
 
 @_needs_engine
 class TestIntakeDependency(unittest.TestCase):
@@ -197,9 +185,6 @@ class TestIntakeDependency(unittest.TestCase):
         self.assertIsNone(decision.topic)
 
 
-# ===========================================================================
-# 5. Priority
-# ===========================================================================
 
 @_needs_engine
 class TestPriority(unittest.TestCase):
@@ -293,9 +278,6 @@ class TestPriority(unittest.TestCase):
                 self.assertEqual(len(positions), len(set(positions)))
 
 
-# ===========================================================================
-# 6. Completion
-# ===========================================================================
 
 @_needs_engine
 class TestInterviewCompletion(unittest.TestCase):
@@ -333,9 +315,6 @@ class TestInterviewCompletion(unittest.TestCase):
         self.assertEqual(decide("generic", INTAKE, flow_slots=slots).topic, "duration")
 
 
-# ===========================================================================
-# 7. Session isolation, concurrency, security
-# ===========================================================================
 
 @_needs_engine
 class TestSessionIsolationAndConcurrency(unittest.TestCase):
@@ -380,13 +359,6 @@ class TestSessionIsolationAndConcurrency(unittest.TestCase):
 
 @_needs_engine
 class TestInterviewIdentifierInjectionResistance(unittest.TestCase):
-    # Hostile AND meaningless: no canonical topic exists, so nothing survives.
-    #
-    # Deliberately excludes payloads that DO normalise onto a real topic —
-    # "Duration" and "\\+duration" both fold to `duration`, because
-    # normalize_english lowercases and strips punctuation. That is the
-    # allow-list mapping working, not leaking: whatever the input looked like,
-    # the output is a member of a fixed set. Pinned separately below.
     HOSTILE = [
         "duration), halt, f(x", "X", "_", "x.\n:- halt.",
         "'quoted'", "duration; halt", "duration-1", "not_a_topic",
@@ -443,9 +415,6 @@ class TestInterviewIdentifierInjectionResistance(unittest.TestCase):
         self.assertEqual(prolog_engine._fact_count_all(), 0)
 
 
-# ===========================================================================
-# 8. Failure behaviour
-# ===========================================================================
 
 class TestInterviewFailureBehaviour(unittest.TestCase):
     def test_prolog_unavailable_yields_no_topic_and_no_completion(self):
@@ -477,9 +446,6 @@ class TestInterviewFailureBehaviour(unittest.TestCase):
         self.assertFalse(decision.complete)
 
 
-# ===========================================================================
-# 9. Topic anchors — calibration of the wording clamp
-# ===========================================================================
 
 class TestTopicAnchorCalibration(unittest.TestCase):
     def test_every_flow_question_passes_its_own_topics_anchors(self):

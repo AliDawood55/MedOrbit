@@ -14,7 +14,6 @@ refactor can be verified as behavior-preserving. No real network or
 database connections are made anywhere in this file.
 """
 
-import asyncio
 import os
 import sys
 import unittest
@@ -32,9 +31,6 @@ from virtual_doctor import interview_engine
 from virtual_doctor.planner import LLMPlanner, PlannerError, PlannerInput
 
 
-# ===========================================================================
-# A. virtual_doctor/retrieval.py
-# ===========================================================================
 
 class TestRetrievalQueryConstruction(unittest.TestCase):
     """Pure functions: query building, citation, context formatting."""
@@ -48,9 +44,6 @@ class TestRetrievalQueryConstruction(unittest.TestCase):
         self.assertEqual(query, "chest pain. chest pain. عندي ألم في الصدر")
 
     def test_build_turn_query_palestinian_dialect_phrase(self):
-        # "بطني بتوجعني كتير" (dialect: "my stomach really hurts") has no
-        # canonical complaint yet (None), so only infer_topics() anchors it —
-        # "بطن" substring-matches TOPIC_LEXICON's abdominal-pain entry.
         query = retrieval.build_turn_query("بطني بتوجعني كتير", None)
         self.assertEqual(query, "abdominal pain. بطني بتوجعني كتير")
         self.assertEqual(retrieval.infer_topics("بطني بتوجعني كتير"), ["abdominal pain"])
@@ -60,7 +53,6 @@ class TestRetrievalQueryConstruction(unittest.TestCase):
             "chest_pain",
             {"duration": "3 hours", "radiation": "left arm", "empty_field": ""},
         )
-        # Empty-string fields are dropped; only non-empty string values are appended.
         self.assertEqual(query, "chest pain. duration: 3 hours. radiation: left arm")
 
     def test_build_profile_query_unknown_complaint_falls_back_to_complaint_name(self):
@@ -118,7 +110,7 @@ class TestRetrievalFailSoft(unittest.IsolatedAsyncioTestCase):
             chunks = await retrieval.retrieve_for_turn("I have a headache", "headache", "en")
 
         self.assertEqual(chunks, [])
-        mock_post.assert_called_once()  # only the embed call, DB never reached
+        mock_post.assert_called_once()
 
     async def test_retrieve_for_turn_returns_empty_list_when_db_search_fails(self):
         fake_embed_response = MagicMock()
@@ -155,15 +147,11 @@ class TestRetrievalFailSoft(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(chunks[0]["text"], "high relevance")
 
 
-# ===========================================================================
-# B. virtual_doctor/memory.py
-# ===========================================================================
 
 class TestMemoryLoadRecent(unittest.IsolatedAsyncioTestCase):
 
     async def test_load_recent_success_returns_oldest_first(self):
         fake_pool = AsyncMock()
-        # DB returns DESC (newest first); load_recent reverses to oldest-first.
         fake_pool.fetch = AsyncMock(return_value=[
             {"role": "doctor", "message_text": "second"},
             {"role": "patient", "message_text": "first"},
@@ -190,7 +178,7 @@ class TestMemoryLoadRecent(unittest.IsolatedAsyncioTestCase):
         ):
             history = await memory.load_recent("session-row-id")
 
-        self.assertEqual(history, [])  # never raises
+        self.assertEqual(history, [])
 
     async def test_load_recent_truncates_long_messages(self):
         long_text = "x" * (memory.MAX_MESSAGE_CHARS + 50)
@@ -217,9 +205,6 @@ class TestMemoryLoadRecent(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(memory.format_history(messages, "ar"), "المريض: hello\nالطبيب: hi")
 
 
-# ===========================================================================
-# C. virtual_doctor/planner.py
-# ===========================================================================
 
 def _fake_ollama_chat_response(content: str) -> MagicMock:
     response = MagicMock()
@@ -251,9 +236,6 @@ class TestLLMPlannerCharacterization(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.llm_planner = LLMPlanner(
             texts={},
-            # Only reached if ctx.phase == "intake"; every ctx here uses
-            # phase="interviewing", but Python still evaluates these dict
-            # lookups as call arguments, so real callables must be present.
             helpers={"extract_name": lambda m: m, "extract_age": lambda m: None},
             validators={
                 "text_matches_language": reasoning._text_matches_language,
@@ -348,9 +330,6 @@ class TestPlannerFallbackToStatic(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.source.endswith("->static"))
 
 
-# ===========================================================================
-# D. virtual_doctor/reasoning.py
-# ===========================================================================
 
 class TestMoreUrgentEscalateOnly(unittest.TestCase):
     """The single safety-critical merge point: LLM can escalate, never downgrade."""
@@ -447,9 +426,6 @@ class TestNormalizeLlmOutput(unittest.TestCase):
 class TestCallLlmFailSoftAndGrounding(unittest.IsolatedAsyncioTestCase):
 
     async def _call_llm_off_loop(self, *args, **kwargs):
-        # _call_llm is a coroutine function (RAG Performance Batch R1 moved
-        # its blocking requests.post off the event loop internally via
-        # asyncio.to_thread), so it's awaited directly.
         return await reasoning._call_llm(*args, **kwargs)
 
     async def test_llm_call_failure_falls_back_to_templated_reply(self):
@@ -494,16 +470,9 @@ class TestCallLlmFailSoftAndGrounding(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sent_system_message, reasoning._RAG_SYSTEM_PROMPTS["en"])
 
     async def test_empty_retrieval_chunks_format_to_empty_context_block(self):
-        # Characterizes the "retrieval returned nothing" path end-to-end at the
-        # formatting boundary: an empty chunk list must produce an empty
-        # context_block, which is what routes _call_llm to the ungrounded
-        # system prompt (see test_ungrounded_prompt_used_when_context_block_is_empty).
         self.assertEqual(reasoning._format_medical_context([]), "")
 
 
-# ===========================================================================
-# E. virtual_doctor/interview_engine.py
-# ===========================================================================
 
 class TestBuildTurnContext(unittest.IsolatedAsyncioTestCase):
 
@@ -621,16 +590,11 @@ class TestEmergencyContinuesIntoPlannerAndRetrieval(unittest.IsolatedAsyncioTest
              patch.object(interview_engine.memory, "doctor_turns", new=AsyncMock(return_value=[])):
             result = await interview_engine.handle_message("public-id", "emergency")
 
-        # The interview is NOT forced to 'complete' just because a red flag
-        # fired — phase reflects whatever the (mocked) planner decided.
         self.assertEqual(result["phase"], "intake")
         self.assertEqual(result["urgency_level"], "emergency")
         build_context_mock.assert_called_once()
         run_planner_mock.assert_called_once()
 
-        # The reply combines the existing canned emergency warning (Red
-        # Crescent/101 — never removed or replaced) with the planner's
-        # question, not the warning alone.
         self.assertIn("Palestinian Red Crescent", result["reply"])
         self.assertIn("How old are you?", result["reply"])
 

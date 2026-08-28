@@ -36,21 +36,17 @@ _needs_engine = unittest.skipUnless(
 
 SESSION = "s_sectest"
 
-# Every one of these must be refused. Grouped by what they attack.
 HOSTILE_VALUES = [
-    # --- goal injection: the audit payload and relatives -------------------
     "chest_pain), halt, f(p,symptom,x",
     "chest_pain), retractall(vd_fact(_,_,_,_)), symptom(s,x",
     "x :- true",
     "a, b",
     "foo(bar)",
     "[1,2,3]",
-    # --- unbound variables: no metacharacter, silently catastrophic --------
     "Evil",
     "X",
     "_",
     "_Anything",
-    # --- quoting and control characters ------------------------------------
     "it's",
     "'quoted'",
     '"double"',
@@ -58,18 +54,14 @@ HOSTILE_VALUES = [
     "line\nbreak",
     "null\x00byte",
     "tab\there",
-    # --- directives and terminators ----------------------------------------
     "x.\n:- halt.",
     ":- halt",
     "end.",
-    # --- operators ----------------------------------------------------------
     "a-b", "a+b", "a=b", "a;b", "a->b", "\\+a",
-    # --- Unicode: bidi controls, RTL text, homoglyphs ----------------------
     "‮chest_pain",
     "​chest_pain",
     "صداع_شديد",
     "chest pain",
-    # --- shape violations ---------------------------------------------------
     "Chest_pain",
     "9lives",
     " leading_space",
@@ -77,32 +69,17 @@ HOSTILE_VALUES = [
     "two words",
     "",
     "x" * (vocabulary.MAX_ATOM_CHARS + 1),
-    # --- wrong types --------------------------------------------------------
     None, 3.5, True, ["chest_pain"], {"a": 1},
 ]
 
-# An integer is not an atom — require_atom rejects it — but it IS a legitimate
-# FACT VALUE (`patient_attr(s, age, 41)`) and so a legitimate goal binding.
-# Kept out of HOSTILE_VALUES so the goal-binding test asserts what it means to.
 NON_ATOM_BUT_VALID_VALUES = [41, 0, -1]
 
-# Hostile AND meaningless: no canonical mapping exists, so nothing survives the
-# allow-list. Used for the end-to-end "no fact was asserted" assertion.
-#
-# Deliberately excludes payloads that DO normalise to a real symptom — e.g.
-# "chest\xa0pain" with a non-breaking space folds to chest_pain. That is the
-# allow-list succeeding, not leaking: the output is a canonical atom from a
-# fixed set, which is the entire security property. See
-# test_obfuscated_but_legitimate_input_normalises_to_a_canonical_atom.
 HOSTILE_AND_UNMAPPABLE = [
     v for v in HOSTILE_VALUES
     if not isinstance(v, str) or vocabulary.canonical_symptom(v) is None
 ]
 
 
-# ===========================================================================
-# 1. The allow-list itself
-# ===========================================================================
 
 class TestIsSafeAtomRejectsEverythingHostile(unittest.TestCase):
     def test_every_hostile_value_is_rejected(self):
@@ -127,9 +104,6 @@ class TestIsSafeAtomRejectsEverythingHostile(unittest.TestCase):
         self.assertFalse(vocabulary.is_safe_atom("a" * (vocabulary.MAX_ATOM_CHARS + 1)))
 
 
-# ===========================================================================
-# 2. Facts cannot carry a hostile value
-# ===========================================================================
 
 class TestFactConstructionRevalidates(unittest.TestCase):
     def test_hostile_value_cannot_be_placed_in_any_fact_field(self):
@@ -161,9 +135,6 @@ class TestFactConstructionRevalidates(unittest.TestCase):
             fact.subject = "chest_pain"  # type: ignore[misc]
 
 
-# ===========================================================================
-# 3. Goal construction refuses unvalidated bindings
-# ===========================================================================
 
 class TestGoalBindingRejectsHostileAtoms(unittest.TestCase):
     def test_bind_rejects_every_hostile_value(self):
@@ -199,9 +170,6 @@ class TestGoalBindingRejectsHostileAtoms(unittest.TestCase):
                 pass
 
 
-# ===========================================================================
-# 4. End to end: hostile input through fact_builder never reaches a rule
-# ===========================================================================
 
 class TestHostileInputIsDroppedByTheFactBuilder(unittest.TestCase):
     def test_injection_payloads_in_symptoms_produce_no_facts(self):

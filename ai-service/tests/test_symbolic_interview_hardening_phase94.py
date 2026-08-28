@@ -146,7 +146,6 @@ class TestPhase94SymbolicIntegration(unittest.IsolatedAsyncioTestCase):
             source="llm:wording-invalid",
             profile_updates={"duration": "two hours"},
         )
-        # Model the typed Phase 9.3 partial result precisely.
         original_plan = inner.plan
 
         async def partial(ctx):

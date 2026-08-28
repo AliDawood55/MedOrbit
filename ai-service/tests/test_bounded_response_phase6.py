@@ -47,9 +47,6 @@ def ctx(topic="duration", lang="ar", **kwargs):
 WARNING_AR = "⚠️ هذه الأعراض قد تكون خطيرة. يرجى التوجه إلى أقرب طوارئ فورًا.\n\n"
 
 
-# ===========================================================================
-# 1. Composition — the warning is Python's, and it is always first
-# ===========================================================================
 
 class TestComposition(unittest.TestCase):
     def test_the_warning_comes_first(self):
@@ -90,9 +87,6 @@ class TestComposition(unittest.TestCase):
             self.assertIn(WARNING_AR, reply)
 
 
-# ===========================================================================
-# 2. The topic clamp
-# ===========================================================================
 
 class TestTopicClamp(unittest.TestCase):
     def test_an_on_topic_question_passes(self):
@@ -127,9 +121,6 @@ class TestTopicClamp(unittest.TestCase):
                                                         fallback="How long?")))
 
 
-# ===========================================================================
-# 3. One question per turn
-# ===========================================================================
 
 class TestOneQuestionPerTurn(unittest.TestCase):
     def test_two_arabic_questions_are_rejected(self):
@@ -155,9 +146,6 @@ class TestOneQuestionPerTurn(unittest.TestCase):
         self.assertIsNone(response.validate_body("أخبرني عن مدة الألم.", ctx("duration")))
 
 
-# ===========================================================================
-# 4. No diagnosis, ever
-# ===========================================================================
 
 class TestNoDiagnosis(unittest.TestCase):
     def test_english_diagnosis_phrasing_is_rejected(self):
@@ -190,9 +178,6 @@ class TestNoDiagnosis(unittest.TestCase):
         self.assertIn("never name a condition", system)
 
 
-# ===========================================================================
-# 5. Language and shape
-# ===========================================================================
 
 class TestLanguageAndShape(unittest.TestCase):
     def test_english_in_an_arabic_turn_is_rejected(self):
@@ -228,9 +213,6 @@ class TestLanguageAndShape(unittest.TestCase):
         self.assertEqual("too long", response.validate_body(long_body, ctx("duration")))
 
 
-# ===========================================================================
-# 6. Generation, rollout and fallback
-# ===========================================================================
 
 class _Response:
     def __init__(self, payload, status=200):
@@ -346,9 +328,6 @@ class TestGenerationFallback(unittest.TestCase):
             self.assertEqual("منذ متى تشعر بهذا؟", result.text)
 
 
-# ===========================================================================
-# 7. The context is bounded — it cannot leak what it never held
-# ===========================================================================
 
 class TestBoundedContext(unittest.TestCase):
     def test_the_context_has_no_field_for_patient_text_or_identity(self):
@@ -385,9 +364,6 @@ class TestBoundedContext(unittest.TestCase):
         self.assertIn("generated", blob)
 
 
-# ===========================================================================
-# 8. Nothing existing was weakened
-# ===========================================================================
 
 class TestExistingBehaviourIntact(unittest.TestCase):
     def test_the_symbolic_planner_topic_clamp_still_exists(self):
@@ -427,7 +403,6 @@ class TestExistingBehaviourIntact(unittest.TestCase):
                                    "response.py")
         with open(source_path, encoding="utf-8") as handle:
             source = handle.read()
-        # The wording layer reads urgency for tone; it must never assign one.
         self.assertNotIn("urgency =", source.replace("self.urgency =", ""))
         self.assertNotIn("merge_urgency", source)
 

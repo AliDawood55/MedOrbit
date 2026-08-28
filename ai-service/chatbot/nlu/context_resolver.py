@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 
 class ContextResolver:
@@ -49,7 +49,6 @@ class ContextResolver:
             "such": "such",
         }
 
-        # Ordinal mapping
         self._ordinal_map = {
             "first": 0, "1st": 0, "الأول": 0, "اول": 0, "أول": 0,
             "second": 1, "2nd": 1, "الثاني": 1, "ثاني": 1,
@@ -70,7 +69,6 @@ class ContextResolver:
 
         text_lower = text.lower()
 
-        # Step 1: Check if this is a follow-up (short message without new topics)
         previous_entities = conversation_context.get("entities", {})
         previous_intent = conversation_context.get("lastIntent")
         previous_places = conversation_context.get("places", [])
@@ -80,28 +78,23 @@ class ContextResolver:
         if is_follow_up:
             resolved["is_follow_up"] = True
 
-            # Step 2: Resolve ordinal references ("the second one")
             ordinal = self._resolve_ordinal(text_lower)
             if ordinal is not None:
                 resolved["ordinal_index"] = ordinal
-                # If previous results exist, resolve to specific item
                 if previous_places and ordinal < len(previous_places):
                     resolved["selected_place"] = previous_places[ordinal]
                     resolved["selected_place_index"] = ordinal
 
-            # Step 3: Inherit previous entities
             for key in ["specialty", "type", "location", "medication"]:
                 if previous_entities.get(key) and key not in resolved:
                     resolved[key] = previous_entities[key]
                     resolved[f"_{key}_inherited"] = True
 
-            # Step 4: Inherit previous symptoms
             previous_symptoms = previous_entities.get("symptoms", [])
             if previous_symptoms:
                 resolved["symptoms"] = previous_symptoms
                 resolved["_symptoms_inherited"] = True
 
-            # Step 5: Check for navigation/direction references
             if self._is_navigation_request(text_lower):
                 resolved["intent_override"] = "show_route"
                 resolved["_navigation"] = True
@@ -110,17 +103,14 @@ class ContextResolver:
 
     def _detect_follow_up(self, text: str, previous_intent: Optional[str]) -> bool:
         """Detect if current message is a follow-up to previous conversation."""
-        # Short messages are likely follow-ups
         word_count = len(text.split())
         if word_count <= 3 and previous_intent:
             return True
 
-        # Reference keywords indicate follow-up
         for keyword in list(self._reference_keywords_ar.keys()) + list(self._reference_keywords_en.keys()):
             if keyword in text:
                 return True
 
-        # Ordinal references
         for ord_word in self._ordinal_map:
             if ord_word in text:
                 return True
@@ -156,25 +146,21 @@ class ContextResolver:
         """
         merged = dict(extracted)
 
-        # Mark as follow-up if detected
         if resolved.get("is_follow_up"):
             merged["is_follow_up"] = True
 
-        # Merge inherited entities (don't override newly extracted)
         for key, value in resolved.items():
             if key.startswith("_"):
-                continue  # Skip internal keys
+                continue
             if key == "intent_override":
-                continue  # Handled separately
+                continue
             if key not in merged or merged[key] is None:
                 merged[key] = value
             elif isinstance(merged[key], list) and isinstance(value, list):
-                # Merge lists
                 for item in value:
                     if item not in merged[key]:
                         merged[key].append(item)
 
-        # Handle navigation override
         if resolved.get("intent_override") == "show_route":
             merged["_intent_override"] = "show_route"
 
@@ -191,7 +177,6 @@ class ContextResolver:
         if ordinal is None:
             return None
 
-        # Determine what is being selected
         entity_type = None
         type_keywords = {
             "doctor": ["doctor", "طبيب", "دكتور"],
@@ -229,6 +214,6 @@ class ContextResolver:
         updated["lastIntent"] = intent
         updated["entities"] = entities
         if places:
-            updated["places"] = places[:10]  # Keep last 10 places
+            updated["places"] = places[:10]
 
         return updated

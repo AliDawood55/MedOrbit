@@ -1,43 +1,5 @@
-# MedOrbit ai-service — Python 3.12
-#
-# Pinned to 3.12, NOT 3.13+: asyncpg and pydantic (via pydantic-core) don't
-# publish prebuilt wheels for 3.13+ at the versions pinned in requirements.txt,
-# which would force a from-source build (and likely fail without a Rust
-# toolchain for pydantic-core).
-#
-# Build context is the PROJECT ROOT (see docker-compose.yml's
-# `build.context: .` for this service) because requirements.txt lives at the
-# repo root, not inside ai-service/ — this Dockerfile's COPY paths assume that.
 FROM python:3.12-slim
 
-# System deps:
-#   tesseract-ocr + tesseract-ocr-ara — OCR for scanned reports (pytesseract),
-#     Arabic language pack required since summaries are bilingual.
-#   poppler-utils — pdf2image's backend for rendering PDF pages to images
-#     before OCR (used by chatbot/medical/document_extractor.py's OCR
-#     fallback path; note pdf2image itself is not currently pinned in
-#     requirements.txt — see DOCKER.md).
-#   libpango-1.0-0 + libpangoft2-1.0-0 — WeasyPrint's text-shaping backend
-#     (virtual_doctor/pdf_worker.py, consultation PDF reports). WeasyPrint
-#     (v53+) no longer needs cairo/gdk-pixbuf — it renders PDFs itself via
-#     pydyf — but still links Pango/HarfBuzz/fontconfig/freetype through cffi
-#     for correct (including RTL/Arabic) text layout. apt pulls in glib,
-#     harfbuzz, fontconfig and freetype transitively, so nothing else is
-#     listed explicitly. Unlike the native Windows dev setup (see
-#     pdf_worker.py's pin_native_stack()), a single apt install here can't
-#     produce the mixed-runtime split that caused heap corruption there —
-#     pin_native_stack() is a no-op on Linux for exactly that reason.
-#   fonts-noto-core — includes Noto Naskh Arabic; fallback so Pango can still
-#     shape Arabic text if report_generator.py's embedded Cairo font is ever
-#     unavailable. Debian has no standalone "fonts-noto-naskh-arabic" package;
-#     the Arabic weights ship inside this core metapackage.
-#   swi-prolog-core — the Prolog runtime and libswipl behind pyswip, for the
-#     Virtual Doctor's symbolic reasoning layer
-#     (virtual_doctor/reasoning_engine). Verified against this exact base image
-#     (Debian 13 trixie, SWI-Prolog 9.2.9): -core is 2 packages / 4.5MB and is
-#     sufficient for pyswip to import, consult a rule file and run a query.
-#     NOT swi-prolog-nox, which pulls 19 packages for the clib/http/ssl add-on
-#     libraries none of these rules use, and NOT swi-prolog-full.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-ara \
@@ -53,31 +15,11 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# GPU support for Whisper, OFF by default.
-#
-# CTranslate2 needs the CUDA runtime (cuBLAS + cuDNN) to run Whisper on the
-# GPU. Those wheels are ~2GB, and the default build must stay lean because CI
-# builds this image on a GPU-less ubuntu-latest runner where the extra weight
-# buys nothing and costs disk and build minutes.
-#
-# Enabled by docker-compose.gpu.yml, which sets this arg and reserves the
-# device together — the two must travel as a pair, since libraries without a
-# device (or a device without libraries) both just fall back to CPU.
-#
-#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
-#
-# stt.py's _register_cuda_libraries() finds these at import time; when they are
-# absent it reports cuda_libraries_found=false and the CPU path is used.
 ARG INSTALL_CUDA=0
 RUN if [ "$INSTALL_CUDA" = "1" ]; then \
         pip install --no-cache-dir nvidia-cublas-cu12 nvidia-cudnn-cu12; \
     fi
 
-# Whole ai-service/ subtree in one shot — .dockerignore (root-level; this
-# build's context is the repo root) is the only thing that should ever decide
-# what's excluded. Don't replace this with individual COPY lines for specific
-# files/folders; a single odd file shouldn't be able to silently break
-# unrelated parts of the build.
 COPY ai-service/ ./
 
 EXPOSE 8001

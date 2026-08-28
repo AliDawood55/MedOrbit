@@ -63,7 +63,6 @@ def analyse(artifact: Dict[str, Any]) -> Dict[str, Any]:
     q_fp, q_safety_fp = false_positives(question)
     control_fp, control_safety_fp = false_positives(controls)
 
-    # Positive controls: did the patient's OWN symptom survive?
     pos_hits, pos_misses = [], []
     pos_safety_expected = pos_safety_found = 0
     for row in positive:

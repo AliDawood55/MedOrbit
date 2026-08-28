@@ -59,9 +59,6 @@ def _replay():
     return rows
 
 
-# ===========================================================================
-# 1. Core invariants across every trajectory turn
-# ===========================================================================
 
 @_needs
 class TestTrajectoryInvariants(unittest.TestCase):
@@ -97,14 +94,14 @@ class TestTrajectoryInvariants(unittest.TestCase):
                              f"{trajectory['id']}#{index} re-asked {decision.topic}")
 
     def test_never_chooses_a_topic_outside_the_active_flow(self):
-        for trajectory, index, turn, complaint, decision in self.rows:
+        for trajectory, index, _, complaint, decision in self.rows:
             if decision.topic is None:
                 continue
             self.assertIn(decision.topic, self._declared(complaint),
                           f"{trajectory['id']}#{index}: {decision.topic}")
 
     def test_every_chosen_topic_is_canonical_vocabulary(self):
-        for trajectory, index, turn, complaint, decision in self.rows:
+        for _, _, _, _, decision in self.rows:
             if decision.topic is None:
                 continue
             self.assertIn(decision.topic, vocabulary.CLINICAL_SLOTS)
@@ -118,7 +115,7 @@ class TestTrajectoryInvariants(unittest.TestCase):
                              f"{trajectory['id']}#{index} complete with {sorted(missing)}")
 
     def test_matches_the_expected_topic_on_every_turn(self):
-        for trajectory, index, turn, complaint, decision in self.rows:
+        for trajectory, index, turn, _, decision in self.rows:
             self.assertEqual(turn["expected_topic"], decision.topic,
                              f"{trajectory['id']}#{index} ({turn['note']})")
 
@@ -129,7 +126,7 @@ class TestTrajectoryInvariants(unittest.TestCase):
                 self.assertNotIn(topic, answered, f"{trajectory['id']}#{index}")
 
     def test_the_chosen_topic_is_always_the_head_of_the_ranked_list(self):
-        for trajectory, index, turn, complaint, decision in self.rows:
+        for _, _, _, _, decision in self.rows:
             if decision.ranked:
                 self.assertEqual(decision.ranked[0], decision.topic)
 
@@ -143,9 +140,6 @@ class TestTrajectoryInvariants(unittest.TestCase):
             self.assertEqual(first.ranked, second.ranked)
 
 
-# ===========================================================================
-# 2. Legacy comparison
-# ===========================================================================
 
 @_needs
 class TestLegacyComparison(unittest.TestCase):
@@ -176,9 +170,6 @@ class TestLegacyComparison(unittest.TestCase):
                              f"{trajectory['id']}#{index} diverged with no reason")
 
 
-# ===========================================================================
-# 3. Adaptivity — the core acceptance criterion
-# ===========================================================================
 
 @_needs
 class TestPatientSpecificPaths(unittest.TestCase):
@@ -191,8 +182,8 @@ class TestPatientSpecificPaths(unittest.TestCase):
 
     def test_same_complaint_different_facts_gives_a_different_question(self):
         for left, right, turn_index in PAIRS:
-            left_topic, left_turn = self._topic(left, turn_index)
-            right_topic, right_turn = self._topic(right, turn_index)
+            left_topic, _ = self._topic(left, turn_index)
+            right_topic, _ = self._topic(right, turn_index)
             self.assertNotEqual(
                 left_topic, right_topic,
                 f"{left} and {right} got the same question despite different facts")
@@ -216,9 +207,6 @@ class TestPatientSpecificPaths(unittest.TestCase):
         self.assertIsNone(topic)
 
 
-# ===========================================================================
-# 4. Safety priority
-# ===========================================================================
 
 @_needs
 class TestSafetyPriority(unittest.TestCase):
@@ -272,9 +260,6 @@ class TestSafetyPriority(unittest.TestCase):
         self.assertTrue(hasattr(interview_engine, "_apply_safety_continuation"))
 
 
-# ===========================================================================
-# 5. Corrections and unanswered questions
-# ===========================================================================
 
 @_needs
 class TestCorrectionAndUnanswered(unittest.TestCase):
@@ -303,9 +288,6 @@ class TestCorrectionAndUnanswered(unittest.TestCase):
         self.assertIn("duration", decision.asked_unanswered)
 
 
-# ===========================================================================
-# 6. Topic clamp — Prolog decides WHAT, the LLM only decides HOW
-# ===========================================================================
 
 class TestTopicClamp(unittest.TestCase):
     """No Prolog needed: the clamp is pure Python and applies to whatever
@@ -375,9 +357,6 @@ class TestTopicClamp(unittest.TestCase):
         self.assertGreater(checked, 20)
 
 
-# ===========================================================================
-# 7. Fallback — no consultation may fail because Prolog failed
-# ===========================================================================
 
 class TestFallback(unittest.TestCase):
     def test_symbolic_is_not_consulted_unless_the_mode_is_active(self):
@@ -441,9 +420,6 @@ class TestFallback(unittest.TestCase):
         self.assertTrue(hasattr(interview_engine, "_next_unfilled_slot"))
 
 
-# ===========================================================================
-# 8. Activation gate — defaults must not have moved
-# ===========================================================================
 
 class TestDefaultsUnchanged(unittest.TestCase):
     def test_symbolic_is_off_by_default(self):

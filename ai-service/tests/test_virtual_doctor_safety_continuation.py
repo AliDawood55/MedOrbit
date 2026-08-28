@@ -82,9 +82,6 @@ async def _handle(message, fake_session, planner_result=None):
     return result, run_planner_mock, fake_pool
 
 
-# ===========================================================================
-# 1. Urgent headache continues the interview
-# ===========================================================================
 
 class TestUrgentHeadacheContinuesInterview(unittest.IsolatedAsyncioTestCase):
     async def test_urgent_warning_and_follow_up_question_both_present(self):
@@ -96,15 +93,12 @@ class TestUrgentHeadacheContinuesInterview(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(interview_engine._check_safety("عندي صداع شديد فجأة", "ar")["severity"], "urgent")
         self.assertEqual(result["urgency_level"], "urgent")
-        self.assertIn("تقييمًا طبيًا عاجلًا", result["reply"])  # urgent warning present
-        self.assertIn(mocked_next_question, result["reply"])     # follow-up question present
-        run_planner_mock.assert_called_once()                    # planner NOT skipped
-        self.assertNotEqual(result["phase"], "complete")         # not force-completed
+        self.assertIn("تقييمًا طبيًا عاجلًا", result["reply"])
+        self.assertIn(mocked_next_question, result["reply"])
+        run_planner_mock.assert_called_once()
+        self.assertNotEqual(result["phase"], "complete")
 
 
-# ===========================================================================
-# 2. Hematuria continues a focused (not purely generic-escalation) interview
-# ===========================================================================
 
 class TestHematuriaContinuesFocusedInterview(unittest.IsolatedAsyncioTestCase):
     async def test_focused_question_present_not_generic_escalation_only(self):
@@ -117,20 +111,13 @@ class TestHematuriaContinuesFocusedInterview(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["urgency_level"], "urgent")
         self.assertIn("تقييمًا طبيًا عاجلًا", result["reply"])
         self.assertIn(mocked_next_question, result["reply"])
-        # Not JUST the escalation message: the reply is strictly longer than
-        # the warning text alone once the focused question is appended.
         self.assertGreater(len(result["reply"]), len(interview_engine.SAFETY_URGENT_WARNING["ar"]))
 
-        # Requirement: prioritize red-flag-related questions. The planner was
-        # actually handed a hint describing what the safety layer matched.
         ctx = run_planner_mock.call_args.args[0]
         self.assertIsNotNone(ctx.safety_hint)
         self.assertIn("بول", ctx.safety_hint)
 
 
-# ===========================================================================
-# 3. Emergency behavior remains safety-first
-# ===========================================================================
 
 class TestEmergencyRemainsSafetyFirst(unittest.IsolatedAsyncioTestCase):
     async def test_mid_interview_emergency_keeps_warning_and_asks_one_short_question(self):
@@ -166,7 +153,7 @@ class TestEmergencyRemainsSafetyFirst(unittest.IsolatedAsyncioTestCase):
         )
         fake_reasoning_result = {
             "reply": "يُقترح مراجعة طبيب عام.",
-            "urgency_level": "routine",  # deliberately lower than emergency
+            "urgency_level": "routine",
             "recommended_specialty_id": "11111111-1111-1111-1111-111111111111",
             "recommended_specialty_name_en": "General Practice",
             "recommended_specialty_name_ar": "طب عام",
@@ -180,19 +167,13 @@ class TestEmergencyRemainsSafetyFirst(unittest.IsolatedAsyncioTestCase):
              patch.object(interview_engine.planner, "warm", new=MagicMock()):
             result, _, _ = await _handle("طوارئ", fake_session, plan)
 
-        # Emergency warning remains strong.
         self.assertIn("الهلال الأحمر الفلسطيني", result["reply"])
         self.assertIn("101", result["reply"])
-        # Not downgraded by the LLM/reasoning's own "routine" opinion.
         self.assertEqual(result["urgency_level"], "emergency")
-        # No final diagnosis language and no false reassurance.
         for phrase in ("كل شيء بخير", "لا داعي للقلق", "everything is fine", "nothing to worry"):
             self.assertNotIn(phrase, result["reply"])
 
 
-# ===========================================================================
-# 4. Normal message: existing behavior unchanged
-# ===========================================================================
 
 class TestNormalSeverityBehaviorUnchanged(unittest.IsolatedAsyncioTestCase):
     async def test_normal_message_reply_is_exactly_the_planners_question(self):
@@ -204,17 +185,12 @@ class TestNormalSeverityBehaviorUnchanged(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(interview_engine._check_safety("عندي صداع", "ar")["severity"], "normal")
         self.assertIsNone(result["urgency_level"])
-        # No safety prefix at all: byte-for-byte the planner's own reply,
-        # exactly matching pre-batch behavior for normal-severity turns.
         self.assertEqual(result["reply"], planner_question)
 
         ctx = run_planner_mock.call_args.args[0]
         self.assertIsNone(ctx.safety_hint)
 
 
-# ===========================================================================
-# 5. Safety signal persisted
-# ===========================================================================
 
 class TestSafetySignalPersisted(unittest.IsolatedAsyncioTestCase):
     """LIMITATION: the current schema has no dedicated structured red_flags

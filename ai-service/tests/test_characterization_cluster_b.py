@@ -58,80 +58,54 @@ class TestClusterBNormalizerCorruption(unittest.TestCase):
         cls.normalizer = TextNormalizer()
 
     def test_al_salama_farewell_no_longer_corrupted(self):
-        # "لا" (no) no longer fires inside "السلامة" (boundary-safe now).
-        # The whole phrase "مع السلامة" instead correctly matches its own
-        # dedicated response_expressions entry, mapping cleanly to "bye".
         info = self.normalizer.normalize_with_metadata("مع السلامة")
         self.assertTrue(info["was_dialect"])
         self.assertEqual(info["dialect_normalized"], "bye")
         self.assertEqual(info["normalized"], "bye")
 
     def test_amshi_i_can_walk_no_longer_corrupted(self):
-        # "مش" (not/no) no longer fires inside "امشي" (I walk). No dialect
-        # entry matches this phrase at all now, so it passes through
-        # standard Arabic normalization unchanged.
         info = self.normalizer.normalize_with_metadata("أقدر امشي")
         self.assertFalse(info["was_dialect"])
         self.assertIsNone(info["dialect_normalized"])
         self.assertEqual(info["normalized"], "اقدر امشي")
 
     def test_kaifak_how_are_you_no_longer_corrupted(self):
-        # "كيف" (how) no longer fires inside "كيفك". The whole word "كيفك"
-        # instead correctly matches its own question_expressions entry,
-        # mapping cleanly to "how_are_you" (-> "how are you" after standard
-        # normalization).
         info = self.normalizer.normalize_with_metadata("كيفك")
         self.assertTrue(info["was_dialect"])
         self.assertEqual(info["dialect_normalized"], "how_are_you")
         self.assertEqual(info["normalized"], "how are you")
 
     def test_kam_how_much_travel_time_phrase_unaffected_by_the_fix(self):
-        # "كم" (how much/many) was already a genuine standalone-word match
-        # before the fix — not a boundary-corruption case — so this value is
-        # unchanged. It still replaces "كم" with "how_much", which still
-        # destroys the multi-word Arabic keyword phrase "كم يستغرق" that
-        # travel_time depends on, and still introduces the literal substring
-        # "how" that collides with platform_support's generic "how" keyword.
-        # That collision is Cluster A, not Cluster B — see
-        # TestClusterBIntentClassificationImpact below.
         info = self.normalizer.normalize_with_metadata("كم يستغرق الوصول")
         self.assertTrue(info["was_dialect"])
         self.assertEqual(info["dialect_normalized"], "how_much يستغرق الوصول")
         self.assertEqual(info["normalized"], "how_much يستغرق الوصول")
 
     def test_kam_how_much_doctor_fee_phrase_unaffected_by_the_fix(self):
-        # Same as above: a genuine standalone match, unchanged by the fix.
         info = self.normalizer.normalize_with_metadata("كم سعر كشف الدكتور")
         self.assertTrue(info["was_dialect"])
         self.assertEqual(info["dialect_normalized"], "how_much سعر كشف الدكتور")
         self.assertEqual(info["normalized"], "how_much سعر كشف الدكتور")
 
     def test_atibbaa_doctors_plural_no_longer_corrupted(self):
-        # "طب" no longer fires inside "أطباء" (doctors, plural). No dialect
-        # entry matches this phrase at all now.
         info = self.normalizer.normalize_with_metadata("من هم الأطباء في العيادة")
         self.assertFalse(info["was_dialect"])
         self.assertIsNone(info["dialect_normalized"])
         self.assertEqual(info["normalized"], "من هم الاطباء في العياده")
 
     def test_altaameen_insurance_no_longer_corrupted(self):
-        # "مين" (who) no longer fires inside "التأمين" (the insurance).
         info = self.normalizer.normalize_with_metadata("هل العيادة تقبل التأمين")
         self.assertFalse(info["was_dialect"])
         self.assertIsNone(info["dialect_normalized"])
         self.assertEqual(info["normalized"], "هل العياده تقبل التامين")
 
     def test_nafsiya_mental_psychological_no_longer_corrupted(self):
-        # "نفسي" no longer fires inside "نفسية" (psychological/mental).
         info = self.normalizer.normalize_with_metadata("مساعدة نفسية")
         self.assertFalse(info["was_dialect"])
         self.assertIsNone(info["dialect_normalized"])
         self.assertEqual(info["normalized"], "مساعده نفسيه")
 
     def test_standalone_dialect_words_still_normalize_correctly(self):
-        # Sanity check: the fix must not stop genuine standalone dialect
-        # words from normalizing — only the embedded-substring false
-        # positives should stop firing.
         self.assertEqual(
             self.normalizer.normalize_with_metadata("هل لا يوجد دكتور")["dialect_normalized"],
             "هل no يوجد دكتور",
@@ -167,34 +141,18 @@ class TestClusterBIntentClassificationImpact(unittest.TestCase):
         self.assertIn(result["intent"], ["walking_route", "show_route"])
 
     def test_how_are_you_now_classifies_correctly(self):
-        # Fixed by the separate "how_are_you only" bug-fix batch (added
-        # "are you" as an explicit how_are_you keyword) — the platform_support
-        # "how" collision this test previously documented no longer wins,
-        # since how_are_you now has 2 matched keywords vs. platform_support's 1.
         result = self.classifier.classify("كيفك")
         self.assertEqual(result["intent"], "how_are_you")
 
     def test_travel_time_now_classifies_correctly(self):
-        # Fixed by the separate "travel_time only" bug-fix batch (added
-        # "يستغرق الوصول" as an explicit travel_time keyword) — the "how_much"
-        # collision this test previously documented no longer wins.
         result = self.classifier.classify("كم يستغرق الوصول")
         self.assertEqual(result["intent"], "travel_time")
 
     def test_doctor_fee_now_classifies_correctly(self):
-        # Fixed by the separate "doctor_fee only" bug-fix batch (added
-        # explicit "سعر كشف"/"سعر كشف الدكتور" keywords) — the "كم"->
-        # "how_much" substitution this test previously documented no longer
-        # matters, since doctor_fee no longer depends on "كم سعر" to win.
         result = self.classifier.classify("كم سعر كشف الدكتور")
         self.assertEqual(result["intent"], "doctor_fee")
 
     def test_clinic_doctors_now_classifies_correctly(self):
-        # Fixed by the separate "clinic_doctors only" bug-fix batch (added
-        # "الأطباء العيادة" as an explicit clinic_doctors keyword) — the
-        # find_doctor keyword-overlap tie this test previously documented no
-        # longer wins, since clinic_doctors now has one more matched
-        # keyword than find_doctor for this input.
         result = self.classifier.classify("من هم الأطباء في العيادة")
         self.assertEqual(result["intent"], "clinic_doctors")
 
@@ -240,11 +198,6 @@ class TestClusterBIntendedBoundarySafeBehavior(unittest.TestCase):
 
     def test_kaifak_should_not_be_corrupted(self):
         info = self.normalizer.normalize_with_metadata("كيفك")
-        # The intended boundary-safety property: "how" from a broken
-        # embedded match must not appear. "how_are_you"'s own clean, correct
-        # dialect mapping legitimately contains "how" as a real word, which
-        # is not the corruption this test guards against, so we check for
-        # the corrupted fragment shape rather than a blanket substring ban.
         self.assertNotIn("howك", info["dialect_normalized"] or "")
 
     def test_how_are_you_should_classify_correctly(self):
@@ -252,9 +205,6 @@ class TestClusterBIntendedBoundarySafeBehavior(unittest.TestCase):
         self.assertEqual(result["intent"], "how_are_you")
 
     def test_travel_time_phrase_should_survive_intact(self):
-        # "كم" was always a legitimate standalone match (not corruption);
-        # the intended Cluster B property — no embedded false positive — was
-        # never violated here. Kept as a stable non-regression check.
         info = self.normalizer.normalize_with_metadata("كم يستغرق الوصول")
         self.assertIn("يستغرق", info["normalized"])
 

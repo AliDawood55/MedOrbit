@@ -72,8 +72,6 @@ async def _handle(message, fake_session, planner_result=None):
     return result, [c.args for c in updates]
 
 
-# Turns chosen to cover the paths the symbolic layer sits next to: an urgent
-# red flag, an emergency, an ordinary answer, and an intake turn.
 _TURNS = [
     ("عندي صداع شديد فجأة", _fake_session(chief_complaint="headache"),
      planner.PlannerResult(reply="منذ متى بدأ الصداع؟", phase="interviewing", source="static")),
@@ -89,9 +87,6 @@ _TURNS = [
 ]
 
 
-# ===========================================================================
-# 1. The flag is off by default and the layer is inert
-# ===========================================================================
 
 class TestDisabledByDefault(unittest.IsolatedAsyncioTestCase):
     async def test_observe_turn_returns_none_when_the_flag_is_absent(self):
@@ -113,9 +108,6 @@ class TestDisabledByDefault(unittest.IsolatedAsyncioTestCase):
         load.assert_not_called()
 
 
-# ===========================================================================
-# 2. Shadow mode produces byte-identical consultation behaviour
-# ===========================================================================
 
 class TestShadowModeChangesNothing(unittest.IsolatedAsyncioTestCase):
     async def _run_both(self, message, session, plan):
@@ -128,7 +120,7 @@ class TestShadowModeChangesNothing(unittest.IsolatedAsyncioTestCase):
     async def test_every_turn_is_identical_with_the_flag_on_and_off(self):
         for message, session, plan in _TURNS:
             with self.subTest(message=message):
-                (off, off_writes), (on, on_writes) = await self._run_both(
+                (off, _), (on, _) = await self._run_both(
                     message, session, plan)
 
                 self.assertEqual(off["reply"], on["reply"])
@@ -222,9 +214,6 @@ class TestShadowModeChangesNothing(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(counts["0"], counts["1"])
 
 
-# ===========================================================================
-# 3. A fault in the shadow layer cannot break a consultation
-# ===========================================================================
 
 class TestShadowFailuresAreSwallowed(unittest.IsolatedAsyncioTestCase):
     async def test_a_raising_fact_builder_does_not_break_the_turn(self):
@@ -260,9 +249,6 @@ class TestShadowFailuresAreSwallowed(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(await reasoning_engine.observe_turn("s1"))
 
 
-# ===========================================================================
-# 4. When it does run, it produces a usable observation
-# ===========================================================================
 
 @unittest.skipUnless(prolog_engine.available(),
                      "SWI-Prolog/pyswip not installed on this machine")

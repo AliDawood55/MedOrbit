@@ -179,8 +179,6 @@ class FactSet:
 
     facts: Tuple[Fact, ...] = ()
     rejected: Tuple[RejectedValue, ...] = ()
-    # Provenance (Phase 4). Separate from `facts` because vd_stated/4 carries a
-    # turn index that vd_fact/4 has no room for.
     stated: Tuple[StatedFact, ...] = ()
 
     def __len__(self) -> int:
