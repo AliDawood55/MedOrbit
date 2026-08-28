@@ -346,8 +346,8 @@ async function residualCounts() {
         check(60, 'Doctor Profile primary CTA order correct', messageThenBookingThenFollow);
         check(61, 'Doctor tabs work', ['about','posts','reviews','availability','clinics'].every((tab) => doctorUi.includes(`['${tab}'`) || doctorUi.includes(`data-panel=\"${tab}`)) && doctorUi.includes("addEventListener('click'"));
         check(62, 'Patient profile renders safely', patientUi.includes('textContent') && readFrontend('public/patient-profile.html').includes('patientProfileForm'));
-        check(63, 'messaging desktop layout initializes', /grid-template-columns:minmax\(270px,34%\) 1fr/.test(directCss) && frontendProduction.includes('loadConversations'));
-        check(64, 'messaging mobile layout initializes', directCss.includes('.messages-thread-open .thread-pane') && directCss.includes('@media(max-width:760px)'));
+        check(63, 'messaging desktop layout initializes', /grid-template-columns\s*:\s*minmax\(\s*270px\s*,\s*34%\s*\)\s+1fr\s*;?/.test(directCss) && frontendProduction.includes('loadConversations'));
+        check(64, 'messaging mobile layout initializes', /\.messages-thread-open\s+\.thread-pane\s*\{/.test(directCss) && /@media\s*\(\s*max-width\s*:\s*760px\s*\)/.test(directCss));
         check(65, 'notification badge still works', badgeSource.includes("count > 9 ? '9+'") && badgeSource.includes("count === 0"));
         check(66, 'RTL layout works', sharedCss.includes('border-inline-end') && readFrontend('public/doctor.html').includes('dir="rtl"'));
         check(67, 'LTR layout works', readFrontend('src/js/i18n.js').includes("document.documentElement.dir") && readFrontend('src/js/i18n.js').includes("'ltr'"));
