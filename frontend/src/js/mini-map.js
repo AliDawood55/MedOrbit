@@ -1,10 +1,3 @@
-/**
- * MedOrbit v2 - Mini Map
- * Small, single-marker Leaflet map used on doctor.html / clinic.html profile
- * pages. Deliberately separate from map.js's MapApp (which is a stateful
- * singleton bound to index.html's chat/clustering experience) — this is
- * just "show one point on a map", nothing more.
- */
 const MiniMap = (() => {
 
     function render(containerId, { lat, lng, title, zoom = 15 } = {}) {

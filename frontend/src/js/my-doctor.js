@@ -1,18 +1,3 @@
-/**
- * MedOrbit v2 - My Doctor (patient's view of their treating doctor(s))
- *
- * GET /patients/me/doctors (backend/src/routes/patient.routes.js) — patient
- * id resolved server-side from the JWT, derived from appointment history,
- * same approach as my-patients.js's doctor-side mirror. "Upcoming
- * appointments with them" reuses the existing ownership-scoped
- * GET /appointments (API.appointments.list) rather than a new endpoint,
- * filtered client-side to the doctors in the list above.
- *
- * "Shared notes" calls GET /patients/me/doctors/:doctorId/notes once per
- * treating doctor and merges the results — only rows a doctor explicitly
- * marked visible_to_patient=true ever come back; doctor_notes never does
- * (see the isolation note in patient.routes.js).
- */
 const MyDoctor = (() => {
 
     const STATUS_KEY = {
@@ -96,9 +81,7 @@ const MyDoctor = (() => {
         '</div>';
     }
 
-    // ================= RENDER: DOCTORS =================
-
-    function renderDoctors() {
+function renderDoctors() {
         const el = document.getElementById('doctorsList');
         if (!el) return;
         if (!doctors.length) {
@@ -139,9 +122,7 @@ const MyDoctor = (() => {
         );
     }
 
-    // ================= RENDER: UPCOMING APPOINTMENTS =================
-
-    function renderUpcoming(list) {
+function renderUpcoming(list) {
         const el = document.getElementById('upcomingWithThemList');
         if (!el) return;
         if (!list.length) {
@@ -184,11 +165,7 @@ const MyDoctor = (() => {
         }
     }
 
-    // ================= LOAD =================
-
-    // ================= RENDER: SHARED NOTES =================
-
-    const RECORD_TYPE_KEY = {
+const RECORD_TYPE_KEY = {
         consultation: 'patientDetail.typeConsultation',
         follow_up: 'patientDetail.typeFollowUp',
         procedure: 'patientDetail.typeProcedure'
@@ -274,12 +251,7 @@ const MyDoctor = (() => {
         load();
     }
 
-    // Swaps a broken avatar <img> for the same plain-text initials fallback
-    // already used when no profile_image_url exists at all. Invoked from a
-    // static onerror="MyDoctor.__avatarFallback(this)" attribute (no
-    // user-derived string is ever embedded in executable JS); the initials
-    // travel only as an HTML-escaped data attribute.
-    function avatarFallback(img) {
+function avatarFallback(img) {
         img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
     }
 

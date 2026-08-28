@@ -1,9 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Design System
-   Modern, polished, dark-mode ready
-   =========================================== */
-
-/* === Reset === */
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -14,27 +8,11 @@ html, body {
     width: 100%;
 }
 
-/* ===========================================
-   Layout shells — exactly two, chosen via a body class, defined once here.
-
-   .app-shell  — fixed viewport, no document scroll; internal panes (chat
-                 messages, map, conversation sidebar) scroll themselves.
-                 index.html and find-clinics.html ONLY.
-   (default)   — every other page. No class needed: normal document flow,
-                 normal scrolling. html/body get no explicit height or
-                 overflow, so the browser's own natural scrolling behavior
-                 applies — this was the bug: html previously had a blanket
-                 overflow:hidden that body.site-page never reset, silently
-                 blocking real scroll input (wheel/touch/keyboard) on every
-                 content page even though body itself looked scrollable.
-   =========================================== */
 html.app-shell, body.app-shell {
     height: 100%;
     overflow: hidden;
 }
 
-/* Smooth scroll for anchor jumps / the back-to-top affordance, on document
-   pages only — the app shell's internal panes handle their own scrolling. */
 html:not(.app-shell) {
     scroll-behavior: smooth;
 }
@@ -44,8 +22,7 @@ html:not(.app-shell) {
         scroll-behavior: auto;
     }
 
-    /* Loader stays visible as feedback but stops looping motion. */
-    .loader-logo {
+.loader-logo {
         animation: none;
     }
 
@@ -75,8 +52,6 @@ html:not(.app-shell) {
     }
 }
 
-/* Reference-counted overlay lock (see Dom.lockScroll/unlockScroll) — blocks
-   background scroll while a drawer/sidebar/bottom-sheet overlay is open. */
 body.scroll-locked {
     overflow: hidden;
 }
@@ -121,9 +96,6 @@ button {
     border: 0;
 }
 
-/* Keyboard-only "skip to main content" link. Fixed positioning keeps it out
-   of flow (no layout shift) while off-screen; it slides into view on focus
-   so keyboard users can bypass the header/nav without a screen reader. */
 .skip-link {
     position: fixed;
     inset-inline-start: 12px;
@@ -169,9 +141,8 @@ kbd {
     border-radius: 4px;
 }
 
-/* === Design Tokens === */
 :root {
-    /* --- Brand --- */
+
     --primary: #2563EB;
     --primary-dark: #1D4ED8;
     --primary-light: #3B82F6;
@@ -185,42 +156,33 @@ kbd {
     --accent: #F59E0B;
     --accent-gradient: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
 
-    /* --- Semantic --- */
-    --danger: #EF4444;
+--danger: #EF4444;
     --warning: #F59E0B;
     --success: #10B981;
     --info: #06B6D4;
 
-    /* --- Category colors --- */
-    --cat-clinic: #2563EB;
+--cat-clinic: #2563EB;
     --cat-dental: #0D9488;
     --cat-pharmacy: #F59E0B;
     --cat-hospital: #DC2626;
     --cat-doctor: #7C3AED;
     --cat-healthcare: #64748B;
 
-    /* --- Surfaces (light) --- */
-    --bg: #F9FAFB;
+--bg: #F9FAFB;
     --bg-soft: #F3F4F6;
     --bg-card: #FFFFFF;
     --bg-elevated: #FFFFFF;
     --bg-overlay: rgba(0, 0, 0, 0.5);
 
-    /* --- Text hierarchy (light) --- */
-    --text: #111827;
+--text: #111827;
     --text-soft: #4B5563;
     --text-mute: #6B7280;
     --text-faint: #9CA3AF;
 
-    /* --- Borders (light) --- */
-    --border: #E5E7EB;
+--border: #E5E7EB;
     --border-strong: #D1D5DB;
 
-    /* --- Spacing scale ---
-       Derived from the pixel values already most common across
-       frontend/src/css/*.css (margin/padding/gap usage). Tokens only —
-       existing hardcoded values are not migrated in this step. */
-    --sp-1: 4px;
+--sp-1: 4px;
     --sp-2: 8px;
     --sp-3: 12px;
     --sp-4: 16px;
@@ -230,8 +192,7 @@ kbd {
     --sp-10: 40px;
     --sp-12: 48px;
 
-    /* --- Radii --- */
-    --r-xs: 4px;
+--r-xs: 4px;
     --r-sm: 6px;
     --r-md: 10px;
     --r-lg: 14px;
@@ -239,41 +200,31 @@ kbd {
     --r-2xl: 24px;
     --r-full: 9999px;
 
-    /* --- Shadows (light) --- */
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+--shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
     --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
     --shadow-glow: 0 0 24px rgba(37, 99, 235, 0.25);
 
-    /* --- Layout --- */
-    --header-h: 64px;
+--header-h: 64px;
     --filter-h: 52px;
 
-    /* --- Z-index --- */
-    --z-header: 100;
+--z-header: 100;
     --z-filter: 90;
     --z-modal: 1000;
     --z-drawer: 1500;
     --z-toast: 2000;
     --z-skip-link: 3000;
 
-    /* --- Motion --- */
-    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+--ease: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
     --t-fast: 150ms var(--ease);
     --t-base: 250ms var(--ease);
     --t-slow: 400ms var(--ease);
 
-    /* --- Typography ---
-       Font stacks match the existing body/[lang="en"] rules below.
-       Sizes/line-heights are the most-repeated values already used across
-       main.css, components.css, layout.css and records.css — not a new
-       scale. --lh-relaxed is the line-height already used for longer
-       Arabic-friendly paragraph text (empty/error states). */
-    --font-ar: 'Cairo', 'Inter', system-ui, sans-serif;
+--font-ar: 'Cairo', 'Inter', system-ui, sans-serif;
     --font-en: 'Inter', system-ui, sans-serif;
     --fs-title: 18px;
     --fs-body: 15px;
@@ -283,19 +234,6 @@ kbd {
     --lh-relaxed: 1.7;
 }
 
-/* ===========================================
-   Responsive breakpoints — the ONE set used across every stylesheet.
-   CSS has no variables usable inside @media conditions, so these are a
-   documented convention, not literal substitution: every @media in this
-   codebase MUST use one of these exact three values (max-width).
-     1024px — tablet landscape / small laptop (grids go 2-col, sheets start)
-      768px — tablet portrait / large phone (hamburger drawer kicks in)
-      480px — phone (single column everywhere, bottom-sheet modals)
-   Test at 360/414 (both fall under 480), 768, 1024, and 1440 (no query
-   applies — default desktop layout).
-   =========================================== */
-
-/* === Dark Mode === */
 [data-theme="dark"] {
     --bg: #0B1220;
     --bg-soft: #111827;
@@ -318,7 +256,6 @@ kbd {
     --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.5), 0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* === App Loader (initial) === */
 .app-loader {
     position: fixed;
     inset: 0;
@@ -388,7 +325,6 @@ kbd {
     100% { transform: translateX(200%); width: 30%; }
 }
 
-/* === App Shell === */
 .app {
     display: grid;
     grid-template-rows: var(--header-h) var(--filter-h) 1fr;
@@ -397,7 +333,6 @@ kbd {
     background: var(--bg);
 }
 
-/* === Header === */
 .app-header {
     display: flex;
     align-items: center;
@@ -451,7 +386,6 @@ kbd {
     font-weight: 500;
 }
 
-/* Search bar in header */
 .header-search {
     flex: 1;
     max-width: 480px;
@@ -536,7 +470,6 @@ kbd {
     font-weight: 700;
 }
 
-/* === Filter Bar === */
 .filter-bar {
     display: flex;
     align-items: center;
@@ -620,7 +553,6 @@ kbd {
     text-align: center;
 }
 
-/* === Main Layout === */
 .app-main {
     display: grid;
     grid-template-columns: 440px 1fr;
@@ -628,7 +560,6 @@ kbd {
     min-height: 0;
 }
 
-/* === Toast === */
 .toast-container {
     position: fixed;
     top: 80px;
@@ -689,9 +620,6 @@ kbd {
     to { transform: translateY(0); opacity: 1; }
 }
 
-/* === Mobile chat/map view toggle (FAB, mobile only) ===
-   Anchored to the opposite side from .map-controls (which sit at
-   inset-inline-end) so the two never overlap. */
 .mobile-view-toggle {
     display: none;
     position: fixed;
@@ -714,7 +642,6 @@ kbd {
     transform: scale(0.94);
 }
 
-/* === Responsive === */
 @media (max-width: 1024px) {
     .header-search {
         max-width: 280px;
@@ -734,9 +661,7 @@ kbd {
         grid-template-rows: var(--header-h) var(--filter-h) 1fr;
     }
 
-    /* Mobile: show one panel at a time (chat by default) instead of a
-       cramped 50/50 stack — .mobile-view-toggle switches between them. */
-    .app-main {
+.app-main {
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
     }
@@ -784,7 +709,6 @@ kbd {
     }
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;

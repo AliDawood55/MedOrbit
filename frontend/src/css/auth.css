@@ -1,8 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Auth Pages Layout
-   Login / Register / Forgot / Reset / Verify
-   =========================================== */
-
 .auth-page {
     flex: 1;
     display: flex;
@@ -13,7 +8,6 @@
     overflow: hidden;
 }
 
-/* Soft decorative background, matching the app's brand gradient */
 .auth-page::before {
     content: '';
     position: absolute;
@@ -91,7 +85,6 @@
     margin-top: 6px;
 }
 
-/* === Google Sign-In block (above the "or" divider + form) === */
 .oauth-block {
     margin-bottom: 20px;
 }
@@ -105,9 +98,8 @@
     display: flex;
     justify-content: center;
     margin-bottom: 18px;
-    /* GIS renders a cross-origin iframe we can't restyle directly — this
-       min-height keeps the card from jumping once it loads in. */
-    min-height: 44px;
+
+min-height: 44px;
 }
 
 .auth-divider {
@@ -148,8 +140,6 @@
     vertical-align: middle;
 }
 
-/* A compact guidance panel: it reuses the existing card, text and brand
-   tokens rather than introducing a second login design for doctors. */
 .auth-role-help {
     display: flex;
     gap: 12px;
@@ -204,7 +194,6 @@
     display: none;
 }
 
-/* === Status page (verify-email) === */
 .auth-status {
     text-align: center;
     padding: 12px 0 24px;

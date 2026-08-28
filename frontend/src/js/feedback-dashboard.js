@@ -1,10 +1,3 @@
-/**
- * MedOrbit v2 - Home Feedback Dashboard
- * Wires the bottom section of home.html to GET /api/feedback/stats:
- * two Chart.js doughnut charts (rating distribution, category averages), a
- * KPI strip, and a continuous marquee of users who left feedback. Refreshes
- * on a bounded cadence so updates appear without creating background storms.
- */
 const FeedbackDashboard = (() => {
 
     const POLL_MS = 60_000;
@@ -44,9 +37,7 @@ const FeedbackDashboard = (() => {
             .replace(/'/g, '&#039;');
     }
 
-    // ================= THEME =================
-
-    function themeColors() {
+function themeColors() {
         const cs = getComputedStyle(document.documentElement);
         const v = (name) => cs.getPropertyValue(name).trim();
         return {
@@ -59,17 +50,12 @@ const FeedbackDashboard = (() => {
             accent: v('--accent'),
             info: v('--info'),
             success: v('--success'),
-            // Existing light->dark tints of --primary (main.css), used as a
-            // sequential ramp for the 1-5 star doughnut below — ratings are
-            // an ordered scale, so one hue getting darker per star reads
-            // correctly instead of five unrelated categorical colors.
-            primaryRamp: [v('--primary-50'), v('--primary-100'), v('--primary-light'), v('--primary'), v('--primary-dark')]
+
+primaryRamp: [v('--primary-50'), v('--primary-100'), v('--primary-light'), v('--primary'), v('--primary-dark')]
         };
     }
 
-    // Shared legend: value + share alongside the swatch, so identity isn't
-    // color-alone on a chart with no axis to read exact sizes off of.
-    function circularLegend(colors, formatItem) {
+function circularLegend(colors, formatItem) {
         return {
             position: 'bottom',
             labels: {
@@ -101,9 +87,7 @@ const FeedbackDashboard = (() => {
         }
     }
 
-    // ================= KPI STRIP =================
-
-    function renderKpis(data) {
+function renderKpis(data) {
         const wrap = document.getElementById('feedbackDashKpis');
         if (!wrap) return;
 
@@ -133,9 +117,7 @@ const FeedbackDashboard = (() => {
         )).join('');
     }
 
-    // ================= CHARTS =================
-
-    function renderRatingChart(ratingDistribution) {
+function renderRatingChart(ratingDistribution) {
         const colors = themeColors();
         const rows = Array.isArray(ratingDistribution) ? ratingDistribution : [];
         const labels = rows.map((row) => row.rating + ' ' + t('feedbackDash.stars'));
@@ -237,11 +219,8 @@ const FeedbackDashboard = (() => {
                 cutout: '62%',
                 animation: reducedMotion() ? false : { duration: 250 },
                 plugins: {
-                    // Averages are each independently out of 5, not parts of
-                    // one whole — legend/tooltip show the "x.x / 5" value
-                    // itself rather than a share-of-circle percentage, so
-                    // the doughnut's angles aren't read as summing to 100%.
-                    legend: circularLegend(colors, (label, value) => label + ' — ' + value.toFixed(1) + '/5'),
+
+legend: circularLegend(colors, (label, value) => label + ' — ' + value.toFixed(1) + '/5'),
                     tooltip: {
                         callbacks: {
                             label(ctx) { return ctx.label + ': ' + ctx.parsed.toFixed(1) + '/5'; }
@@ -252,9 +231,7 @@ const FeedbackDashboard = (() => {
         });
     }
 
-    // ================= USERS MARQUEE =================
-
-    function displayName(user) {
+function displayName(user) {
         const name = isAr() ? (user.nameAr || user.nameEn) : (user.nameEn || user.nameAr);
         return name || (isAr() ? 'مستخدم' : 'User');
     }
@@ -280,12 +257,7 @@ const FeedbackDashboard = (() => {
         const section = wrap?.closest('.feedback-dash-users');
         if (!wrap || !track) return;
 
-        // GET /api/feedback/stats returns the aggregates to everyone but sends
-        // `users` (real people's names and avatars) only to a signed-in caller.
-        // An absent array therefore means "not shown to guests", which is not
-        // the same as an empty one — hide the whole section rather than tell a
-        // visitor there is no feedback yet when there is.
-        if (!Array.isArray(users)) {
+if (!Array.isArray(users)) {
             section?.classList.add('hidden');
             track.innerHTML = '';
             lastUserKey = '';
@@ -303,24 +275,18 @@ const FeedbackDashboard = (() => {
             return;
         }
 
-        // Rebuilding the track resets the CSS animation, so skip it when the
-        // visible set (and language, which changes the rendered name) hasn't
-        // actually changed — keeps the scroll smooth across each 5s poll.
-        const key = (isAr() ? 'ar:' : 'en:') + list.map((u) => u.id).join(',');
+const key = (isAr() ? 'ar:' : 'en:') + list.map((u) => u.id).join(',');
         if (key === lastUserKey) return;
         lastUserKey = key;
 
         wrap.classList.remove('hidden');
         empty?.classList.add('hidden');
 
-        // Duplicated once so `translateX(-50%)` loops seamlessly.
-        const itemsHtml = list.map(marqueeItemHtml).join('');
+const itemsHtml = list.map(marqueeItemHtml).join('');
         track.innerHTML = itemsHtml + itemsHtml;
     }
 
-    // ================= LOAD =================
-
-    function renderData(data) {
+function renderData(data) {
         renderKpis(data);
         renderRatingChart(data?.ratingDistribution);
         renderCategoryChart(data?.categoryAverages);
@@ -363,16 +329,14 @@ const FeedbackDashboard = (() => {
     }
 
     function rerenderStatic() {
-        // Language/theme change: force a full chart + marquee rebuild.
+
         destroy('ratings');
         destroy('categories');
         lastUserKey = null;
         if (lastData) renderData(lastData);
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         if (initialized) return;
         initialized = true;
         if (!document.getElementById('feedbackDashKpis')) return;

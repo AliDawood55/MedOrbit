@@ -1,7 +1,3 @@
-/**
- * MedOrbit v2 - Clinic Profile
- * GET /api/clinics/:id — info, hours, services, doctors, mini-map, route button.
- */
 const ClinicProfile = (() => {
 
     const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -59,9 +55,7 @@ const ClinicProfile = (() => {
         return t ? String(t).slice(0, 5) : '';
     }
 
-    // ================= LOAD =================
-
-    async function load() {
+async function load() {
         const id = getIdFromUrl();
         const content = document.getElementById('clinicContent');
         if (!content) return;
@@ -91,9 +85,7 @@ const ClinicProfile = (() => {
         }
     }
 
-    // ================= RENDER: STATES =================
-
-    function renderSkeleton() {
+function renderSkeleton() {
         return (
             '<div class="profile-header">' +
                 '<div class="skeleton" style="width:96px;height:96px;border-radius:18px;flex-shrink:0;"></div>' +
@@ -120,9 +112,7 @@ const ClinicProfile = (() => {
         '</div>';
     }
 
-    // ================= RENDER: PROFILE =================
-
-    function renderProfile(clinic, doctors) {
+function renderProfile(clinic, doctors) {
         const ar = isAr();
         const clinicName = escapeHtml(name(clinic, 'name_ar', 'name_en'));
         const address = escapeHtml(name(clinic, 'address_ar', 'address_en'));
@@ -257,29 +247,17 @@ const ClinicProfile = (() => {
         });
     }
 
-    // ================= IMAGE FALLBACK =================
-
-    // Swaps a broken clinic logo <img> for the same type-icon <i> already used
-    // when logo_url is absent. Invoked from a static
-    // onerror="ClinicProfile.__logoFallback(this)" attribute (no user-derived
-    // string is ever embedded in executable JS); the icon class travels only
-    // as an HTML-escaped data attribute.
-    function logoFallback(img) {
+function logoFallback(img) {
         const icon = document.createElement('i');
         icon.className = 'fas ' + (img.dataset.fallbackIcon || 'fa-notes-medical');
         img.replaceWith(icon);
     }
 
-    // Swaps a broken doctor sub-item <img> for the same initials fallback
-    // already used when profile_image_url is absent. Same static-onerror
-    // pattern as logoFallback above.
-    function avatarFallback(img) {
+function avatarFallback(img) {
         img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         load();
     }
 

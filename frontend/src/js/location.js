@@ -1,22 +1,6 @@
-/**
- * MedOrbit v2 - Shared Location State
- * Single source of truth for the user's location, used by map.js, chat.js,
- * and find-clinics.js. Owns the ONLY navigator.geolocation call in the app —
- * nothing else should call it directly, so there's one place to fix
- * timeouts/accuracy/error handling instead of three drifting copies.
- *
- * State shape: { status, coords, accuracy, source, errorCode, label }
- *   status: 'idle' | 'locating' | 'resolved' | 'manual' | 'error'
- *   coords: { lat, lng } | null
- *   source: 'gps' | 'manual-map' | 'manual-district' | null
- *   errorCode: 'PERMISSION_DENIED' | 'POSITION_UNAVAILABLE' | 'TIMEOUT' | 'NOT_SUPPORTED' | null
- */
 const Location = (() => {
 
-    // Rough, approximate central points for manual district selection — not
-    // geocoded/verified addresses, just a reasonable starting point on the
-    // map when GPS isn't available. Clearly presented as approximate in the UI.
-    const NABLUS_DISTRICTS = [
+const NABLUS_DISTRICTS = [
         { id: 'center', ar: 'وسط المدينة', en: 'City Center', lat: 32.2211, lng: 35.2544 },
         { id: 'rafidia', ar: 'رفيديا', en: 'Rafidia', lat: 32.2258, lng: 35.2280 },
         { id: 'askar', ar: 'مخيم عسكر', en: 'Askar Camp', lat: 32.2350, lng: 35.2930 },
@@ -121,10 +105,7 @@ const Location = (() => {
         );
     }
 
-    /**
-     * Manual fallback — picked on the map or chosen from the district list.
-     */
-    function setManual(coords, source, label) {
+function setManual(coords, source, label) {
         state = {
             status: 'manual',
             coords: { lat: Number(coords.lat), lng: Number(coords.lng) },
@@ -146,14 +127,7 @@ const Location = (() => {
         return NABLUS_DISTRICTS.slice();
     }
 
-    /**
-     * If a fix is already available (resolved or manual), resolves
-     * immediately. If one is in flight, waits up to timeoutMs for it to
-     * land before giving up. Never silently swallows a fix that arrives —
-     * it either resolves with real coords or explicitly with null so the
-     * caller can tell the user why results aren't distance-ranked.
-     */
-    function waitForFix(timeoutMs = 2500) {
+function waitForFix(timeoutMs = 2500) {
         return new Promise((resolve) => {
             if (state.coords) {
                 resolve(state.coords);

@@ -1,9 +1,3 @@
-/**
- * MedOrbit v2 - Find Clinics
- * GET /api/clinics (paginated list) + GET /api/clinics/nearby (geolocation),
- * both with an optional ?type= filter. List + map side by side, reusing
- * MapApp (the same Leaflet/clustering module the chat page uses).
- */
 const FindClinics = (() => {
 
     const PAGE_SIZE = 20;
@@ -18,12 +12,12 @@ const FindClinics = (() => {
         labelKey: 'filter.healthcare', icon: 'fa-notes-medical', category: 'healthcare'
     });
 
-    let mode = 'list'; // 'list' | 'nearby'
+    let mode = 'list';
     let currentType = '';
     let currentPage = 1;
     let searchDebounceTimer = null;
     let activeController = null;
-    const LIST_CACHE_TTL = 60000; // 1 min — clinic list/filters rarely change that fast
+    const LIST_CACHE_TTL = 60000;
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -76,9 +70,7 @@ const FindClinics = (() => {
         };
     }
 
-    // ================= DATA: LIST MODE =================
-
-    async function loadList(page = 1) {
+async function loadList(page = 1) {
         mode = 'list';
         currentPage = page;
 
@@ -118,9 +110,7 @@ const FindClinics = (() => {
         }
     }
 
-    // ================= DATA: NEARBY MODE =================
-
-    function loadNearby() {
+function loadNearby() {
         const content = document.getElementById('clinicsListContent');
         if (!content) return;
 
@@ -132,10 +122,7 @@ const FindClinics = (() => {
         mode = 'nearby';
         content.innerHTML = '<div class="empty-state"><div class="spinner spinner-lg" style="margin:0 auto 16px;"></div><p>' + escapeHtml(t('clinics.locating')) + '</p></div>';
 
-        // "Near me" always means a fresh GPS fix — delegated entirely to the
-        // shared Location module (map.js reacts to the same state change and
-        // updates the user marker on its own, no separate call needed here).
-        const unsubscribe = Location.onChange(handleLocationUpdate);
+const unsubscribe = Location.onChange(handleLocationUpdate);
         Location.locate(true);
 
         function handleLocationUpdate(state) {
@@ -187,9 +174,7 @@ const FindClinics = (() => {
         }
     }
 
-    // ================= RENDER =================
-
-    function renderSkeleton() {
+function renderSkeleton() {
         const row = '<div class="entity-card" style="margin-bottom:10px;"><div class="entity-card-body">' +
             '<div class="skeleton" style="width:44px;height:44px;border-radius:50%;flex-shrink:0;"></div>' +
             '<div style="flex:1;"><div class="skeleton" style="height:14px;width:60%;margin-bottom:8px;"></div>' +
@@ -266,9 +251,7 @@ const FindClinics = (() => {
         return html;
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         const params = new URLSearchParams(window.location.search);
         const initialSearch = params.get('search');
         if (initialSearch) {

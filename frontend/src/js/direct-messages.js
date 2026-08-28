@@ -9,13 +9,7 @@ const DirectMessages=(()=>{
     const isNearBottom=el=>!el||(el.scrollHeight-el.scrollTop-el.clientHeight<120);
     const formatTime=iso=>new Date(iso).toLocaleTimeString(isAr()?'ar':'en-US',{hour:'2-digit',minute:'2-digit'});
 
-    // ---- Connection state (honest, bounded) ----
-    // idle: nothing to report yet (pill hidden). connecting: first handshake in
-    // flight. online: socket connected. reconnecting: a real drop, socket.io is
-    // actively retrying with backoff. offline: navigator says we have no network.
-    // unavailable: retries exhausted — shown with a manual retry action instead
-    // of looping forever.
-    const CONNECTION_LABELS={
+const CONNECTION_LABELS={
         connecting:['جارٍ الاتصال…','Connecting…'],
         online:['متصل','Connected'],
         reconnecting:['إعادة الاتصال…','Reconnecting…'],
@@ -67,10 +61,7 @@ const DirectMessages=(()=>{
 
     function emptyNode(message){const node=document.createElement('div');node.className='messages-empty';node.textContent=message;return node;}
 
-    // Maps a thrown API error into a category-specific, user-facing message —
-    // never the raw exception, and never the same generic text for every
-    // failure (network vs auth vs forbidden vs server all read differently).
-    function describeError(err,fallback){
+function describeError(err,fallback){
         if(!err)return fallback;
         if(err.status===undefined||err.status===null)return copy('تعذر الوصول إلى الخادم. تحقق من اتصالك بالإنترنت.','Could not reach the server. Check your internet connection.');
         if(err.status===401)return copy('انتهت صلاحية الجلسة. الرجاء تسجيل الدخول مجدداً.','Your session has expired. Please log in again.');
@@ -186,18 +177,10 @@ const DirectMessages=(()=>{
         if(!items.length&&!older&&!missed)history.appendChild(emptyNode(selected.request_status==='pending'?copy('لا يمكن تبادل الرسائل حتى قبول الطلب.','Messages unlock after the request is accepted.'):copy('لا توجد رسائل بعد. ابدأ بتحية واضحة.','No messages yet. Start with a clear greeting.')));
         if(!older&&(!missed||wasNearBottom)){history.scrollTop=history.scrollHeight;hideJumpLatest();}
         const last=items[items.length-1];
-        if(last)try{await API.messaging.markRead(selected.id,last.id);}catch{/* best-effort */}
+        if(last)try{await API.messaging.markRead(selected.id,last.id);}catch{ }
     }
 
-    // ---- Silent REST fallback (Socket.IO's safety net) ----
-    // A small bounded scheduler that keeps messages/conversations flowing
-    // without a page refresh when the socket is reconnecting/unavailable, and
-    // stays as a low-frequency safety net even when it's online. Unlike
-    // loadHistory({missed:true}) this never touches nextCursor (Load Older's
-    // pagination cursor) and never clears/rebuilds existing bubbles — it only
-    // appends genuinely-new items through the same renderedIds/pending-bubble
-    // reconciliation path used by the socket's message.created handler.
-    async function syncSelectedConversation(){
+async function syncSelectedConversation(){
         if(!selected||selected.request_status!=='accepted')return;
         const conversationId=selected.id;
         const history=byId('messageHistory');
@@ -225,7 +208,7 @@ const DirectMessages=(()=>{
         if(wasNearBottom){history.scrollTop=history.scrollHeight;hideJumpLatest();}
         else showJumpLatest();
         const last=items[items.length-1];
-        if(last)try{await API.messaging.markRead(conversationId,last.id);}catch{/* best-effort */}
+        if(last)try{await API.messaging.markRead(conversationId,last.id);}catch{ }
         await runListSync();
     }
 
@@ -243,11 +226,7 @@ const DirectMessages=(()=>{
         finally{listSyncInFlight=false;}
     }
 
-    // Fast (~8s) fallback cadence while the socket isn't online, slow (~30s)
-    // safety net once it is. Uses a setTimeout chain (not setInterval) so a
-    // slow request never overlaps the next scheduled run, and pauses
-    // entirely while the tab is hidden or the browser is offline.
-    function scheduleThreadSync(){
+function scheduleThreadSync(){
         if(threadSyncTimer){clearTimeout(threadSyncTimer);threadSyncTimer=null;}
         if(!selected||selected.request_status!=='accepted')return;
         if(document.visibilityState!=='visible'||!navigator.onLine)return;
@@ -312,10 +291,7 @@ const DirectMessages=(()=>{
         }
     }
 
-    // A rejected conversation.subscribe is a per-conversation access issue
-    // (e.g. the relationship changed), not a connectivity problem — it must
-    // never drive the global connection pill.
-    async function subscribe(){
+async function subscribe(){
         if(!socket?.connected||!selected||selected.request_status!=='accepted')return;
         socket.emit('conversation.subscribe',{conversation_id:selected.id},reply=>{
             if(!reply?.ok)Toast.error(copy('تعذر الانضمام إلى هذه المحادثة المباشرة.','Unable to join this live conversation.'));
@@ -324,11 +300,8 @@ const DirectMessages=(()=>{
 
     async function selectConversation(conversation){
         if(selected&&socket?.connected)socket.emit('conversation.unsubscribe',{conversation_id:selected.id});
-        // `sending` only exists to block a double-click/Enter-spam race on a
-        // single in-flight send — it must not carry over and silently block
-        // sending in a newly-selected conversation just because the previous
-        // thread's send (now irrelevant to what's on screen) hasn't settled.
-        sending=false;
+
+sending=false;
         selected=conversation;
         document.body.classList.add('messages-thread-open');
         byId('threadName').textContent=conversation.other_display_name;
@@ -359,19 +332,12 @@ const DirectMessages=(()=>{
         if(candidate)await selectConversation(candidate);
     }
 
-    // Refreshes only the sidebar (previews, unread counts, ordering) without
-    // re-selecting or reloading the open thread. Sending or receiving a
-    // message already updates the visible history directly (appendMessage /
-    // performSend) — re-running loadConversations() here would re-select the
-    // same conversation and reload its entire history from scratch on every
-    // single message, flashing a skeleton and rebuilding bubbles that are
-    // already correctly on screen.
-    async function refreshConversationList(){
+async function refreshConversationList(){
         try{
             const response=await API.messaging.list();
             conversations=response?.data?.items||[];
             renderConversations();
-        }catch{/* sidebar refresh is best-effort, non-critical */}
+        }catch{ }
     }
 
     function loadSocketLibrary(){if(window.io)return Promise.resolve();return new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=API.getOrigin()+'/socket.io/socket.io.js';script.onload=resolve;script.onerror=reject;document.head.appendChild(script);});}
@@ -380,10 +346,8 @@ const DirectMessages=(()=>{
         try{
             await loadSocketLibrary();
             setConnection('connecting');
-            // `auth` as a function is re-invoked on every (re)connection attempt,
-            // so a refreshed access token is always picked up automatically —
-            // no manual bookkeeping or hand-rolled retry loop needed.
-            socket=window.io(API.getOrigin(),{
+
+socket=window.io(API.getOrigin(),{
                 auth:cb=>cb({token:API.getAccessToken()}),
                 transports:['websocket','polling'],
                 reconnection:true,
@@ -393,11 +357,9 @@ const DirectMessages=(()=>{
             });
             socket.on('connect',async()=>{
                 setConnection('online');
-                try{await subscribe();}catch{/* handled inside subscribe */}
-                // Reconnect catch-up reuses the same safe incremental sync as
-                // the background fallback — it never touches nextCursor, so
-                // Load Older's pagination cursor survives a reconnect.
-                if(selected)await runThreadSync();
+                try{await subscribe();}catch{ }
+
+if(selected)await runThreadSync();
                 scheduleThreadSync();
             });
             socket.on('disconnect',()=>{if(connState!=='unavailable')setConnection(navigator.onLine?'reconnecting':'offline');scheduleThreadSync();});
@@ -409,18 +371,13 @@ const DirectMessages=(()=>{
                 if(renderedIds.has(message.id))return;
                 const history=byId('messageHistory');
                 const wasNearBottom=isNearBottom(history);
-                // The server emits this event before the HTTP response for our
-                // own send is even written (see realtime.service.js), so it can
-                // legitimately race ahead of performSend()'s fetch resolving.
-                // If a pending bubble for this exact clientId is still on
-                // screen, reconcile it in place instead of appending a second,
-                // separate bubble for the same message.
-                const pendingMatch=message.client_message_id&&findPendingBubble(message.client_message_id);
+
+const pendingMatch=message.client_message_id&&findPendingBubble(message.client_message_id);
                 if(pendingMatch)reconcileBubble(pendingMatch,message);
                 else appendMessage(message,{animate:true});
                 if(message.sender_user_id===currentUser.id||wasNearBottom){history.scrollTop=history.scrollHeight;hideJumpLatest();}
                 else showJumpLatest();
-                try{await API.messaging.markRead(selected.id,message.id);}catch{/* best-effort */}
+                try{await API.messaging.markRead(selected.id,message.id);}catch{ }
                 await refreshConversationList();
             });
         }catch{
@@ -428,14 +385,7 @@ const DirectMessages=(()=>{
         }
     }
 
-    // ---- Sending: safe optimistic UI ----
-    // A pending bubble appears immediately, keyed by a client-generated
-    // clientMessageId that the backend treats as an idempotency key
-    // (messaging.service.js). On failure the bubble is marked failed with a
-    // Retry that resends the *same* clientMessageId — even if the original
-    // request actually landed server-side, the server returns the existing
-    // message instead of creating a duplicate, so retrying is always safe.
-    function pendingBubble(clientId,body){
+function pendingBubble(clientId,body){
         const bubble=document.createElement('article');
         bubble.className='message-bubble mine pending fade-in-item';
         bubble.dataset.clientId=clientId;
@@ -448,20 +398,12 @@ const DirectMessages=(()=>{
     function spinnerNode(){const s=document.createElement('span');s.className='spinner spinner-sm';return s;}
     function statusText(text){const s=document.createElement('span');s.className='message-status-text';s.textContent=text;return s;}
 
-    // DOM-attribute lookup instead of a separate JS Map: the bubble element
-    // itself is the only piece of pending-send state, so there is nothing
-    // extra to keep in sync or leak when a conversation is switched out from
-    // under an in-flight send (loadHistory() simply discards the old nodes).
-    function findPendingBubble(clientId){
+function findPendingBubble(clientId){
         return Array.from(byId('messageHistory').querySelectorAll('.message-bubble[data-client-id]'))
             .find(b=>b.dataset.clientId===clientId)||null;
     }
 
-    // Converts a pending/failed bubble into its confirmed, server-reconciled
-    // form. Shared by performSend()'s own success path and the message.created
-    // socket handler, so whichever one learns about the confirmed message
-    // first "wins" and the other becomes a no-op via the renderedIds guard.
-    function reconcileBubble(bubble,message){
+function reconcileBubble(bubble,message){
         if(renderedIds.has(message.id))return;
         renderedIds.add(message.id);
         bubble.dataset.messageId=message.id;
@@ -481,10 +423,8 @@ const DirectMessages=(()=>{
         const retry=document.createElement('button');retry.type='button';retry.className='message-bubble-action';retry.textContent=copy('إعادة المحاولة','Retry');
         retry.addEventListener('click',()=>retrySend(clientId,body,bubble));
         const dismiss=document.createElement('button');dismiss.type='button';dismiss.className='message-bubble-action';dismiss.textContent=copy('حذف','Dismiss');
-        // Only restore the text into the composer if it's empty — otherwise the
-        // user may already be mid-draft on a different message, and overwriting
-        // that would itself be a silent data loss.
-        dismiss.addEventListener('click',()=>{if(!input.value.trim()){input.value=body;autoResize(input);}bubble.remove();input.focus();});
+
+dismiss.addEventListener('click',()=>{if(!input.value.trim()){input.value=body;autoResize(input);}bubble.remove();input.focus();});
         meta.append(retry,dismiss);
     }
 
@@ -493,21 +433,16 @@ const DirectMessages=(()=>{
             const response=await API.messaging.send(selected.id,body,clientId);
             const message=response.data;
             if(renderedIds.has(message.id)){
-                // The message.created socket event already reconciled this
-                // exact send (it can arrive before this fetch resolves — see
-                // the socket handler) — this bubble is now a redundant
-                // duplicate of the already-confirmed one, not a second copy.
-                if(bubble.dataset.messageId!==String(message.id))bubble.remove();
+
+if(bubble.dataset.messageId!==String(message.id))bubble.remove();
             }else{
                 reconcileBubble(bubble,message);
             }
             await refreshConversationList();
         }catch(err){
             if(bubble.dataset.messageId){
-                // The socket already confirmed this send landed before this
-                // request's failure came back — the message truly went
-                // through, so do not show a false "failed" state for it.
-                return;
+
+return;
             }
             markBubbleFailed(bubble,clientId,body,input);
             Toast.error(describeError(err,copy('تعذر إرسال الرسالة.','Unable to send the message.')));
@@ -615,10 +550,7 @@ const DirectMessages=(()=>{
 
     function openPicker(){byId('recipientPicker').classList.remove('hidden');byId('recipientSearchInput').focus();searchRecipients();}
 
-    // The fetch-and-connect sequence, kept separate from one-time listener
-    // wiring in init() so the "Retry" action on a failed initial load can
-    // re-run just this part without re-registering every event listener.
-    async function bootstrap(){
+async function bootstrap(){
         try{
             const state=await AuthGate.verifySession();
             if(state!=='valid')return;
@@ -646,11 +578,8 @@ const DirectMessages=(()=>{
         setConnection('idle');
         localize();
         window.addEventListener('languageChanged',localize);
-        // Guarded on connState, not just socket.connected — the browser can
-        // fire multiple 'online' events in a burst, and socket.connected is
-        // still false while a connection attempt is already in flight, which
-        // would otherwise fire a second overlapping socket.connect() call.
-        window.addEventListener('online',()=>{
+
+window.addEventListener('online',()=>{
             if(socket&&!socket.connected&&connState!=='connecting'){setConnection('connecting');socket.io.reconnection(true);socket.connect();}
             if(selected)runThreadSync();
             runListSync();
@@ -662,10 +591,8 @@ const DirectMessages=(()=>{
             if(threadSyncTimer){clearTimeout(threadSyncTimer);threadSyncTimer=null;}
             if(listSyncTimer){clearTimeout(listSyncTimer);listSyncTimer=null;}
         });
-        // Background sync is resilience infrastructure, not a live feed — pause
-        // it entirely while the tab is hidden and catch up immediately when it
-        // becomes visible again, instead of polling at the normal rate unseen.
-        document.addEventListener('visibilitychange',()=>{
+
+document.addEventListener('visibilitychange',()=>{
             if(document.visibilityState==='visible'){
                 if(navigator.onLine){
                     if(selected)runThreadSync();

@@ -1,20 +1,3 @@
-/* =====================================================================
-   Billing, pricing and the sandbox checkout.
-
-   Built on the existing design tokens (--bg-card, --text, --border …), so
-   light and dark both work without a second palette here, and RTL works
-   without a mirrored stylesheet: spacing uses logical properties
-   (margin-inline, padding-inline, border-inline-start) which flip with
-   dir="rtl" on their own.
-
-   Every horizontal container below either wraps or scrolls inside itself.
-   Nothing in this file can make the page scroll sideways on a phone.
-   ===================================================================== */
-
-/* ---------------------------------------------------------------------
-   Pricing dialog
-   --------------------------------------------------------------------- */
-
 .billing-modal {
     position: fixed;
     inset: 0;
@@ -36,7 +19,7 @@
     position: relative;
     width: 100%;
     max-width: 940px;
-    /* Tall content scrolls inside the dialog rather than growing the page. */
+
     max-height: min(90vh, 900px);
     overflow-y: auto;
     overflow-x: hidden;
@@ -86,15 +69,10 @@
     margin: 0;
 }
 
-/* ---------------------------------------------------------------------
-   Plan cards
-   --------------------------------------------------------------------- */
-
 .plan-grid {
     display: grid;
-    /* auto-fit + minmax means one column on a phone and three on a desktop
-       with no breakpoint doing the deciding. */
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+
+grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
     align-items: stretch;
 }
@@ -168,10 +146,6 @@
 
 .btn-block { width: 100%; justify-content: center; }
 
-/* ---------------------------------------------------------------------
-   Sandbox notice
-   --------------------------------------------------------------------- */
-
 .billing-sandbox-notice {
     display: flex;
     align-items: flex-start;
@@ -186,10 +160,6 @@
 .billing-sandbox-notice i { color: var(--warning); margin-block-start: 2px; }
 .billing-sandbox-notice strong { display: block; font-size: 14px; }
 .billing-sandbox-notice p { margin: 2px 0 0; font-size: 13px; color: var(--text-mute); }
-
-/* ---------------------------------------------------------------------
-   Billing page
-   --------------------------------------------------------------------- */
 
 .billing-banner {
     border-radius: 12px;
@@ -270,8 +240,6 @@
 
 .btn-danger-text { color: var(--danger); }
 
-/* Usage */
-
 .usage-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -289,8 +257,6 @@
 .usage-tile__label { margin: 0; font-size: 13px; color: var(--text-mute); }
 .usage-tile__value { margin: 6px 0 0; font-size: 26px; font-weight: 800; }
 .usage-tile__note  { margin: 4px 0 0; font-size: 12px; color: var(--text-mute); }
-
-/* History */
 
 .billing-history { list-style: none; margin: 0; padding: 0; }
 
@@ -311,10 +277,6 @@
 .billing-empty { color: var(--text-mute); font-size: 14px; margin: 0; }
 
 .section-title { font-size: 18px; font-weight: 700; margin: 32px 0 12px; }
-
-/* ---------------------------------------------------------------------
-   Sandbox checkout page
-   --------------------------------------------------------------------- */
 
 .sandbox-shell {
     max-width: 460px;
@@ -403,10 +365,6 @@
     color: var(--text-faint);
 }
 
-/* ---------------------------------------------------------------------
-   Small screens
-   --------------------------------------------------------------------- */
-
 @media (max-width: 640px) {
     .billing-modal { padding: 8px; }
     .billing-modal__panel { padding: 20px 16px; border-radius: 14px; }
@@ -417,5 +375,4 @@
     .sandbox-card { padding: 22px 18px; }
 }
 
-/* Buttons that carry a busy state while a request is in flight. */
 [data-busy="true"] { opacity: 0.65; cursor: progress; }

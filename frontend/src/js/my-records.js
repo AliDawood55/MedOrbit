@@ -1,12 +1,3 @@
-/**
- * MedOrbit v2 - My Medical Records
- *
- * Fetches via GET /patients/me/records (backend/src/routes/patient.routes.js)
- * — a single ownership-scoped timeline that interleaves the patient's own
- * appointments, medical records (diagnoses) and prescriptions. The generic
- * /api/medical-records and /api/prescriptions/:id are ownership-scoped too,
- * but call this combined timeline instead of stitching them together here.
- */
 const MyRecords = (() => {
 
     let entries = [];
@@ -98,11 +89,8 @@ const MyRecords = (() => {
     }
 
     function doctorName(item) {
-        // Backend joins bilingual name columns (doctor_first_name_ar/en,
-        // same suffix convention as everything else in this file) for
-        // appointments/records. Prescriptions don't carry a doctor join
-        // in this timeline, so this falls back to '' for those.
-        const first = isAr() ? item.doctor_first_name_ar : item.doctor_first_name_en;
+
+const first = isAr() ? item.doctor_first_name_ar : item.doctor_first_name_en;
         const last = isAr() ? item.doctor_last_name_ar : item.doctor_last_name_en;
         return (
             item.doctor_name ||
@@ -135,9 +123,8 @@ const MyRecords = (() => {
     }
 
     function normalizeEntry(raw) {
-        // Prescription entries in this timeline carry the doctor's internal
-        // notes from the backend; the patient-facing UI must not retain them.
-        const { doctor_notes, ...rest } = raw || {};
+
+const { doctor_notes, ...rest } = raw || {};
         return rest;
     }
 
@@ -163,11 +150,7 @@ const MyRecords = (() => {
 
     let lastEmptyIsFiltered = false;
 
-    // Swaps the shared empty-state container's copy between "no history at
-    // all for this patient" (true-empty) and "no matches for the current
-    // filters" (filtered-empty), mirroring my-prescriptions.js so the two
-    // cases are never presented the same way.
-    function setEmptyStateContent(isFiltered) {
+function setEmptyStateContent(isFiltered) {
         lastEmptyIsFiltered = isFiltered;
         const container = document.getElementById('recordsEmpty');
         if (!container) return;
@@ -454,11 +437,7 @@ const MyRecords = (() => {
         document.getElementById('recordDateFilter')?.addEventListener('change', render);
         document.getElementById('recordsRetryBtn')?.addEventListener('click', load);
 
-        // The filtered-empty copy is set as plain text (not data-i18n), so
-        // it needs its own re-render on language switch; true-empty and the
-        // data grid don't need this — their static labels already carry
-        // data-i18n and are covered by I18n.apply()'s own global pass.
-        window.addEventListener('languageChanged', () => {
+window.addEventListener('languageChanged', () => {
             if (lastEmptyIsFiltered && !document.getElementById('recordsEmpty')?.classList.contains('hidden')) {
                 setEmptyStateContent(true);
             }

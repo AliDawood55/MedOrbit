@@ -30,9 +30,8 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/home.css">
     <link rel="stylesheet" href="../src/css/feedback-dashboard.css">
-    <!-- Global authentication gate: must load in <head>, before any
-         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
-    <script src="../src/js/auth-gate.js"></script>
+
+<script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
@@ -58,7 +57,7 @@
     </header>
 
     <main id="main-content">
-        <!-- ===== Hero ===== -->
+
         <section class="hero">
             <div class="hero-content">
                 <div class="hero-badge">
@@ -103,8 +102,7 @@
             </div>
         </section>
 
-        <!-- ===== Feature Highlights ===== -->
-        <section class="features">
+<section class="features">
             <div class="features-heading">
                 <h2 data-i18n="home.featuresTitle">كل ما تحتاجه لرعاية صحية أفضل</h2>
                 <p data-i18n="home.featuresSubtitle">منصة واحدة تجمع بين الذكاء الاصطناعي والبيانات الطبية الموثوقة</p>
@@ -153,8 +151,7 @@
             </div>
         </section>
 
-        <!-- ===== Bottom CTA ===== -->
-        <section class="cta-band">
+<section class="cta-band">
             <h2 data-i18n="home.ctaTitle">ابدأ رحلتك الصحية اليوم</h2>
             <p data-i18n="home.ctaSubtitle">أنشئ حساباً مجانياً لحفظ محادثاتك والوصول السريع لأطبائك المفضلين</p>
             <a href="register.html" class="btn" id="ctaRegisterBtn">
@@ -165,8 +162,7 @@
             </a>
         </section>
 
-        <!-- ===== Feedback Dashboard ===== -->
-        <section class="feedback-dash" id="feedbackDash">
+<section class="feedback-dash" id="feedbackDash">
             <div class="feedback-dash-heading">
                 <div>
                     <h2 data-i18n="feedbackDash.title">آراء مستخدمينا</h2>
@@ -229,59 +225,6 @@
     <script src="../src/js/layout.js"></script>
     <script src="../src/js/feedback-dashboard.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Layout.init();
-            FeedbackDashboard.init();
-
-            // Logged-in visitors get a dashboard shortcut instead of the
-            // chat-app link and the "create an account" pitch. Re-applied on
-            // auth:changed so a session the gate finds to be stale (a token the
-            // server rejects) drops back to the guest presentation instead of
-            // promising a dashboard that would only bounce them.
-            function applySessionState() {
-                const loggedIn = API.isAuthenticated();
-
-                const heroBtn = document.getElementById('heroPrimaryBtn');
-                if (heroBtn) heroBtn.href = loggedIn ? 'dashboard.html' : 'index.html';
-
-                const heroIcon = document.getElementById('heroPrimaryIcon');
-                if (heroIcon) {
-                    heroIcon.classList.toggle('fa-gauge-high', loggedIn);
-                    heroIcon.classList.toggle('fa-comments', !loggedIn);
-                }
-
-                const heroLabel = document.getElementById('heroPrimaryLabel');
-                if (heroLabel) {
-                    heroLabel.setAttribute('data-i18n', loggedIn ? 'home.goToDashboard' : 'home.startChat');
-                }
-
-                document.getElementById('ctaRegisterBtn')?.classList.toggle('hidden', loggedIn);
-                document.getElementById('ctaDashboardBtn')?.classList.toggle('hidden', !loggedIn);
-
-                if (typeof I18n !== 'undefined') I18n.apply();
-            }
-
-            applySessionState();
-            window.addEventListener('auth:changed', applySessionState);
-
-            // The destination is chosen in JS, so there is no href for the
-            // gate's delegated click handler to intercept — AuthGate.navigate()
-            // is the programmatic equivalent. For a guest it stores the intended
-            // search (page + query) and opens the auth modal instead of
-            // navigating; after signing in they land on the results they asked
-            // for. For a signed-in visitor it navigates exactly as before.
-            document.getElementById('heroSearchForm')?.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const q = document.getElementById('heroSearchInput')?.value.trim();
-                const type = document.getElementById('heroSearchType')?.value;
-                const target = type === 'clinics' ? 'find-clinics.html' : 'find-doctors.html';
-                AuthGate.navigate(
-                    target + (q ? '?search=' + encodeURIComponent(q) : ''),
-                    e.submitter || document.getElementById('heroSearchInput')
-                );
-            });
-        });
-    </script>
+    <script src="../src/js/pages/home.js"></script>
 </body>
 </html>

@@ -1,10 +1,6 @@
-/**
- * MedOrbit v2 - Medical Report Summarizer
- * Uses the authenticated backend gateway: POST /api/ai/summarize.
- */
 const ReportSummary = (() => {
 
-    const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024;
     const ALLOWED_EXT = ['pdf', 'jpg', 'jpeg', 'png'];
 
     let selectedFile = null;
@@ -37,9 +33,7 @@ const ReportSummary = (() => {
         document.getElementById('submitBtn')?.classList.toggle('loading', loading);
     }
 
-    // ================= FILE SELECTION =================
-
-    function validateFile(file) {
+function validateFile(file) {
         const ext = (file.name || '').split('.').pop().toLowerCase();
         if (!ALLOWED_EXT.includes(ext)) {
             return t('reportSummary.errorFileType');
@@ -79,9 +73,7 @@ const ReportSummary = (() => {
         if (input) input.value = '';
     }
 
-    // ================= SUBMIT =================
-
-    async function submit() {
+async function submit() {
         if (!selectedFile) return;
         FormAlert.clear();
 
@@ -101,9 +93,7 @@ const ReportSummary = (() => {
         }
     }
 
-    // ================= RENDER: STATES =================
-
-    function showLoading() {
+function showLoading() {
         document.getElementById('formSection')?.classList.add('hidden');
         const result = document.getElementById('resultSection');
         if (!result) return;
@@ -201,9 +191,7 @@ const ReportSummary = (() => {
         document.getElementById('formSection')?.classList.remove('hidden');
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('fileInput');
 
