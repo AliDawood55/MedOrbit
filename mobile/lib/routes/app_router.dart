@@ -5,6 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../features/appointments/screens/appointments_screen.dart';
 import '../features/admin/management/screens/admin_management_screen.dart';
 import '../features/doctor_workspace/screens/doctor_patients_screen.dart';
+import '../features/doctor_workspace/screens/doctor_patient_detail_screen.dart';
+import '../features/doctor_workspace/screens/doctor_portal_screen.dart';
+import '../features/doctor_workspace/screens/doctor_messages_screen.dart';
+import '../features/doctor_workspace/screens/doctor_schedule_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
@@ -22,6 +26,7 @@ import '../features/chatbot/screens/conversations_screen.dart';
 import '../features/discovery/screens/map_foundation_screen.dart';
 import '../features/drug_checker/screens/drug_checker_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
+import '../features/feed/screens/health_feed_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/my_reports/screens/my_reports_screen.dart';
 import '../features/my_doctors/models/patient_doctor_models.dart';
@@ -53,6 +58,7 @@ import 'route_paths.dart';
 /// authenticated user, so an unauthenticated request would 401 regardless.
 const Set<String> protectedRoutes = {
   RoutePaths.home,
+  RoutePaths.feed,
   RoutePaths.records,
   RoutePaths.prescriptions,
   RoutePaths.appointments,
@@ -69,6 +75,12 @@ const Set<String> protectedRoutes = {
   RoutePaths.contact,
   RoutePaths.adminManagement,
   RoutePaths.doctorPatients,
+  RoutePaths.doctorSchedule,
+  RoutePaths.doctorPatientDetail,
+  RoutePaths.doctorProfessional,
+  RoutePaths.doctorPosts,
+  RoutePaths.doctorBilling,
+  RoutePaths.doctorMessages,
 };
 
 /// Redirect target for [location], or null to allow it.
@@ -140,6 +152,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => ResetPasswordScreen(
           initialToken: state.uri.queryParameters['token'],
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.feed,
+        builder: (context, state) => const HealthFeedScreen(),
       ),
       GoRoute(
         path: RoutePaths.virtualDoctor,
@@ -221,6 +237,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.doctorPatients,
         builder: (context, state) => const DoctorPatientsScreen(),
+      ),
+      GoRoute(path: RoutePaths.doctorPatientDetail, builder: (context, state) => DoctorPatientDetailScreen(patientId: state.pathParameters['id'] ?? '')),
+      GoRoute(path: RoutePaths.doctorProfessional, builder: (context, state) => const DoctorPortalScreen(initialSection: 'professional')),
+      GoRoute(path: RoutePaths.doctorPosts, builder: (context, state) => const DoctorPortalScreen(initialSection: 'posts')),
+      GoRoute(path: RoutePaths.doctorBilling, builder: (context, state) => const DoctorPortalScreen(initialSection: 'billing')),
+      GoRoute(path: RoutePaths.doctorMessages, builder: (context, state) => const DoctorMessagesScreen()),
+      GoRoute(
+        path: RoutePaths.doctorSchedule,
+        builder: (context, state) => const DoctorScheduleScreen(),
       ),
       GoRoute(
         path: RoutePaths.adminManagement,
