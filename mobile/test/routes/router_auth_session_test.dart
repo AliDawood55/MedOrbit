@@ -42,6 +42,17 @@ void main() {
     RoutePaths.doctorPatients,
     RoutePaths.doctorPatient,
     RoutePaths.doctorPosts,
+    // Administration surfaces are session-protected too; the role gate on top
+    // of that lives in `adminRedirect` and is covered by its own suite.
+    RoutePaths.adminDashboard,
+    RoutePaths.adminAnalytics,
+    RoutePaths.adminUsers,
+    RoutePaths.adminDoctorApplications,
+    RoutePaths.adminContactMessages,
+    RoutePaths.adminModeration,
+    RoutePaths.adminAuditLogs,
+    RoutePaths.adminInvitations,
+    RoutePaths.adminInvitationAccept,
   ];
 
   const public = [
@@ -248,7 +259,7 @@ void main() {
 
   group('protected set', () {
     test(
-      'covers patient data, billing, AI, messaging, and Doctor Workspace routes',
+      'covers patient data, billing, AI, messaging, Doctor Workspace, and administration routes',
       () {
         expect(protectedRoutes, protected.toSet());
       },

@@ -35,6 +35,7 @@ class ProfileScreen extends ConsumerWidget {
     final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
     final canUseCareMessages = role == 'patient' || role == 'doctor';
     final isDoctor = role == 'doctor';
+    final canAcceptAdminInvitation = role == 'patient' || role == 'doctor';
 
     return AppScaffold(
       appBar: AppBar(title: Text(strings.profileTitle)),
@@ -171,6 +172,27 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    // The only in-app way to reach the administrator
+                    // invitation acceptance flow. The backend emails a link to
+                    // the *web* page, and this app has no verified app-link
+                    // domain to claim it, so an invitee needs somewhere to
+                    // paste it. Hidden once the account is already an
+                    // administrator, which is also what the backend answers.
+                    if (canAcceptAdminInvitation) ...[
+                      const SizedBox(height: AppTheme.spaceLg),
+                      FeatureCard(
+                        key: const ValueKey('profile-admin-invitation-accept'),
+                        title: strings.adminInvitationAcceptTitle,
+                        subtitle: strings.adminInvitationAcceptEntryHint,
+                        icon: Icons.admin_panel_settings_outlined,
+                        color: AppTheme.accent,
+                        semanticLabel:
+                            '${strings.adminInvitationAcceptTitle}. '
+                            '${strings.adminInvitationAcceptEntryHint}',
+                        onTap: () =>
+                            context.push(RoutePaths.adminInvitationAccept),
+                      ),
+                    ],
                   ],
                 ),
               ),

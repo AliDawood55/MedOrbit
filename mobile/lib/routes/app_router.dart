@@ -2,6 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/admin/analytics/screens/admin_analytics_screen.dart';
+import '../features/admin/audit/screens/admin_audit_log_screen.dart';
+import '../features/admin/common/providers/admin_access_provider.dart';
+import '../features/admin/contact/screens/admin_contact_inbox_screen.dart';
+import '../features/admin/dashboard/screens/admin_dashboard_screen.dart';
+import '../features/admin/doctor_applications/screens/admin_application_review_screen.dart';
+import '../features/admin/doctor_applications/screens/admin_doctor_applications_screen.dart';
+import '../features/admin/invitations/screens/admin_invitation_accept_screen.dart';
+import '../features/admin/invitations/screens/admin_invitations_screen.dart';
+import '../features/admin/moderation/screens/admin_moderation_screen.dart';
+import '../features/admin/users/screens/admin_users_screen.dart';
 import '../features/appointments/screens/appointments_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
@@ -54,6 +65,23 @@ import '../features/virtual_doctor/screens/virtual_doctor_screen.dart';
 import 'main_shell.dart';
 import 'route_paths.dart';
 
+/// Administration destinations that require an `admin` or `super_admin`
+/// session, mirroring the backend's `authorizeAdmin` guard.
+const Set<String> adminRoutes = {
+  RoutePaths.adminDashboard,
+  RoutePaths.adminAnalytics,
+  RoutePaths.adminUsers,
+  RoutePaths.adminDoctorApplications,
+  RoutePaths.adminContactMessages,
+  RoutePaths.adminModeration,
+  RoutePaths.adminAuditLogs,
+  RoutePaths.adminInvitations,
+};
+
+/// The subset the backend protects with `authorizeSuperAdmin`. A plain `admin`
+/// is turned away from these, not merely from seeing their navigation entry.
+const Set<String> superAdminRoutes = {RoutePaths.adminInvitations};
+
 const Set<String> protectedRoutes = {
   RoutePaths.home,
   RoutePaths.records,
@@ -89,10 +117,30 @@ const Set<String> protectedRoutes = {
   RoutePaths.doctorPatients,
   RoutePaths.doctorPatient,
   RoutePaths.doctorPosts,
+  ...adminRoutes,
+  // Session-protected but deliberately not administrator-gated: the account
+  // accepting an invitation is still a patient or doctor at that point.
+  RoutePaths.adminInvitationAccept,
 };
 
+/// True for every location inside the administration area, including
+/// parameterized detail routes such as `/admin/doctor-applications/<id>`
+/// which cannot be listed as literal members of [adminRoutes].
+bool isAdministrationLocation(String location) =>
+    location == RoutePaths.adminDashboard ||
+    location.startsWith('${RoutePaths.adminDashboard}/');
+
+bool _isSuperAdminLocation(String location) =>
+    superAdminRoutes.contains(location) ||
+    superAdminRoutes.any(
+      (route) => location.startsWith('$route/'),
+    );
+
 bool isProtectedLocation(String location) {
-  if (protectedRoutes.contains(location)) return true;
+  if (protectedRoutes.contains(location) ||
+      isAdministrationLocation(location)) {
+    return true;
+  }
   return location.startsWith('${RoutePaths.conversations}/') ||
       location.startsWith('/billing/sandbox/') ||
       location.startsWith('${RoutePaths.messages}/') ||
@@ -124,6 +172,31 @@ String? sessionRedirect(
     path: RoutePaths.login,
     queryParameters: {'redirect': fullLocation},
   ).toString();
+}
+
+/// Role gate for the administration area, applied by the router **before** an
+/// admin screen is built — so an unauthorized account never renders a frame of
+/// administration data on its way to being redirected.
+///
+/// Returns `null` (allow) while the session status is still `unknown`: that is
+/// the splash bootstrap window, where redirecting would bounce a signed-in
+/// administrator on every cold start. The screen's own [AdminGate] holds the
+/// line during that window by rendering a neutral placeholder rather than
+/// data, and the backend refuses every request regardless.
+///
+/// Authorization is derived from the canonical auth state on each call; it is
+/// never cached or stored separately.
+String? adminRedirect(AuthStatus status, String? role, String location) {
+  if (!isAdministrationLocation(location)) return null;
+  if (location == RoutePaths.adminInvitationAccept) return null;
+  // `unauthenticated` is [sessionRedirect]'s to answer, `unknown` is nobody's.
+  if (status != AuthStatus.authenticated) return null;
+
+  final access = adminAccessFor(status: status, role: role);
+  final allowed = _isSuperAdminLocation(location)
+      ? access.canUseSuperAdminTools
+      : access.canUseAdminTools;
+  return allowed ? null : RoutePaths.home;
 }
 
 /// Accepts only an in-app protected route captured by [sessionRedirect].
@@ -168,7 +241,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         fullLocation: state.uri.toString(),
       );
       if (session != null) return session;
-      return doctorRoleRedirect(auth.status, auth.user?.role, state.uri.path);
+      return doctorRoleRedirect(auth.status, auth.user?.role, state.uri.path) ??
+          adminRedirect(auth.status, auth.user?.role, state.matchedLocation);
     },
     routes: [
       GoRoute(
@@ -371,6 +445,51 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.doctorPosts,
         builder: (context, state) => const DoctorPostsScreen(),
       ),
+      // ── Administration ─────────────────────────────────────────────────
+      GoRoute(
+        path: RoutePaths.adminDashboard,
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminAnalytics,
+        builder: (context, state) => const AdminAnalyticsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminUsers,
+        builder: (context, state) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminDoctorApplications,
+        builder: (context, state) => const AdminDoctorApplicationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminDoctorApplicationDetail,
+        builder: (context, state) => AdminApplicationReviewScreen(
+          applicationId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.adminContactMessages,
+        builder: (context, state) => const AdminContactInboxScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminModeration,
+        builder: (context, state) => const AdminModerationScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminAuditLogs,
+        builder: (context, state) => const AdminAuditLogScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminInvitations,
+        builder: (context, state) => const AdminInvitationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminInvitationAccept,
+        builder: (context, state) => AdminInvitationAcceptScreen(
+          initialToken: state.uri.queryParameters['token'],
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),
@@ -379,11 +498,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.home,
-                builder: (context, state) =>
-                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
-                        'doctor'
-                    ? const DoctorWorkspaceScreen()
-                    : const HomeScreen(),
+                builder: (context, state) {
+                  final role = ref
+                      .read(authControllerProvider)
+                      .user
+                      ?.role
+                      .toLowerCase();
+                  if (role == 'doctor') {
+                    return const DoctorWorkspaceScreen();
+                  }
+                  if (role == 'admin' || role == 'super_admin') {
+                    return const AdminDashboardScreen();
+                  }
+                  return const HomeScreen();
+                },
               ),
             ],
           ),
