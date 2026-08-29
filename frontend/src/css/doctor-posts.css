@@ -1,15 +1,7 @@
-/* ===========================================
-   MedOrbit v2 - Doctor Posts (management)
-   Page-specific presentation only. Loaded last, after feedback.css.
-   Does not touch records.css / care.css / feedback.css / social.css.
-   =========================================== */
-
-/* === Page shell === */
 body.doctor-posts-page .page-container {
     max-width: 900px;
 }
 
-/* === Header row === */
 body.doctor-posts-page .care-header-row .page-header {
     margin-bottom: 0;
     min-width: 0;
@@ -24,12 +16,10 @@ body.doctor-posts-page #newPostBtn {
     flex-shrink: 0;
 }
 
-/* === Restricted notice === */
 body.doctor-posts-page .care-restricted .btn {
     min-height: 44px;
 }
 
-/* === Create / edit form card === */
 body.doctor-posts-page #postFormCard {
     padding: 22px;
     margin-bottom: 24px;
@@ -39,7 +29,6 @@ body.doctor-posts-page #postFormCard .form-group:last-of-type {
     margin-bottom: 0;
 }
 
-/* Title input: keep icon wrapper aligned when the field shrinks. */
 body.doctor-posts-page #postFormCard .input-wrapper {
     min-width: 0;
 }
@@ -63,20 +52,14 @@ body.doctor-posts-page .care-form-actions .btn {
     min-height: 44px;
 }
 
-/* === Save result panel === */
 body.doctor-posts-page #postFormResultCloseBtn {
     min-height: 44px;
 }
 
-/* === Posts list === */
 body.doctor-posts-page #postsRetryBtn {
     min-height: 44px;
 }
 
-/* Management records, not Feed cards: no hover lift / no pointer affordance
-   implying whole-card navigation. The inline cursor:default from JS already
-   overrides the global .records-real-card cursor; this clears the global
-   hover lift/border/shadow for this page only. */
 body.doctor-posts-page .records-real-card,
 body.doctor-posts-page .records-real-card:hover {
     border-color: var(--border);
@@ -98,14 +81,10 @@ body.doctor-posts-page .care-person-actions .btn {
     min-height: 44px;
 }
 
-/* === Delete modal ===
-   Appended to document.body directly, so it is not a descendant of
-   .page-container — scope via the body class instead. */
 body.doctor-posts-page .modal-actions .btn {
     min-height: 44px;
 }
 
-/* === Responsive === */
 @media (max-width: 768px) {
     body.doctor-posts-page #postBody {
         min-height: 140px;

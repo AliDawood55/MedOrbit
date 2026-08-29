@@ -53,8 +53,6 @@ from typing import Any, Dict, Mapping, Tuple
 
 from virtual_doctor import understanding
 
-# Only this value survives. Everything else — including a missing field — is
-# treated as "not the patient".
 PATIENT = "patient"
 RECOGNISED_SUBJECTS = ("patient", "other", "unknown")
 
@@ -109,8 +107,6 @@ def filter_by_subject(payload: Any) -> Tuple[Any, Dict[str, int]]:
     for entry in raw:
         stats["total"] += 1
         if not isinstance(entry, Mapping):
-            # A bare string carries no subject claim, so it fails closed like
-            # everything else that does not say "patient".
             stats["missing"] += 1
             continue
         subject = entry.get("subject")

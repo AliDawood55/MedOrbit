@@ -35,9 +35,6 @@ _MODULE_DIR = Path(__file__).resolve().parent.parent
 _VOICE_DIR = Path(os.getenv("VD_TTS_VOICE_DIR", str(_MODULE_DIR / "assets" / "tts_voices")))
 _CACHE_DIR = _MODULE_DIR / "generated" / "tts"
 
-# Piper's only medium-quality Arabic voice is male (kareem); the English one
-# chosen here is female (amy). They therefore do not match in gender — Piper
-# simply has no female Arabic voice. Override either with the env vars below.
 VOICES = {
     "ar": os.getenv("VD_TTS_VOICE_AR", "ar_JO-kareem-medium"),
     "en": os.getenv("VD_TTS_VOICE_EN", "en_US-amy-medium"),
@@ -51,10 +48,6 @@ _voices: Dict[str, Any] = {}
 _voice_lock = threading.Lock()
 _load_errors: Dict[str, str] = {}
 
-# Piper is CPU-bound; a single worker keeps it off the event loop without
-# letting several syntheses fight over the same cores. It is deliberately a
-# different executor from the STT one so speech generation and transcription
-# can overlap (STT runs on the GPU).
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vd-tts")
 
 _memory_cache: Dict[str, bytes] = {}
@@ -68,9 +61,6 @@ class TtsError(Exception):
     """Speech could not be produced. Callers should fall back to text."""
 
 
-# Latin words are read letter-salad by the Arabic voice — "MedOrbit" comes out
-# as "مذابه". Only a tiny fixed vocabulary appears in the doctor's script, so
-# transliterating those explicitly is both sufficient and predictable.
 _AR_TRANSLITERATIONS = {
     "medorbit": "ميد أوربِت",
     "med orbit": "ميد أوربِت",
@@ -79,22 +69,6 @@ _AR_TRANSLITERATIONS = {
 }
 _LATIN_RUN = re.compile(r"[A-Za-z][A-Za-z0-9'’\-]*(?:\s+[A-Za-z][A-Za-z0-9'’\-]*)*")
 
-# --- Arabic TTS text normalization (Virtual Doctor Formal Arabic Voice
-# Quality batch) ------------------------------------------------------------
-#
-# Cleans up punctuation/formatting NOISE before synthesis — it never touches
-# words, so medical terms and meaning are always preserved by construction.
-#
-# Deliberately does NOT attempt sentence-level chunking/splitting of its own:
-# verified by reading the installed piper-tts==1.6.0 source
-# (PiperVoice.synthesize()/synthesize_wav()), Piper's own phonemizer already
-# batches text into one phoneme sequence PER SENTENCE internally (via
-# espeak-ng's sentence boundary detection) before synthesizing each one in
-# turn — "long text splitting" is already handled by Piper itself, provided
-# the text has real sentence-ending punctuation. This function's job is
-# narrower and more useful: make sure that punctuation is actually clean
-# (not tripled, not markdown, not a stray literal "**") so Piper's own
-# per-sentence segmentation has real boundaries to work with.
 _REPEATED_EXCLAIM_RE = re.compile(r"!{2,}")
 _REPEATED_QUESTION_RE = re.compile(r"[؟?]{2,}")
 _REPEATED_STOP_RE = re.compile(r"([.،,؛:])\1+")
@@ -117,22 +91,13 @@ def _normalize_arabic_tts_text(text: str) -> str:
     if not text:
         return text
 
-    # Markdown-ish artifacts: read aloud as literal symbols ("نجمة نجمة") if
-    # left in, which no patient-facing reply should ever actually need.
     text = text.replace("**", "").replace("##", "").replace("__", "")
     text = _MARKDOWN_BULLET_RE.sub("", text)
 
-    # Repeated punctuation reads as agitated/shouting when spoken; collapse
-    # it to the single, calm form. "!!!" specifically becomes "." rather
-    # than "!" — an exclamation mark itself already pushes Piper toward a
-    # more emphatic reading than this assistant's tone calls for (see the
-    # "no scary exaggeration" style requirement).
     text = _REPEATED_EXCLAIM_RE.sub(".", text)
     text = _REPEATED_QUESTION_RE.sub("؟", text)
     text = _REPEATED_STOP_RE.sub(r"\1", text)
 
-    # Whitespace/newline cleanup — a stray double space or newline is a
-    # micro-pause Piper renders as dead air, not a real sentence boundary.
     text = _MULTI_NEWLINE_RE.sub(" ", text)
     text = text.replace("\n", " ")
     text = _MULTI_SPACE_RE.sub(" ", text)
@@ -154,23 +119,6 @@ def _prepare_text(text: str, language: str) -> str:
     return text
 
 
-# --- Optional Piper SynthesisConfig tuning (Arabic voice only) -------------
-#
-# Verified directly against the installed piper-tts==1.6.0 (`from piper import
-# SynthesisConfig`) rather than assumed: the dataclass exposes exactly
-# `speaker_id, length_scale, noise_scale, noise_w_scale, normalize_audio,
-# volume`. There is NO `sentence_silence` field in this version — a
-# VD_TTS_SENTENCE_SILENCE env var was considered but deliberately NOT
-# implemented, since piper-tts 1.6.0 has no parameter it could map to; adding
-# one would either silently do nothing or require hand-rolled WAV splicing,
-# neither of which is the safe, verified tuning this batch asked for.
-#
-# Every var below defaults to unset. When unset, `_synthesis_config_for()`
-# returns None and `synthesize_wav(..., syn_config=None)` behaves exactly as
-# before this batch — verified by reading `phoneme_ids_to_audio()`, which
-# falls back to the voice's own tuned `.onnx.json` defaults whenever a
-# SynthesisConfig field is None. So this plumbing is a no-op until an
-# operator deliberately sets one of these env vars.
 _AR_LENGTH_SCALE = os.getenv("VD_TTS_AR_LENGTH_SCALE")
 _AR_NOISE_SCALE = os.getenv("VD_TTS_AR_NOISE_SCALE")
 _AR_NOISE_W_SCALE = os.getenv("VD_TTS_AR_NOISE_W_SCALE")
@@ -225,9 +173,6 @@ def _get_voice(language: str):
 
             voice = PiperVoice.load(onnx)
         except Exception as exc:  # noqa: BLE001 - reported through /speak/status
-            # Covers a missing `piper` package (Piper not installed in this
-            # environment) as well as a real voice-load failure — both are
-            # "TTS unavailable", never an unhandled 500 (see TtsError docstring).
             _load_errors[language] = f"{type(exc).__name__}: {exc}"
             logger.exception("Piper voice '%s' failed to load", name)
             raise TtsError(str(exc)) from exc
@@ -273,8 +218,6 @@ def _cache_put(key: str, data: bytes) -> None:
     _cache_put_memory(key, data)
     try:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        # Write-then-rename so a crash mid-write cannot leave a truncated wav
-        # that would be served as a cache hit forever.
         tmp = _CACHE_DIR / f".{key}.part"
         tmp.write_bytes(data)
         tmp.replace(_CACHE_DIR / f"{key}.wav")
@@ -303,7 +246,7 @@ def _synthesize_sync(text: str, language: str) -> Dict[str, Any]:
         raise TtsError(str(exc)) from exc
 
     data = buffer.getvalue()
-    if len(data) <= 44:  # header only, no samples
+    if len(data) <= 44:
         raise TtsError("synthesis produced no audio")
 
     _cache_put(key, data)
@@ -334,7 +277,7 @@ async def warmup(language: Optional[str] = None) -> Dict[str, Any]:
         try:
             await loop.run_in_executor(_executor, _get_voice, lang)
         except TtsError:
-            pass   # recorded in _load_errors and surfaced by get_status()
+            pass
     return get_status()
 
 

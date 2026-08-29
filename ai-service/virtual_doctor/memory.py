@@ -20,7 +20,6 @@ would mean a schema change.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 from db import get_pool
@@ -28,23 +27,10 @@ from .config import env_int
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.memory")
 
-# "At least the last 10 messages" is the requirement; 12 is the default so a
-# 10-message window is still full after the current turn's patient message and
-# doctor reply are appended.
 HISTORY_LIMIT = env_int("VD_HISTORY_LIMIT", 12, minimum=1)
 
-# Guard against one pathological answer (a dictated paragraph, or STT looping)
-# crowding the entire window out of the prompt.
-# minimum=1: this value is used as `text[:MAX_MESSAGE_CHARS]`, where a
-# negative slices from the WRONG END and silently feeds the model the tail
-# of a message instead of its head.
 MAX_MESSAGE_CHARS = env_int("VD_HISTORY_MAX_CHARS", 600, minimum=1)
 
-# The final diagnosis is one call per consultation, not per turn, so it can
-# afford the WHOLE transcript rather than the per-turn HISTORY_LIMIT window.
-# planner.MAX_INTERVIEW_TURNS=6 clinical + 2 intake questions, each with a
-# patient reply, tops out around ~16 messages in the normal case — 50 is a
-# defensive ceiling against a pathological session, not a real-world limit.
 FULL_HISTORY_LIMIT = env_int("VD_FULL_HISTORY_LIMIT", 50, minimum=1)
 
 ROLE_LABELS = {

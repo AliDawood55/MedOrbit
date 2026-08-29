@@ -762,7 +762,7 @@ def _apply_correction_layer(
         elif field == "age":
             value = _extract_corrected_age(message)
         elif field == "chief_complaint":
-            value, _label = _extract_corrected_chief_complaint(message, lang)
+            value, _ = _extract_corrected_chief_complaint(message, lang)
         else:
             value = None
 
@@ -832,13 +832,6 @@ FLOWS = _load_flows()
 _extractor = EntityExtractor()
 _safety = MedicalSafetyLayer()
 
-# MedicalSafetyLayer's vocabulary ("normal" where the canonical lattice says
-# "routine"), ranked. DERIVED from the one canonical ranking rather than
-# restated (Phase 3): the values are byte-identical to the literal that used to
-# be here, but there is now a single urgency ordering in the service and this
-# is a view onto it. The legacy key is kept because the safety layer's own
-# output still uses it — translation happens at the boundary
-# (vocabulary.canonical_urgency), not by maintaining a second table.
 _SEVERITY_RANK = {
     "normal": 0,
     **{level: rank - 1
@@ -875,11 +868,6 @@ def _apply_safety_continuation(
     severity = safety_result["severity"]
     prior_session_urgency = session["urgency_level"]
 
-    # Phase 3: the deterministic layer's verdict merged with the symbolic one.
-    # `symbolic_urgency` is None in every mode except VD_SYMBOLIC_SAFETY=active,
-    # and merge_urgency is a maximum, so with None this reduces to exactly the
-    # pre-Phase-3 expression. Prolog can raise the level here; it has no way to
-    # lower it, and the deterministic layer still ran first and unconditionally.
     effective_severity = reasoning_engine.merge_urgency(severity, symbolic_urgency)
 
     if effective_severity == "routine":
@@ -895,11 +883,6 @@ def _apply_safety_continuation(
     )
 
     if session_urgency == "emergency":
-        # The emergency body is MedicalSafetyLayer's own text, verbatim. It is
-        # absent only when the layer itself did not flag this turn, i.e. when
-        # the symbolic layer alone escalated to emergency; the same template is
-        # then requested directly rather than a second wording being written for
-        # the occasion. No patient-facing emergency text is new in Phase 3.
         body = safety_result.get("response") or _safety._get_emergency_response(
             message or ("ع" if lang == "ar" else "e"))
         prefix = (
@@ -967,9 +950,6 @@ _planner, _fallback_planner = planner.build(
     },
 )
 
-# Phase 2. Wraps the planner above so Prolog chooses the clinical topic and the
-# wrapped planner only words it. Consulted ONLY in VD_SYMBOLIC_INTERVIEW=active
-# — see _select_planner. Constructing it boots no engine and costs nothing.
 _symbolic_planner = planner.build_symbolic(
     inner=_planner,
     flows=FLOWS,
@@ -1075,14 +1055,6 @@ async def _observe_symbolic_safety(session_id, profile, entities, chief_complain
     if reasoning_engine.safety_mode() == "off":
         return None
 
-    # Structured observations contribute facts only when the understanding
-    # layer is in `active` mode — in shadow it has already been logged and is
-    # discarded here, so the facts this turn reasons over are identical to
-    # Phase 5's. The contribution is additive in one direction: build_facts
-    # resolves any overlap upward, so a structured denial cannot cancel a
-    # symptom the extractor reported, and none of this can lower the
-    # deterministic floor, which enters as a separate fact and is merged with a
-    # maximum.
     present = denied = uncertain = ()
     if structured is not None and structured.available and understanding.active():
         present = structured.present_symptoms
@@ -1242,8 +1214,6 @@ class _SafetyDivergenceCounters:
             if symbolic_rank > legacy_rank:
                 self._data["escalated"] += 1
             elif symbolic_rank < legacy_rank:
-                # Must never happen: the merge is a maximum. Counted so that a
-                # regression shows up as a number rather than as silence.
                 self._data["downgraded"] += 1
             else:
                 self._data["agree"] += 1
@@ -1409,10 +1379,6 @@ async def _run_planner(ctx: PlannerInput):
     try:
         result = await active.plan(ctx)
         if not result.wording_valid:
-            # A typed partial result is consumable only by active symbolic mode,
-            # where Prolog can select a deterministic template from the
-            # accepted post-turn profile. OFF/SHADOW (and degraded active mode)
-            # retain the historical per-turn static fallback semantics.
             raise PlannerError("planner returned no trusted question wording")
         logger.info("planner=%s %.0fms complaint=%s ready=%s reply=%r",
                     result.source, (time.monotonic() - started) * 1000,
@@ -1528,11 +1494,6 @@ async def handle_message(
     session_id: str, message: str, owner_user_id: Optional[str] = None
 ) -> dict:
     pool = await get_pool()
-    # Ownership is part of the lookup, not a check applied to the row after
-    # fetching it: a session belonging to another account is simply not found,
-    # so there is no row to accidentally act on and nothing to leak about
-    # whether the id exists. owner_user_id is optional only so that in-process
-    # test harnesses can drive the engine directly; every HTTP path supplies it.
     if owner_user_id:
         session = await pool.fetchrow(
             "SELECT * FROM virtual_doctor_sessions WHERE session_id = $1 AND user_id = $2",
@@ -1557,11 +1518,6 @@ async def handle_message(
     chief_complaint = session["chief_complaint"]
 
 
-    # Captured before the correction layer mutates anything: symbolic
-    # provenance must see the state the correction was proposed AGAINST, and
-    # the layer's own normalised candidate is what the symbolic decision is
-    # compared with. _detect_profile_correction is pure, so calling it here
-    # costs nothing and leaves the layer untouched.
     profile_before_correction = dict(profile)
     legacy_correction_candidate = _detect_profile_correction(message, profile, lang)
 
@@ -1570,8 +1526,6 @@ async def handle_message(
         profile, phase, chief_complaint, message, lang,
     )
 
-    # Phase 4, parallel only. The Python layer above has already decided; this
-    # observes and logs. Nothing below reads the result.
     await _observe_symbolic_corrections(
         session_id, profile_before_correction, legacy_correction_candidate)
 
@@ -1585,22 +1539,8 @@ async def handle_message(
 
     entities = _extractor.extract(effective_message)
 
-    # Phase 6 structured understanding. Runs ALONGSIDE the legacy extractor,
-    # never instead of it — `entities` above is untouched and still drives
-    # everything it drove before. Off by default; in shadow the comparison is
-    # logged and discarded; only in active do its validated observations reach
-    # fact_builder, and even then only additively.
-    #
-    # Placed after MedicalSafetyLayer (which ran on the raw message at the top
-    # of this turn) so the deterministic floor is already established: if this
-    # call times out or the model returns nonsense, the raw safety layer has
-    # already protected the turn.
     structured = await _observe_structured_understanding(effective_message, lang, entities)
 
-    # Phase 3 symbolic safety. Runs after MedicalSafetyLayer, never instead of
-    # it, and contributes an urgency only in VD_SYMBOLIC_SAFETY=active — where
-    # merge_urgency can only raise the level. In shadow it is logged and
-    # discarded, so the patient-facing result is bit-identical to Phase 2.
     safety_verdict = await _observe_symbolic_safety(
         session_id, profile, entities, chief_complaint, safety_result, session,
         structured=structured)
@@ -1615,13 +1555,6 @@ async def handle_message(
         message=message,
     )
 
-    # Symbolic reasoning, SHADOW MODE (Phase 1). Off unless VD_SYMBOLIC=1, and
-    # even then its result is logged and discarded — nothing below reads it, so
-    # urgency, the planner, corrections, the differential, the reply and TTS
-    # are byte-for-byte what they were before this layer existed. Placed here
-    # so it observes the same post-safety state the planner will see, and
-    # deliberately fed only values already in hand: adding a query for it would
-    # change this turn's I/O, which "no behaviour change" has to include.
     await reasoning_engine.observe_turn(
         session_id,
         profile=profile,
@@ -1733,11 +1666,6 @@ async def handle_message(
         "phase": phase,
         "chief_complaint": chief_complaint,
         "urgency_level": urgency_level,
-        # symbolic_asked_topics is internal bookkeeping for the symbolic
-        # interview planner (Phase 2/9), read back from patient_profile on
-        # later turns — it must stay in what is persisted, but has no
-        # business in a client-facing payload. Persistence above uses
-        # `profile` directly and is unaffected by this copy.
         "profile_snapshot": {k: v for k, v in profile.items()
                              if k != planner.ASKED_TOPICS_KEY},
     }

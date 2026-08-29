@@ -1,14 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Admin Doctor Applications Review
-   (admin-doctor-applications.html)
-
-   Loads after doctor-applications.css, which this page shares with other
-   application-related surfaces. Every rule here is scoped to
-   body.admin-doctor-applications-page so nothing leaks onto other
-   doctor-applications.css consumers (admin-users, admin-invitations).
-   =========================================== */
-
-/* === Page header === */
 body.admin-doctor-applications-page .application-hero {
     padding-block-end: 16px;
     margin-block-end: 20px;
@@ -28,7 +17,6 @@ body.admin-doctor-applications-page .application-hero p {
     line-height: 1.6;
 }
 
-/* === Status filter === */
 body.admin-doctor-applications-page #statusFilter {
     min-width: 140px;
     min-height: 44px;
@@ -53,10 +41,6 @@ body.admin-doctor-applications-page #statusFilter:focus-visible {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* Native select controls default to a light popup regardless of page theme
-   unless color-scheme tells the browser this control is dark. Without it,
-   the closed control still picks up --bg/--text correctly, but the dropdown
-   popup and its options render as unreadable white-on-white. */
 body[data-theme="dark"].admin-doctor-applications-page #statusFilter {
     color-scheme: dark;
 }
@@ -66,7 +50,6 @@ body[data-theme="dark"].admin-doctor-applications-page #statusFilter option {
     color: var(--text);
 }
 
-/* === Review layout / list pane === */
 body.admin-doctor-applications-page .application-card {
     box-shadow: var(--shadow-xs, var(--shadow-sm));
 }
@@ -101,7 +84,6 @@ body.admin-doctor-applications-page .review-item:focus-visible {
     box-shadow: inset 0 0 0 2px var(--primary);
 }
 
-/* === Empty / loading state === */
 body.admin-doctor-applications-page #reviewEmpty h3 {
     text-align: center;
     color: var(--text-mute);
@@ -109,7 +91,6 @@ body.admin-doctor-applications-page #reviewEmpty h3 {
     padding-block: 24px;
 }
 
-/* === Detail pane === */
 body.admin-doctor-applications-page #reviewDetail .application-hero {
     padding-block-end: 0;
     margin-block-end: 20px;
@@ -136,7 +117,6 @@ body.admin-doctor-applications-page .review-bio {
     overflow-wrap: anywhere;
 }
 
-/* === Status badges — shared CSS uses hardcoded light-theme colors === */
 body[data-theme="dark"].admin-doctor-applications-page .application-status.pending {
     background: color-mix(in srgb, #fff7d6 22%, var(--bg-card));
     color: #f0c541;
@@ -157,7 +137,6 @@ body[data-theme="dark"].admin-doctor-applications-page .application-status.withd
     color: var(--text-mute);
 }
 
-/* === Rejection reason === */
 body.admin-doctor-applications-page .review-rejection-group {
     margin-block-start: 18px;
 }
@@ -182,7 +161,6 @@ body.admin-doctor-applications-page #rejectionReason:focus-visible {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* === Actions === */
 body.admin-doctor-applications-page .application-actions .btn {
     min-height: 44px;
 }

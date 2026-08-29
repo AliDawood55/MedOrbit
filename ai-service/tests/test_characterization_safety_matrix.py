@@ -43,8 +43,6 @@ def symptoms_of(text):
     return sorted(_extractor.extract(text).get("symptoms") or [])
 
 
-# The matrix, as recorded from the running system. (case, text, lang,
-# expected MedicalSafetyLayer severity, expected extractor symptoms)
 SAFETY_MATRIX = [
     ("thunderclap headache", "عندي صداع شديد فجأة", "ar", "urgent", ["headache"]),
     ("thunderclap alt 1", "صداع مفاجئ شديد", "ar", "urgent", ["headache"]),
@@ -66,8 +64,6 @@ SAFETY_MATRIX = [
      ["chest_pain", "shortness_of_breath"]),
 ]
 
-# Cases that must NOT be urgent or emergency. Each carries the reason, because
-# an unexplained negative is the first thing a later phase "fixes".
 PINNED_NEGATIVES = [
     ("bare headache", "عندي صداع", "ar", ["headache"],
      "a headache alone is not a red flag; only the sudden+severe combination is"),
@@ -84,9 +80,6 @@ PINNED_NEGATIVES = [
 ]
 
 
-# ===========================================================================
-# 1. MedicalSafetyLayer verdicts
-# ===========================================================================
 
 class TestMedicalSafetyLayerMatrix(unittest.TestCase):
     def test_every_recorded_case_keeps_its_severity(self):
@@ -123,9 +116,6 @@ class TestPinnedNegatives(unittest.TestCase):
                 self.assertEqual(symptoms_of(text), sorted(expected))
 
 
-# ===========================================================================
-# 2. The urgency lattice and merge
-# ===========================================================================
 
 class TestUrgencyMerge(unittest.TestCase):
     def test_more_urgent_is_a_maximum_over_the_lattice(self):
@@ -160,9 +150,6 @@ class TestUrgencyMerge(unittest.TestCase):
         self.assertEqual(reasoning._URGENCY_RANK.get("normal", 0), 0)
 
 
-# ===========================================================================
-# 3. SymptomSpecialtyEngine — the third urgency source
-# ===========================================================================
 
 class TestSymptomSpecialtyEngineTriage(unittest.TestCase):
     def test_emergency_keywords_are_as_recorded(self):
@@ -182,9 +169,6 @@ class TestSymptomSpecialtyEngineTriage(unittest.TestCase):
             self.assertIn(level, source)
 
 
-# ===========================================================================
-# 4. Safety continuation: warnings, ordering, escalation-only
-# ===========================================================================
 
 class _Session(dict):
     pass

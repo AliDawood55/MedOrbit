@@ -17,7 +17,6 @@ and check interactions bidirectionally.
 import json
 import logging
 from typing import List, Dict, Any, Optional
-from uuid import UUID
 
 from db import get_pool
 
@@ -61,7 +60,6 @@ class DrugInteractionMatcher:
         pool = await get_pool()
         meds: List[Dict[str, Any]] = []
 
-        # 1) Fetch medication records from DB
         if medication_ids:
             ids = [mid for mid in medication_ids if mid]
             if ids:
@@ -97,7 +95,6 @@ class DrugInteractionMatcher:
                 )
                 if rows:
                     row_dict = dict(rows[0])
-                    # Avoid duplicates if already fetched by ID
                     if not any(m["id"] == row_dict["id"] for m in meds):
                         meds.append(row_dict)
 
@@ -105,15 +102,12 @@ class DrugInteractionMatcher:
             logger.info("Need at least 2 medications to check interactions, got %d", len(meds))
             return []
 
-        # 2) Cross-check all pairs
         interactions: List[Dict[str, Any]] = []
         seen_pairs: set = set()
 
         for i, drug_a in enumerate(meds):
             interactions_jsonb = self._interaction_map(drug_a.get("known_interactions"))
 
-            # known_interactions can be: {"Aspirin": "Moderate - increases bleeding risk"}
-            # or: {"<uuid>": "Severe - ..."}
             for j, drug_b in enumerate(meds):
                 if i == j:
                     continue
@@ -140,7 +134,6 @@ class DrugInteractionMatcher:
                         "description": severity,
                     })
 
-        # 3) Also check drug_b interactions for drug_a (bidirectional)
         for j, drug_b in enumerate(meds):
             interactions_jsonb = self._interaction_map(drug_b.get("known_interactions"))
             for i, drug_a in enumerate(meds):
@@ -169,7 +162,6 @@ class DrugInteractionMatcher:
                         "description": severity,
                     })
 
-        # Sort by severity: severe > moderate > mild
         severity_order = {"severe": 0, "moderate": 1, "mild": 2, "unknown": 3}
         interactions.sort(key=lambda x: severity_order.get(x["severity"], 3))
 
@@ -198,22 +190,18 @@ class DrugInteractionMatcher:
         if not interactions_jsonb:
             return None
 
-        # Try by name_en
         val = interactions_jsonb.get(other_drug.get("name_en", ""))
         if val:
             return str(val)
 
-        # Try by generic_name
         val = interactions_jsonb.get(other_drug.get("generic_name", ""))
         if val:
             return str(val)
 
-        # Try by UUID
         val = interactions_jsonb.get(str(other_drug.get("id", "")))
         if val:
             return str(val)
 
-        # Case-insensitive fallback: scan keys
         name_en_lower = (other_drug.get("name_en") or "").lower()
         generic_lower = (other_drug.get("generic_name") or "").lower()
         for key, value in interactions_jsonb.items():

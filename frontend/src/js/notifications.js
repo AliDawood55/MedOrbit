@@ -1,9 +1,3 @@
-/**
- * MedOrbit v2 - Notifications (full inbox)
- * GET /api/notifications already returns everything (capped at 50 by the
- * backend) — no pagination needed. Uses the same PUT/PATCH/DELETE
- * endpoints already wired in api.js's notifications namespace.
- */
 const NotificationsPage = (() => {
 
     let notifications = [];

@@ -1,3 +1,5 @@
+import '../../../shared/utils/json_parsing.dart';
+
 /// One row of `GET /appointments` — `SELECT *` on `medorbit.appointments`.
 /// Only the columns the UI needs.
 class AppointmentModel {
@@ -25,18 +27,25 @@ class AppointmentModel {
   final String status; // scheduled|confirmed|in_progress|completed|cancelled|no_show
   final String? reasonForVisit;
 
+  /// Throws a [FormatException] naming the missing/malformed field if a
+  /// required identity/schedule/status field is absent or not a usable
+  /// string — booking data must fail loudly rather than show a fabricated
+  /// id, date, or status. Every required field here is a `UUID`/`VARCHAR`/
+  /// `DATE`/`TIME NOT NULL` column (`db/02_dependent_tables.sql`'s
+  /// `appointments` table), never numeric or boolean in a well-formed
+  /// response, so no scalar coercion is applied.
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
-      id: json['id'].toString(),
-      appointmentNumber: json['appointment_number'] as String,
-      doctorId: json['doctor_id'].toString(),
-      clinicId: json['clinic_id']?.toString(),
-      scheduledDate: json['scheduled_date'] as String,
-      startTime: json['start_time'] as String,
-      endTime: json['end_time'] as String,
-      appointmentType: json['appointment_type'] as String? ?? 'in_person',
-      status: json['status'] as String,
-      reasonForVisit: json['reason_for_visit'] as String?,
+      id: requireExactString(json, 'id'),
+      appointmentNumber: requireExactString(json, 'appointment_number'),
+      doctorId: requireExactString(json, 'doctor_id'),
+      clinicId: optionalExactString(json, 'clinic_id'),
+      scheduledDate: requireExactString(json, 'scheduled_date'),
+      startTime: requireExactString(json, 'start_time'),
+      endTime: requireExactString(json, 'end_time'),
+      appointmentType: optionalExactString(json, 'appointment_type') ?? 'in_person',
+      status: requireExactString(json, 'status'),
+      reasonForVisit: optionalExactString(json, 'reason_for_visit'),
     );
   }
 

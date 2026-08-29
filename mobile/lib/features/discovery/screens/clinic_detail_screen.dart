@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
-
-import '../../../core/locale/locale_controller.dart';
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -13,6 +12,7 @@ import '../providers/discovery_provider.dart';
 import '../widgets/clinic_detail_sections.dart';
 import '../widgets/discovery_map.dart';
 import '../widgets/place_marker.dart';
+
 
 class ClinicDetailScreen extends ConsumerStatefulWidget {
   const ClinicDetailScreen({super.key, required this.clinicId});
@@ -48,14 +48,17 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
     final state = ref.watch(discoveryControllerProvider);
     final detail = state.selectedClinicDetail;
     final clinic = detail?.clinic;
     final error = state.clinicDetailError;
-    final ar = ref.watch(localeControllerProvider).languageCode == 'ar';
+
 
     return AppScaffold(
-      appBar: AppBar(title: Text(ar ? 'تفاصيل العيادة' : 'Clinic details')),
+
+      appBar: AppBar(title: Text(strings.clinicDetailTitle)),
+
       useSafeArea: true,
       body: RefreshIndicator(
         onRefresh: _load,
@@ -66,13 +69,15 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
             ResponsiveContent(
               maxWidth: 960,
               child: state.isLoadingClinicDetail && clinic == null
-                  ? const _LoadingDetail()
+                  ? _LoadingDetail(strings: strings)
                   : error != null
                       ? Card(
                           child: ErrorRetryState(
-                            title: ar ? 'تعذر تحميل العيادة' : 'Could not load clinic',
+
+                            title: strings.clinicDetailLoadErrorTitle,
                             message: error.message,
-                            retryLabel: ar ? 'إعادة المحاولة' : 'Retry',
+                            retryLabel: strings.retry,
+                            
                             onRetry: () {
                               _load();
                             },
@@ -83,12 +88,14 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
                           ? Card(
                               child: EmptyState(
                                 icon: Icons.local_hospital_outlined,
-                                title: ar ? 'العيادة غير موجودة' : 'Clinic not found',
-                                hint: ar ? 'قد لا تكون هذه العيادة متاحة بعد الآن.' : 'This clinic may no longer be available.',
+
+                                title: strings.clinicDetailNotFoundTitle,
+                                hint: strings.clinicDetailNotFoundHint,
+
                                 variant: EmptyStateVariant.compact,
                               ),
                             )
-                          : _LoadedClinicDetail(clinic: clinic, doctors: detail?.doctors ?? const []),
+                          : _LoadedClinicDetail(clinic: clinic, doctors: detail?.doctors ?? const [], strings: strings),
             ),
           ],
         ),
@@ -98,10 +105,11 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
 }
 
 class _LoadedClinicDetail extends StatelessWidget {
-  const _LoadedClinicDetail({required this.clinic, required this.doctors});
+  const _LoadedClinicDetail({required this.clinic, required this.doctors, required this.strings});
 
   final Clinic clinic;
   final List<ClinicDoctorSummary> doctors;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -118,9 +126,9 @@ class _LoadedClinicDetail extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionHeader(
-                  title: 'Map',
-                  subtitle: 'Routing and directions are not enabled in this phase.',
+                SectionHeader(
+                  title: strings.clinicMapSectionTitle,
+                  subtitle: strings.clinicMapRoutingNote,
                 ),
                 SizedBox(
                   height: 280,
@@ -138,7 +146,7 @@ class _LoadedClinicDetail extends StatelessWidget {
                           initialZoom: 15,
                           showControls: false,
                         )
-                      : const Center(child: Text('No map coordinates are listed for this clinic.')),
+                      : Center(child: Text(strings.clinicNoCoordinates)),
                 ),
               ],
             ),
@@ -150,18 +158,20 @@ class _LoadedClinicDetail extends StatelessWidget {
 }
 
 class _LoadingDetail extends StatelessWidget {
-  const _LoadingDetail();
+  const _LoadingDetail({required this.strings});
+
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return Card(
       child: Padding(
-        padding: EdgeInsets.all(AppTheme.spaceLg),
+        padding: const EdgeInsets.all(AppTheme.spaceLg),
         child: Row(
           children: [
-            SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2)),
-            SizedBox(width: AppTheme.spaceMd),
-            Expanded(child: Text('Loading clinic details...')),
+            const SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: AppTheme.spaceMd),
+            Expanded(child: Text(strings.clinicLoadingDetails)),
           ],
         ),
       ),

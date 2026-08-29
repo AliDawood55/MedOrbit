@@ -1,34 +1,6 @@
-/**
- * MedOrbit v2 - Virtual Doctor speech output (TTS)
- *
- * Speaks each doctor reply aloud via the AI service:
- *   POST <backend>/api/virtual-doctor/speak  ->  audio/wav
- *
- * The reply is split into sentences and played in order. That buys three
- * things at once:
- *   - playback starts as soon as the FIRST sentence is ready instead of
- *     waiting for the whole paragraph,
- *   - the next sentence is fetched while the current one plays, so there is
- *     no gap between them,
- *   - subtitles have a natural unit to display and stay in sync without
- *     needing word-level timings, which Piper does not give us.
- *
- * Contract: speak() NEVER rejects. Failure resolves with {ok: false} and
- * reports through onError, because a broken voice must not be able to stall a
- * consultation — the text is on screen regardless.
- */
 const VirtualDoctorTTS = (() => {
 
-
-    /**
-     * Authenticated call into the MedOrbit backend's Virtual Doctor gateway.
-     *
-     * These endpoints used to be called on the AI service directly, with no
-     * credential at all. They now require both an access token and ownership
-     * of an active consultation, so the model cannot be driven by anyone who
-     * merely has an account, let alone by an anonymous caller.
-     */
-    function vdBase() {
+function vdBase() {
         return API.getOrigin() + '/api/virtual-doctor';
     }
 
@@ -37,30 +9,24 @@ const VirtualDoctorTTS = (() => {
         return Object.assign({}, extra || {}, token ? { Authorization: 'Bearer ' + token } : {});
     }
 
-    /** The consultation this turn belongs to. */
-    function activeSessionId() {
+function activeSessionId() {
         if (typeof VirtualDoctorSession !== 'undefined' && typeof VirtualDoctorSession.getSessionId === 'function') {
             return VirtualDoctorSession.getSessionId();
         }
         return null;
     }
 
-    // Backend rejects >800 chars; split well below that.
-    const MAX_CHUNK_CHARS = 300;
+const MAX_CHUNK_CHARS = 300;
     const MIN_CHUNK_CHARS = 2;
 
     let audioEl = null;
     let unlocked = false;
-    let generation = 0;          // bumped on every stop/new utterance
+    let generation = 0;
     let speaking = false;
     let currentAbort = null;
-    const cache = new Map();     // `${lang}|${text}` -> object URL
+    const cache = new Map();
 
-    // ================= text -> sentences =================
-
-    /** Split on sentence enders in both scripts, keeping the punctuation.
-     *  Arabic uses ؟ and ، and the full stop is the same glyph as Latin. */
-    function splitSentences(text) {
+function splitSentences(text) {
         const raw = String(text || '')
             .replace(/\s+/g, ' ')
             .trim();
@@ -73,16 +39,12 @@ const VirtualDoctorTTS = (() => {
             piece = piece.trim();
             if (!piece) continue;
 
-            // A fragment too small to be a sentence (a stray "?" or an
-            // abbreviation tail) belongs with what came before it.
-            if (out.length && piece.length < MIN_CHUNK_CHARS) {
+if (out.length && piece.length < MIN_CHUNK_CHARS) {
                 out[out.length - 1] += ' ' + piece;
                 continue;
             }
 
-            // Very long sentences get broken on commas so the first audio
-            // still arrives quickly.
-            while (piece.length > MAX_CHUNK_CHARS) {
+while (piece.length > MAX_CHUNK_CHARS) {
                 let cut = piece.lastIndexOf('،', MAX_CHUNK_CHARS);
                 if (cut < MAX_CHUNK_CHARS * 0.4) cut = piece.lastIndexOf(',', MAX_CHUNK_CHARS);
                 if (cut < MAX_CHUNK_CHARS * 0.4) cut = piece.lastIndexOf(' ', MAX_CHUNK_CHARS);
@@ -95,9 +57,7 @@ const VirtualDoctorTTS = (() => {
         return out;
     }
 
-    // ================= audio element =================
-
-    function ensureAudio() {
+function ensureAudio() {
         if (!audioEl) {
             audioEl = new Audio();
             audioEl.preload = 'auto';
@@ -105,25 +65,17 @@ const VirtualDoctorTTS = (() => {
         return audioEl;
     }
 
-    /**
-     * Browsers refuse programmatic audio until the page has seen a user
-     * gesture. The doctor's greeting plays after an async round trip, long
-     * after the click that started the consultation, so the element is primed
-     * during that click instead.
-     */
-    function unlock() {
+function unlock() {
         if (unlocked) return Promise.resolve(true);
         const el = ensureAudio();
-        // 1 sample of silence — enough to satisfy the gesture requirement.
+
         el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
         return el.play()
             .then(() => { el.pause(); unlocked = true; return true; })
             .catch(() => { unlocked = false; return false; });
     }
 
-    // ================= fetching =================
-
-    function cacheKey(text, lang) { return lang + '|' + text; }
+function cacheKey(text, lang) { return lang + '|' + text; }
 
     async function fetchClip(text, lang, signal) {
         const key = cacheKey(text, lang);
@@ -141,7 +93,7 @@ const VirtualDoctorTTS = (() => {
             try {
                 const body = await res.json();
                 if (body && body.detail) detail = body.detail;
-            } catch (_) { /* non-JSON body */ }
+            } catch (_) {   }
             const err = new Error(detail);
             err.status = res.status;
             throw err;
@@ -175,9 +127,7 @@ const VirtualDoctorTTS = (() => {
             el.src = url;
             el.play().catch(() => done('blocked'));
 
-            // stop() bumps the generation; poll so a cancel resolves promptly
-            // even mid-clip.
-            const guard = setInterval(() => {
+const guard = setInterval(() => {
                 if (myGeneration !== generation) {
                     clearInterval(guard);
                     done('cancelled');
@@ -188,15 +138,9 @@ const VirtualDoctorTTS = (() => {
         });
     }
 
-    // ================= public =================
-
-    /**
-     * Speak `text`. Resolves when playback finishes, is interrupted, or fails.
-     * Any previous utterance is cancelled first, so speech can never overlap.
-     */
-    async function speak(text, lang, handlers) {
+async function speak(text, lang, handlers) {
         const cb = handlers || {};
-        stop();                       // enforce "one voice at a time"
+        stop();
         const myGeneration = ++generation;
 
         const sentences = splitSentences(text);
@@ -212,9 +156,8 @@ const VirtualDoctorTTS = (() => {
         const startedAt = performance.now();
 
         try {
-            // Kick off the first fetch, then keep exactly one request in
-            // flight ahead of playback.
-            let pending = fetchClip(sentences[0], lang, abort.signal);
+
+let pending = fetchClip(sentences[0], lang, abort.signal);
 
             for (let i = 0; i < sentences.length; i++) {
                 let clip;
@@ -230,8 +173,7 @@ const VirtualDoctorTTS = (() => {
 
                 if (firstAudioMs === null) firstAudioMs = Math.round(performance.now() - startedAt);
 
-                // Prefetch the next sentence while this one is playing.
-                pending = (i + 1 < sentences.length)
+pending = (i + 1 < sentences.length)
                     ? fetchClip(sentences[i + 1], lang, abort.signal).catch((e) => { throw e; })
                     : null;
 
@@ -256,9 +198,8 @@ const VirtualDoctorTTS = (() => {
                     detail: err.message
                 });
             }
-            // Deliberately resolve, not reject: the consultation continues on
-            // text alone.
-            return { ok: false, spoken, detail: err.message };
+
+return { ok: false, spoken, detail: err.message };
         } finally {
             if (myGeneration === generation) {
                 speaking = false;
@@ -268,24 +209,22 @@ const VirtualDoctorTTS = (() => {
         }
     }
 
-    /** Cut speech off immediately (used for barge-in). Safe to call anytime. */
-    function stop() {
+function stop() {
         generation++;
         speaking = false;
         if (currentAbort) {
-            try { currentAbort.abort(); } catch (_) { /* already aborted */ }
+            try { currentAbort.abort(); } catch (_) {   }
             currentAbort = null;
         }
         if (audioEl) {
             try {
                 audioEl.pause();
                 audioEl.currentTime = 0;
-            } catch (_) { /* not playing */ }
+            } catch (_) {   }
         }
     }
 
-    /** Unwrap the backend's {success, data} envelope. */
-    function unwrap(payload) {
+function unwrap(payload) {
         return payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload;
     }
 
@@ -298,8 +237,7 @@ const VirtualDoctorTTS = (() => {
         }
     }
 
-    /** Load the voices up front so the greeting is not delayed by a model load. */
-    function warmup() {
+function warmup() {
         return fetch(vdBase() + '/speak/warmup', { method: 'POST', headers: authHeaders() })
             .then((res) => (res.ok ? res.json().then(unwrap) : null))
             .catch(() => null);

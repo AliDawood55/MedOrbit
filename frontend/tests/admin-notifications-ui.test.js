@@ -22,6 +22,7 @@ function read(relativePath) {
 console.log('\nAdmin application and notification UI tests\n');
 
 const adminPage = read('public/admin-doctor-applications.html');
+const adminPageEntry = read('src/js/pages/admin-doctor-applications.js');
 const adminController = read('src/js/admin-doctor-applications.js');
 const api = read('src/js/api.js');
 const layout = read('src/js/layout.js');
@@ -35,7 +36,8 @@ const messagingController = read('src/js/direct-messages.js');
 
 check(
     'admin page has one initializer and controller init is idempotent',
-    (adminPage.match(/AdminDoctorApplications\.init\(\)/g) || []).length === 1 &&
+    adminPage.includes('src="../src/js/pages/admin-doctor-applications.js"') &&
+    (adminPageEntry.match(/AdminDoctorApplications\.init\(\)/g) || []).length === 1 &&
     /if \(initialized\) return;[\s\S]*initialized = true;/.test(adminController)
 );
 check(

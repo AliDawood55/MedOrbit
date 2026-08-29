@@ -30,6 +30,18 @@ class ApiException implements Exception {
   static const String codeCancelled = 'CANCELLED';
   static const String codeUnknown = 'UNKNOWN_ERROR';
 
+  /// Billing/entitlement codes from `backend/src/config/billing.js`'s
+  /// `ERROR_CODES`. Shared here (rather than duplicated per feature) because
+  /// both the chatbot and the Virtual Doctor gateway can return them, and
+  /// callers must branch on these exact strings, never on `message`.
+  static const String codeFreeQuotaExhausted = 'FREE_QUOTA_EXHAUSTED';
+  static const String codeDuplicateInFlight = 'DUPLICATE_IN_FLIGHT';
+  static const String codeVoiceCooldown = 'VOICE_COOLDOWN';
+  static const String codeVoiceSessionActive = 'VOICE_SESSION_ACTIVE';
+  static const String codeSubscriptionRequired = 'SUBSCRIPTION_REQUIRED';
+  static const String codeSubscriptionInactive = 'SUBSCRIPTION_INACTIVE';
+  static const String codeEntitlementUnavailable = 'ENTITLEMENT_UNAVAILABLE';
+
   /// True for any of the three timeout categories.
   ///
   /// Kept distinct from [codeServiceUnavailable] on purpose: "the AI is taking

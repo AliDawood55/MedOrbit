@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html data-auth-gate="pending" lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,17 +18,11 @@
     <link rel="stylesheet" href="../src/css/forms.css">
     <link rel="stylesheet" href="../src/css/listing.css">
     <link rel="stylesheet" href="../src/css/appointments.css">
-    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
-         below is an external file and an external file can 404, be blocked or
-         time out, and a gate that never loads hides nothing. These lines
-         cannot go missing on their own. They hide protected markup from the
-         first paint; the gate clears the attribute once it has verified the
-         session, and the watchdog leaves for Home if the gate never arrives. -->
-    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
-    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
-    <!-- Global authentication gate: must load in <head>, before any
-         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
-    <script src="../src/js/auth-gate.js"></script>
+
+<style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script src="../src/js/auth-bootstrap.js"></script>
+
+<script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
@@ -99,8 +93,7 @@
 
                 <div id="wizardBody" class="hidden">
 
-                    <!-- ===== Step 1: Doctor ===== -->
-                    <section class="wizard-panel active" data-panel="1">
+<section class="wizard-panel active" data-panel="1">
                         <h2 class="wizard-panel-title" data-i18n="bookAppt.step1">الطبيب</h2>
 
                         <div id="doctorPickerWrap">
@@ -140,8 +133,7 @@
                         </div>
                     </section>
 
-                    <!-- ===== Step 2: Time slot ===== -->
-                    <section class="wizard-panel" data-panel="2">
+<section class="wizard-panel" data-panel="2">
                         <h2 class="wizard-panel-title" data-i18n="bookAppt.step2">الموعد</h2>
 
                         <div class="field-block hidden" id="clinicFieldBlock">
@@ -185,8 +177,7 @@
                         </div>
                     </section>
 
-                    <!-- ===== Step 3: Confirm ===== -->
-                    <section class="wizard-panel" data-panel="3">
+<section class="wizard-panel" data-panel="3">
                         <h2 class="wizard-panel-title" data-i18n="bookAppt.step3">التأكيد</h2>
 
                         <div class="alert" id="confirmAlert"></div>
@@ -216,8 +207,7 @@
 
                 </div>
 
-                <!-- ===== Success ===== -->
-                <div class="wizard-success hidden" id="wizardSuccess">
+<div class="wizard-success hidden" id="wizardSuccess">
                     <div class="wizard-success-icon"><i class="fas fa-check"></i></div>
                     <h2 data-i18n="bookAppt.successTitle">تم حجز موعدك بنجاح</h2>
                     <p data-i18n="bookAppt.successHint">سيصلك تأكيد بالتفاصيل. رقم الموعد الخاص بك:</p>
@@ -252,11 +242,6 @@
     <script src="../src/js/layout.js"></script>
     <script src="../src/js/book-appointment.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Layout.init();
-            BookAppointment.init();
-        });
-    </script>
+    <script src="../src/js/pages/book-appointment.js"></script>
 </body>
 </html>

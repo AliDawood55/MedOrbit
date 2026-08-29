@@ -1,10 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Appointments
-   Shared by book-appointment.html (wizard) and
-   my-appointments.html (tabbed list).
-   =========================================== */
-
-/* === Wizard step indicator === */
 .wizard-steps {
     display: flex;
     align-items: center;
@@ -79,7 +72,6 @@
     .wizard-step-connector { width: 20px; }
 }
 
-/* === Wizard panels === */
 .wizard-card {
     max-width: 720px;
     margin: 0 auto;
@@ -113,7 +105,6 @@
     min-width: 110px;
 }
 
-/* === Step 1: doctor picker === */
 .doctor-search-box {
     position: relative;
     margin-bottom: 16px;
@@ -203,7 +194,6 @@
     margin-top: 2px;
 }
 
-/* === Step 2: clinic / date / slots === */
 .field-block {
     margin-bottom: 20px;
 }
@@ -297,7 +287,6 @@
     opacity: 0.75;
 }
 
-/* === Step 3: confirm summary === */
 .booking-summary {
     background: var(--bg-soft);
     border-radius: var(--r-lg);
@@ -351,7 +340,6 @@
     background: var(--bg-card);
 }
 
-/* === Success screen === */
 .wizard-success {
     text-align: center;
     padding: 30px 16px;
@@ -398,9 +386,6 @@
     flex-wrap: wrap;
 }
 
-/* ===========================================
-   My Appointments — tabs + list
-   =========================================== */
 .appt-tabs {
     display: flex;
     gap: 6px;
@@ -512,10 +497,6 @@
     margin-top: 10px;
 }
 
-/* === Cancel confirmation modal === */
-/* .modal-backdrop / .modal-box / .modal-actions now live in components.css
-   (they're a generic pattern used by several pages, not appointment-specific). */
-
 @media (max-width: 480px) {
     .appt-card {
         flex-direction: column;
@@ -525,14 +506,6 @@
         flex: 1;
     }
 }
-
-/* ===========================================
-   My Appointments — page modernization (C1)
-   Scoped to .my-appointments-page: this page shares
-   .page-header / .loading-state / appt-tab / appt-card
-   with book-appointment.html's load set, so all new
-   rules stay scoped to avoid touching the wizard.
-   =========================================== */
 
 .my-appointments-page .page-header {
     display: flex;
@@ -568,7 +541,6 @@
     color: var(--text-mute);
 }
 
-/* === Tabs === */
 .my-appointments-page .appt-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -590,7 +562,6 @@
     outline-offset: -2px;
 }
 
-/* === Cards === */
 .my-appointments-page .appt-card-header {
     gap: 10px 14px;
 }
@@ -635,18 +606,10 @@
     }
 }
 
-/* ===========================================
-   Book Appointment — wizard modernization (C2)
-   Scoped to .book-appointment-page: appointments.css
-   is shared with my-appointments.html (C1, committed),
-   so all new rules stay scoped to avoid regressing it.
-   =========================================== */
-
 .book-appointment-page {
     max-width: 780px;
 }
 
-/* === Page header === */
 .book-appointment-page .page-header {
     margin-bottom: 24px;
 }
@@ -658,7 +621,6 @@
     line-height: 1.5;
 }
 
-/* === Wizard progress indicator === */
 .book-appointment-page .wizard-steps {
     gap: 6px;
     margin-bottom: 32px;
@@ -686,7 +648,6 @@
     }
 }
 
-/* === Wizard card / panels === */
 .book-appointment-page .wizard-card,
 .book-appointment-page .wizard-card:hover {
     box-shadow: none;
@@ -704,7 +665,6 @@
     }
 }
 
-/* === Loading state === */
 .book-appointment-page #wizardLoading {
     display: flex;
     flex-direction: column;
@@ -714,7 +674,6 @@
     color: var(--text-mute);
 }
 
-/* === Step 1: doctor search === */
 .book-appointment-page .doctor-search-box .input-wrapper {
     min-height: 44px;
 }
@@ -770,7 +729,6 @@
     }
 }
 
-/* === Step 2: clinic / date / slots === */
 .book-appointment-page .date-pill {
     min-height: 44px;
     min-width: 60px;
@@ -795,7 +753,6 @@
     text-align: center;
 }
 
-/* === Step 3: confirmation === */
 .book-appointment-page .booking-summary-row .value {
     overflow-wrap: anywhere;
 }
@@ -811,7 +768,6 @@
     }
 }
 
-/* === Wizard actions === */
 .book-appointment-page .wizard-actions .btn {
     min-height: 44px;
 }
@@ -831,7 +787,6 @@
     }
 }
 
-/* === Success state === */
 .book-appointment-page .wizard-success-actions .btn {
     min-height: 44px;
 }

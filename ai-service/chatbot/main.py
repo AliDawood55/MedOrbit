@@ -20,23 +20,19 @@ import logging
 import json
 import uuid
 
-# Core NLP (existing)
 from chatbot.intent.classifier import IntentClassifier
 from chatbot.entities.extractor import EntityExtractor
-from chatbot.medical.drug_checker import DrugChecker  # legacy in-memory checker
-from chatbot.medical.report_summarizer import ReportSummarizer  # legacy template-based
+from chatbot.medical.drug_checker import DrugChecker
+from chatbot.medical.report_summarizer import ReportSummarizer
 
-# NLU Pipeline (existing)
 from chatbot.nlu.pipeline import NLUPipeline
 from chatbot.nlu.safety import MedicalSafetyLayer
 from chatbot.nlu.slots import SlotFiller
 from chatbot.nlu.provider_resolver import ProviderResolver
 
-# LLM + RAG (existing)
 from rag.retriever import retrieve_context
 from llm.llm_service import generate_response
 
-# === NEW MODULES (Phase 2 + Phase 3) ===
 from db import get_pool, close_pool
 from chatbot.medical.symptom_engine import SymptomSpecialtyEngine
 from chatbot.medical.drug_interaction_matcher import DrugInteractionMatcher
@@ -44,48 +40,38 @@ from chatbot.medical.document_extractor import DocumentExtractor
 from chatbot.medical.report_summarizer_llm import ReportSummarizerLLM
 from identity_boundary import require_internal_identity, resolve_internal_identity
 
-# === Virtual Doctor (new, additive, isolated module) ===
 from virtual_doctor.router import router as virtual_doctor_router
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger("medorbit-ai")
 
-# Initialize existing services
 classifier = IntentClassifier()
 extractor = EntityExtractor()
-drug_checker = DrugChecker()          # kept for backward compat
-report_summarizer = ReportSummarizer()  # kept for backward compat
+drug_checker = DrugChecker()
+report_summarizer = ReportSummarizer()
 nlu_pipeline = NLUPipeline()
 safety_layer = MedicalSafetyLayer()
 slot_filler = SlotFiller()
 provider_resolver = ProviderResolver()
 
-# Initialize new services
 symptom_engine = SymptomSpecialtyEngine()
 drug_matcher = DrugInteractionMatcher()
 doc_extractor = DocumentExtractor()
 llm_summarizer = ReportSummarizerLLM()
 
 
-# =========================
-# Lifespan (DB pool)
-# =========================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: warm the DB pool
     await get_pool()
     logger.info("AI service started")
     yield
-    # Shutdown
     await close_pool()
     logger.info("AI service stopped")
 
 
-# FastAPI app
 app = FastAPI(
     title="MedOrbit AI Service",
     version="3.0.0",
@@ -95,9 +81,6 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    # The AI service is an internal backend dependency, never a browser API.
-    # Keep CORS closed even while local Docker temporarily exposes port 8001
-    # during the client-migration window.
     allow_origins=[],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -106,9 +89,6 @@ app.add_middleware(
 app.include_router(virtual_doctor_router)
 
 
-# =========================================================
-# REQUEST / RESPONSE SCHEMAS
-# =========================================================
 
 class ChatRequest(BaseModel):
     message: Optional[str] = None
@@ -128,7 +108,6 @@ class ChatResponse(BaseModel):
     entities: Optional[Dict[str, Any]] = None
 
 
-# --- T-047: Triage ---
 class TriageRequest(BaseModel):
     symptoms: List[str] = Field(..., min_length=1, description="List of symptom strings")
     user_id: Optional[str] = None
@@ -149,7 +128,6 @@ class TriageResponse(BaseModel):
     follow_up_action: str
 
 
-# --- T-048: Drug Interactions ---
 class DrugCheckRequest(BaseModel):
     medication_ids: Optional[List[str]] = None
     medication_names: Optional[List[str]] = None
@@ -159,10 +137,9 @@ class DrugCheckResponse(BaseModel):
     has_interactions: bool
     interaction_count: int
     interactions: List[Dict[str, Any]]
-    severity_summary: Dict[str, int]  # {"severe": 1, "moderate": 2, ...}
+    severity_summary: Dict[str, int]
 
 
-# --- T-049: Prescription Auto-Check ---
 class PrescriptionCheckRequest(BaseModel):
     prescription_items: List[Dict[str, Any]] = Field(
         ...,
@@ -176,7 +153,6 @@ class PrescriptionCheckResponse(BaseModel):
     warnings: List[str]
 
 
-# --- T-050/051: Summarize ---
 class SummarizeRequest(BaseModel):
     text: Optional[str] = None
     user_id: Optional[str] = None
@@ -194,17 +170,11 @@ class SummarizeResponse(BaseModel):
     source_file_type: Optional[str] = None
 
 
-# =========================================================
-# HEALTH CHECK
-# =========================================================
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "medorbit-ai", "version": "3.0.0"}
 
 
-# =========================================================
-# T-047: TRIAGE ENDPOINT
-# =========================================================
 @app.post("/triage", response_model=TriageResponse)
 async def triage(
     req: TriageRequest,
@@ -220,13 +190,11 @@ async def triage(
             req.user_id, x_medorbit_internal_token, x_medorbit_user_id
         )
 
-        # 1) Run the mapping engine
         result = await symptom_engine.match(
             symptoms=req.symptoms,
             user_id=uuid.UUID(resolved_user_id) if resolved_user_id else None,
         )
 
-        # 2) Persist to DB
         pool = await get_pool()
         row = await pool.fetchrow(
             """
@@ -279,9 +247,6 @@ async def triage(
         raise HTTPException(status_code=500, detail="Triage failed")
 
 
-# =========================================================
-# T-048: DRUG INTERACTIONS ENDPOINT
-# =========================================================
 @app.post("/drug-interactions", response_model=DrugCheckResponse)
 async def drug_interactions(
     req: DrugCheckRequest,
@@ -318,9 +283,6 @@ async def drug_interactions(
         raise HTTPException(status_code=500, detail=f"Drug check failed: {str(e)}")
 
 
-# =========================================================
-# T-049: PRESCRIPTION AUTO-CHECK ENDPOINT
-# =========================================================
 @app.post("/prescription-check", response_model=PrescriptionCheckResponse)
 async def prescription_check(
     req: PrescriptionCheckRequest,
@@ -372,9 +334,6 @@ async def prescription_check(
         raise HTTPException(status_code=500, detail=f"Prescription check failed: {str(e)}")
 
 
-# =========================================================
-# T-050 + T-051: SUMMARIZE ENDPOINT (file upload)
-# =========================================================
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize(
     file: Optional[UploadFile] = File(None),
@@ -438,7 +397,6 @@ async def summarize(
                        "(pdfplumber, pytesseract, pdf2image, tesseract-ocr).",
             )
 
-        # Run LLM summarization + persist
         summary_result = await llm_summarizer.summarize_and_save(
             extracted_text=extracted_text,
             user_id=resolved_user_id,
@@ -451,7 +409,7 @@ async def summarize(
             id=summary_result["id"],
             summary_ar=summary_result["summary_ar"],
             summary_en=summary_result["summary_en"],
-            extracted_text=extracted_text[:2000],  # preview only
+            extracted_text=extracted_text[:2000],
             processing_time_ms=summary_result["processing_time_ms"],
             model_used=summary_result["model_used"],
             source_file_type=source_file_type,
@@ -466,9 +424,6 @@ async def summarize(
         raise HTTPException(status_code=500, detail="Summarization failed")
 
 
-# =========================================================
-# CHAT ENDPOINT (existing, enhanced)
-# =========================================================
 @app.post("/chat")
 async def chat(
     req: ChatRequest,
@@ -481,12 +436,8 @@ async def chat(
     try:
         require_internal_identity(None, x_medorbit_internal_token, x_medorbit_user_id)
 
-        # ============================================
-        # SPECIAL FLOWS
-        # ============================================
 
         if req.type == "drug_check":
-            # Enhanced: try DB-backed checker first
             med_names = []
             med_ids = []
             for m in (req.medications or []):
@@ -521,7 +472,6 @@ async def chat(
                 except Exception as e:
                     logger.warning("DB drug check failed, falling back to in-memory: %s", e)
 
-            # Fallback to legacy in-memory checker
             medications = req.medications or []
             interactions = drug_checker.check_interaction(medications)
             logger.info("Drug check (legacy): %d medications, %d interactions", len(medications), len(interactions))
@@ -560,9 +510,6 @@ async def chat(
                 entities={},
             )
 
-        # ============================================
-        # NORMAL CHAT — Full NLU Pipeline
-        # ============================================
 
         if not req.message:
             return ChatResponse(
@@ -575,7 +522,6 @@ async def chat(
         message = req.message
         logger.info("=== NEW MESSAGE === | chars=%d", len(message))
 
-        # Step 1: Extract conversation context
         conv_context = None
         if req.context:
             conv_context = {
@@ -585,7 +531,6 @@ async def chat(
             }
         pipeline_log.append({"step": "context_extraction", "has_context": conv_context is not None})
 
-        # Step 2: Medical Safety Check
         safety_result = safety_layer.check(message)
         pipeline_log.append({
             "step": "safety_check",
@@ -603,7 +548,6 @@ async def chat(
                 entities={"is_emergency": True, "matched_patterns": safety_result["matched_patterns"]},
             )
 
-        # Step 3: Intent Classification
         intent_start = time.time()
         intent_result = classifier.classify(message, context=conv_context)
         intent_time = round((time.time() - intent_start) * 1000, 2)
@@ -615,10 +559,7 @@ async def chat(
             "is_fallback": intent_result.get("is_fallback", False),
         })
 
-        # Step 4: Entity Extraction
-        extract_start = time.time()
         entities = extractor.extract(message, context=conv_context)
-        extract_time = round((time.time() - extract_start) * 1000, 2)
         pipeline_log.append({
             "step": "entity_extraction",
             "specialty": entities.get("specialty"),
@@ -634,14 +575,6 @@ async def chat(
             entities["latitude"] = req.latitude
             entities["longitude"] = req.longitude
 
-        # Step 5: Slot Filling
-        # NOTE: conversation_id is optional on ChatRequest. When the caller
-        # doesn't supply one, we fall back to a per-request UUID rather than
-        # hash(message) -- this avoids cross-user state collisions on
-        # identical message text, but (unlike a real conversation_id) it
-        # does NOT provide multi-turn continuity across requests. True
-        # continuity requires the backend/frontend to send a stable
-        # conversation_id, which is a separate follow-up.
         slot_info = None
         slot_conversation_id = req.conversation_id or str(uuid.uuid4())
         if intent_result["intent"] != "unknown" and not intent_result.get("is_fallback"):
@@ -660,10 +593,8 @@ async def chat(
                 if next_question:
                     logger.info("Slot filling: missing=%s", slot_state["missing_slots"])
 
-        # Step 6: Build RAG Context
         context = retrieve_context(message, entities)
 
-        # Step 7: Determine Response Source
         response_source = "LLM"
         reply = None
 
@@ -674,7 +605,6 @@ async def chat(
                 response_source = "RULE"
                 reply = _get_rule_response(intent_result["intent"], message)
 
-        # Step 8: Generate LLM Response
         if reply is None:
             llm_start = time.time()
             lang = "ar" if any("\u0600" <= c <= "\u06FF" for c in message) else "en"
@@ -682,7 +612,6 @@ async def chat(
             llm_time = round((time.time() - llm_start) * 1000, 2)
             pipeline_log.append({"step": "llm_generation", "processing_ms": llm_time})
 
-        # Step 9: Build Final Response
         total_time = round((time.time() - pipeline_start) * 1000, 2)
 
         return ChatResponse(

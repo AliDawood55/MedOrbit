@@ -41,7 +41,7 @@ import os
 import threading
 import time
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -51,86 +51,31 @@ from .config import env_float, env_int
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.retrieval")
 
-# --- Ollama endpoints -------------------------------------------------------
-# Same derivation convention as reasoning.py: one configured host, several
-# endpoints, so a deployment only ever sets OLLAMA_URL.
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_EMBED_URL = os.environ.get(
     "OLLAMA_EMBED_URL", OLLAMA_URL.replace("/api/generate", "/api/embed")
 )
 OLLAMA_EMBED_LEGACY_URL = OLLAMA_EMBED_URL.replace("/api/embed", "/api/embeddings")
 
-# Must match the model medical_knowledge was ingested with (rag/ingest_book.py);
-# vectors from different models are not comparable.
 EMBED_MODEL = os.environ.get("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
-# minimum=1: reaches SQL as LIMIT; 0 or negative returns nothing or errors.
 RAG_TOP_K = env_int("RAG_TOP_K", 3, minimum=1)
 
-# Empirically chosen, unchanged from the original reasoning.py implementation:
-# nomic-embed-text packs embeddings into a narrow cone, so similarity has a high
-# floor. Measured over the ingested corpus across all five complaints in both
-# languages: relevant chunks 0.647-0.781, nonsense 0.450-0.558, corpus mean
-# 0.557. 0.60 sits in the empty gap between the two bands.
-# Bounded to cosine's codomain [-1, 1]: this is compared against
-# cosine_similarity() output, so a threshold outside that range turns the
-# filter into a constant (accept everything / reject everything).
 RAG_MIN_SCORE = env_float("RAG_MIN_SCORE", 0.60, minimum=-1.0, maximum=1.0)
 
-# minimum=1: used as `chunk_text[:RAG_MAX_CHUNK_CHARS]` — a negative would
-# silently keep the tail of each passage instead of the head.
 RAG_MAX_CHUNK_CHARS = env_int("RAG_MAX_CHUNK_CHARS", 1200, minimum=1)
-# exclusive_min=0: passed to requests(timeout=), which rejects <= 0.
 RAG_EMBED_TIMEOUT = env_float("RAG_EMBED_TIMEOUT", 20.0, minimum=0.0,
                               exclusive_min=True)
 
-# How long Ollama should keep the embedding model resident between calls.
-#
-# Ollama evicts models to make room, and on a 4GB card loading qwen2:7b
-# (2.31GB) throws out nomic-embed-text (0.32GB). Measured: a warm embed is
-# 0.067s, but the first embed after a chat call pays a 4.85s reload — which is
-# exactly the 53ms -> 5.8s spread seen in the per-turn logs. The two models fit
-# together (2.63GB of 4GB), so pinning the small one is nearly free and removes
-# the reload entirely.
-#
-# Sent per request rather than relying on the server-side OLLAMA_KEEP_ALIVE,
-# because Ollama runs on the host, outside this compose project — a per-request
-# value is the only knob reachable from here. "-1" pins indefinitely.
-#
-# keep_alive alone is NOT sufficient: measured, loading qwen2:7b evicts the
-# embedder anyway (Ollama frees room for a large model regardless of the idle
-# TTL). It fixes the *idle* path — a warm embed goes 1.452s -> 0.057s — but not
-# the post-LLM path. See EMBED_ON_CPU for that half.
 OLLAMA_KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "1h")
 
-# Run the embedding model on CPU (num_gpu=0), which is the actual fix for the
-# 53ms -> 5.8s spikes seen in the per-turn logs.
-#
-# nomic-embed-text is a 137M-parameter model; it does not need a GPU. Keeping
-# it off the card means it can never be evicted by the planner's LLM and never
-# queues behind it. Measured, embed latency straight after a qwen2 chat call:
-#
-#     on GPU   0.216 / 0.928 / 0.797s   (mean 0.647s, 0.32GB VRAM)
-#     on CPU   0.070 / 0.063 / 0.061s   (mean 0.065s, 0.00GB VRAM)
-#
-# 10x faster on the contended path, marginally faster even warm (0.059s vs
-# 0.080s), and it hands 0.32GB of a 4GB card back to the planner and Whisper.
-# Set VD_EMBED_ON_CPU=0 on a machine with VRAM to spare.
 EMBED_ON_CPU = os.environ.get("VD_EMBED_ON_CPU", "1") not in ("0", "false", "False")
 EMBED_OPTIONS: Optional[Dict[str, Any]] = {"num_gpu": 0} if EMBED_ON_CPU else None
 
-# --- Cache configuration (env-tunable) --------------------------------------
-# minimum=0 on all three: zero is meaningful here (a disabled cache), and
-# the code already passes a literal ttl of 0 for the embedding cache.
 RESULT_CACHE_SIZE = env_int("VD_RAG_CACHE_SIZE", 256, minimum=0)
 RESULT_CACHE_TTL = env_float("VD_RAG_CACHE_TTL", 900.0, minimum=0.0)
 EMBED_CACHE_SIZE = env_int("RAG_EMBED_CACHE_SIZE", 128, minimum=0)
 
-# English seed phrases per canonical complaint. The corpus is an English
-# textbook and nomic-embed-text is a weak cross-lingual matcher: measured, a raw
-# Arabic symptom query topped out at 0.567 (noise) and surfaced a behavioural
-# assessment page for chest pain; adding these anchors lifted the same case to
-# 0.68 and returned the *same* pages as the equivalent English query.
 COMPLAINT_ANCHORS: Dict[str, List[str]] = {
     "headache": ["headache"],
     "chest_pain": ["chest pain"],
@@ -140,25 +85,6 @@ COMPLAINT_ANCHORS: Dict[str, List[str]] = {
     "generic": [],
 }
 
-# Surface forms (Arabic and English) -> canonical English clinical term.
-#
-# This exists because the retrieval query needs an English anchor and the two
-# obvious sources both failed:
-#
-#   * The JSON flow's slot name worked, but coupling the query (and therefore
-#     the cache key) to the flow means both break when the planner replaces it.
-#   * chatbot.entities.extractor was the natural reuse candidate, but measured
-#     on real utterances it returns no symptoms for "عندي ألم في وسط الصدر" —
-#     or even for "I have pain in the centre of my chest" — so it cannot anchor
-#     the very complaint the corpus is richest in.
-#
-# Inferring the topic from the utterance keeps the query a pure function of
-# (utterance, complaint), which is exactly what the cache key covers, and
-# survives the flow being deleted. Measured over 9 real turns: bare utterances
-# put 1/9 above the 0.60 floor, complaint anchors alone 2/9, this 7/9.
-#
-# Substring matching is deliberate — Arabic is heavily inflected and prefixed
-# ("الذراع", "بالذراع"), so stemming would cost more than it returns here.
 TOPIC_LEXICON: Dict[str, List[str]] = {
     "chest pain": ["صدر", "chest"],
     "headache": ["صداع", "راس", "رأس", "headache", "migraine"],
@@ -197,9 +123,6 @@ def infer_topics(utterance: str) -> List[str]:
     ]
 
 
-# ---------------------------------------------------------------------------
-# Cache primitives
-# ---------------------------------------------------------------------------
 
 class TtlLruCache:
     """Bounded LRU with per-entry expiry.
@@ -226,12 +149,11 @@ class TtlLruCache:
                 return None
             expires_at, value = entry
             if self._ttl > 0 and now >= expires_at:
-                # Expired: drop it and report a miss, not a stale hit.
                 del self._data[key]
                 self._stats["expirations"] += 1
                 self._stats["misses"] += 1
                 return None
-            self._data.move_to_end(key)  # refresh LRU recency
+            self._data.move_to_end(key)
             self._stats["hits"] += 1
             return value
 
@@ -240,7 +162,7 @@ class TtlLruCache:
             self._data[key] = (time.monotonic() + self._ttl, value)
             self._data.move_to_end(key)
             while len(self._data) > self._maxsize:
-                self._data.popitem(last=False)  # evict least-recently-used
+                self._data.popitem(last=False)
                 self._stats["evictions"] += 1
 
     def clear(self) -> None:
@@ -260,7 +182,6 @@ class TtlLruCache:
 
 
 _result_cache = TtlLruCache(RESULT_CACHE_SIZE, RESULT_CACHE_TTL, "rag_result")
-# No TTL: an embedding is a pure function of (model, text) and cannot go stale.
 _embed_cache = TtlLruCache(EMBED_CACHE_SIZE, 0, "rag_embed")
 
 
@@ -284,9 +205,6 @@ def reset_stats_for_tests() -> None:
     _embed_cache.clear()
 
 
-# ---------------------------------------------------------------------------
-# Query construction
-# ---------------------------------------------------------------------------
 
 def normalize_utterance(text: str, lang: Optional[str] = None) -> str:
     """Canonical form of a patient answer, for cache keying only.
@@ -361,16 +279,11 @@ def build_profile_query(chief_complaint: str, profile: Dict[str, Any]) -> str:
 
     for key, value in profile.items():
         if isinstance(value, str) and value.strip():
-            # The key is already an English slot name ("duration", "radiation");
-            # it carries the English anchor even when the value is Arabic.
             parts.append(f"{key.replace('_', ' ')}: {value.strip()}")
 
     return ". ".join(p for p in parts if p)
 
 
-# ---------------------------------------------------------------------------
-# Embedding
-# ---------------------------------------------------------------------------
 
 def _embed_uncached(text: str) -> Optional[List[float]]:
     """Embed one string via Ollama. Returns None on any failure.
@@ -390,7 +303,7 @@ def _embed_uncached(text: str) -> Optional[List[float]]:
             OLLAMA_EMBED_URL, json=body, timeout=RAG_EMBED_TIMEOUT,
         )
         if response.status_code == 404:
-            raise FileNotFoundError  # older Ollama: fall through to legacy endpoint
+            raise FileNotFoundError
         response.raise_for_status()
         vectors = response.json().get("embeddings") or []
         if vectors and vectors[0]:
@@ -429,14 +342,11 @@ def embed(text: str) -> Optional[List[float]]:
 
     vector = _embed_uncached(text)
     if not vector:
-        return vector  # failures are never cached
+        return vector
     _embed_cache.put(key, list(vector))
     return vector
 
 
-# ---------------------------------------------------------------------------
-# Retrieval
-# ---------------------------------------------------------------------------
 
 async def _search(vector: List[float]) -> List[Dict[str, Any]]:
     """Top-K passages above threshold. Never raises."""
@@ -493,11 +403,9 @@ async def retrieve(
         if cached is not None:
             logger.info("RAG cache HIT (%s) — %d passage(s), no embed, no DB scan",
                         label or "query", len(cached))
-            # Copy out: callers must not mutate a shared cached entry.
             return [dict(c) for c in cached]
 
     started = time.monotonic()
-    # requests is blocking and callers are on the event loop.
     vector = await asyncio.to_thread(embed, query_text)
     embed_ms = (time.monotonic() - started) * 1000
     if not vector:
@@ -553,9 +461,6 @@ async def retrieve_for_profile(
     )
 
 
-# ---------------------------------------------------------------------------
-# Formatting
-# ---------------------------------------------------------------------------
 
 def cite(chunk: Dict[str, Any]) -> str:
     """'p. 59' / 'pp. 114-115' for one chunk."""

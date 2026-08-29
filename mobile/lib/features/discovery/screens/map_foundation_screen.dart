@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/page_sections.dart';
@@ -20,12 +21,13 @@ class _MapFoundationScreenState extends ConsumerState<MapFoundationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
     final locationState = ref.watch(locationControllerProvider);
     final controller = ref.read(locationControllerProvider.notifier);
     final location = locationState.currentLocation;
 
     return AppScaffold(
-      appBar: AppBar(title: const Text('Map foundation')),
+      appBar: AppBar(title: Text(strings.mapFoundationTitle)),
       useSafeArea: true,
       body: Column(
         children: [
@@ -47,11 +49,11 @@ class _MapFoundationScreenState extends ConsumerState<MapFoundationScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _LocationSummary(state: locationState),
+                  _LocationSummary(state: locationState, strings: strings),
                   if (_selectingMapPoint) ...[
                     const SizedBox(height: AppTheme.spaceSm),
-                    const InlineMessage(
-                      message: 'Tap the map to select a manual point.',
+                    InlineMessage(
+                      message: strings.selectManualMapPointHint,
                       tone: InlineMessageTone.info,
                     ),
                   ],
@@ -67,22 +69,22 @@ class _MapFoundationScreenState extends ConsumerState<MapFoundationScreen> {
                             ? null
                             : controller.resolveCurrentLocation,
                         icon: const Icon(Icons.my_location_rounded),
-                        label: const Text('Use GPS'),
+                        label: Text(strings.useGpsButton),
                       ),
                       OutlinedButton.icon(
                         onPressed: () => setState(() => _selectingMapPoint = true),
                         icon: const Icon(Icons.add_location_alt_rounded),
-                        label: const Text('Pick on map'),
+                        label: Text(strings.pickOnMapButton),
                       ),
                       OutlinedButton.icon(
                         onPressed: () => _showPicker(context, locationState, controller),
                         icon: const Icon(Icons.tune_rounded),
-                        label: const Text('More options'),
+                        label: Text(strings.moreOptionsButton),
                       ),
                       TextButton.icon(
                         onPressed: controller.clearLocation,
                         icon: const Icon(Icons.clear_rounded),
-                        label: const Text('Clear'),
+                        label: Text(strings.clearLocationButton),
                       ),
                     ],
                   ),
@@ -106,6 +108,7 @@ class _MapFoundationScreenState extends ConsumerState<MapFoundationScreen> {
       builder: (context) {
         return LocationPickerSheet(
           permissionState: state.permissionState,
+          errorCode: state.errorCode,
           errorMessage: state.errorMessage,
           isBusy: state.status == LocationControllerStatus.locating ||
               state.status == LocationControllerStatus.checking ||
@@ -136,9 +139,10 @@ class _MapFoundationScreenState extends ConsumerState<MapFoundationScreen> {
 }
 
 class _LocationSummary extends StatelessWidget {
-  const _LocationSummary({required this.state});
+  const _LocationSummary({required this.state, required this.strings});
 
   final LocationState state;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -146,10 +150,10 @@ class _LocationSummary extends StatelessWidget {
     final location = state.currentLocation;
     final errorMessage = state.errorMessage;
     final status = state.status.name;
-    final source = location?.source.name ?? 'none';
+    final source = location?.source.name ?? strings.locationSourceNone;
     final precision = location == null
-        ? 'No location selected'
-        : '${location.approximate ? 'Approximate' : 'Exact'} · ${location.displayLatitude}, ${location.displayLongitude}';
+        ? strings.noLocationSelected
+        : '${location.approximate ? strings.locationPrecisionApproximate : strings.locationPrecisionExact} · ${location.displayLatitude}, ${location.displayLongitude}';
 
     return Card(
       child: Padding(
@@ -158,7 +162,7 @@ class _LocationSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Location state',
+              strings.locationStateSectionTitle,
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: AppTheme.spaceSm),
@@ -171,13 +175,13 @@ class _LocationSummary extends StatelessWidget {
             ),
             const SizedBox(height: AppTheme.spaceXs),
             Text(
-              'Status: $status · Source: $source',
+              strings.locationStatusSourceLine(status, source),
               style: theme.textTheme.bodySmall,
             ),
             if (errorMessage != null) ...[
               const SizedBox(height: AppTheme.spaceSm),
               InlineMessage(
-                message: errorMessage,
+                message: strings.locationErrorForCode(state.errorCode),
                 tone: InlineMessageTone.warning,
               ),
             ],

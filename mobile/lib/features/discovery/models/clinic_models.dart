@@ -1,3 +1,4 @@
+import '../../../shared/utils/json_parsing.dart';
 import 'doctor_models.dart';
 
 class ClinicListResponse {
@@ -110,7 +111,7 @@ class Clinic {
     final status = _asString(_read(json, 'verification_status', 'verificationStatus'));
     final operatingHours = _asMap(_read(json, 'operating_hours', 'operatingHours'));
     return Clinic(
-      id: _asString(json['id']) ?? '',
+      id: requireExactString(json, 'id'),
       nameAr: _asString(_read(json, 'name_ar', 'nameAr')),
       nameEn: _asString(_read(json, 'name_en', 'nameEn')) ?? _asString(json['name']),
       addressAr: _asString(_read(json, 'address_ar', 'addressAr')),
@@ -303,7 +304,7 @@ class ClinicDoctorSummary {
 
   factory ClinicDoctorSummary.fromJson(Map<String, dynamic> json) {
     return ClinicDoctorSummary(
-      id: _asString(json['id']) ?? '',
+      id: requireExactString(json, 'id'),
       firstNameAr: _asString(_read(json, 'first_name_ar', 'firstNameAr')),
       lastNameAr: _asString(_read(json, 'last_name_ar', 'lastNameAr')),
       firstNameEn: _asString(_read(json, 'first_name_en', 'firstNameEn')),
@@ -386,7 +387,12 @@ Map<String, dynamic>? _asMap(Object? value) => value is Map ? Map<String, dynami
 
 List<Map<String, dynamic>> _list(Object? value) {
   if (value is! List) return const [];
-  return value.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+  return value.map((item) {
+    if (item is! Map) {
+      throw const FormatException('Malformed list item: expected an object.');
+    }
+    return Map<String, dynamic>.from(item);
+  }).toList();
 }
 
 List<String> _stringList(Object? value) {

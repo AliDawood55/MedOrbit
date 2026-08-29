@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 
 class Tokenizer:
@@ -8,17 +8,13 @@ class Tokenizer:
     Handles mixed-language input, number extraction, and multi-word terms.
     """
 
-    # Common Arabic prefixes for stemming
     ARABIC_PREFIXES = ["ال", "و", "ف", "ب", "ل", "ك", "س", "ي", "ت", "ا", "ن"]
-    # Common Arabic suffixes for stemming
     ARABIC_SUFFIXES = ["ه", "ها", "هم", "هن", "كم", "كن", "نا", "ني", "ي", "ون", "ين", "ات", "ان", "ية"]
 
-    # Common English suffixes for stemming
     ENGLISH_SUFFIXES = ["ing", "ed", "ly", "s", "es", "ies", "ment", "tion", "ness", "able",
                         "ible", "ful", "less", "ist", "ism", "ity", "al", "ial", "ical"]
 
     def __init__(self):
-        # Arabic stop words (medical context)
         self.arabic_stop_words = set([
             "في", "من", "الى", "إلى", "على", "عن", "مع", "كان", "هذا", "هذه",
             "ذلك", "تلك", "هو", "هي", "هم", "ان", "إن", "أن", "قد", "لا",
@@ -49,10 +45,8 @@ class Tokenizer:
         if not text:
             return []
 
-        # Normalize whitespace
         text = re.sub(r'\s+', ' ', text).strip()
 
-        # Extract tokens (Arabic letters, English letters, numbers)
         tokens = []
         current_token = []
 
@@ -65,12 +59,10 @@ class Tokenizer:
                     tokens.append(token)
                     current_token = []
             else:
-                # Handle punctuation: consider it a separator
                 if current_token:
                     token = ''.join(current_token)
                     tokens.append(token)
                     current_token = []
-                # Keep certain punctuation as standalone tokens for intent matching
                 if char in '?!' and char:
                     tokens.append(char)
 
@@ -78,7 +70,6 @@ class Tokenizer:
             token = ''.join(current_token)
             tokens.append(token)
 
-        # Filter stop words unless requested
         if not keep_stop_words:
             tokens = [t for t in tokens if not self._is_stop_word(t)]
 
@@ -112,7 +103,6 @@ class Tokenizer:
                     })
                     current_token = []
                 if not char.isspace() and char not in ' \t\n\r':
-                    # Single punctuation
                     tokens.append({
                         "text": char,
                         "start": i,
@@ -154,19 +144,15 @@ class Tokenizer:
 
         stem = word
 
-        # Remove definite article "ال"
         if stem.startswith("ال") and len(stem) > 4:
             stem = stem[2:]
 
-        # Remove common prefixes
         for prefix in self.ARABIC_PREFIXES:
             if stem.startswith(prefix) and len(stem) > len(prefix) + 1:
-                # Don't strip if it would remove too much
                 if len(stem) - len(prefix) >= 2:
                     stem = stem[len(prefix):]
                     break
 
-        # Remove common suffixes
         for suffix in self.ARABIC_SUFFIXES:
             if stem.endswith(suffix) and len(stem) > len(suffix) + 1:
                 stem = stem[:-len(suffix)]
@@ -184,7 +170,6 @@ class Tokenizer:
 
         stem = word.lower()
 
-        # Remove common suffixes (order matters for overlap)
         if stem.endswith("ment") and len(stem) > 5:
             stem = stem[:-4]
         elif stem.endswith("tion") and len(stem) > 5:
@@ -201,12 +186,10 @@ class Tokenizer:
             stem = stem[:-4]
         elif stem.endswith("ing") and len(stem) > 4:
             stem = stem[:-3]
-            # Handle doubled consonant (running → run)
             if len(stem) >= 2 and stem[-1] == stem[-2]:
                 stem = stem[:-1]
         elif stem.endswith("ed") and len(stem) > 4:
             stem = stem[:-2]
-            # Handle doubled consonant (stopped → stop)
             if len(stem) >= 2 and stem[-1] == stem[-2]:
                 stem = stem[:-1]
         elif stem.endswith("ly") and len(stem) > 4:
@@ -238,7 +221,6 @@ class Tokenizer:
         """Extract numeric values with context."""
         numbers = []
 
-        # Integer numbers
         for match in re.finditer(r'\d+', text):
             numbers.append({
                 "value": int(match.group()),
@@ -248,7 +230,6 @@ class Tokenizer:
                 "type": "integer"
             })
 
-        # Decimal numbers
         for match in re.finditer(r'\d+\.\d+', text):
             numbers.append({
                 "value": float(match.group()),
@@ -258,7 +239,6 @@ class Tokenizer:
                 "type": "decimal"
             })
 
-        # Ordinal numbers in Arabic (الأول, الثاني, etc.)
         arabic_ordinals = ["اول", "أول", "ثاني", "ثالث", "رابع", "خامس"]
         for ord_str in arabic_ordinals:
             idx = text.find(ord_str)
@@ -271,7 +251,6 @@ class Tokenizer:
                     "type": "ordinal"
                 })
 
-        # English ordinals (first, second, etc.)
         english_ordinals = {
             "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
             "1st": 1, "2nd": 2, "3rd": 3, "4th": 4, "5th": 5

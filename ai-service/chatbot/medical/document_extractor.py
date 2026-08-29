@@ -11,7 +11,6 @@ Falls back gracefully if OCR dependencies are not installed.
 import io
 import os
 import logging
-from typing import Optional, Tuple
 
 logger = logging.getLogger("medorbit-ai.ocr")
 
@@ -79,7 +78,6 @@ class DocumentExtractor:
 
     def _extract_pdf(self, file_bytes: bytes) -> dict:
         """Extract text from PDF bytes. Try pdfplumber first, then OCR fallback."""
-        # --- Attempt 1: pdfplumber (native text extraction) ---
         try:
             import pdfplumber
 
@@ -92,7 +90,6 @@ class DocumentExtractor:
                     page_text = page.extract_text()
                     if page_text:
                         text_parts.append(page_text.strip())
-                    # Also extract tables if present
                     tables = page.extract_tables()
                     for table in tables:
                         for row in table:
@@ -114,7 +111,6 @@ class DocumentExtractor:
         except ImportError:
             logger.warning("pdfplumber not installed, trying OCR fallback")
 
-        # --- Attempt 2: OCR fallback via pdf2image + pytesseract ---
         return self._ocr_pdf(file_bytes)
 
     def _ocr_pdf(self, file_bytes: bytes) -> dict:
@@ -129,7 +125,6 @@ class DocumentExtractor:
             text_parts = []
 
             for img in images:
-                # OCR with Arabic + English support
                 ocr_text = pytesseract.image_to_string(
                     img,
                     lang="ara+eng",

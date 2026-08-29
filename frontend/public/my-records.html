@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html data-auth-gate="pending" lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,17 +18,11 @@
     <link rel="stylesheet" href="../src/css/listing.css">
     <link rel="stylesheet" href="../src/css/animation.css">
     <link rel="stylesheet" href="../src/css/records.css">
-    <!-- Fail-closed shield for this page's shell. Inline on purpose: the gate
-         below is an external file and an external file can 404, be blocked or
-         time out, and a gate that never loads hides nothing. These lines
-         cannot go missing on their own. They hide protected markup from the
-         first paint; the gate clears the attribute once it has verified the
-         session, and the watchdog leaves for Home if the gate never arrives. -->
-    <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
-    <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
-    <!-- Global authentication gate: must load in <head>, before any
-         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
-    <script src="../src/js/auth-gate.js"></script>
+
+<style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+    <script src="../src/js/auth-bootstrap.js"></script>
+
+<script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
@@ -60,8 +54,7 @@
             <p class="page-subtitle" data-i18n="records.subtitle">السجل الزمني لزياراتك وتشخيصاتك الطبية</p>
         </div>
 
-        <!-- Filters: enabled once the timeline finishes loading -->
-        <div class="records-filter-bar" id="recordsFilters">
+<div class="records-filter-bar" id="recordsFilters">
             <div class="search-field">
                 <i class="fas fa-search"></i>
                 <input type="text" id="recordSearchInput" disabled data-i18n-placeholder="records.searchPlaceholder" data-i18n-aria="records.searchPlaceholder" placeholder="ابحث في السجلات...">
@@ -96,8 +89,7 @@
             <section class="records-real-detail" id="recordDetail"></section>
         </div>
 
-        <!-- Honest empty state — no history recorded for this patient yet -->
-        <div class="records-empty-state" id="recordsEmpty">
+<div class="records-empty-state" id="recordsEmpty">
             <div class="empty-state-icon"><i class="fas fa-file-waveform"></i></div>
             <h2 data-i18n="records.emptyTitle">لا يوجد سجل طبي بعد</h2>
             <p data-i18n="records.emptyHint">ستظهر هنا مواعيدك وتشخيصاتك ووصفاتك الطبية بمجرد توفرها.</p>
@@ -125,11 +117,6 @@
     <script src="../src/js/layout.js"></script>
     <script src="../src/js/my-records.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Layout.init();
-            MyRecords.init();
-        });
-    </script>
+    <script src="../src/js/pages/my-records.js"></script>
 </body>
 </html>

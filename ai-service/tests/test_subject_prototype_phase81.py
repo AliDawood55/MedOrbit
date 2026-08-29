@@ -87,7 +87,7 @@ class TestFailsClosed(unittest.TestCase):
 
     def test_an_unrecognised_subject_is_dropped(self):
         for bad in ("me", "self", "PATIENT_1", "patient's brother", "", "1", "true"):
-            narrowed, stats = filter_by_subject(_payload(_obs(bad)))
+            narrowed, _ = filter_by_subject(_payload(_obs(bad)))
             self.assertEqual([], narrowed["symptoms"], bad)
 
     def test_a_non_string_subject_is_dropped(self):
@@ -166,7 +166,7 @@ class TestFilterIsOnlyNarrowing(unittest.TestCase):
     def test_malformed_payloads_do_not_raise(self):
         for payload in (None, [], "text", 5, {"symptoms": "not a list"},
                         {"symptoms": None}, {}):
-            narrowed, stats = filter_by_subject(payload)
+            _, stats = filter_by_subject(payload)
             self.assertIsInstance(stats, dict)
 
 
@@ -264,8 +264,6 @@ class TestPrototypeStaysOutOfProduction(unittest.TestCase):
         result = understanding.parse_understanding(
             {"symptoms": [{"symptom": "seizure", "status": "present",
                            "subject": "other"}]})
-        # Production ignores `subject` entirely — which is exactly why the
-        # third-party failure exists and why this prototype was measured.
         self.assertEqual(("seizure",), result.present_symptoms)
 
     def test_the_shipped_prompt_does_not_mention_a_subject_field(self):

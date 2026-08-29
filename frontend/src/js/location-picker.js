@@ -1,9 +1,3 @@
-/**
- * MedOrbit v2 - Location Picker UI
- * Renders a status pill + dropdown (GPS / pick-on-map / choose district)
- * into a container, backed entirely by the shared Location module. Mounted
- * on index.html (chat/map page) and find-clinics.html — same UI, same state.
- */
 const LocationPicker = (() => {
 
     function isAr() {
@@ -83,9 +77,7 @@ const LocationPicker = (() => {
         const menu = document.getElementById(containerId + 'Menu');
         const errorNote = document.getElementById(containerId + 'ErrorNote');
 
-        // Bottom-sheet backdrop on mobile (see map.css) — harmless on desktop
-        // where the menu is a small anchored dropdown instead.
-        const backdrop = document.createElement('div');
+const backdrop = document.createElement('div');
         backdrop.className = 'location-menu-backdrop';
         document.body.appendChild(backdrop);
 
@@ -97,9 +89,8 @@ const LocationPicker = (() => {
             const wasOpen = menu.classList.contains('open');
             menu.classList.remove('open');
             backdrop.classList.remove('open');
-            // Only the mobile bottom-sheet variant locks the background —
-            // the desktop dropdown is small and shouldn't block page scroll.
-            if (wasOpen && isBottomSheet() && typeof Dom !== 'undefined') Dom.unlockScroll();
+
+if (wasOpen && isBottomSheet() && typeof Dom !== 'undefined') Dom.unlockScroll();
         }
 
         function openMenu() {
@@ -113,10 +104,8 @@ const LocationPicker = (() => {
         function render(state) {
             const { icon, text, cls } = pillContent(state);
             pillBtn.className = 'location-pill ' + cls;
-            // Rebuilt fresh each time (not mutated in place) — FontAwesome's
-            // JS kit replaces <i> tags with inline <svg> shortly after they're
-            // added, so a stale reference to the original <i> goes null.
-            pillBtn.querySelector('.location-pill-icon').innerHTML = '<i class="fas ' + icon + '"></i>';
+
+pillBtn.querySelector('.location-pill-icon').innerHTML = '<i class="fas ' + icon + '"></i>';
             pillBtn.querySelector('.location-pill-text').textContent = text;
 
             if (state.status === 'error' && state.errorCode) {
@@ -162,12 +151,7 @@ const LocationPicker = (() => {
         render(Location.getState());
     }
 
-    /**
-     * Language toggled after this picker was already mounted — re-render its
-     * static labels (menu items, district names) and current pill text
-     * without tearing down the DOM or re-subscribing to Location.
-     */
-    function relabel(containerId) {
+function relabel(containerId) {
         const menu = document.getElementById(containerId + 'Menu');
         if (!menu) return;
 

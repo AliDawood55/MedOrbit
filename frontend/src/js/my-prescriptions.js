@@ -1,10 +1,3 @@
-/**
- * MedOrbit v2 - My Prescriptions
- * Fetches via GET /patients/me/prescriptions (backend/src/routes/
- * patient.routes.js), an ownership-scoped call that returns the patient's
- * prescription list and medication items in one request. The backend excludes
- * clinician-private doctor_notes before this page receives the data.
- */
 const MyPrescriptions = (() => {
 
     let prescriptions = [];
@@ -56,9 +49,8 @@ const MyPrescriptions = (() => {
     }
 
     function normalizePrescription(raw) {
-        // Patient-facing UI must never surface the doctor's internal notes;
-        // drop it here so no downstream rendering code can reuse it.
-        const { doctor_notes, ...rest } = raw || {};
+
+const { doctor_notes, ...rest } = raw || {};
         return { ...rest, items: Array.isArray(raw?.items) ? raw.items : [] };
     }
 
@@ -67,11 +59,7 @@ const MyPrescriptions = (() => {
         return source.map(normalizePrescription).filter((p) => p.id);
     }
 
-    // GET /patients/me/prescriptions — ownership-scoped (backend/src/routes/
-    // patient.routes.js) and returns the patient's full list in one call.
-    // The generic /api/prescriptions/:id is ownership-scoped too, but it's
-    // single-record and would need one request per prescription here.
-    async function fetchPrescriptions() {
+async function fetchPrescriptions() {
         const res = await API.care.myPrescriptions();
         return normalizeList(res);
     }
@@ -84,10 +72,7 @@ const MyPrescriptions = (() => {
         show(document.getElementById('prescriptionsLockedTag'), !enabled);
     }
 
-    // Swaps the shared empty-state container's copy between "no prescriptions
-    // at all" (dataset-empty) and "no matches for the current filters"
-    // (filtered-empty), so the two cases are never presented the same way.
-    function setEmptyStateContent(isFiltered) {
+function setEmptyStateContent(isFiltered) {
         const container = document.getElementById('prescriptionsEmpty');
         if (!container) return;
         const titleEl = container.querySelector('h2');
@@ -298,11 +283,8 @@ const MyPrescriptions = (() => {
         document.getElementById('prescriptionStatusFilter')?.addEventListener('change', render);
         document.getElementById('prescriptionDateFilter')?.addEventListener('change', render);
         document.getElementById('prescriptionsRetryBtn')?.addEventListener('click', load);
-        // Static labels are translated by I18n, but prescription names and
-        // dates are rendered from API data. Re-render them on a language
-        // switch so medication_name_en is used in English and
-        // medication_name_ar in Arabic whenever both values exist.
-        window.addEventListener('languageChanged', render);
+
+window.addEventListener('languageChanged', render);
 
         load();
     }

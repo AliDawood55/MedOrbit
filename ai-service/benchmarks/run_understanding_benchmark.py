@@ -41,7 +41,7 @@ from typing import Any, Dict, List, Optional
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from understanding_corpus import CORPUS, SAFETY_ATOMS, by_split  # noqa: E402
+from understanding_corpus import SAFETY_ATOMS, by_split  # noqa: E402
 
 from virtual_doctor import understanding  # noqa: E402
 from virtual_doctor.reasoning_engine import vocabulary  # noqa: E402
@@ -49,12 +49,6 @@ from virtual_doctor.reasoning_engine import vocabulary  # noqa: E402
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 
 
-# ---------------------------------------------------------------------------
-# Prompt variants
-# ---------------------------------------------------------------------------
-# v1 is the shipped Phase 6 prompt, used unmodified so the baseline is the real
-# baseline. Variants are registered here rather than edited in place so a run
-# can name exactly which prompt produced it.
 
 def prompt_v1(message: str, lang: str) -> str:
     """The shipped Phase 6 prompt (understanding.build_prompt)."""
@@ -67,10 +61,6 @@ from subject_prototype import build_v5, filter_by_subject  # noqa: E402
 PROMPTS = {"v1": prompt_v1, "v2": build_v2, "v3": build_v3,
            "v4": build_v4, "v5": build_v5}
 
-# Phase 8.1: a variant may NARROW the payload before the production validator
-# sees it. v5 uses this to drop observations the model did not claim for the
-# patient. The production validator still runs afterwards and still does all the
-# actual validation — a prefilter can only remove entries, never admit one.
 PREFILTERS = {"v5": filter_by_subject}
 
 
@@ -78,9 +68,6 @@ def register_prompt(name, fn):
     PROMPTS[name] = fn
 
 
-# ---------------------------------------------------------------------------
-# Running one case
-# ---------------------------------------------------------------------------
 
 async def run_case(case: Dict[str, Any], model: str, prompt_name: str,
                    timeout: float) -> Dict[str, Any]:
@@ -173,9 +160,6 @@ async def run_case(case: Dict[str, Any], model: str, prompt_name: str,
     }
 
 
-# ---------------------------------------------------------------------------
-# Scoring
-# ---------------------------------------------------------------------------
 
 def _prf(tp: int, fp: int, fn: int) -> Dict[str, float]:
     precision = tp / (tp + fp) if (tp + fp) else 0.0
@@ -193,11 +177,6 @@ def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     safety_expected = safety_found = 0
     safety_misses: List[str] = []
     safety_polarity_errors: List[str] = []
-    # A safety atom the model asserted that the patient never mentioned. Scored
-    # separately from ordinary hallucination because the consequence is
-    # different in kind: an invented `seizure` reaches rules/safety.pl and
-    # escalates the consultation to urgent. A miss loses an escalation; a false
-    # positive manufactures one.
     safety_false_positives: List[str] = []
     multi_expected = multi_found = 0
     hallucinated: Counter = Counter()
@@ -218,10 +197,6 @@ def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         for cat in row["categories"]:
             category_exact[cat].append(1 if row["exact_match"] else 0)
 
-        # Any canonical atom the model produced that the ground truth does not
-        # place in ANY polarity is a hallucinated canonical atom: the validator
-        # let it through because it is real vocabulary, but the patient did not
-        # say it.
         expected_all = set(sum(row["expected"].values(), []))
         actual_all = set(sum(row["actual"].values(), []))
         for atom in actual_all - expected_all:
@@ -245,7 +220,6 @@ def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             lang_counts[row["lang"]]["fp"] += extra
             lang_counts[row["lang"]]["fn"] += miss
 
-        # Safety atoms: raw counts, no weighting formula.
         for atom in row["safety_atoms"]:
             safety_expected += 1
             if atom in row["actual"]["present"]:
@@ -259,11 +233,6 @@ def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             multi_expected += len(row["expected"]["present"])
             multi_found += len(set(row["expected"]["present"]) & set(row["actual"]["present"]))
 
-    # --- Phase 8: per-category slices -------------------------------------
-    # A model that handles textbook MSA but not how people actually speak to a
-    # voice assistant scores fine in aggregate and fails in production. These
-    # slices make colloquial / code-switched / ASR-like performance visible
-    # instead of averaged away.
     def _subset(predicate):
         picked = [r for r in rows if predicate(r)]
         if not picked:
@@ -288,11 +257,6 @@ def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
                     "question_not_report")
     }
 
-    # --- Phase 8: the negative-control gate --------------------------------
-    # Cases where the patient reported NOTHING. Any canonical atom produced
-    # here is invented outright, and an invented SAFETY atom reaches
-    # rules/safety.pl and manufactures an escalation. Reported on its own, never
-    # folded into aggregate precision.
     controls = [r for r in rows if "negative_control" in r["categories"]]
     control_invented = []
     control_safety_invented = []
@@ -361,9 +325,6 @@ def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 
 async def main() -> int:
     parser = argparse.ArgumentParser()
@@ -372,10 +333,6 @@ async def main() -> int:
     parser.add_argument("--split", default="held_out", choices=("dev", "held_out", "all"))
     parser.add_argument("--timeout", type=float, default=90.0)
     parser.add_argument("--out", default=None)
-    # Phase 8.1: run a focused capability subset rather than the whole corpus.
-    # A capability question ("can this model attribute a subject?") is answered
-    # by the cases that probe it, and a 7B model costs ~7s per case, so running
-    # 142 of them to answer a question 45 of them settle is wasted time.
     parser.add_argument("--categories", default=None,
                         help="comma-separated; keep cases carrying ANY of them")
     parser.add_argument("--label", default=None,
@@ -395,8 +352,6 @@ async def main() -> int:
         RESULTS_DIR,
         f"{args.model.replace(':', '_').replace('/', '_')}__{args.prompt}__{args.split}{tag}.json")
 
-    # Cold latency is measured separately and excluded from the warm stats: it
-    # includes weight loading, which happens once per model, not once per turn.
     cold_started = time.perf_counter()
     await run_case(cases[0], args.model, args.prompt, args.timeout)
     cold_ms = round((time.perf_counter() - cold_started) * 1000, 1)

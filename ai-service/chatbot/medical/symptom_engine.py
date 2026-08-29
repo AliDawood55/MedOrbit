@@ -29,7 +29,6 @@ class SymptomSpecialtyEngine:
     symptoms, we sum weights per specialty. The top-scoring specialty wins.
     """
 
-    # Emergency red-flag keywords (override everything)
     EMERGENCY_KEYWORDS_EN = {
         "severe chest pain", "difficulty breathing", "unconscious",
         "severe bleeding", "choking", "poisoning", "suicide",
@@ -63,11 +62,9 @@ class SymptomSpecialtyEngine:
         """
         pool = await get_pool()
 
-        # 1) Normalize and lowercase symptoms
         normalized = [self._normalize(s) for s in symptoms if s.strip()]
         text_bag = " ".join(normalized).lower()
 
-        # 2) Check for emergency red-flags first
         is_emergency = False
         for kw in self.EMERGENCY_KEYWORDS_EN:
             if kw in text_bag:
@@ -79,7 +76,6 @@ class SymptomSpecialtyEngine:
                     is_emergency = True
                     break
 
-        # 3) Query all active mappings
         rows = await pool.fetch(
             """
             SELECT ssm.symptom_keyword, ssm.symptom_keyword_ar,
@@ -91,7 +87,6 @@ class SymptomSpecialtyEngine:
             """
         )
 
-        # 4) Score each specialty
         scores: Dict[UUID, float] = defaultdict(float)
         specialty_names: Dict[UUID, Dict[str, str]] = {}
         matched_keywords: List[str] = []
@@ -121,9 +116,7 @@ class SymptomSpecialtyEngine:
                     if kw_ar not in matched_keywords:
                         matched_keywords.append(kw_ar)
 
-        # 5) Determine result
         if not scores:
-            # No match — default to General Practice
             gp_row = await pool.fetchrow(
                 "SELECT id, name_en, name_ar FROM specialties WHERE name_en = 'General Practice' LIMIT 1"
             )
@@ -140,11 +133,9 @@ class SymptomSpecialtyEngine:
                 "follow_up_action": "visit_general_practitioner",
             }
 
-        # Sort by score descending
         ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         top_specialty_id, top_score = ranked[0]
 
-        # Confidence: normalized 0-1 based on gap between top and second
         if len(ranked) > 1:
             second_score = ranked[1][1]
             gap_ratio = (top_score - second_score) / top_score if top_score > 0 else 0
@@ -152,7 +143,6 @@ class SymptomSpecialtyEngine:
         else:
             confidence = round(min(top_score / 10.0, 1.0), 4)
 
-        # Triage level
         if is_emergency:
             triage_level = "emergency"
             follow_up = "visit_emergency_immediately"
@@ -173,7 +163,6 @@ class SymptomSpecialtyEngine:
                 f"may be helpful. You can book a routine appointment at your convenience."
             )
 
-        # Build specialty_scores display (top 5)
         specialty_scores_display = {
             specialty_names[sid]["en"]: round(score, 2)
             for sid, score in ranked[:5]
@@ -195,8 +184,6 @@ class SymptomSpecialtyEngine:
     def _normalize(self, text: str) -> str:
         """Lowercase, strip diacritics, collapse whitespace."""
         text = text.lower().strip()
-        # Remove Arabic diacritics (tashkeel)
         text = re.sub(r"[\u0610-\u061A\u064B-\u065F\u0670]", "", text)
-        # Collapse whitespace
         text = re.sub(r"\s+", " ", text)
         return text

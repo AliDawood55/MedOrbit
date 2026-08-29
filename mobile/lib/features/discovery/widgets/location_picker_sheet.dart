@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/location_models.dart';
 
-class LocationPickerSheet extends StatelessWidget {
+class LocationPickerSheet extends ConsumerWidget {
   const LocationPickerSheet({
     super.key,
     required this.permissionState,
+    this.errorCode,
     this.errorMessage,
     required this.onUseCurrentLocation,
     required this.onSelectMapPoint,
@@ -19,6 +22,12 @@ class LocationPickerSheet extends StatelessWidget {
   });
 
   final LocationPermissionState permissionState;
+
+  /// Name of the [LocationFailureCode] the state layer reported (e.g.
+  /// `serviceDisabled`, `denied`, `deniedForever`, `timeout`, `unavailable`,
+  /// `unexpected`). Used to pick a distinct localized message per failure
+  /// kind. Falls back to [permissionState] when unset.
+  final String? errorCode;
   final String? errorMessage;
   final VoidCallback onUseCurrentLocation;
   final VoidCallback onSelectMapPoint;
@@ -30,9 +39,10 @@ class LocationPickerSheet extends StatelessWidget {
   final bool isBusy;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final theme = Theme.of(context);
-    final isArabic = Directionality.of(context) == TextDirection.rtl;
+    final isArabic = strings.isArabic;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
@@ -52,18 +62,20 @@ class LocationPickerSheet extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Choose location',
+                      strings.chooseLocationTitle,
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: AppTheme.weightBold),
                     ),
                     const SizedBox(height: AppTheme.spaceXs),
                     Text(
-                      'Use GPS, select a point, or choose an approximate Nablus-area district.',
+                      strings.chooseLocationSubtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                     ),
                     if (errorMessage != null) ...[
                       const SizedBox(height: AppTheme.spaceMd),
                       _GuidanceCard(
-                        message: _errorGuidance(permissionState, errorMessage!),
+                        message: _errorGuidance(strings),
+                        appSettingsLabel: strings.appSettingsButton,
+                        locationSettingsLabel: strings.locationSettingsButton,
                         onOpenAppSettings: onOpenAppSettings,
                         onOpenLocationSettings: onOpenLocationSettings,
                       ),
@@ -77,17 +89,17 @@ class LocationPickerSheet extends StatelessWidget {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.my_location_rounded),
-                      label: const Text('Use current location'),
+                      label: Text(strings.useCurrentLocationButton),
                     ),
                     const SizedBox(height: AppTheme.spaceSm),
                     OutlinedButton.icon(
                       onPressed: onSelectMapPoint,
                       icon: const Icon(Icons.add_location_alt_rounded),
-                      label: const Text('Select point on map'),
+                      label: Text(strings.selectPointOnMapButton),
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
                     Text(
-                      'Approximate district',
+                      strings.approximateDistrictTitle,
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: AppTheme.spaceSm),
@@ -100,7 +112,7 @@ class LocationPickerSheet extends StatelessWidget {
                             key: ValueKey('location-district-${_districtKeyId(district)}'),
                             avatar: const Icon(Icons.location_city_rounded, size: AppTheme.iconSm),
                             label: Text(
-                              '${isArabic ? district.nameAr : district.nameEn} · approximate',
+                              '${isArabic ? district.nameAr : district.nameEn} · ${strings.districtApproximateSuffix}',
                               textDirection: isArabic ? TextDirection.rtl : TextDirection.ltr,
                             ),
                             onPressed: () => onSelectDistrict(district),
@@ -108,15 +120,15 @@ class LocationPickerSheet extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
-                    _PrivacyNote(theme: theme),
+                    _PrivacyNote(theme: theme, text: strings.locationPrivacyNote),
                     const SizedBox(height: AppTheme.spaceMd),
                     Wrap(
                       alignment: WrapAlignment.end,
                       spacing: AppTheme.spaceSm,
                       runSpacing: AppTheme.spaceSm,
                       children: [
-                        TextButton(onPressed: onClear, child: const Text('Clear')),
-                        TextButton(onPressed: onCancel, child: const Text('Cancel')),
+                        TextButton(onPressed: onClear, child: Text(strings.clearLocationButton)),
+                        TextButton(onPressed: onCancel, child: Text(strings.cancel)),
                       ],
                     ),
                   ],
@@ -129,13 +141,15 @@ class LocationPickerSheet extends StatelessWidget {
     );
   }
 
-  String _errorGuidance(LocationPermissionState state, String fallback) {
-    return switch (state) {
-      LocationPermissionState.serviceDisabled => 'Location services are off. Turn them on or choose a manual location.',
-      LocationPermissionState.denied => 'Location permission was denied. You can retry or choose a manual location.',
-      LocationPermissionState.deniedForever => 'Location permission is blocked. Open app settings or choose a manual location.',
-      _ => fallback,
+  String _errorGuidance(AppStrings strings) {
+    final code = errorCode ?? switch (permissionState) {
+      LocationPermissionState.serviceDisabled => 'serviceDisabled',
+      LocationPermissionState.denied => 'denied',
+      LocationPermissionState.deniedForever => 'deniedForever',
+      _ => null,
     };
+    if (code == null) return errorMessage ?? strings.locationUnexpectedMessage;
+    return strings.locationErrorForCode(code);
   }
 }
 
@@ -147,11 +161,15 @@ String _districtKeyId(ManualDistrictLocation district) {
 class _GuidanceCard extends StatelessWidget {
   const _GuidanceCard({
     required this.message,
+    required this.appSettingsLabel,
+    required this.locationSettingsLabel,
     required this.onOpenAppSettings,
     required this.onOpenLocationSettings,
   });
 
   final String message;
+  final String appSettingsLabel;
+  final String locationSettingsLabel;
   final VoidCallback onOpenAppSettings;
   final VoidCallback onOpenLocationSettings;
 
@@ -178,12 +196,12 @@ class _GuidanceCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: onOpenAppSettings,
                   icon: const Icon(Icons.settings_rounded),
-                  label: const Text('App settings'),
+                  label: Text(appSettingsLabel),
                 ),
                 OutlinedButton.icon(
                   onPressed: onOpenLocationSettings,
                   icon: const Icon(Icons.location_searching_rounded),
-                  label: const Text('Location settings'),
+                  label: Text(locationSettingsLabel),
                 ),
               ],
             ),
@@ -195,9 +213,10 @@ class _GuidanceCard extends StatelessWidget {
 }
 
 class _PrivacyNote extends StatelessWidget {
-  const _PrivacyNote({required this.theme});
+  const _PrivacyNote({required this.theme, required this.text});
 
   final ThemeData theme;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +235,7 @@ class _PrivacyNote extends StatelessWidget {
             const SizedBox(width: AppTheme.spaceSm),
             Expanded(
               child: Text(
-                'Location is used for nearby results. Exact location is not persisted by the mobile app. External map or routing providers may receive location later when those actions are used.',
+                text,
                 style: theme.textTheme.bodySmall,
               ),
             ),

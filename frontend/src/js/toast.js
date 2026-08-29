@@ -1,7 +1,3 @@
-/**
- * MedOrbit v2 - Toast Module
- * Shared across every page. Requires a #toastContainer element in the DOM.
- */
 const Toast = (() => {
     const URGENT = new Set(['error', 'warning']);
 
@@ -9,10 +5,7 @@ const Toast = (() => {
         const container = document.getElementById('toastContainer');
         if (!container) return;
 
-        // One announcement owner: the container carries the live-region
-        // semantics, toasts themselves carry none, so a toast's text is
-        // announced exactly once when it lands in the region.
-        const role = URGENT.has(type) ? 'alert' : 'status';
+const role = URGENT.has(type) ? 'alert' : 'status';
         if (container.getAttribute('role') !== role) {
             container.setAttribute('role', role);
             container.setAttribute('aria-live', role === 'alert' ? 'assertive' : 'polite');

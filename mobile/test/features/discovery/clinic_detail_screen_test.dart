@@ -4,12 +4,18 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/localization/app_strings.dart';
 import 'package:mobile/core/network/api_exception.dart';
+import 'package:mobile/core/providers/core_providers.dart';
+import 'package:mobile/core/storage/secure_storage_service.dart';
 import 'package:mobile/core/theme/app_theme.dart';
 import 'package:mobile/features/discovery/data/discovery_api.dart';
 import 'package:mobile/features/discovery/models/clinic_models.dart';
 import 'package:mobile/features/discovery/providers/discovery_provider.dart';
 import 'package:mobile/features/discovery/screens/clinic_detail_screen.dart';
+
+const _strings = AppStrings(false);
+const _arStrings = AppStrings(true);
 
 void main() {
   testWidgets('loading state is visible', (tester) async {
@@ -19,7 +25,7 @@ void main() {
     await tester.pumpWidget(_app(api));
     await tester.pump();
 
-    expect(find.text('Loading clinic details...'), findsOneWidget);
+    expect(find.text(_strings.clinicLoadingDetails), findsOneWidget);
     pending.complete(const ClinicDetailResponse());
     await tester.pump();
   });
@@ -70,10 +76,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('Nablus Health Center'), findsOneWidget);
-    expect(find.text('Verified'), findsOneWidget);
+    expect(find.text(_strings.clinicVerifiedLabel), findsOneWidget);
     expect(find.text('Family medicine'), findsWidgets);
     expect(find.text('Public insurance'), findsOneWidget);
-    expect(find.text('Listed hours'), findsOneWidget);
+    expect(find.text(_strings.clinicHoursTitle), findsOneWidget);
     expect(find.textContaining('Contact the clinic to confirm before visiting'), findsOneWidget);
     expect(find.text('Mariam Saleh'), findsOneWidget);
     expect(find.byKey(const ValueKey('discovery-map-place-clinic-1')), findsOneWidget);
@@ -100,7 +106,7 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Pending verification'), findsOneWidget);
+    expect(find.text(_strings.clinicPendingVerificationLabel), findsOneWidget);
     expect(find.textContaining('Hours and facility details may not be verified'), findsOneWidget);
   });
 
@@ -114,10 +120,31 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Healthcare facility'), findsOneWidget);
-    expect(find.text('No contact details are listed.'), findsOneWidget);
-    expect(find.text('No operating hours are listed.'), findsOneWidget);
-    expect(find.text('No map coordinates are listed for this clinic.'), findsOneWidget);
+    expect(find.text(_strings.healthcareFacilityFallbackName), findsOneWidget);
+    expect(find.text(_strings.clinicNoContactDetails), findsOneWidget);
+    expect(find.text(_strings.clinicNoHoursListed), findsOneWidget);
+    expect(find.text(_strings.clinicNoCoordinates), findsOneWidget);
+  });
+
+  testWidgets('major section labels and no-coordinate state localize to Arabic', (tester) async {
+    final api = _FakeDiscoveryApi()
+      ..detailResults.add(
+        Future.value(const ClinicDetailResponse(clinic: Clinic(id: 'minimal', nameAr: 'عيادة الأمل'))),
+      );
+
+    await tester.pumpWidget(_app(api, isArabic: true));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(_arStrings.clinicDetailTitle), findsOneWidget);
+    expect(find.text(_arStrings.clinicContactSectionTitle), findsOneWidget);
+    expect(find.text(_arStrings.clinicServicesTitle), findsOneWidget);
+    expect(find.text(_arStrings.clinicHoursTitle), findsOneWidget);
+    expect(find.text(_arStrings.clinicDoctorsSectionTitle), findsOneWidget);
+    expect(find.text(_arStrings.clinicMapSectionTitle), findsOneWidget);
+    expect(find.text(_arStrings.clinicNoCoordinates), findsOneWidget);
+    // Backend-provided clinic name is never translated locally.
+    expect(find.text('عيادة الأمل'), findsOneWidget);
   });
 
   testWidgets('error, retry, and not-found states render safely', (tester) async {
@@ -128,13 +155,13 @@ void main() {
     await tester.pumpWidget(_app(api));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Could not load clinic'), findsOneWidget);
+    expect(find.text(_strings.clinicDetailLoadErrorTitle), findsOneWidget);
     expect(api.detailCalls, ['clinic-1']);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Retry'));
+    await tester.tap(find.widgetWithText(OutlinedButton, _strings.retry));
     await tester.pump();
     await tester.pump();
-    expect(find.text('Clinic not found'), findsOneWidget);
+    expect(find.text(_strings.clinicDetailNotFoundTitle), findsOneWidget);
     expect(api.detailCalls, ['clinic-1', 'clinic-1']);
   });
 
@@ -157,11 +184,12 @@ void main() {
         ),
       );
 
-    await tester.pumpWidget(_app(api, textDirection: TextDirection.rtl, textScale: 2));
+    await tester.pumpWidget(_app(api, textDirection: TextDirection.rtl, textScale: 2, isArabic: true));
     await tester.pump();
     await tester.pump();
 
     expect(errors.where((error) => error.exceptionAsString().contains('overflowed')), isEmpty);
+    expect(find.text(_arStrings.clinicDetailTitle), findsOneWidget);
   });
 }
 
@@ -169,9 +197,13 @@ Widget _app(
   _FakeDiscoveryApi api, {
   TextDirection textDirection = TextDirection.ltr,
   double textScale = 1,
+  bool isArabic = false,
 }) {
   return ProviderScope(
-    overrides: [discoveryApiProvider.overrideWithValue(api)],
+    overrides: [
+      discoveryApiProvider.overrideWithValue(api),
+      secureStorageProvider.overrideWithValue(_FakeSecureStorage(isArabic ? 'ar' : 'en')),
+    ],
     child: MaterialApp(
       theme: AppTheme.light(isArabic: textDirection == TextDirection.rtl),
       home: MediaQuery(
@@ -183,6 +215,17 @@ Widget _app(
       ),
     ),
   );
+}
+
+class _FakeSecureStorage extends SecureStorageService {
+  _FakeSecureStorage(this._languageCode);
+  final String _languageCode;
+
+  @override
+  Future<String?> getLanguageCode() async => _languageCode;
+
+  @override
+  Future<void> saveLanguageCode(String code) async {}
 }
 
 class _FakeDiscoveryApi extends DiscoveryApi {

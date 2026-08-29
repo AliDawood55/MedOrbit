@@ -31,7 +31,6 @@ disabled cache-free path, or an experimental mode. TestMalformedCannotWeaken
 asserts that directly.
 """
 
-import logging
 import os
 import subprocess
 import sys
@@ -62,9 +61,6 @@ class _EnvCase(unittest.TestCase):
         os.environ.pop(VAR, None)
 
 
-# ===========================================================================
-# 1. env_int
-# ===========================================================================
 
 class TestEnvInt(_EnvCase):
     def test_unset_returns_the_default(self):
@@ -129,9 +125,6 @@ class TestEnvInt(_EnvCase):
                 self.assertEqual(7, env_int(VAR, 7), bad)
 
 
-# ===========================================================================
-# 2. env_float
-# ===========================================================================
 
 class TestEnvFloat(_EnvCase):
     def test_unset_returns_the_default(self):
@@ -193,9 +186,6 @@ class TestEnvFloat(_EnvCase):
             env_float(VAR, True)
 
 
-# ===========================================================================
-# 3. Logging
-# ===========================================================================
 
 class TestWarningBehaviour(_EnvCase):
     def test_a_warning_names_the_variable_and_the_default(self):
@@ -244,9 +234,6 @@ class TestWarningBehaviour(_EnvCase):
                 env_int(VAR, 7)
 
 
-# ===========================================================================
-# 4. Valid configuration is unchanged — the primary safety requirement
-# ===========================================================================
 
 class TestValidConfigUnchanged(unittest.TestCase):
     """Every documented default, pinned. These are the values the service ran
@@ -321,7 +308,6 @@ class TestValidOverridesStillApply(_EnvCase):
             self.assertEqual(5, env_int("RAG_TOP_K", 3, minimum=1))
             self.assertEqual(0.75, env_float("RAG_MIN_SCORE", 0.60,
                                              minimum=-1.0, maximum=1.0))
-            # 0 is a legitimate value here — a disabled cache.
             self.assertEqual(0, env_int("VD_RAG_CACHE_SIZE", 256, minimum=0))
 
     def test_memory_overrides(self):
@@ -331,9 +317,6 @@ class TestValidOverridesStillApply(_EnvCase):
             self.assertEqual(100, env_int("VD_FULL_HISTORY_LIMIT", 50, minimum=1))
 
 
-# ===========================================================================
-# 5. Fail-safe direction
-# ===========================================================================
 
 class TestMalformedCannotWeaken(_EnvCase):
     def test_a_malformed_inference_limit_does_not_grant_a_bigger_budget(self):
@@ -394,9 +377,6 @@ class TestMalformedNumericsCannotActivateExperimentalModes(_EnvCase):
                 self.assertFalse(response.active(), bad)
 
 
-# ===========================================================================
-# 6. Import safety — the actual regression test
-# ===========================================================================
 
 MALFORMED_ENV = {
     "VD_PLANNER_TIMEOUT": "abc",
@@ -519,9 +499,6 @@ class TestImportSafetyInSubprocess(unittest.TestCase):
         self.assertIn("Invalid", proc.stderr)
 
 
-# ===========================================================================
-# 7. Cluster 1 — canonical_topic is gone
-# ===========================================================================
 
 class TestCanonicalTopicRemoved(unittest.TestCase):
     def test_the_alias_no_longer_exists(self):

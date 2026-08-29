@@ -1,7 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Dashboard (dashboard.html)
-   =========================================== */
-
 .dashboard-page {
     padding-top: 28px;
 }
@@ -19,7 +15,6 @@
     display: none;
 }
 
-/* === Welcome header === */
 .dashboard-welcome {
     display: flex;
     align-items: center;
@@ -28,8 +23,6 @@
     margin-bottom: 24px;
 }
 
-/* Static identity header, not a link/button — the ambient .card hover
-   lift/shadow implies clickability it doesn't have. */
 .dashboard-welcome:hover {
     transform: none;
     box-shadow: none;
@@ -76,7 +69,6 @@
     margin-top: 3px;
 }
 
-/* === Search / command box === */
 .dashboard-search-wrapper {
     margin-bottom: 20px;
 }
@@ -94,7 +86,6 @@
     margin-bottom: 20px;
 }
 
-/* === Skeleton loading rows (dashboard + notifications.html) === */
 .skeleton-list {
     display: flex;
     flex-direction: column;
@@ -112,7 +103,6 @@
     padding: 10px;
 }
 
-/* === Stat tiles === */
 .dashboard-stats-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -173,7 +163,6 @@
     margin-top: 2px;
 }
 
-/* === Section headings === */
 .dashboard-section {
     margin-bottom: 32px;
 }
@@ -185,7 +174,6 @@
     margin-bottom: 14px;
 }
 
-/* === Quick action groups === */
 .dashboard-groups-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
@@ -318,7 +306,6 @@
     margin-top: 2px;
 }
 
-/* === Two-column layout === */
 .dashboard-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -334,8 +321,6 @@
     margin-bottom: 0;
 }
 
-/* Static content containers, not links/buttons — the ambient .card hover
-   lift/shadow implies clickability they don't have. */
 .dashboard-card:hover {
     transform: none;
     box-shadow: none;
@@ -346,7 +331,6 @@
     gap: 8px;
 }
 
-/* === Generic list items (conversations / saved places) === */
 .dashboard-list-item {
     display: flex;
     align-items: center;
@@ -427,7 +411,6 @@
     padding: 4px 8px;
 }
 
-/* Saved places have a leading icon instead of an active/rename state */
 .dashboard-place-item {
     cursor: default;
 }
@@ -445,7 +428,6 @@
     font-size: 14px;
 }
 
-/* === Upcoming appointments (dashboard preview) === */
 .dashboard-appt-item {
     cursor: default;
 }
@@ -467,7 +449,6 @@
     background: rgba(37, 99, 235, 0.15);
 }
 
-/* === Notifications (dashboard preview) === */
 .dashboard-notif-item {
     cursor: default;
     align-items: flex-start;
@@ -495,7 +476,6 @@
     color: var(--text-faint);
 }
 
-/* === Profile completeness === */
 .completeness-bar {
     height: 8px;
     background: var(--bg-soft);
@@ -551,7 +531,6 @@
     justify-content: center;
 }
 
-/* === Responsive === */
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;

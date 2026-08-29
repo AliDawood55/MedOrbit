@@ -1,15 +1,3 @@
-/**
- * MedOrbit v2 - Shared Layout Module
- * Renders site navigation, the auth-aware header area, and the footer
- * into placeholder elements so every page shares the same header/nav/footer
- * without a build step (plain HTML placeholders + JS injection).
- *
- * Pages opt in by including empty containers with these IDs:
- *   #navLinks    - site navigation links
- *   #authArea    - login/register buttons OR the logged-in user menu
- *   #siteFooter  - full footer (brand, nav, copyright)
- * Any container that isn't present on a page is simply skipped.
- */
 const Layout = (() => {
 
     const PAGES = [
@@ -53,58 +41,75 @@ const Layout = (() => {
             .replace(/"/g, '&quot;');
     }
 
-    function initials(user) {
-        const name = (user && (user.name || user.email)) || '';
-        return name.trim().charAt(0).toUpperCase() || '?';
+   function userDisplayName(user) {
+    if (typeof API !== 'undefined' && typeof API.displayName === 'function') {
+        return API.displayName(user);
     }
 
-    function localized(ar, en) {
-        return (typeof I18n !== 'undefined' && I18n.getLang() === 'ar') ? ar : en;
-    }
+    const arabic = typeof I18n !== 'undefined' && I18n.getLang?.() === 'ar';
+    const primary = arabic
+        ? [user?.first_name_ar, user?.last_name_ar]
+        : [user?.first_name_en, user?.last_name_en];
+    const fallback = arabic
+        ? [user?.first_name_en, user?.last_name_en]
+        : [user?.first_name_ar, user?.last_name_ar];
 
-    function roleLabel(role) {
-        const labels = {
-            patient: ['مريض', 'Patient'],
-            doctor: ['طبيب', 'Doctor'],
-            admin: ['مسؤول', 'Administrator'],
-            super_admin: ['مسؤول عام', 'Super administrator']
-        };
-        const pair = labels[role] || ['عضو', 'Member'];
-        return localized(pair[0], pair[1]);
-    }
+    return primary.filter(Boolean).join(' ').trim()
+        || fallback.filter(Boolean).join(' ').trim()
+        || user?.name
+        || user?.email
+        || '';
+}
 
-    function profileShortcut() {
-        return '<a href="profile.html" class="icon-btn account-shortcut" title="Account / الحساب" aria-label="Account">' +
-            '<i class="fas fa-user-circle" aria-hidden="true"></i>' +
-        '</a>';
-    }
+function initials(user) {
+    const name = userDisplayName(user);
+    return name.trim().charAt(0).toUpperCase() || '?';
+}
 
-    // Operational accounts are not patient-facing AI or support consumers.
-    // This only controls navigation presentation; backend authorization stays
-    // responsible for every route and API request.
-    function isAdminSession() {
-        const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
-        return role === 'admin' || role === 'super_admin';
-    }
+function localized(ar, en) {
+    return (typeof I18n !== 'undefined' && I18n.getLang() === 'ar') ? ar : en;
+}
+
+function roleLabel(role) {
+    const labels = {
+        patient: ['مريض', 'Patient'],
+        doctor: ['طبيب', 'Doctor'],
+        clinic: ['منشأة صحية', 'Clinic'],
+        admin: ['مسؤول', 'Administrator'],
+        super_admin: ['مسؤول عام', 'Super administrator']
+    };
+
+    const pair = labels[role] || ['عضو', 'Member'];
+    return localized(pair[0], pair[1]);
+}
+
+function profileShortcut() {
+    return '<a href="profile.html" class="icon-btn account-shortcut" title="Account / الحساب" aria-label="Account">' +
+        '<i class="fas fa-user-circle" aria-hidden="true"></i>' +
+    '</a>';
+}
+
+// Operational accounts are not patient-facing AI or support consumers.
+function isAdminSession() {
+    const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
+    return role === 'admin' || role === 'super_admin';
+}
+     
 
     function visiblePagesForSession() {
-        if (!isAdminSession()) return PAGES;
-        return PAGES.filter((page) => page.href !== 'contact.html' && !page.children);
-    }
+    if (!isAdminSession()) return PAGES;
 
-    // ================= NAV =================
+    return PAGES.filter((page) =>
+        !['contact.html', 'index.html'].includes(page.href) && !page.children
+    );
+}
 
-    function renderLink(p, page) {
+function renderLink(p, page) {
         const active = (p.match ? p.match.includes(page) : page === p.href) ? ' active' : '';
         return `<a href="${p.href}" class="nav-link${active}" data-i18n="${p.key}"></a>`;
     }
 
-    /**
-     * @param {boolean} [options.flat] - render grouped items (e.g. AI Tools)
-     * as plain sibling links instead of a dropdown — used for the footer,
-     * where a click-to-open dropdown would be unusual UX.
-     */
-    function renderNav(containerId = 'navLinks', options = {}) {
+function renderNav(containerId = 'navLinks', options = {}) {
         const el = document.getElementById(containerId);
         if (!el) return;
 
@@ -135,7 +140,7 @@ const Layout = (() => {
         if (!flat) {
             el.querySelectorAll('.nav-dropdown').forEach(dropdown => {
                 dropdown.addEventListener('click', (e) => {
-                    // Let clicks on the actual menu items (<a> hrefs) navigate normally.
+
                     if (e.target.closest('.nav-dropdown-item')) return;
                     e.stopPropagation();
                     const wasOpen = dropdown.classList.contains('open');
@@ -148,9 +153,7 @@ const Layout = (() => {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
-    // ================= AUTH AREA =================
-
-    function renderAuthArea(containerId = 'authArea') {
+function renderAuthArea(containerId = 'authArea') {
         const el = document.getElementById(containerId);
         if (!el) return;
 
@@ -178,7 +181,7 @@ const Layout = (() => {
             profileShortcut() +
             '<div class="user-chip" id="userChip">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
-                '<span class="user-identity"><span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
+                '<span class="user-identity"><span class="user-name">' + escapeHtml(userDisplayName(user)) + '</span>' +
                 '<span class="role-badge">' + escapeHtml(roleLabel(user?.role)) + '</span></span>' +
                 '<i class="fas fa-chevron-down"></i>' +
                 '<div class="user-menu" id="userMenu">' +
@@ -204,10 +207,8 @@ const Layout = (() => {
                     '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
                     (!isAdmin ? '<a href="contact.html" class="user-menu-item" data-i18n="nav.contactUs"></a>' : '') +
                     '<a href="profile.html" class="user-menu-item" data-i18n="nav.account"></a>' +
-                    // Unconditional, and deliberately so: a subscription
-                    // belongs to a user, not to a role. A patient, doctor,
-                    // admin and super_admin all subscribe on identical terms.
-                    '<a href="billing.html" class="user-menu-item" data-i18n="nav.billing"></a>' +
+
+'<a href="billing.html" class="user-menu-item" data-i18n="nav.billing"></a>' +
                     '<button type="button" class="user-menu-item" id="logoutBtn" data-i18n="auth.logout"></button>' +
                 '</div>' +
             '</div>';
@@ -229,14 +230,7 @@ const Layout = (() => {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
-    // ================= MOBILE DRAWER =================
-    // Injected entirely via JS (no per-page HTML needed) — every page with
-    // an .app-header automatically gets a hamburger trigger + slide-in
-    // drawer containing the nav, AI Tools group, and the user/auth menu.
-    // Shown only ≤1024px via CSS; this is the ONLY nav+auth surface at
-    // that width (the desktop nav/auth area is hidden by the same query).
-
-    function renderDrawerNavItems() {
+function renderDrawerNavItems() {
         const page = currentPage();
         return visiblePagesForSession().map(p => {
             if (!p.children) {
@@ -273,7 +267,7 @@ const Layout = (() => {
         return (
             '<div class="drawer-user">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
-                '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
+                '<span class="user-name">' + escapeHtml(userDisplayName(user)) + '</span>' +
             '</div>' +
             '<a href="dashboard.html" class="drawer-link" data-i18n="nav.dashboard"></a>' +
             (isPatient ? '<a href="find-doctors.html" class="drawer-link" data-i18n="nav.doctors"></a>' : '') +
@@ -372,9 +366,7 @@ const Layout = (() => {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
-    // ================= FOOTER =================
-
-    function renderFooter(containerId = 'siteFooter') {
+function renderFooter(containerId = 'siteFooter') {
         const el = document.getElementById(containerId);
         if (!el) return;
 
@@ -396,9 +388,7 @@ const Layout = (() => {
         renderNav('footerLinks', { flat: true });
     }
 
-    // ================= INIT =================
-
-    function updateNotificationBadge(value) {
+function updateNotificationBadge(value) {
         const count = Math.max(0, Number(value) || 0);
         lastUnreadCount = count;
         const label = count > 9 ? '9+' : String(count);
@@ -463,12 +453,7 @@ const Layout = (() => {
         return notificationRequest;
     }
 
-    /**
-     * Floating "back to top" button — document pages only (app-shell pages
-     * scroll internally, not at the document level, so it has nothing to
-     * do there). Appears after scrolling past one viewport height.
-     */
-    function renderBackToTop() {
+function renderBackToTop() {
         if (!document.body.classList.contains('site-page')) return;
 
         const btn = document.createElement('button');
@@ -504,21 +489,14 @@ const Layout = (() => {
         updateNotificationBadge(lastUnreadCount);
         refreshNotificationBadge({ force: true });
 
-        // Header theme/language toggles — every page (not just index.html,
-        // which used to be the only one wiring these up in app.js).
-        document.getElementById('langToggle')?.addEventListener('click', () => {
+document.getElementById('langToggle')?.addEventListener('click', () => {
             if (typeof I18n !== 'undefined') I18n.toggle();
         });
         document.getElementById('themeToggle')?.addEventListener('click', () => {
             if (typeof Theme !== 'undefined') Theme.toggle();
         });
 
-        // Note: language switching does NOT need a re-render here — every
-        // element above carries data-i18n, so I18n.apply()'s own global
-        // pass re-translates them on every toggle. Re-rendering (and thus
-        // calling I18n.apply() again) on a 'languageChanged' event it
-        // itself triggers would recurse forever.
-        window.addEventListener('auth:changed', () => {
+window.addEventListener('auth:changed', () => {
             renderAuthArea('authArea');
             if (API.isAuthenticated()) {
                 refreshNotificationBadge({ force: true });
@@ -539,20 +517,25 @@ const Layout = (() => {
 
         window.addEventListener('beforeunload', stopNotificationPolling);
 
-        // Single global listener (not re-registered per renderNav call, since
-        // renderNav also runs for the footer) to close any open nav dropdown.
-        document.addEventListener('click', () => {
+document.addEventListener('click', () => {
             document.getElementById('userChip')?.classList.remove('open');
             document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
         });
+      
+      window.addEventListener('languageChanged', () => {
+    renderAuthArea('authArea');
+
+    const drawerAuth = document.querySelector('.mobile-drawer-auth');
+    if (drawerAuth) {
+        drawerAuth.innerHTML = renderDrawerAuth();
+        if (typeof I18n !== 'undefined') {
+            I18n.apply();
+        }
+    }
+});
     }
 
-    /**
-     * Shows a "log in to save your history" banner on pages that stay public
-     * but offer more value to a logged-in user (the AI tools). No-op for
-     * already-authenticated visitors — the container stays hidden.
-     */
-    function renderAuthPromptBanner(containerId) {
+function renderAuthPromptBanner(containerId) {
         if (typeof API === 'undefined' || API.isAuthenticated()) return;
 
         const banner = document.getElementById(containerId);

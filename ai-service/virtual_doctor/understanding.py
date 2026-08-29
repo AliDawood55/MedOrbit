@@ -76,19 +76,6 @@ from .config import env_float
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.understanding")
 
-# --- rollout ---------------------------------------------------------------
-# Same three-state convention as VD_SYMBOLIC_* (see prolog_engine), but with a
-# different default: those layers cost microseconds of Prolog, whereas this one
-# costs a model call on every turn. "shadow" is therefore not a free
-# observation mode here, so the default is OFF and both other modes are
-# deliberate operator choices.
-#
-#   off     no model call, no cost, behaviour identical to Phase 5   (default)
-#   shadow  the model runs, its output is compared with the legacy extractor's
-#           and the divergence is logged — the legacy extractor stays
-#           authoritative and the patient-facing reply is byte-identical to off
-#   active  validated observations are additionally fed to fact_builder; the
-#           legacy extractor still runs and still contributes
 MODES: Tuple[str, ...] = ("off", "shadow", "active")
 MODE_DEFAULT = "off"
 
@@ -115,42 +102,25 @@ def active() -> bool:
 MODEL = os.environ.get("VD_UNDERSTANDING_MODEL", "qwen2.5:3b")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 CHAT_URL = os.environ.get("OLLAMA_CHAT_URL", OLLAMA_URL.replace("/api/generate", "/api/chat"))
-# exclusive_min=0: passed to requests(timeout=), which rejects <= 0.
 TIMEOUT = env_float("VD_UNDERSTANDING_TIMEOUT", 20.0, minimum=0.0,
                     exclusive_min=True)
 KEEP_ALIVE = os.environ.get("OLLAMA_KEEP_ALIVE", "1h")
 
-# --- hard limits on model output -------------------------------------------
-# A model that returns 10,000 symptoms is malfunctioning, and validating all of
-# them wastes the turn. These bound the work before any of it is done.
 MAX_SYMPTOMS = 24
 MAX_FINDINGS = 24
 MAX_CORRECTIONS = 6
 MAX_VALUE_CHARS = 200
 MAX_PAYLOAD_CHARS = 20000
 
-# --- the allow-lists handed to the model -----------------------------------
-# Straight from vocabulary. Written into the prompt so the model chooses FROM
-# the vocabulary rather than inventing terms we would then have to map — and
-# checked against the same sets on the way back, because a prompt is guidance
-# and a validator is enforcement.
 ALLOWED_SYMPTOMS: Tuple[str, ...] = tuple(sorted(vocabulary.SYMPTOMS))
 ALLOWED_SLOTS: Tuple[str, ...] = tuple(sorted(vocabulary.CLINICAL_SLOTS))
 ALLOWED_STATUSES: Tuple[str, ...] = ("present", "absent", "uncertain")
 
-# Correction targets: the identity slots the Phase 4 correction layer maintains
-# plus the clinical slots. Mirrors fact_builder.PROVENANCE_IDENTITY_SLOTS; a
-# test asserts the two agree.
 IDENTITY_CORRECTION_FIELDS: Tuple[str, ...] = ("name", "age", "sex", "chief_complaint")
 ALLOWED_CORRECTION_FIELDS: Tuple[str, ...] = tuple(sorted(
     set(IDENTITY_CORRECTION_FIELDS) | set(vocabulary.CLINICAL_SLOTS)
 ))
 
-# The four rules/safety.pl rules the legacy extractor cannot reach, each with
-# the approved MedOrbit sources that ground it. Nothing here is new medical
-# knowledge: every atom is already in vocabulary.SYMPTOMS and every one of
-# these urgencies is already assigned by MedicalSafetyLayer today. A test
-# asserts each atom is in the vocabulary and each rule exists in safety.pl.
 LATENT_SAFETY_ATOMS: Dict[str, Tuple[str, ...]] = {
     "hematuria": (
         "MedicalSafetyLayer.URGENT_PATTERNS_AR[4] (four Arabic variants)",
@@ -174,20 +144,6 @@ LATENT_SAFETY_ATOMS: Dict[str, Tuple[str, ...]] = {
     ),
 }
 
-# Keys refused OUTRIGHT rather than merely ignored, because reading them would
-# defeat a decision taken elsewhere:
-#
-#   condition/diagnosis/differential  Phase 5 is deferred. MedOrbit has no
-#                                     grounded symptom-to-condition source, so
-#                                     a condition from this model is exactly
-#                                     the invented knowledge that STOP avoided.
-#   rule/predicate/goal/prolog        The model does not author rules. Rule
-#                                     files are static application code.
-#   urgency/red_flag/emergency        Urgency is deterministic-first. The LLM
-#                                     is never the safety authority.
-#
-# Counted, not silently dropped, so a model drifting into diagnosis shows up in
-# the logs instead of disappearing.
 FORBIDDEN_KEYS = frozenset({
     "condition", "conditions", "diagnosis", "diagnoses", "differential",
     "rule", "rules", "predicate", "predicates", "prolog", "goal", "query",
@@ -195,13 +151,8 @@ FORBIDDEN_KEYS = frozenset({
     "is_emergency", "triage", "assessment",
 })
 
-# Recognised top-level keys. Anything else is ignored and counted — ignoring is
-# right rather than fatal, because one stray key from a small model should cost
-# a log line, not the turn.
 KNOWN_KEYS = frozenset({"symptoms", "findings", "corrections", "language"})
 
-# Status synonyms a small model reaches for despite the prompt. A closed,
-# hand-written table — not an inference, and not extensible by the model.
 _STATUS_SURFACE: Dict[str, str] = {
     "present": "present", "yes": "present", "true": "present",
     "positive": "present", "confirmed": "present", "reported": "present",
@@ -213,24 +164,11 @@ _STATUS_SURFACE: Dict[str, str] = {
     "unclear": "uncertain",
 }
 
-# A historical mention ("I had a fever last week") is not a current finding.
-# The model is asked to mark it, and a marked observation is DROPPED rather
-# than downgraded: "used to have" is not "might have", and folding it into
-# uncertain would let a resolved complaint keep influencing this consultation.
 _HISTORICAL_VALUES = frozenset({"historical", "past", "resolved", "previous", "old"})
 
-# Reported symptoms outrank uncertainty, which outranks denial. Identical to
-# fact_builder._SYMPTOM_STATE_PRECEDENCE, deliberately: if one payload says
-# both "fever present" and "fever absent" the model has contradicted itself,
-# and for a safety-critical system the conservative resolution is the one that
-# can only ever escalate. The conflict is recorded (ClinicalUnderstanding
-# .conflicts) rather than smoothed over silently.
 _STATE_PRECEDENCE = {"present": 3, "uncertain": 2, "absent": 1}
 
 
-# ---------------------------------------------------------------------------
-# Typed results
-# ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class SymptomObservation:
@@ -360,13 +298,7 @@ class ClinicalUnderstanding:
         }
 
 
-# ---------------------------------------------------------------------------
-# Validation — the trust boundary
-# ---------------------------------------------------------------------------
 
-# U+200E..U+200F and U+202A..U+202E and U+2066..U+2069: direction overrides
-# that can make a logged or displayed value read as something other than what
-# it is. No legitimate symptom label contains one.
 _BIDI_CONTROLS = frozenset(
     list(range(0x200E, 0x2010)) + list(range(0x202A, 0x202F)) + list(range(0x2066, 0x206A))
 )
@@ -437,10 +369,6 @@ def _parse_symptoms(raw: Any, rejected: List[RejectedValue]) -> List[SymptomObse
 
         canonical = vocabulary.canonical_symptom(text)
         if canonical is None:
-            # The single most important rejection in this module. A term the
-            # model invented — "brain_tumor", "migraine as a diagnosis", a
-            # Prolog fragment — stops here. The vocabulary is NOT extended to
-            # accommodate it.
             rejected.append(RejectedValue.of("symptom", "not in vocabulary", text))
             continue
 
@@ -448,8 +376,6 @@ def _parse_symptoms(raw: Any, rejected: List[RejectedValue]) -> List[SymptomObse
             rejected.append(RejectedValue.of("symptom", "historical, not current", canonical))
             continue
 
-        # certainty is descriptive metadata, never a gate: it is normalised to
-        # a safe token so it cannot carry free text into a log line.
         safe_certainty = certainty.lower() if vocabulary.is_safe_atom(certainty.lower()) else "confirmed"
         observations.append(SymptomObservation(symptom=canonical, status=status,
                                                certainty=safe_certainty))
@@ -563,9 +489,6 @@ def parse_understanding(payload: Any, *, elapsed_ms: float = 0.0) -> ClinicalUnd
         if isinstance(k, str) and k.lower() not in KNOWN_KEYS and k.lower() not in FORBIDDEN_KEYS
     ))
     if forbidden:
-        # Not fatal — the rest of the payload may be perfectly good — but
-        # loudly logged, because a model reaching for `condition` is a prompt
-        # regression worth seeing.
         logger.warning("Structured understanding returned forbidden keys %s — ignored", list(forbidden))
 
     rejected: List[RejectedValue] = []
@@ -593,9 +516,6 @@ def parse_understanding(payload: Any, *, elapsed_ms: float = 0.0) -> ClinicalUnd
     )
 
 
-# ---------------------------------------------------------------------------
-# The model call
-# ---------------------------------------------------------------------------
 
 _SYSTEM = {
     "ar": (
@@ -608,11 +528,6 @@ _SYSTEM = {
     ),
 }
 
-# Deliberately in English for both patient languages: the task is to emit fixed
-# English keys from a fixed English allow-list, and instructing a 3B model in
-# Arabic to produce English enum values measurably increases the rate at which
-# it answers in Arabic instead. The patient TEXT is passed through untranslated
-# and the model reads it in whatever language it arrived in.
 _USER_TEMPLATE = """Patient said (language: {language}):
 {message}
 
@@ -716,8 +631,6 @@ async def understand(message: str, lang: str = "ar") -> ClinicalUnderstanding:
                 "stream": False,
                 "format": "json",
                 "keep_alive": KEEP_ALIVE,
-                # Near-greedy: this is an extraction task with one right
-                # answer, not a generation task that benefits from variety.
                 "options": {"temperature": 0.1},
             },
             timeout=TIMEOUT,
@@ -739,9 +652,6 @@ async def understand(message: str, lang: str = "ar") -> ClinicalUnderstanding:
     return parse_understanding(payload, elapsed_ms=elapsed)
 
 
-# ---------------------------------------------------------------------------
-# Divergence — shadow mode's whole product
-# ---------------------------------------------------------------------------
 
 def legacy_canonical_symptoms(entities: Optional[Mapping[str, Any]]) -> Tuple[str, ...]:
     """What the legacy extractor found, in canonical form, for comparison."""

@@ -1,4 +1,4 @@
-/** MedOrbit Doctor Profile 2.0 — public, privacy-safe professional profile. */
+
 const DoctorProfile = (() => {
     const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     let currentDoctor = null;
@@ -343,12 +343,7 @@ const DoctorProfile = (() => {
         window.addEventListener('languageChanged', () => { if (currentDoctor) load(); });
     }
 
-    // Swaps a broken hero avatar <img> for the same initials <span> already
-    // used when no profile_image_url exists. Invoked from a static
-    // onerror="DoctorProfile.__avatarFallback(this)" attribute (no
-    // user-derived string is ever embedded in executable JS); the initials
-    // travel only as an HTML-escaped data attribute.
-    function avatarFallback(img) {
+function avatarFallback(img) {
         const span = document.createElement('span');
         span.textContent = img.dataset.fallbackInitials || '?';
         img.replaceWith(span);

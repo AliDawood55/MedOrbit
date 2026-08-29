@@ -1,8 +1,3 @@
-/**
- * MedOrbit v2 - Chip Input
- * Small reusable "type + Enter/button to add, click to remove" tag input,
- * shared by symptom-checker.html and drug-checker.html.
- */
 const ChipInput = (() => {
 
     function escapeHtml(s) {

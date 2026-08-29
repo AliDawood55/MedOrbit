@@ -1,10 +1,3 @@
-/**
- * MedOrbit v2 - Auth Pages Logic
- * Shared across login.html, register.html, forgot-password.html,
- * reset-password.html, and verify-email.html. Every request goes through
- * the shared API module (no direct fetch here) so session storage and
- * error shapes stay consistent everywhere.
- */
 (function () {
 
     function showAlert(message, type = 'error') {
@@ -33,12 +26,7 @@
         return (typeof I18n !== 'undefined' ? I18n.getLang() : (document.documentElement.lang || 'ar')) === 'ar';
     }
 
-    /**
-     * Map known backend error codes to friendly bilingual messages.
-     * Unknown server responses use a generic message so implementation details
-     * never reach the account screens.
-     */
-    function authErrorMessage(err) {
+function authErrorMessage(err) {
         const ar = isAr();
         const map = {
             INVALID_CREDENTIALS: ar ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' : 'Incorrect email or password',
@@ -60,19 +48,12 @@
         showAlert(err?.status ? authErrorMessage(err) : connectionErrorMessage());
     }
 
-    /**
-     * The destination the visitor was originally trying to reach, validated by
-     * the one shared sanitizer in auth-gate.js. Returns null for anything that
-     * is not a real in-app page, so a crafted ?redirect= can never turn a
-     * successful login into an off-site redirect.
-     */
-    function intendedDestination() {
+function intendedDestination() {
         if (typeof AuthGate === 'undefined') return null;
         return AuthGate.readIntendedDestination();
     }
 
-    /** Carries the intended destination across an auth-flow page hop. */
-    function authFlowUrl(page) {
+function authFlowUrl(page) {
         const next = intendedDestination();
         const params = new URLSearchParams();
         if (next) params.set('redirect', next);
@@ -83,20 +64,25 @@
         return query ? page + '?' + query : page;
     }
 
-    function verificationUrl(email) {
-        const target = authFlowUrl('verify-email.html');
-        return target + (target.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email || '');
+function verificationUrl(email) {
+    const target = authFlowUrl('verify-email.html');
+    return target + (target.includes('?') ? '&' : '?') +
+        'email=' + encodeURIComponent(email || '');
+}
+
+function showVerificationAction(email) {
+    const action = document.getElementById('verificationAction');
+    const link = document.getElementById('verificationActionLink');
+
+    if (link) {
+        link.href = verificationUrl(email);
     }
 
-    function showVerificationAction(email) {
-        const action = document.getElementById('verificationAction');
-        const link = document.getElementById('verificationActionLink');
-        if (link) link.href = verificationUrl(email);
-        action?.classList.remove('hidden');
-    }
+    action?.classList.remove('hidden');
+}
 
-    // ================= LOGIN =================
-    async function handleLogin(e) {
+// ================= LOGIN =================
+async function handleLogin(e) {
         e.preventDefault();
         clearAlert();
 
@@ -134,8 +120,7 @@
         }
     }
 
-    // ================= REGISTER =================
-    async function handleRegister(e) {
+async function handleRegister(e) {
         e.preventDefault();
         clearAlert();
 
@@ -171,10 +156,11 @@
                 ? 'تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني ثم تسجيل الدخول.'
                 : 'Account created! Please check your email to verify it, then log in.', 'success');
 
-            // Do not send a newly registered person back to login before they
-            // can activate their account. The verification page pre-fills the
-            // address and has a resend action if delivery is delayed.
-            setTimeout(() => { window.location.href = verificationUrl(email); }, 900);
+        // Keep the person in the verification flow instead of returning them
+        // to login before their email has been activated.
+        setTimeout(() => {
+            window.location.href = verificationUrl(email);
+        }, 900);
         } catch (err) {
             alertForError(err);
         } finally {
@@ -182,8 +168,7 @@
         }
     }
 
-    // ================= FORGOT PASSWORD =================
-    async function handleForgot(e) {
+async function handleForgot(e) {
         e.preventDefault();
         clearAlert();
 
@@ -206,8 +191,7 @@
         }
     }
 
-    // ================= RESET PASSWORD =================
-    function initResetPage() {
+function initResetPage() {
         const token = new URLSearchParams(window.location.search).get('token');
         if (token) return;
 
@@ -249,8 +233,7 @@
         }
     }
 
-    // ================= VERIFY EMAIL =================
-    function setVerifyState(state, text) {
+function setVerifyState(state, text) {
         const statusEl = document.getElementById('verifyStatus');
         const iconEl = document.getElementById('verifyIcon');
         if (statusEl) statusEl.textContent = text;
@@ -319,8 +302,7 @@
         }
     }
 
-    // ================= SHARED: password visibility toggle =================
-    function wirePasswordToggles() {
+function wirePasswordToggles() {
         document.querySelectorAll('.toggle-password').forEach((toggle) => {
             toggle.addEventListener('click', function () {
                 const input = this.closest('.input-wrapper')?.querySelector('input');
@@ -336,8 +318,7 @@
         });
     }
 
-    // ================= SHARED: password strength meter =================
-    function wirePasswordStrength() {
+function wirePasswordStrength() {
         const pwInput = document.getElementById('password');
         const strengthEl = document.getElementById('pwStrength');
         if (!pwInput || !strengthEl) return;
@@ -357,8 +338,7 @@
         });
     }
 
-    // ================= INIT (per page, by element presence) =================
-    document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
         document.getElementById('registerForm')?.addEventListener('submit', handleRegister);
         document.getElementById('forgotForm')?.addEventListener('submit', handleForgot);

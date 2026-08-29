@@ -34,6 +34,7 @@ class ChatbotScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
+
   final _input = TextEditingController();
   final _scroll = ScrollController();
   bool _attachLocation = false;

@@ -82,9 +82,6 @@ async def _run_turn(message, fake_session, planner_result=None):
     return result, next_session
 
 
-# ===========================================================================
-# 1. Name correction
-# ===========================================================================
 
 class TestNameCorrection(unittest.IsolatedAsyncioTestCase):
     async def test_rejection_with_new_name_updates_profile(self):
@@ -106,21 +103,18 @@ class TestNameCorrection(unittest.IsolatedAsyncioTestCase):
 
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(result["reply"], interview_engine.CORRECTION_ASK_NAME["ar"])
-        self.assertEqual(profile["name"], "أحمد")  # not guessed at
+        self.assertEqual(profile["name"], "أحمد")
         self.assertEqual(profile["pending_correction"]["field"], "name")
 
     async def test_clarification_answer_is_applied_next_turn(self):
         _, pending = await _run_turn("اسمي غلط", _fake_session())
-        result, next_session = await _run_turn("علي", pending)
+        _, next_session = await _run_turn("علي", pending)
 
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(profile["name"], "علي")
         self.assertNotIn("pending_correction", profile)
 
 
-# ===========================================================================
-# 2. Age correction
-# ===========================================================================
 
 class TestAgeCorrection(unittest.IsolatedAsyncioTestCase):
     async def test_contrastive_age_picks_the_affirmed_number(self):
@@ -138,13 +132,9 @@ class TestAgeCorrection(unittest.IsolatedAsyncioTestCase):
 
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(result["reply"], interview_engine.CORRECTION_ASK_AGE["ar"])
-        self.assertEqual(profile["age"], 23)  # unchanged until they say
+        self.assertEqual(profile["age"], 23)
 
 
-# ===========================================================================
-# 2b. Follow-up: no duplicated acknowledgement when a correction lands
-#     mid-intake
-# ===========================================================================
 
 class TestNoDuplicatedAcknowledgement(unittest.IsolatedAsyncioTestCase):
     """Follow-up fix, originally reported against the Levantine-era wording:
@@ -173,17 +163,13 @@ class TestNoDuplicatedAcknowledgement(unittest.IsolatedAsyncioTestCase):
             result["reply"],
             "عدّلت العمر لـ24 سنة. ما الأعراض التي تشعر بها اليوم؟",
         )
-        # No leftover dialect filler, and no doubled-up opener of any kind.
         self.assertNotIn("تمام", result["reply"])
         self.assertEqual(result["reply"].count("عدّلت العمر"), 1)
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(profile["age"], 24)
-        self.assertEqual(len(profile["correction_history"]), 1)  # still recorded
+        self.assertEqual(len(profile["correction_history"]), 1)
 
 
-# ===========================================================================
-# 3. Chief complaint correction
-# ===========================================================================
 
 class TestChiefComplaintCorrection(unittest.IsolatedAsyncioTestCase):
     async def test_pain_moved_from_head_to_abdomen_reroutes_complaint(self):
@@ -193,7 +179,6 @@ class TestChiefComplaintCorrection(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(next_session["chief_complaint"], "abdominal_pain")
         self.assertIn("الوجع في البطن", result["reply"])
-        # The planner still runs and still asks the next clinical question.
         self.assertIn("من متى بلّش؟", result["reply"])
 
     async def test_i_meant_phrasing_also_reroutes(self):
@@ -204,9 +189,6 @@ class TestChiefComplaintCorrection(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(next_session["chief_complaint"], "abdominal_pain")
 
 
-# ===========================================================================
-# 4. Correction history audit trail
-# ===========================================================================
 
 class TestCorrectionHistory(unittest.IsolatedAsyncioTestCase):
     async def test_history_records_old_and_new_values(self):
@@ -229,9 +211,6 @@ class TestCorrectionHistory(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([e["field"] for e in history], ["name", "age"])
 
 
-# ===========================================================================
-# 5. The report reflects corrected values
-# ===========================================================================
 
 class TestReportUsesCorrectedValues(unittest.IsolatedAsyncioTestCase):
     async def test_report_shows_corrected_name_and_age_and_no_bookkeeping_rows(self):
@@ -245,18 +224,13 @@ class TestReportUsesCorrectedValues(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(report["patient_info"]["name"], "علي")
         self.assertEqual(report["patient_info"]["age"], 24)
-        # Corrected fields are confirmed, so they render unlabelled.
         html = report_generator._render_html(report)
         self.assertIn("<td>علي</td>", html)
         self.assertNotIn("غير مؤكد", html)
-        # Bookkeeping keys must never surface as clinical symptom rows.
         for key in ("correction_history", "pending_correction", "name_repeat_attempts"):
             self.assertNotIn(key, report["symptoms_summary"])
 
 
-# ===========================================================================
-# 6. False positives: ordinary answers must NOT be treated as corrections
-# ===========================================================================
 
 class TestOrdinaryAnswersAreNotCorrections(unittest.IsolatedAsyncioTestCase):
     async def test_severity_answer_containing_mish_is_left_alone(self):
@@ -269,7 +243,7 @@ class TestOrdinaryAnswersAreNotCorrections(unittest.IsolatedAsyncioTestCase):
         profile = json.loads(next_session["patient_profile"])
         self.assertEqual(next_session["chief_complaint"], "headache")
         self.assertNotIn("correction_history", profile)
-        self.assertEqual(result["reply"], "من متى بلّش؟")  # straight from the planner
+        self.assertEqual(result["reply"], "من متى بلّش؟")
 
     async def test_bare_no_and_plain_answers_are_left_alone(self):
         for message in ("لا", "نعم", "من يومين", "لا، ما عندي غثيان"):
@@ -280,13 +254,10 @@ class TestOrdinaryAnswersAreNotCorrections(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(profile["name"], "أحمد")
 
 
-# ===========================================================================
-# 7. Safety behaviour is unaffected by the correction layer
-# ===========================================================================
 
 class TestSafetyStillWinsOverCorrections(unittest.IsolatedAsyncioTestCase):
     async def test_urgent_symptom_still_warns_and_continues(self):
-        result, next_session = await _run_turn("عندي دم بالبول", _fake_session())
+        result, _ = await _run_turn("عندي دم بالبول", _fake_session())
 
         self.assertEqual(result["urgency_level"], "urgent")
         self.assertNotEqual(result["phase"], "complete")
@@ -312,9 +283,9 @@ class TestSafetyStillWinsOverCorrections(unittest.IsolatedAsyncioTestCase):
         result, next_session = await _run_turn("لا، اسمي علي، وعندي دم بالبول", _fake_session())
 
         profile = json.loads(next_session["patient_profile"])
-        self.assertEqual(profile["name"], "أحمد")            # unchanged, not guessed
+        self.assertEqual(profile["name"], "أحمد")
         self.assertNotIn("correction_history", profile)
-        self.assertEqual(result["urgency_level"], "urgent")  # safety unaffected
+        self.assertEqual(result["urgency_level"], "urgent")
         self.assertIn("تقييمًا طبيًا عاجلًا", result["reply"])
 
 

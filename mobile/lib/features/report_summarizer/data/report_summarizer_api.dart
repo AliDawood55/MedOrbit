@@ -3,10 +3,14 @@ import 'package:dio/dio.dart';
 import '../../../core/config/app_config.dart';
 import '../models/report_summary_result.dart';
 
-/// Client for the AI service's `POST /summarize` — supports both text and
-/// PDF/image file summarization, matching the web app's contract exactly.
-/// `file` and `text` are mutually exclusive on the wire (each method sends
-/// only the field it's named for); the AI service accepts either.
+/// Client for the authenticated MedOrbit backend's `POST /api/ai/summarize`
+/// (`backend/src/routes/ai.routes.js`), which forwards internally to the AI
+/// service's `/summarize` — matching the web app's contract. Supports both
+/// text and PDF/image file summarization. `file` and `text` are mutually
+/// exclusive on the wire (each method sends only the field it's named for).
+/// Goes through `dioProvider`, so it carries the `/api` base and the auth
+/// interceptor's bearer token, which is what lets the backend attribute a
+/// generated summary to the signed-in patient for `GET /reports/summaries`.
 class ReportSummarizerApi {
   ReportSummarizerApi(this._dio);
 

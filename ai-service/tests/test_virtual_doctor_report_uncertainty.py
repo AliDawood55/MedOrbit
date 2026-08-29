@@ -64,9 +64,6 @@ async def _build(profile, **session_kwargs):
         return await report_generator.build_report_data(fake_session["session_id"])
 
 
-# A minimal, complete report dict — every top-level key _render_html actually
-# reads — so tests can override just the field(s) under test without
-# reverse-engineering the whole schema from the template.
 def _base_report(**overrides):
     report = {
         "report_id": "11111111-1111-1111-1111-111111111111",
@@ -99,9 +96,6 @@ def _base_report(**overrides):
     return report
 
 
-# ===========================================================================
-# 1. Unconfirmed name is visibly marked
-# ===========================================================================
 
 class TestUnconfirmedNameVisiblyMarked(unittest.IsolatedAsyncioTestCase):
     async def test_build_report_data_passes_confirmed_fields_through(self):
@@ -134,9 +128,6 @@ class TestUnconfirmedNameVisiblyMarked(unittest.IsolatedAsyncioTestCase):
         self.assertIn("<td>Draj (unconfirmed)</td>", html)
 
 
-# ===========================================================================
-# 2. Uncertain chief complaint is visibly marked
-# ===========================================================================
 
 class TestUncertainChiefComplaintVisiblyMarked(unittest.IsolatedAsyncioTestCase):
     async def test_build_report_data_passes_uncertain_chief_complaint_through(self):
@@ -159,9 +150,6 @@ class TestUncertainChiefComplaintVisiblyMarked(unittest.IsolatedAsyncioTestCase)
         self.assertIn("عندي صدق شديد فجأة (غير مؤكد)", html)
 
 
-# ===========================================================================
-# 3. pending_confirmation is visible in the rendered report
-# ===========================================================================
 
 class TestPendingConfirmationVisible(unittest.IsolatedAsyncioTestCase):
     def test_pending_name_shows_heard_value_marked_pending(self):
@@ -193,9 +181,6 @@ class TestPendingConfirmationVisible(unittest.IsolatedAsyncioTestCase):
         self.assertIn("صداع شديد بدأ فجأة (بانتظار التأكيد)", html)
 
 
-# ===========================================================================
-# 4. Confirmed fields render normally
-# ===========================================================================
 
 class TestConfirmedFieldsRenderNormally(unittest.IsolatedAsyncioTestCase):
     def test_confirmed_name_has_no_uncertainty_suffix(self):
@@ -224,13 +209,10 @@ class TestConfirmedFieldsRenderNormally(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("بانتظار التأكيد", html)
 
 
-# ===========================================================================
-# 5. Missing fields still render as missing/not collected
-# ===========================================================================
 
 class TestMissingFieldsStillRenderAsMissing(unittest.IsolatedAsyncioTestCase):
     def test_absent_name_shows_not_collected_note_not_a_blank_or_pending_label(self):
-        report = _base_report()  # name is None, no pending_confirmation
+        report = _base_report()
         html = report_generator._render_html(report)
 
         self.assertIn(
@@ -247,9 +229,6 @@ class TestMissingFieldsStillRenderAsMissing(unittest.IsolatedAsyncioTestCase):
         )
 
 
-# ===========================================================================
-# 6. uncertain_fields/confirmed_fields are not blindly rendered as symptom rows
-# ===========================================================================
 
 class TestConfirmationMetadataNotRenderedAsSymptoms(unittest.IsolatedAsyncioTestCase):
     async def test_build_report_data_excludes_confirmation_keys_from_symptoms_summary(self):
@@ -290,9 +269,6 @@ class TestConfirmationMetadataNotRenderedAsSymptoms(unittest.IsolatedAsyncioTest
         self.assertIn("<td>يومين</td>", html)
 
 
-# ===========================================================================
-# 7. History narrative does not falsely present uncertainty as confirmed
-# ===========================================================================
 
 class TestHistoryNarrativeReflectsUncertainty(unittest.IsolatedAsyncioTestCase):
     def test_uncertain_chief_complaint_marked_in_narrative(self):
@@ -327,7 +303,7 @@ class TestHistoryNarrativeReflectsUncertainty(unittest.IsolatedAsyncioTestCase):
         working exactly as before — every field resolves to "normal" status."""
         report = _base_report(
             chief_complaint_description="صداع شديد بدأ فجأة",
-            uncertain_fields={"chief_complaint": "..."},  # ignored: not passed in below
+            uncertain_fields={"chief_complaint": "..."},
         )
         narrative = report_generator._build_history_narrative(report, "ar")
 

@@ -29,7 +29,7 @@ class TestDbPoolCharacterization(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         import db
         self.db = db
-        self.db._pool = None  # ensure a clean singleton for each test
+        self.db._pool = None
 
     def tearDown(self):
         self.db._pool = None
@@ -65,7 +65,7 @@ class TestDbPoolCharacterization(unittest.IsolatedAsyncioTestCase):
             pool2 = await self.db.get_pool()
 
         self.assertIs(pool1, pool2)
-        mock_create.assert_awaited_once()  # not re-created on second call
+        mock_create.assert_awaited_once()
 
     async def test_get_pool_recreates_pool_if_previous_was_closed(self):
         closed_pool = MagicMock()
@@ -95,7 +95,7 @@ class TestDbPoolCharacterization(unittest.IsolatedAsyncioTestCase):
 
     async def test_close_pool_is_a_no_op_when_no_pool_exists(self):
         self.db._pool = None
-        await self.db.close_pool()  # must not raise
+        await self.db.close_pool()
         self.assertIsNone(self.db._pool)
 
     async def test_set_search_path_executes_expected_statement(self):
@@ -122,9 +122,6 @@ class TestSynonymEngineCharacterization(unittest.TestCase):
         self.assertEqual(self.engine.resolve("headache"), "headache")
 
     def test_resolve_mixed_case_english_word_is_returned_unchanged(self):
-        # resolve() lowercases only for the lookup key, not the returned
-        # fallback value: "DOCTOR" has no dict entry (only Arabic variants
-        # and canonical "doctor" are keys), so it comes back unmodified.
         self.assertEqual(self.engine.resolve("DOCTOR"), "DOCTOR")
 
     def test_resolve_medical_synonym_case_insensitive_lookup(self):
@@ -137,8 +134,6 @@ class TestSynonymEngineCharacterization(unittest.TestCase):
         self.assertEqual(self.engine.resolve(""), "")
 
     def test_resolve_duplicate_words_not_matched_as_a_phrase(self):
-        # "دكتور دكتور" is not itself a registered multi-word variant, so
-        # resolve() (single-key exact match) leaves it untouched.
         self.assertEqual(self.engine.resolve("دكتور دكتور"), "دكتور دكتور")
 
     def test_resolve_text_arabic_sentence(self):
@@ -166,11 +161,6 @@ class TestSynonymEngineCharacterization(unittest.TestCase):
         self.assertEqual(self.engine.resolve_text(""), "")
 
     def test_resolve_text_palestinian_dialect_attached_word_not_matched(self):
-        # "عالمستشفى" glues the "عال" (to-the) prefix directly onto
-        # "مستشفى" with no separating space; the \b word-boundary guard in
-        # resolve_text() correctly declines to match here today. Pinning
-        # this exact (non-)match so a refactor can't silently start
-        # over-matching glued dialect forms.
         self.assertEqual(
             self.engine.resolve_text("بدي اروح عالمستشفى بسرعة"),
             "بدي اروح عالمستشفى بسرعة",
@@ -192,10 +182,6 @@ class TestSynonymEngineCharacterization(unittest.TestCase):
         self.assertEqual(forms, sorted(forms))
 
     def test_expand_query_appends_up_to_three_synonyms_in_parentheses(self):
-        # get_synonyms() builds its result via list(set(...)), so which three
-        # synonyms appear is not stable across interpreter runs (string hash
-        # randomization) — pin the *shape* of the output, not the exact
-        # synonym order, since that's the real current contract.
         result = self.engine.expand_query("doctor")
         self.assertTrue(result.startswith("doctor ("))
         parts = result[len("doctor"):].strip().split(") (")
@@ -252,7 +238,6 @@ class TestReportGeneratorImportCharacterization(unittest.TestCase):
                 self.assertTrue(gitignore_path.exists())
                 self.assertEqual(gitignore_path.read_text(encoding="utf-8"), "*\n!.gitignore\n")
 
-                # Idempotent: calling again must not raise or change the content.
                 report_generator._ensure_report_output_dirs()
                 self.assertEqual(gitignore_path.read_text(encoding="utf-8"), "*\n!.gitignore\n")
 
@@ -354,7 +339,6 @@ class TestLlmServiceFallbackCharacterization(unittest.TestCase):
         self.assertEqual(kwargs["json"]["stream"], False)
 
     def test_no_real_network_request_is_ever_made(self):
-        # Guard for the test file itself: OLLAMA_URL must never be hit for real.
         with patch.object(self.llm_service.requests, "post") as mock_post:
             mock_post.return_value.json.return_value = {"response": "ok"}
             self.llm_service.generate_response("hello", "{}", lang="en")
