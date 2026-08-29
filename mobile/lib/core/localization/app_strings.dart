@@ -135,6 +135,10 @@ class AppStrings {
     'تعذّر إكمال الطلب. حاول مرة أخرى.',
     'Could not complete the request. Please try again.',
   );
+  String get registrationValidationError => _t(
+    'يرجى مراجعة البيانات التي أدخلتها ثم المحاولة مرة أخرى.',
+    'Please review the information you entered and try again.',
+  );
   String get googleSignInError => _t(
     'تعذّر تسجيل الدخول باستخدام جوجل. حاول مرة أخرى.',
     'Could not sign in with Google. Please try again.',
