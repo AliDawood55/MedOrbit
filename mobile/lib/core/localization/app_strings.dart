@@ -2044,6 +2044,173 @@ class AppStrings {
     'unavailable' => locationUnavailableMessage,
     _ => locationUnexpectedMessage,
   };
+
+  // ─── Doctor Application ────────────────────────────────────────────────
+  String get doctorApplicationTitle => _t('طلب الانضمام كطبيب', 'Doctor application');
+  String get doctorApplicationQuickActionLabel =>
+      _t('طلب الانضمام كطبيب', 'Apply to become a doctor');
+  String get doctorApplicationQuickActionDescription => _t(
+    'يمكن للمرضى الموثّقين تقديم مؤهلاتهم لمراجعتها من قبل الإدارة.',
+    'Verified patients can submit their credentials for admin review.',
+  );
+  String get doctorApplicationIntroTitle =>
+      _t('انضم إلى فريق الأطباء في MedOrbit', 'Join MedOrbit as a doctor');
+  String get doctorApplicationIntroBody => _t(
+    'أرسل مؤهلاتك المهنية ليراجعها فريق الإدارة. بعد الموافقة يتحول حسابك إلى حساب طبيب.',
+    'Submit your professional credentials for the admin team to review. Once approved, your account becomes a doctor account.',
+  );
+  String get doctorApplicationLoading =>
+      _t('جارٍ تحميل حالة الطلب...', 'Loading your application status…');
+  String get doctorApplicationLoadErrorTitle =>
+      _t('تعذّر تحميل طلب الانضمام', 'Could not load your application');
+  String get doctorApplicationPatientOnlyTitle =>
+      _t('متاح لحسابات المرضى فقط', 'Available to patient accounts only');
+  String get doctorApplicationPatientOnlyBody => _t(
+    'صفحة طلب الانضمام كطبيب متاحة لحسابات المرضى الموثّقة فقط.',
+    'The doctor application is available only to verified patient accounts.',
+  );
+
+  // Form
+  String get doctorApplicationFormTitle => _t('طلب الانضمام', 'Application details');
+  String get doctorApplicationNewFormTitle =>
+      _t('تقديم طلب جديد', 'Submit a new application');
+  String get doctorApplicationFormIntro => _t(
+    'الحقول المميّزة مطلوبة. باقي الحقول اختيارية وتساعد المراجعين على تقييم طلبك.',
+    'Required fields are marked. The rest are optional and help reviewers assess your application.',
+  );
+  String get doctorApplicationOptional => _t('اختياري', 'Optional');
+  String get doctorApplicationSpecialtyLabel => _t('التخصص', 'Specialty');
+  String get doctorApplicationSpecialtySelect =>
+      _t('اختر التخصص', 'Select a specialty');
+  String get doctorApplicationSpecialtyRequired =>
+      _t('اختر التخصص', 'Select a specialty');
+  String get doctorApplicationSpecialtyEmpty => _t(
+    'لا تتوفر قائمة تخصصات حالياً. حاول لاحقاً.',
+    'No specialties are available right now. Please try again later.',
+  );
+  String get doctorApplicationLicenseLabel =>
+      _t('رقم الترخيص الطبي', 'Medical license number');
+  String get doctorApplicationLicenseHint =>
+      _t('كما هو مدوّن في ترخيصك', 'As written on your license');
+  String get doctorApplicationLicenseRequired =>
+      _t('أدخل رقم الترخيص الطبي', 'Enter your medical license number');
+  String get doctorApplicationSubSpecialtyLabel =>
+      _t('التخصص الفرعي', 'Sub-specialty');
+  String get doctorApplicationExperienceLabel =>
+      _t('سنوات الخبرة', 'Years of experience');
+  String get doctorApplicationExperienceInvalid =>
+      _t('أدخل رقماً صحيحاً', 'Enter a whole number');
+  String get doctorApplicationExperienceRange =>
+      _t('أدخل قيمة بين 0 و 80', 'Enter a value between 0 and 80');
+  String get doctorApplicationEducationLabel => _t('التعليم', 'Education');
+  String get doctorApplicationCertificationsLabel =>
+      _t('الشهادات', 'Certifications');
+  String get doctorApplicationOnePerLineHint =>
+      _t('أدخل عنصراً واحداً في كل سطر', 'Enter one item per line');
+  String get doctorApplicationBioLabel =>
+      _t('نبذة مهنية', 'Professional bio');
+  String get doctorApplicationPrivacyNote => _t(
+    'لا تضع كلمات مرور أو بيانات مرضى أو مستندات حساسة في هذا النموذج.',
+    'Do not put passwords, patient data, or sensitive documents in this form.',
+  );
+  String get doctorApplicationSubmit => _t('إرسال الطلب', 'Submit application');
+  String get doctorApplicationSubmitting => _t('جارٍ الإرسال...', 'Submitting…');
+  String get doctorApplicationSubmitSuccess =>
+      _t('تم إرسال طلبك للمراجعة.', 'Your application has been submitted for review.');
+
+  // Status
+  String get doctorApplicationStatusHeading => _t('حالة الطلب', 'Application status');
+  String get doctorApplicationStatusPending => _t('قيد المراجعة', 'Under review');
+  String get doctorApplicationStatusApproved => _t('تمت الموافقة', 'Approved');
+  String get doctorApplicationStatusRejected => _t('بحاجة إلى تعديل', 'Needs changes');
+  String get doctorApplicationStatusWithdrawn => _t('تم السحب', 'Withdrawn');
+  String get doctorApplicationStatusUnknown =>
+      _t('حالة غير معروفة', 'Status unavailable');
+  String get doctorApplicationPendingBody => _t(
+    'سيراجع فريق الإدارة طلبك. يمكنك سحبه ما دام قيد المراجعة.',
+    'The admin team will review your application. You can withdraw it while it is still under review.',
+  );
+  String get doctorApplicationApprovedBody => _t(
+    'تمت الموافقة على طلبك. سجّل الخروج ثم الدخول من جديد لتفعيل حساب الطبيب.',
+    'Your application was approved. Sign out and sign in again to activate your doctor account.',
+  );
+  String get doctorApplicationRejectedBody => _t(
+    'راجع سبب التعديل المطلوب، ثم يمكنك تقديم طلب جديد.',
+    'Review the requested changes below, then you can submit a new application.',
+  );
+  String get doctorApplicationWithdrawnBody => _t(
+    'تم سحب طلبك. يمكنك تقديم طلب جديد في أي وقت.',
+    'Your application was withdrawn. You can submit a new application any time.',
+  );
+  String get doctorApplicationUnknownBody => _t(
+    'تعذّر عرض حالة هذا الطلب. حدّث الصفحة أو حاول لاحقاً.',
+    'This application status could not be shown. Refresh or try again later.',
+  );
+  String get doctorApplicationSubmittedOn => _t('تاريخ التقديم', 'Submitted on');
+  String get doctorApplicationReviewedOn => _t('تاريخ المراجعة', 'Reviewed on');
+  String get doctorApplicationRejectionReason => _t('سبب التعديل', 'Reason');
+  String doctorApplicationYearsValue(int years) =>
+      _t('$years سنة', '$years years');
+  String get doctorApplicationSignInAgain =>
+      _t('تسجيل الدخول من جديد', 'Sign in again');
+
+  // Withdraw
+  String get doctorApplicationWithdraw => _t('سحب الطلب', 'Withdraw application');
+  String get doctorApplicationWithdrawTitle =>
+      _t('سحب الطلب الحالي؟', 'Withdraw this application?');
+  String get doctorApplicationWithdrawBody => _t(
+    'سيتم سحب طلبك المعلّق. سيبقى ضمن السجل، ويمكنك تقديم طلب جديد لاحقاً. لن يتم حذف أي شيء.',
+    'Your pending application will be withdrawn. It stays in your history, and you can submit a new application later. Nothing is deleted.',
+  );
+  String get doctorApplicationWithdrawConfirm => _t('سحب الطلب', 'Withdraw');
+  String get doctorApplicationWithdrawSuccess =>
+      _t('تم سحب طلبك.', 'Your application has been withdrawn.');
+
+  // History
+  String get doctorApplicationHistoryTitle => _t('سجل الطلبات', 'Application history');
+
+  /// Safe localized copy for a Doctor Application backend/transport error
+  /// code. Never renders a raw backend message. Verified `/doctor-applications`
+  /// codes: VALIDATION_ERROR, FORBIDDEN, UNAUTHORIZED, DUPLICATE_ENTRY,
+  /// INVALID_FORMAT, INVALID_REFERENCE, NOT_FOUND, INVALID_TARGET,
+  /// INTERNAL_ERROR, RATE_LIMITED; transport codes from [ApiException].
+  String doctorApplicationError(String? code) => switch (code) {
+    'UNAUTHORIZED' => _t(
+      'انتهت جلستك. سجّل الدخول من جديد ثم حاول مجدداً.',
+      'Your session has expired. Sign in again and try once more.',
+    ),
+    'FORBIDDEN' => _t(
+      'حسابك غير مؤهل لتقديم طلب انضمام كطبيب.',
+      'Your account is not eligible to submit a doctor application.',
+    ),
+    'VALIDATION_ERROR' || 'INVALID_FORMAT' || 'INVALID_REFERENCE' => _t(
+      'تحقّق من الحقول المدخلة ثم حاول مرة أخرى.',
+      'Check the details you entered and try again.',
+    ),
+    'DUPLICATE_ENTRY' => _t(
+      'لديك طلب قيد المراجعة بالفعل.',
+      'You already have an application under review.',
+    ),
+    'NOT_FOUND' || 'INVALID_TARGET' => _t(
+      'لم يعد هذا الطلب متاحاً لهذا الإجراء.',
+      'This application is no longer available for that action.',
+    ),
+    'RATE_LIMITED' => _t(
+      'محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.',
+      'Too many attempts. Wait a little while and try again.',
+    ),
+    'CONNECT_TIMEOUT' ||
+    'SEND_TIMEOUT' ||
+    'RECEIVE_TIMEOUT' ||
+    'SERVICE_UNAVAILABLE' => _t(
+      'تعذّر الوصول إلى الخدمة. تحقّق من اتصالك ثم حاول مرة أخرى.',
+      'Could not reach the service. Check your connection and try again.',
+    ),
+    _ => _t(
+      'حدث خطأ ما. حاول مرة أخرى.',
+      'Something went wrong. Please try again.',
+    ),
+  };
 }
 
 final appStringsProvider = Provider<AppStrings>((ref) {

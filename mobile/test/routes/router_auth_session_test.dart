@@ -24,6 +24,7 @@ void main() {
     RoutePaths.savedPlaces,
     RoutePaths.contact,
     RoutePaths.myDoctor,
+    RoutePaths.doctorApplication,
   ];
 
   const public = [
@@ -169,9 +170,46 @@ void main() {
     );
   });
 
+  group('doctor application route', () {
+    test('is protected: unauthenticated access redirects to login', () {
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          RoutePaths.doctorApplication,
+        ),
+        RoutePaths.login,
+      );
+      expect(protectedRoutes.contains(RoutePaths.doctorApplication), isTrue);
+    });
+
+    test('redirect preserves the intended doctor-application destination', () {
+      final loginLocation = sessionRedirect(
+        AuthStatus.unauthenticated,
+        RoutePaths.doctorApplication,
+        fullLocation: RoutePaths.doctorApplication,
+      );
+      expect(loginLocation, isNotNull);
+      expect(
+        intendedDestinationFromLoginUri(Uri.parse(loginLocation!)),
+        RoutePaths.doctorApplication,
+      );
+    });
+
+    test('authenticated access is not redirected away', () {
+      expect(
+        sessionRedirect(AuthStatus.authenticated, RoutePaths.doctorApplication),
+        isNull,
+      );
+      expect(
+        sessionRedirect(AuthStatus.unknown, RoutePaths.doctorApplication),
+        isNull,
+      );
+    });
+  });
+
   group('protected set', () {
     test(
-      'covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, my reports, my doctors, saved places, contact, and my doctor',
+      'covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, my reports, my doctors, saved places, contact, my doctor, and the doctor application',
       () {
         expect(protectedRoutes, protected.toSet());
       },

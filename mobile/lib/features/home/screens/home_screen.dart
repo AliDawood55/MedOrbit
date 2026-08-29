@@ -29,6 +29,12 @@ import '../../records/providers/records_provider.dart';
 import '../models/user_profile_model.dart';
 import '../providers/user_provider.dart';
 
+/// Whether the patient Home shows the "Apply to become a doctor" quick action.
+/// Patient accounts only — doctors, admins, and any other role never see it,
+/// matching the patient-only Doctor Application route and backend guard.
+bool homeShowsDoctorApplicationAction(String? role) =>
+    role?.trim().toLowerCase() == 'patient';
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -215,6 +221,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       strings: strings,
                       query: _query,
                       notificationsUnreadCount: notificationsUnreadCount,
+                      showDoctorApplication:
+                          homeShowsDoctorApplicationAction(role),
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
@@ -833,6 +841,7 @@ class _QuickActions extends StatelessWidget {
     required this.strings,
     required this.query,
     required this.notificationsUnreadCount,
+    required this.showDoctorApplication,
   });
 
   final AppStrings strings;
@@ -840,6 +849,9 @@ class _QuickActions extends StatelessWidget {
 
   /// Null while the notifications provider is loading or errored.
   final int? notificationsUnreadCount;
+
+  /// Patient-only "Apply to become a doctor" entry.
+  final bool showDoctorApplication;
 
   @override
   Widget build(BuildContext context) {
@@ -991,6 +1003,15 @@ class _QuickActions extends StatelessWidget {
         title: strings.quickGroupSupport,
         icon: Icons.support_agent_outlined,
         actions: [
+          if (showDoctorApplication)
+            _QuickAction(
+              label: strings.doctorApplicationQuickActionLabel,
+              description: strings.doctorApplicationQuickActionDescription,
+              icon: Icons.medical_information_outlined,
+              color: AppTheme.primary,
+              path: RoutePaths.doctorApplication,
+              push: true,
+            ),
           _QuickAction(
             label: strings.navFeedback,
             description: strings.quickFeedbackDescription,

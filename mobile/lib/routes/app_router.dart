@@ -19,6 +19,7 @@ import '../features/chatbot/screens/chatbot_screen.dart';
 import '../features/contact/screens/contact_screen.dart';
 import '../features/chatbot/screens/conversations_screen.dart';
 import '../features/discovery/screens/map_foundation_screen.dart';
+import '../features/doctor_application/screens/doctor_application_screen.dart';
 import '../features/drug_checker/screens/drug_checker_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
 import '../features/home/screens/home_screen.dart';
@@ -55,6 +56,7 @@ const Set<String> protectedRoutes = {
   RoutePaths.savedPlaces,
   RoutePaths.contact,
   RoutePaths.myDoctor,
+  RoutePaths.doctorApplication,
 };
 
 String? sessionRedirect(
@@ -234,6 +236,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.myDoctor,
         builder: (context, state) => const MyDoctorScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorApplication,
+        builder: (context, state) => const DoctorApplicationScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
