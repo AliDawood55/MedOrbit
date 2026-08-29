@@ -32,6 +32,7 @@ const billingRoutes = require('./routes/billing.routes');
 const virtualDoctorRoutes = require('./routes/virtual-doctor.routes');
 const adminInvitationRoutes = require('./routes/admin-invitation.routes');
 const { applicationRoutes, adminDoctorApplicationRoutes } = require('./routes/doctor-application.routes');
+const { applicationRoutes: clinicApplicationRoutes, adminClinicApplicationRoutes } = require('./routes/clinic-application.routes');
 const careRelationshipRoutes = require('./routes/care-relationship.routes');
 const { feedRoutes, socialDoctorRoutes, adminSocialRoutes } = require('./routes/social.routes');
 const messageRoutes = require('./routes/message.routes');
@@ -128,6 +129,7 @@ if (process.env.NODE_ENV === 'development') {
 // Auth routes (public)
 app.use('/api/auth', authRoutes);
 app.use('/api/doctor-applications', applicationRoutes);
+app.use('/api/clinic-applications', clinicApplicationRoutes);
 
 // Persisted AI operations cross this authenticated identity boundary.
 app.use('/api/ai', aiRoutes);
@@ -171,6 +173,7 @@ app.use('/api/health/events', eventHealthRoutes);
 app.use("/api/admin", adminRoutes);
 app.use('/api/admin/invitations', adminInvitationRoutes);
 app.use('/api/admin/doctor-applications', adminDoctorApplicationRoutes);
+app.use('/api/admin/clinic-applications', adminClinicApplicationRoutes);
 app.use('/api/admin/care-relationships', careRelationshipRoutes);
 app.use('/api/admin/social', adminSocialRoutes);
 app.use('/api/admin/contact-messages', adminContactRoutes);

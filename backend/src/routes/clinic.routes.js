@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../config/database');
 const { success, error } = require('../utils/response');
-const { authenticate, authorizeAdmin } = require('../middleware/auth');
+const { authenticate, authorize, authorizeAdmin } = require('../middleware/auth');
 const { createAudit } = require('../services/audit.service');
 
 const router = express.Router();
@@ -14,7 +14,7 @@ const VALID_CLINIC_TYPES = new Set([
 // GET /api/clinics - List clinics with filters
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const { region, service, insurance, search, type, page = 1, limit = 10 } = req.query;
+    const { city, region, service, insurance, search, type, page = 1, limit = 10 } = req.query;
 
     let query = `
       SELECT
@@ -38,6 +38,12 @@ router.get('/', authenticate, async (req, res, next) => {
     if (region) {
       query += ` AND c.region ILIKE $${paramIndex}`;
       params.push(`%${region}%`);
+      paramIndex++;
+    }
+
+    if (city) {
+      query += ` AND c.city ILIKE $${paramIndex}`;
+      params.push(`%${city}%`);
       paramIndex++;
     }
 
@@ -85,6 +91,77 @@ router.get('/', authenticate, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// GET /api/clinics/directory-filters - server-driven city and service filters.
+router.get('/directory-filters', authenticate, async (_req, res, next) => {
+  try {
+    const result = await db.query(`
+      SELECT ARRAY_REMOVE(ARRAY_AGG(DISTINCT c.city ORDER BY c.city), NULL) AS cities,
+             ARRAY_REMOVE(ARRAY_AGG(DISTINCT service ORDER BY service), NULL) AS services
+      FROM medorbit.clinics c
+      LEFT JOIN LATERAL UNNEST(c.services) AS service ON true
+      WHERE c.is_active=true
+    `);
+    return success(res, result.rows[0] || { cities: [], services: [] }, 'Clinic directory filters retrieved');
+  } catch (err) { return next(err); }
+});
+
+async function ownedClinic(userId, queryable = db, lock = false) {
+  const result = await queryable.query(
+    `SELECT * FROM medorbit.clinics WHERE owner_user_id=$1 AND is_active=true${lock ? ' FOR UPDATE' : ''}`,
+    [userId]
+  );
+  if (!result.rows.length) { const err = new Error('Approved clinic workspace not found'); err.statusCode = 404; err.code = 'NOT_FOUND'; throw err; }
+  return result.rows[0];
+}
+
+router.get('/me', authenticate, authorize('clinic'), async (req, res, next) => {
+  try { return success(res, await ownedClinic(req.user.sub), 'Clinic workspace retrieved'); }
+  catch (err) { return next(err); }
+});
+
+router.put('/me', authenticate, authorize('clinic'), async (req, res, next) => {
+  const client = await db.getClient();
+  try {
+    const allowed = ['name_ar', 'name_en', 'address_ar', 'address_en', 'city', 'region', 'phone', 'email', 'website', 'services', 'operating_hours', 'logo_url'];
+    const values = []; const assignments = [];
+    for (const key of allowed) if (Object.prototype.hasOwnProperty.call(req.body, key)) { assignments.push(`${key}=$${values.length + 1}`); values.push(req.body[key]); }
+    if (!assignments.length) return success(res, await ownedClinic(req.user.sub), 'No clinic changes submitted');
+    await client.query('BEGIN'); const existing = await ownedClinic(req.user.sub, client, true); values.push(existing.id);
+    const updated = await client.query(`UPDATE medorbit.clinics SET ${assignments.join(',')},updated_at=NOW() WHERE id=$${values.length} RETURNING *`, values);
+    await createAudit({ user_id:req.user.sub,user_role:req.user.role,action:'CLINIC_OWNER_UPDATED_PROFILE',entity_type:'CLINIC',entity_id:existing.id,old_values:existing,new_values:updated.rows[0] }, client);
+    await client.query('COMMIT'); return success(res, updated.rows[0], 'Clinic profile updated');
+  } catch (err) { await client.query('ROLLBACK').catch(() => {}); return next(err); } finally { client.release(); }
+});
+
+router.get('/me/doctors', authenticate, authorize('clinic'), async (req, res, next) => {
+  try { const clinic = await ownedClinic(req.user.sub); const result = await db.query(`SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,s.name_ar AS specialty_ar,s.name_en AS specialty_en,dca.is_primary FROM medorbit.doctor_clinic_assignments dca JOIN medorbit.doctors d ON d.id=dca.doctor_id JOIN medorbit.users u ON u.id=d.user_id LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id WHERE dca.clinic_id=$1 AND dca.is_active=true AND u.is_active=true ORDER BY p.first_name_en`, [clinic.id]); return success(res,result.rows,'Clinic doctors retrieved'); }
+  catch (err) { return next(err); }
+});
+
+router.get('/eligible-doctors', authenticate, authorize('clinic'), async (_req, res, next) => {
+  try { const result = await db.query(`SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,s.name_ar AS specialty_ar,s.name_en AS specialty_en FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id WHERE u.is_active=true AND d.approval_status='approved' ORDER BY p.first_name_en LIMIT 250`); return success(res,result.rows,'Eligible doctors retrieved'); }
+  catch (err) { return next(err); }
+});
+
+router.post('/me/doctors', authenticate, authorize('clinic'), async (req, res, next) => {
+  const client = await db.getClient();
+  try {
+    if (!req.body.doctor_id) return error(res,'Doctor id is required',400,'VALIDATION_ERROR');
+    await client.query('BEGIN'); const clinic=await ownedClinic(req.user.sub,client,true);
+    const doctor=await client.query(`SELECT d.id FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id WHERE d.id=$1 AND d.approval_status='approved' AND u.is_active=true`,[req.body.doctor_id]);
+    if(!doctor.rows.length) { const err = new Error('Approved doctor not found'); err.statusCode = 404; err.code = 'NOT_FOUND'; throw err; }
+    const result=await client.query(`INSERT INTO medorbit.doctor_clinic_assignments(doctor_id,clinic_id,is_primary,is_active) VALUES($1,$2,$3,true) ON CONFLICT(doctor_id,clinic_id) DO UPDATE SET is_active=true,is_primary=EXCLUDED.is_primary RETURNING *`,[req.body.doctor_id,clinic.id,!!req.body.is_primary]);
+    await createAudit({user_id:req.user.sub,user_role:req.user.role,action:'CLINIC_OWNER_ASSIGNED_DOCTOR',entity_type:'CLINIC_DOCTOR_ASSIGNMENT',new_values:result.rows[0]},client);
+    await client.query('COMMIT'); return success(res,result.rows[0],'Doctor linked to clinic');
+  } catch(err){await client.query('ROLLBACK').catch(()=>{});return next(err);} finally {client.release();}
+});
+
+router.delete('/me/doctors/:doctorId', authenticate, authorize('clinic'), async (req,res,next) => {
+  const client=await db.getClient();
+  try { await client.query('BEGIN');const clinic=await ownedClinic(req.user.sub,client,true);const result=await client.query('UPDATE medorbit.doctor_clinic_assignments SET is_active=false WHERE clinic_id=$1 AND doctor_id=$2 AND is_active=true RETURNING *',[clinic.id,req.params.doctorId]);if(!result.rows.length){const err=new Error('Doctor link not found');err.statusCode=404;err.code='NOT_FOUND';throw err;}await createAudit({user_id:req.user.sub,user_role:req.user.role,action:'CLINIC_OWNER_REMOVED_DOCTOR',entity_type:'CLINIC_DOCTOR_ASSIGNMENT',old_values:result.rows[0]},client);await client.query('COMMIT');return success(res,result.rows[0],'Doctor removed from clinic'); }
+  catch(err){await client.query('ROLLBACK').catch(()=>{});return next(err);} finally {client.release();}
 });
 
 // GET /api/clinics/nearby - Find nearby clinics
@@ -149,7 +226,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     const clinicResult = await db.query(
-      `SELECT * FROM medorbit.clinics WHERE id = $1 AND is_active = true`,
+      `SELECT c.*, to_jsonb(u)->'preferences'->'social_links' AS social_links FROM medorbit.clinics c LEFT JOIN medorbit.users u ON u.id=c.owner_user_id WHERE c.id = $1 AND c.is_active = true`,
       [id]
     );
 
