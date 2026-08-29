@@ -115,6 +115,30 @@ class AppStrings {
   String get orDivider => _t('أو', 'OR');
   String get continueWithGoogle =>
       _t('المتابعة باستخدام جوجل', 'Continue with Google');
+  String get invalidCredentials => _t(
+    'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    'Incorrect email or password.',
+  );
+  String get emailNotVerified => _t(
+    'يرجى تفعيل بريدك الإلكتروني قبل تسجيل الدخول.',
+    'Please verify your email before signing in.',
+  );
+  String get authRateLimited => _t(
+    'محاولات كثيرة جدًا. حاول مرة أخرى لاحقًا.',
+    'Too many attempts. Please try again later.',
+  );
+  String get authConnectionError => _t(
+    'تعذّر الوصول إلى الخدمة. تحقّق من اتصالك ثم حاول مرة أخرى.',
+    'Could not reach the service. Check your connection and try again.',
+  );
+  String get authRequestError => _t(
+    'تعذّر إكمال الطلب. حاول مرة أخرى.',
+    'Could not complete the request. Please try again.',
+  );
+  String get googleSignInError => _t(
+    'تعذّر تسجيل الدخول باستخدام جوجل. حاول مرة أخرى.',
+    'Could not sign in with Google. Please try again.',
+  );
   String get noAccountCta =>
       _t('ليس لديك حساب؟ إنشاء حساب', "Don't have an account? Register");
   String get haveAccountCta =>

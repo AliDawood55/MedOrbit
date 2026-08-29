@@ -125,6 +125,38 @@ void main() {
       },
     );
 
+    test('preserves a protected intended destination and its query', () {
+      const destination = '${RoutePaths.appointmentBooking}?doctorId=doctor-1';
+      final loginLocation = sessionRedirect(
+        AuthStatus.unauthenticated,
+        RoutePaths.appointmentBooking,
+        fullLocation: destination,
+      );
+
+      expect(loginLocation, isNotNull);
+      expect(
+        intendedDestinationFromLoginUri(Uri.parse(loginLocation!)),
+        destination,
+      );
+    });
+
+    test('rejects external and public post-login destinations', () {
+      expect(
+        intendedDestinationFromLoginUri(
+          Uri.parse('/login?redirect=https%3A%2F%2Fexample.com'),
+        ),
+        isNull,
+      );
+      expect(
+        intendedDestinationFromLoginUri(
+          Uri.parse(
+            '/login?redirect=${Uri.encodeQueryComponent(RoutePaths.doctors)}',
+          ),
+        ),
+        isNull,
+      );
+    });
+
     test(
       'the login target is never itself protected, so redirects cannot loop',
       () {

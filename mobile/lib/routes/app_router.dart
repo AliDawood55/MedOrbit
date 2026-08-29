@@ -57,9 +57,33 @@ const Set<String> protectedRoutes = {
   RoutePaths.myDoctor,
 };
 
-String? sessionRedirect(AuthStatus status, String location) {
+String? sessionRedirect(
+  AuthStatus status,
+  String location, {
+  String? fullLocation,
+}) {
   if (status != AuthStatus.unauthenticated) return null;
-  return protectedRoutes.contains(location) ? RoutePaths.login : null;
+  if (!protectedRoutes.contains(location)) return null;
+  if (fullLocation == null) return RoutePaths.login;
+  return Uri(
+    path: RoutePaths.login,
+    queryParameters: {'redirect': fullLocation},
+  ).toString();
+}
+
+/// Accepts only an in-app protected route captured by [sessionRedirect].
+/// This prevents the Login screen from becoming an open redirect.
+String? intendedDestinationFromLoginUri(Uri uri) {
+  final raw = uri.queryParameters['redirect'];
+  if (raw == null || raw.isEmpty) return null;
+  final destination = Uri.tryParse(raw);
+  if (destination == null ||
+      destination.hasScheme ||
+      destination.hasAuthority ||
+      !protectedRoutes.contains(destination.path)) {
+    return null;
+  }
+  return destination.toString();
 }
 
 class AuthRouterRefresh extends ChangeNotifier {
@@ -80,6 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) => sessionRedirect(
       ref.read(authControllerProvider).status,
       state.matchedLocation,
+      fullLocation: state.uri.toString(),
     ),
     routes: [
       GoRoute(
@@ -88,7 +113,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.login,
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => LoginScreen(
+          intendedDestination: intendedDestinationFromLoginUri(state.uri),
+        ),
       ),
       GoRoute(
         path: RoutePaths.register,
