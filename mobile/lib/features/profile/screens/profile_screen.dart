@@ -34,6 +34,7 @@ class ProfileScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeControllerProvider);
     final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
     final canUseCareMessages = role == 'patient' || role == 'doctor';
+    final isDoctor = role == 'doctor';
 
     return AppScaffold(
       appBar: AppBar(title: Text(strings.profileTitle)),
@@ -99,6 +100,19 @@ class ProfileScreen extends ConsumerWidget {
                       onSave: (draft) =>
                           _handleSave(context, notifier, draft, strings),
                     ),
+                    if (isDoctor) ...[
+                      const SizedBox(height: AppTheme.spaceLg),
+                      Card(
+                        child: ListTile(
+                          minVerticalPadding: AppTheme.spaceMd,
+                          leading: const Icon(Icons.medical_services_outlined),
+                          title: Text(strings.doctorWorkspace),
+                          subtitle: Text(strings.doctorWorkspaceSubtitle),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => context.push(RoutePaths.doctorWorkspace),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppTheme.spaceLg),
                     PreferencesSection(
                       strings: strings,

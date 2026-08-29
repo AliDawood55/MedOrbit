@@ -44,6 +44,14 @@ class RoutePaths {
   static const String messagesNew = '/messages/new';
   static const String messageThread = '/messages/:id';
 
+  // Doctor Workspace. Kept additive to minimize shared-route collisions.
+  static const String doctorWorkspace = '/doctor/workspace';
+  static const String doctorProfessionalProfile = '/doctor/profile';
+  static const String doctorSchedule = '/doctor/schedule';
+  static const String doctorPatients = '/doctor/patients';
+  static const String doctorPatient = '/doctor/patients/:id';
+  static const String doctorPosts = '/doctor/posts';
+
   static String clinicDetailPath(String id) =>
       '/clinics/${Uri.encodeComponent(id)}';
   static String doctorDetailPath(String id) =>
@@ -58,6 +66,8 @@ class RoutePaths {
       '/messages/${Uri.encodeComponent(id)}';
   static String newMessagePath(String counterpartId) =>
       '$messagesNew?counterpart=${Uri.encodeQueryComponent(counterpartId)}';
+  static String doctorPatientPath(String id) =>
+      '/doctor/patients/${Uri.encodeComponent(id)}';
 
   static String appointmentBookingPath({String? doctorId}) {
     if (doctorId == null || doctorId.isEmpty) return appointmentBooking;

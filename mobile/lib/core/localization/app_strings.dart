@@ -2523,6 +2523,246 @@ class AppStrings {
     _ => errorGeneric,
   };
 
+  // ===== DOCTOR WORKSPACE / CLINICAL OPERATIONS =====
+  // Additive section kept isolated for parallel mobile workstreams.
+  String get doctorWorkspace => _t('مساحة عمل الطبيب', 'Doctor workspace');
+  String get doctorWorkspaceSubtitle => _t(
+    'أدر جدولك ومرضاك ومحتواك المهني بأمان.',
+    'Manage your schedule, patients, and professional content securely.',
+  );
+  String get professionalProfile => _t('الملف المهني', 'Professional profile');
+  String get professionalHeadline =>
+      _t('العنوان المهني', 'Professional headline');
+  String get professionalBiography =>
+      _t('النبذة المهنية', 'Professional biography');
+  String get subSpecialty => _t('التخصص الدقيق', 'Sub-specialty');
+  String get yearsOfExperience => _t('سنوات الخبرة', 'Years of experience');
+  String get consultationFee => _t('رسوم الاستشارة', 'Consultation fee');
+  String get city => _t('المدينة', 'City');
+  String get areasOfExpertise => _t(
+    'مجالات الخبرة (افصل بينها بفاصلة)',
+    'Areas of expertise (comma-separated)',
+  );
+  String get professionalInterests => _t(
+    'الاهتمامات المهنية (افصل بينها بفاصلة)',
+    'Professional interests (comma-separated)',
+  );
+  String get languages =>
+      _t('اللغات (افصل بينها بفاصلة)', 'Languages (comma-separated)');
+  String get educationLines =>
+      _t('التعليم (عنصر في كل سطر)', 'Education (one per line)');
+  String get certificationLines =>
+      _t('الشهادات (عنصر في كل سطر)', 'Certifications (one per line)');
+  String get acceptingPatients => _t('يستقبل مرضى', 'Accepting patients');
+  String get verifiedCredentialsReadOnly => _t(
+    'التخصص والترخيص الموثقان للقراءة فقط.',
+    'Verified specialty and license are read-only.',
+  );
+  String minutesValue(int value) => _t('$value دقيقة', '$value min');
+  String bookingDaysValue(int value) =>
+      _t('$value يومًا للحجز', '$value booking days');
+  String get schedule => _t('الجدول والتوفر', 'Schedule & availability');
+  String get doctorAppointments => _t('مواعيد الطبيب', 'Doctor appointments');
+  String get myPatients => _t('مرضاي', 'My patients');
+  String get doctorPosts => _t('منشوراتي', 'My posts');
+  String get doctorRecords => _t('السجلات الطبية', 'Medical records');
+  String get doctorEligibilityUnavailable => _t(
+    'مساحة عمل الطبيب غير متاحة لهذا الحساب.',
+    'The doctor workspace is not available for this account.',
+  );
+  String get doctorApprovalRequired => _t(
+    'يجب اعتماد ملف الطبيب قبل استخدام مساحة العمل.',
+    'Your doctor profile must be approved before using this workspace.',
+  );
+  String get save => _t('حفظ', 'Save');
+  String get delete => _t('حذف', 'Delete');
+  String get edit => _t('تعديل', 'Edit');
+  String get create => _t('إنشاء', 'Create');
+  String get complete => _t('إكمال', 'Complete');
+  String get refresh => _t('تحديث', 'Refresh');
+  String get searchPatients => _t('ابحث عن مريض', 'Search patients');
+  String get noPatients => _t(
+    'لا يوجد مرضى مرتبطون بك حاليًا.',
+    'You have no active patient relationships.',
+  );
+  String get noAppointments => _t(
+    'لا توجد مواعيد في جدولك.',
+    'There are no appointments in your schedule.',
+  );
+  String get noAvailability =>
+      _t('لم تتم إضافة أوقات توفر بعد.', 'No availability has been added yet.');
+  String get noPosts =>
+      _t('لم تنشئ أي منشورات بعد.', 'You have not created any posts yet.');
+  String get noRecords =>
+      _t('لا توجد سجلات طبية متاحة.', 'No medical records are available.');
+  String get addAvailability => _t('إضافة وقت توفر', 'Add availability');
+  String get weeklyAvailability => _t('التوفر الأسبوعي', 'Weekly availability');
+  String get dateOverrides => _t('استثناءات التواريخ', 'Date overrides');
+  String get clinic => _t('العيادة', 'Clinic');
+  String get telemedicine => _t('استشارة عن بُعد', 'Telemedicine');
+  String get inPerson => _t('في العيادة', 'In person');
+  String get startTime => _t('وقت البدء', 'Start time');
+  String get endTime => _t('وقت الانتهاء', 'End time');
+  String get specificDate => _t('تاريخ محدد', 'Specific date');
+  String get weekday => _t('يوم الأسبوع', 'Weekday');
+  String get slotDuration => _t('مدة الموعد', 'Slot duration');
+  String get availabilityType => _t('نوع التوفر', 'Availability type');
+  String get available => _t('متاح', 'Available');
+  String get blocked => _t('محظور', 'Blocked');
+  String get dayOff => _t('إجازة', 'Day off');
+  String get patientFile => _t('ملف المريض', 'Patient file');
+  String get patientInformation => _t('بيانات المريض', 'Patient information');
+  String get sessionNotes => _t('ملاحظات الجلسات', 'Session notes');
+  String get addSessionNote => _t('إضافة ملاحظة جلسة', 'Add session note');
+  String get visibleToPatient => _t('مرئية للمريض', 'Visible to patient');
+  String get draft => _t('مسودة', 'Draft');
+  String get publish => _t('نشر', 'Publish');
+  String get publishNoteWarning => _t(
+    'سيتمكن المريض من قراءة هذه الملاحظة. هل تريد المتابعة؟',
+    'The patient will be able to read this note. Continue?',
+  );
+  String get endCareRelationship =>
+      _t('إنهاء علاقة الرعاية', 'End care relationship');
+  String get endRelationshipWarning => _t(
+    'سيفقد هذا المريض الارتباط النشط بك. لن تُحذف السجلات أو المواعيد السابقة.',
+    'This patient will no longer have an active care relationship with you. Existing records and appointments are not deleted.',
+  );
+  String get reason => _t('السبب', 'Reason');
+  String get diagnosis => _t('التشخيص', 'Diagnosis');
+  String get chiefComplaint => _t('الشكوى الرئيسية', 'Chief complaint');
+  String get clinicalNotes => _t('ملاحظات سريرية', 'Clinical notes');
+  String get privateDoctorNotes =>
+      _t('ملاحظات خاصة بالطبيب', 'Private doctor notes');
+  String get treatmentPlan => _t('خطة العلاج', 'Treatment plan');
+  String get recordType => _t('نوع السجل', 'Record type');
+  String get createPrescription => _t('إنشاء وصفة طبية', 'Create prescription');
+  String get prescriptionHistory => _t('سجل الوصفات', 'Prescription history');
+  String get appointment => _t('الموعد', 'Appointment');
+  String get medicationNameArabic =>
+      _t('اسم الدواء بالعربية', 'Medication name in Arabic');
+  String get medicationNameEnglish =>
+      _t('اسم الدواء بالإنجليزية', 'Medication name in English');
+  String get dosage => _t('الجرعة', 'Dosage');
+  String get frequency => _t('التكرار', 'Frequency');
+  String get duration => _t('المدة', 'Duration');
+  String get quantity => _t('الكمية', 'Quantity');
+  String get instructions => _t('التعليمات', 'Instructions');
+  String get validUntil =>
+      _t('صالح حتى (سنة-شهر-يوم)', 'Valid until (YYYY-MM-DD)');
+  String get safetyWarning => _t(
+    'تم حفظ الوصفة، وأبلغ فحص السلامة الاستشاري عن تحذير. راجعها سريريًا.',
+    'The prescription was saved and the advisory safety check reported a warning. Review it clinically.',
+  );
+  String get safetyUnavailable => _t(
+    'تم حفظ الوصفة، لكن فحص السلامة الاستشاري غير متاح. راجعها سريريًا.',
+    'The prescription was saved, but the advisory safety check is unavailable. Review it clinically.',
+  );
+  String get postTitle => _t('عنوان المنشور', 'Post title');
+  String get postBody => _t('محتوى المنشور', 'Post body');
+  String get category => _t('الفئة', 'Category');
+  String get published => _t('منشور', 'Published');
+  String get moderation => _t('المراجعة', 'Moderation');
+  String get deleteConfirmation => _t(
+    'لا يمكن التراجع عن هذا الإجراء من التطبيق. هل تريد المتابعة؟',
+    'This action cannot be undone in the app. Continue?',
+  );
+  String get doctorRequiredField =>
+      _t('هذا الحقل مطلوب.', 'This field is required.');
+  String get invalidValue =>
+      _t('تحقق من القيمة المدخلة.', 'Check the value you entered.');
+  String get operationSucceeded => _t('تم حفظ التغييرات.', 'Changes saved.');
+  String doctorPostCategory(String value) => switch (value) {
+    'health_tip' => _t('نصيحة صحية', 'Health tip'),
+    'announcement' => _t('إعلان', 'Announcement'),
+    'clinic_news' => _t('أخبار العيادة', 'Clinic news'),
+    'article' => _t('مقال', 'Article'),
+    _ => value,
+  };
+  String doctorRecordType(String value) => switch (value) {
+    'consultation' => _t('استشارة', 'Consultation'),
+    'follow_up' => _t('متابعة', 'Follow-up'),
+    'diagnosis' => _t('تشخيص', 'Diagnosis'),
+    'treatment' => _t('علاج', 'Treatment'),
+    'other' => _t('أخرى', 'Other'),
+    _ => _t('غير معروف', 'Unknown'),
+  };
+  String doctorStatus(String value) => switch (value) {
+    'scheduled' => _t('مجدول', 'Scheduled'),
+    'confirmed' => _t('مؤكد', 'Confirmed'),
+    'in_progress' => _t('جارٍ', 'In progress'),
+    'completed' => _t('مكتمل', 'Completed'),
+    'cancelled' => _t('ملغي', 'Cancelled'),
+    'no_show' => _t('لم يحضر', 'No show'),
+    'draft' => _t('مسودة', 'Draft'),
+    'published' => _t('منشور', 'Published'),
+    'active' => _t('نشط', 'Active'),
+    'approved' => _t('معتمد', 'Approved'),
+    'pending' => _t('قيد المراجعة', 'Pending'),
+    'rejected' => _t('مرفوض', 'Rejected'),
+    'hidden' => _t('مخفي', 'Hidden'),
+    _ => _t('غير معروف', 'Unknown'),
+  };
+  String doctorError(String? code) => switch (code) {
+    'UNAUTHORIZED' => _t(
+      'انتهت جلستك. سجّل الدخول من جديد.',
+      'Your session has expired. Sign in again.',
+    ),
+    'FORBIDDEN' => _t(
+      'لا يملك هذا الحساب صلاحية تنفيذ هذا الإجراء.',
+      'This account is not allowed to perform this action.',
+    ),
+    'NOT_FOUND' => _t(
+      'لم يعد العنصر متاحًا أو لا يمكنك الوصول إليه.',
+      'This item is no longer available or accessible.',
+    ),
+    'DOCTOR_NOT_APPROVED' => doctorApprovalRequired,
+    'VALIDATION_ERROR' ||
+    'INVALID_FORMAT' ||
+    'PROTECTED_FIELD' ||
+    'INVALID_WEEKDAY' ||
+    'INVALID_TIME_RANGE' ||
+    'PLAN_CHANGE_INVALID' => _t(
+      'تحقق من البيانات المدخلة ثم حاول مرة أخرى.',
+      'Check the entered details and try again.',
+    ),
+    'AVAILABILITY_OVERLAP' => _t(
+      'يتداخل هذا الوقت مع فترة توفر أخرى.',
+      'This time overlaps another availability period.',
+    ),
+    'BOOKED_APPOINTMENT_CONFLICT' => _t(
+      'لا يمكن تغيير هذا الوقت لوجود موعد محجوز.',
+      'This availability cannot be changed because it conflicts with a booked appointment.',
+    ),
+    'CLINIC_REQUIRED' || 'CLINIC_NOT_ASSIGNED' => _t(
+      'اختر عيادة مرتبطة بملفك لهذا الموعد.',
+      'Choose a clinic assigned to your profile for this slot.',
+    ),
+    'PAST_DATE' || 'DATE_OUTSIDE_HORIZON' => _t(
+      'اختر تاريخًا صالحًا ضمن نطاق الحجز الذي حدده الخادم.',
+      'Choose a valid date within the server booking horizon.',
+    ),
+    'CONTENT_MODERATED' => _t(
+      'لا يمكن نشر هذا المحتوى بسبب حالة المراجعة.',
+      'This content cannot be published because of its moderation status.',
+    ),
+    'RATE_LIMITED' || 'DUPLICATE_IN_FLIGHT' => _t(
+      'الطلب قيد المعالجة أو توجد محاولات كثيرة. انتظر قليلًا.',
+      'The request is already processing or there are too many attempts. Wait a moment.',
+    ),
+    'CONNECT_TIMEOUT' ||
+    'SEND_TIMEOUT' ||
+    'RECEIVE_TIMEOUT' ||
+    'SERVICE_UNAVAILABLE' => _t(
+      'تعذر الوصول إلى الخدمة. تحقق من اتصالك وحاول مرة أخرى.',
+      'Could not reach the service. Check your connection and try again.',
+    ),
+    'INVALID_RESPONSE' => _t(
+      'وصل رد غير مكتمل من الخدمة. حاول مرة أخرى.',
+      'The service returned an incomplete response. Try again.',
+    ),
+    _ => errorGeneric,
+  };
+
   // ================================================================
   // DIRECT MESSAGING / CARE MESSAGES
   // ================================================================

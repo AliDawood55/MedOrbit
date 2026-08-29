@@ -36,6 +36,12 @@ void main() {
     RoutePaths.messages,
     RoutePaths.messagesNew,
     RoutePaths.messageThread,
+    RoutePaths.doctorWorkspace,
+    RoutePaths.doctorProfessionalProfile,
+    RoutePaths.doctorSchedule,
+    RoutePaths.doctorPatients,
+    RoutePaths.doctorPatient,
+    RoutePaths.doctorPosts,
   ];
 
   const public = [
@@ -242,9 +248,9 @@ void main() {
 
   group('protected set', () {
     test(
-      'covers exactly patient data, billing, chatbot, voice, and messaging routes',
+      'covers patient data, billing, AI, messaging, and Doctor Workspace routes',
       () {
-      expect(protectedRoutes, protected.toSet());
+        expect(protectedRoutes, protected.toSet());
       },
     );
 
@@ -261,6 +267,56 @@ void main() {
       expect(validMessageConversationId(id), id);
       expect(validMessageConversationId('../records'), isNull);
       expect(validMessageConversationId('not-a-uuid'), isNull);
+    });
+  });
+
+  group('doctor workspace routing', () {
+    test('dynamic patient files are protected and preserve destination', () {
+      const destination =
+          '/doctor/patients/11111111-1111-4111-8111-111111111111';
+      final login = sessionRedirect(
+        AuthStatus.unauthenticated,
+        destination,
+        fullLocation: destination,
+      );
+      expect(login, isNotNull);
+      expect(intendedDestinationFromLoginUri(Uri.parse(login!)), destination);
+    });
+
+    test('non-doctor authenticated roles are redirected away', () {
+      expect(
+        doctorRoleRedirect(
+          AuthStatus.authenticated,
+          'patient',
+          RoutePaths.doctorWorkspace,
+        ),
+        RoutePaths.home,
+      );
+      expect(
+        doctorRoleRedirect(
+          AuthStatus.authenticated,
+          'admin',
+          RoutePaths.doctorPatients,
+        ),
+        RoutePaths.home,
+      );
+    });
+
+    test('doctor role remains on doctor routes', () {
+      expect(
+        doctorRoleRedirect(
+          AuthStatus.authenticated,
+          'doctor',
+          RoutePaths.doctorSchedule,
+        ),
+        isNull,
+      );
+    });
+
+    test('UUID validation rejects malformed patient ids', () {
+      expect(isValidUuid('11111111-1111-4111-8111-111111111111'), isTrue);
+      expect(isValidUuid('../patient-1'), isFalse);
+      expect(isValidUuid(''), isFalse);
     });
   });
 }

@@ -25,6 +25,14 @@ import '../features/chatbot/screens/conversations_screen.dart';
 import '../features/discovery/screens/map_foundation_screen.dart';
 import '../features/doctor_application/screens/doctor_application_screen.dart';
 import '../features/drug_checker/screens/drug_checker_screen.dart';
+import '../features/doctor_workspace/screens/doctor_appointments_screen.dart';
+import '../features/doctor_workspace/screens/doctor_patient_detail_screen.dart';
+import '../features/doctor_workspace/screens/doctor_patients_screen.dart';
+import '../features/doctor_workspace/screens/doctor_posts_screen.dart';
+import '../features/doctor_workspace/screens/doctor_profile_screen.dart';
+import '../features/doctor_workspace/screens/doctor_records_screen.dart';
+import '../features/doctor_workspace/screens/doctor_schedule_screen.dart';
+import '../features/doctor_workspace/screens/doctor_workspace_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/my_reports/screens/my_reports_screen.dart';
@@ -75,13 +83,33 @@ const Set<String> protectedRoutes = {
   RoutePaths.messages,
   RoutePaths.messagesNew,
   RoutePaths.messageThread,
+  RoutePaths.doctorWorkspace,
+  RoutePaths.doctorProfessionalProfile,
+  RoutePaths.doctorSchedule,
+  RoutePaths.doctorPatients,
+  RoutePaths.doctorPatient,
+  RoutePaths.doctorPosts,
 };
 
 bool isProtectedLocation(String location) {
   if (protectedRoutes.contains(location)) return true;
   return location.startsWith('${RoutePaths.conversations}/') ||
       location.startsWith('/billing/sandbox/') ||
-      location.startsWith('${RoutePaths.messages}/');
+      location.startsWith('${RoutePaths.messages}/') ||
+      location.startsWith('${RoutePaths.doctorPatients}/');
+}
+
+bool isValidUuid(String value) => RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+).hasMatch(value);
+
+String? doctorRoleRedirect(AuthStatus status, String? role, String location) {
+  if (status == AuthStatus.authenticated &&
+      location.startsWith('/doctor/') &&
+      role?.trim().toLowerCase() != 'doctor') {
+    return RoutePaths.home;
+  }
+  return null;
 }
 
 String? sessionRedirect(
@@ -116,7 +144,11 @@ String? intendedDestinationFromLoginUri(Uri uri) {
 class AuthRouterRefresh extends ChangeNotifier {
   AuthRouterRefresh(Ref ref) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      if (previous?.status != next.status) notifyListeners();
+      if (previous?.status != next.status ||
+          previous?.user?.id != next.user?.id ||
+          previous?.user?.role != next.user?.role) {
+        notifyListeners();
+      }
     });
   }
 }
@@ -128,11 +160,16 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: RoutePaths.splash,
     refreshListenable: refresh,
-    redirect: (context, state) => sessionRedirect(
-      ref.read(authControllerProvider).status,
-      state.matchedLocation,
-      fullLocation: state.uri.toString(),
-    ),
+    redirect: (context, state) {
+      final auth = ref.read(authControllerProvider);
+      final session = sessionRedirect(
+        auth.status,
+        state.matchedLocation,
+        fullLocation: state.uri.toString(),
+      );
+      if (session != null) return session;
+      return doctorRoleRedirect(auth.status, auth.user?.role, state.uri.path);
+    },
     routes: [
       GoRoute(
         path: RoutePaths.splash,
@@ -305,6 +342,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.doctorApplication,
         builder: (context, state) => const DoctorApplicationScreen(),
       ),
+      GoRoute(
+        path: RoutePaths.doctorWorkspace,
+        builder: (context, state) => const DoctorWorkspaceScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorProfessionalProfile,
+        builder: (context, state) => const DoctorProfileScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorSchedule,
+        builder: (context, state) => const DoctorScheduleScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorPatients,
+        builder: (context, state) => const DoctorPatientsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorPatient,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return isValidUuid(id)
+              ? DoctorPatientDetailScreen(patientId: id)
+              : const DoctorPatientsScreen();
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.doctorPosts,
+        builder: (context, state) => const DoctorPostsScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),
@@ -313,7 +379,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.home,
-                builder: (context, state) => const HomeScreen(),
+                builder: (context, state) =>
+                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
+                        'doctor'
+                    ? const DoctorWorkspaceScreen()
+                    : const HomeScreen(),
               ),
             ],
           ),
@@ -321,7 +391,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.records,
-                builder: (context, state) => const RecordsScreen(),
+                builder: (context, state) =>
+                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
+                        'doctor'
+                    ? const DoctorRecordsScreen()
+                    : const RecordsScreen(),
               ),
             ],
           ),
@@ -329,7 +403,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.prescriptions,
-                builder: (context, state) => const PrescriptionsScreen(),
+                builder: (context, state) =>
+                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
+                        'doctor'
+                    ? const DoctorPatientsScreen()
+                    : const PrescriptionsScreen(),
               ),
             ],
           ),
@@ -337,7 +415,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.appointments,
-                builder: (context, state) => const AppointmentsScreen(),
+                builder: (context, state) =>
+                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
+                        'doctor'
+                    ? const DoctorAppointmentsScreen()
+                    : const AppointmentsScreen(),
               ),
             ],
           ),
