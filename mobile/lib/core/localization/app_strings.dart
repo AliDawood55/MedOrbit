@@ -206,10 +206,10 @@ class AppStrings {
   );
   String get sendResetLinkButton =>
       _t('إرسال رابط إعادة التعيين', 'Send Reset Link');
-  String get resetLinkSentTitle => _t('تم إرسال الرابط', 'Reset link sent');
+  String get resetLinkSentTitle => _t('تحقق من بريدك الإلكتروني', 'Check your email');
   String get resetLinkSentHint => _t(
-    'إذا كان البريد مسجلاً، فسيصلك رابط إعادة التعيين.',
-    'If that email is registered, a reset link will be sent.',
+    'إذا كان البريد الإلكتروني موجودًا، فقد تم إرسال رابط لإعادة التعيين.',
+    'If the email exists, a reset link has been sent.',
   );
   String get verifyCodeTitle => _t('تحقق من البريد الإلكتروني', 'Verify Email');
   String get verifyCodeSubtitle => _t(

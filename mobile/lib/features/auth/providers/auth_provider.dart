@@ -157,13 +157,25 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<bool> forgotPassword(String email) async {
+    if (state.isSubmitting) return false;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       await _repository.forgotPassword(email);
       state = state.copyWith(isSubmitting: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
       return false;
     }
   }
