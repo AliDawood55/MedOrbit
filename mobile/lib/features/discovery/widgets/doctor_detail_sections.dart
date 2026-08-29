@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/localization/app_strings.dart';
+import '../../../core/providers/core_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/page_sections.dart';
@@ -25,11 +26,15 @@ class DoctorDetailSections extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(appStringsProvider);
     final direction = Directionality.of(context);
+    final isArabic = direction == TextDirection.rtl;
     final bio =
         doctor.professionalBio ??
-        (direction == TextDirection.rtl
+        (isArabic
             ? doctor.professionalBioAr ?? doctor.professionalBioEn
             : doctor.professionalBioEn ?? doctor.professionalBioAr);
+    final specialty = doctorDisplaySpecialty(doctor, direction);
+    final imageUrl = _absoluteImageUrl(ref, doctor.profileImageUrl);
+    final name = doctorDisplayName(doctor, direction, strings);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -39,29 +44,69 @@ class DoctorDetailSections extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                StatusBadge(
-                  label: doctor.isAcceptingPatients == true
-                      ? strings.doctorAcceptingPatients
-                      : strings.doctorAvailabilityNotConfirmed,
-                  color: doctor.isAcceptingPatients == true
-                      ? AppTheme.success
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                // Text conveys the accepting-patients state on its own; colour
+                // is only a reinforcement. `false` and `unknown` stay distinct.
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: StatusBadge(
+                    label: switch (doctor.isAcceptingPatients) {
+                      true => strings.doctorAcceptingPatients,
+                      false => strings.doctorNotAcceptingPatients,
+                      null => strings.doctorAvailabilityNotConfirmed,
+                    },
+                    color: switch (doctor.isAcceptingPatients) {
+                      true => AppTheme.success,
+                      false => AppTheme.danger,
+                      null => Theme.of(context).colorScheme.onSurfaceVariant,
+                    },
+                  ),
                 ),
                 const SizedBox(height: AppTheme.spaceMd),
-                Text(
-                  doctorDisplayName(doctor, direction, strings),
-                  style: Theme.of(context).textTheme.headlineSmall,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _DoctorAvatar(name: name, imageUrl: imageUrl),
+                    const SizedBox(width: AppTheme.spaceMd),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          if (specialty != null) ...[
+                            const SizedBox(height: AppTheme.spaceXs),
+                            Text(
+                              [
+                                specialty,
+                                if (doctor.subSpecialty?.trim().isNotEmpty == true)
+                                  doctor.subSpecialty!.trim(),
+                              ].join(' · '),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                          if (doctor.professionalHeadline?.trim().isNotEmpty ==
+                              true) ...[
+                            const SizedBox(height: AppTheme.spaceXs),
+                            Text(
+                              doctor.professionalHeadline!.trim(),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                if (doctorDisplaySpecialty(doctor, direction) != null) ...[
-                  const SizedBox(height: AppTheme.spaceXs),
-                  Text(
-                    doctorDisplaySpecialty(doctor, direction)!,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
                 if (bio?.trim().isNotEmpty == true) ...[
                   const SizedBox(height: AppTheme.spaceMd),
-                  Text(bio!),
+                  Text(bio!.trim()),
                 ],
               ],
             ),
@@ -84,8 +129,58 @@ class DoctorDetailSections extends ConsumerWidget {
         const SizedBox(height: AppTheme.spaceLg),
         _ClinicsSection(clinics: clinics, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
-        _ReviewsSection(reviews: reviews, strings: strings),
+        _ReviewsSection(reviews: reviews, strings: strings, isArabic: isArabic),
       ],
+    );
+  }
+}
+
+String? _absoluteImageUrl(WidgetRef ref, String? raw) {
+  final value = raw?.trim();
+  if (value == null || value.isEmpty) return null;
+  if (value.startsWith('http://') || value.startsWith('https://')) return value;
+  return '${ref.watch(activeOriginProvider)}$value';
+}
+
+/// Doctor photo with an initials fallback. Mirrors the web profile's
+/// `onerror` swap to initials — a broken or missing image never surfaces a
+/// broken-image glyph or a network error.
+class _DoctorAvatar extends StatelessWidget {
+  const _DoctorAvatar({required this.name, this.imageUrl});
+  final String name;
+  final String? imageUrl;
+  static const double size = 64;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = name.trim();
+    final initial = trimmed.isEmpty ? '?' : trimmed.substring(0, 1).toUpperCase();
+    final fallback = Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppTheme.primaryGradient,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: AppTheme.weightExtraBold,
+            ),
+      ),
+    );
+    final url = imageUrl?.trim();
+    if (url == null || url.isEmpty) return fallback;
+    return ClipOval(
+      child: Image.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+      ),
     );
   }
 }
@@ -97,7 +192,8 @@ class _InfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <String>[
-      if (doctor.yearsOfExperience != null) strings.doctorInfoExperience(doctor.yearsOfExperience!),
+      if (doctor.yearsOfExperience != null)
+        strings.doctorInfoExperience(doctor.yearsOfExperience!),
       if (doctor.consultationFee != null)
         strings.doctorInfoConsultationFee(doctor.consultationFee!.toStringAsFixed(0)),
       if (doctor.consultationDuration != null)
@@ -105,10 +201,17 @@ class _InfoSection extends StatelessWidget {
       if (doctor.averageRating != null)
         doctor.totalRatings == null
             ? strings.doctorInfoRating(doctor.averageRating!.toStringAsFixed(1))
-            : strings.doctorInfoRatingWithCount(doctor.averageRating!.toStringAsFixed(1), doctor.totalRatings!),
+            : strings.doctorInfoRatingWithCount(
+                doctor.averageRating!.toStringAsFixed(1), doctor.totalRatings!),
       if (doctor.medicalLicenseNumber?.trim().isNotEmpty == true)
         strings.doctorInfoMedicalLicense(doctor.medicalLicenseNumber!),
     ];
+    final chipGroups = <(String, List<String>)>[
+      (strings.doctorInfoExpertise, doctor.areasOfExpertise),
+      (strings.doctorInfoInterests, doctor.professionalInterests),
+      (strings.doctorInfoLanguages, doctor.languagesSpoken),
+    ].where((group) => group.$2.isNotEmpty).toList();
+    final empty = rows.isEmpty && chipGroups.isEmpty;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spaceLg),
@@ -116,14 +219,31 @@ class _InfoSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SectionHeader(title: strings.doctorSectionProfessionalDetails),
-            if (rows.isEmpty)
+            if (empty)
               Text(strings.doctorSectionProfessionalDetailsEmpty)
-            else
+            else ...[
               for (final row in rows)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppTheme.spaceSm),
                   child: Text(row),
                 ),
+              for (final group in chipGroups) ...[
+                const SizedBox(height: AppTheme.spaceXs),
+                Text(
+                  group.$1,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: AppTheme.spaceXs),
+                Wrap(
+                  spacing: AppTheme.spaceSm,
+                  runSpacing: AppTheme.spaceXs,
+                  children: [
+                    for (final value in group.$2) Chip(label: Text(value)),
+                  ],
+                ),
+                const SizedBox(height: AppTheme.spaceSm),
+              ],
+            ],
           ],
         ),
       ),
@@ -214,9 +334,14 @@ class _ClinicsSection extends StatelessWidget {
 }
 
 class _ReviewsSection extends StatelessWidget {
-  const _ReviewsSection({required this.reviews, required this.strings});
+  const _ReviewsSection({
+    required this.reviews,
+    required this.strings,
+    required this.isArabic,
+  });
   final List<DoctorReview> reviews;
   final AppStrings strings;
+  final bool isArabic;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -229,22 +354,73 @@ class _ReviewsSection extends StatelessWidget {
             Text(strings.doctorSectionReviewsEmpty)
           else
             for (final review in reviews)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: review.rating == null
-                    ? null
-                    : Text(review.rating!.toStringAsFixed(1)),
-                title: review.comment?.trim().isNotEmpty == true
-                    ? Text(review.comment!)
-                    : Text(strings.doctorReviewNoComment),
-                subtitle: review.createdAt == null
-                    ? null
-                    : Text(
-                        review.createdAt!.toLocal().toString().split(' ').first,
-                      ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppTheme.spaceSm),
+                child: _ReviewTile(
+                  review: review,
+                  strings: strings,
+                  isArabic: isArabic,
+                ),
               ),
         ],
       ),
     ),
   );
+}
+
+class _ReviewTile extends StatelessWidget {
+  const _ReviewTile({
+    required this.review,
+    required this.strings,
+    required this.isArabic,
+  });
+  final DoctorReview review;
+  final AppStrings strings;
+  final bool isArabic;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final body = review.localizedText(isArabic: isArabic);
+    final reviewer = review.reviewerName(isArabic: isArabic) ??
+        strings.doctorReviewAnonymous;
+    final date = review.createdAt?.toLocal().toString().split(' ').first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                reviewer,
+                style: theme.textTheme.labelLarge,
+              ),
+            ),
+            if (review.rating != null)
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.star_rounded, size: AppTheme.iconSm),
+                    const SizedBox(width: AppTheme.spaceXs),
+                    Text(review.rating!.toStringAsFixed(1)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        if (date != null) ...[
+          const SizedBox(height: AppTheme.spaceXs),
+          Text(
+            date,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        const SizedBox(height: AppTheme.spaceXs),
+        Text(body ?? strings.doctorReviewNoComment),
+      ],
+    );
+  }
 }

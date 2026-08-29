@@ -165,6 +165,7 @@ class DiscoveryState {
     this.isLoadingRecommendedDoctors = false,
     this.recommendedDoctorsError,
     this.doctorPagination,
+    this.selectedDoctorId,
     this.selectedDoctorDetail,
     this.doctorAvailability = const [],
     this.isLoadingClinics = false,
@@ -195,6 +196,12 @@ class DiscoveryState {
   final bool isLoadingRecommendedDoctors;
   final DiscoveryError? recommendedDoctorsError;
   final DoctorPagination? doctorPagination;
+
+  /// The doctor id the detail/availability slices currently belong to. Set
+  /// synchronously when a detail screen mounts, so a stale [selectedDoctorDetail]
+  /// or [doctorDetailError] from a previously viewed doctor is never rendered
+  /// as the current one (Doctor A → back → Doctor B, or B → back → A).
+  final String? selectedDoctorId;
   final DoctorDetailResponse? selectedDoctorDetail;
   final List<DoctorAvailabilitySlot> doctorAvailability;
   final bool isLoadingClinics;
@@ -247,6 +254,8 @@ class DiscoveryState {
     bool clearRecommendedDoctorsError = false,
     DoctorPagination? doctorPagination,
     bool clearDoctorPagination = false,
+    String? selectedDoctorId,
+    bool clearSelectedDoctorId = false,
     DoctorDetailResponse? selectedDoctorDetail,
     bool clearSelectedDoctorDetail = false,
     List<DoctorAvailabilitySlot>? doctorAvailability,
@@ -288,6 +297,7 @@ class DiscoveryState {
           ? null
           : (recommendedDoctorsError ?? this.recommendedDoctorsError),
       doctorPagination: clearDoctorPagination ? null : (doctorPagination ?? this.doctorPagination),
+      selectedDoctorId: clearSelectedDoctorId ? null : (selectedDoctorId ?? this.selectedDoctorId),
       selectedDoctorDetail: clearSelectedDoctorDetail
           ? null
           : (selectedDoctorDetail ?? this.selectedDoctorDetail),
@@ -319,6 +329,8 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
 
   int _clinicRequestId = 0;
   int _doctorRequestId = 0;
+  int _doctorDetailRequestId = 0;
+  int _doctorAvailabilityRequestId = 0;
   ClinicFilters? _activeClinicRequest;
   DoctorFilters? _activeDoctorRequest;
   bool _disposed = false;
@@ -582,11 +594,36 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
     }
   }
 
+  /// Called synchronously when a detail screen mounts (or re-surfaces for a
+  /// different doctor). Rebinds the shared detail/availability slices to [id]
+  /// and drops everything that belonged to the previously viewed doctor, so
+  /// Doctor A's data can never render for Doctor B. A no-op when [id] is
+  /// already the active doctor (a refresh of the same screen keeps its data
+  /// visible while reloading).
+  void prepareDoctorDetail(String id) {
+    if (state.selectedDoctorId == id) return;
+    _doctorDetailRequestId++;
+    _doctorAvailabilityRequestId++;
+    _set(
+      state.copyWith(
+        selectedDoctorId: id,
+        clearSelectedDoctorDetail: true,
+        doctorAvailability: const [],
+        isLoadingDoctorDetail: false,
+        isLoadingDoctorAvailability: false,
+        clearDoctorDetailError: true,
+        clearDoctorAvailabilityError: true,
+      ),
+    );
+  }
+
   Future<bool> loadDoctorDetail(String id) async {
-    if (state.isLoadingDoctorDetail) return false;
+    prepareDoctorDetail(id);
+    final requestId = ++_doctorDetailRequestId;
     _set(state.copyWith(isLoadingDoctorDetail: true, clearDoctorDetailError: true));
     try {
       final detail = await _api.getDoctor(id);
+      if (requestId != _doctorDetailRequestId) return false;
       _set(
         state.copyWith(
           selectedDoctorDetail: detail,
@@ -595,16 +632,26 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
+      if (requestId != _doctorDetailRequestId) return false;
       _set(state.copyWith(isLoadingDoctorDetail: false, doctorDetailError: _safeError(error)));
       return false;
     }
   }
 
   Future<bool> loadDoctorAvailability(String id, {String? date}) async {
-    if (state.isLoadingDoctorAvailability) return false;
-    _set(state.copyWith(isLoadingDoctorAvailability: true, clearDoctorAvailabilityError: true));
+    // Availability always belongs to whichever doctor's detail screen is open.
+    prepareDoctorDetail(id);
+    final requestId = ++_doctorAvailabilityRequestId;
+    _set(
+      state.copyWith(
+        isLoadingDoctorAvailability: true,
+        doctorAvailability: const [],
+        clearDoctorAvailabilityError: true,
+      ),
+    );
     try {
       final response = await _api.getDoctorAvailability(id, date: date);
+      if (requestId != _doctorAvailabilityRequestId) return false;
       _set(
         state.copyWith(
           doctorAvailability: response.slots,
@@ -613,6 +660,7 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
+      if (requestId != _doctorAvailabilityRequestId) return false;
       _set(
         state.copyWith(
           isLoadingDoctorAvailability: false,

@@ -263,6 +263,88 @@ void main() {
     expect(state.doctorAvailability.single.id, 'slot-1');
   });
 
+  test('switching doctors drops the previous doctor detail, availability and error', () async {
+    final fake = _FakeDiscoveryApi()
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'a', firstNameEn: 'A'),
+        reviews: [DoctorReview(id: 'r', reviewTextEn: 'old')],
+      )))
+      ..availabilityResults.add(Future.value(
+        const DoctorAvailabilityResponse(slots: [DoctorAvailabilitySlot(id: 's1')]),
+      ))
+      // A later refresh of doctor 'a' that fails — seeds a genuine stale
+      // detail error while the previously loaded 'a' detail + slots stay put.
+      ..doctorDetailResults.add(Future.error(
+        const ApiException(message: 'transient', code: 'X', statusCode: 503),
+      ))
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'b', firstNameEn: 'B'),
+      )));
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    await notifier.loadDoctorDetail('a');
+    await notifier.loadDoctorAvailability('a', date: '2026-08-05');
+    await notifier.loadDoctorDetail('a'); // fails → error is set for doctor 'a'
+
+    final stale = container.read(discoveryControllerProvider);
+    expect(stale.doctorDetailError, isNotNull);
+    expect(stale.selectedDoctorDetail?.doctor?.id, 'a');
+    expect(stale.doctorAvailability, isNotEmpty);
+
+    await notifier.loadDoctorDetail('b');
+    final state = container.read(discoveryControllerProvider);
+    expect(state.selectedDoctorId, 'b');
+    expect(state.selectedDoctorDetail?.doctor?.id, 'b');
+    expect(state.doctorAvailability, isEmpty);
+    expect(state.doctorDetailError, isNull);
+  });
+
+  test('a slow detail response for a previously viewed doctor never overwrites the current one', () async {
+    final slowA = Completer<DoctorDetailResponse>();
+    final fake = _FakeDiscoveryApi()
+      ..doctorDetailResults.add(slowA.future)
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'b', firstNameEn: 'B'),
+      )));
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    final stale = notifier.loadDoctorDetail('a');
+    await notifier.loadDoctorDetail('b');
+    slowA.complete(const DoctorDetailResponse(doctor: Doctor(id: 'a', firstNameEn: 'A')));
+
+    expect(await stale, isFalse);
+    final state = container.read(discoveryControllerProvider);
+    expect(state.selectedDoctorId, 'b');
+    expect(state.selectedDoctorDetail?.doctor?.id, 'b');
+  });
+
+  test('a stale availability response for an earlier date is ignored', () async {
+    final slow = Completer<DoctorAvailabilityResponse>();
+    final fake = _FakeDiscoveryApi()
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'a', firstNameEn: 'A'),
+      )))
+      ..availabilityResults.add(slow.future)
+      ..availabilityResults.add(Future.value(
+        const DoctorAvailabilityResponse(slots: [DoctorAvailabilitySlot(id: 'new')]),
+      ));
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    await notifier.loadDoctorDetail('a');
+    final stale = notifier.loadDoctorAvailability('a', date: '2026-08-01');
+    await notifier.loadDoctorAvailability('a', date: '2026-08-02');
+    slow.complete(const DoctorAvailabilityResponse(slots: [DoctorAvailabilitySlot(id: 'old')]));
+
+    expect(await stale, isFalse);
+    expect(container.read(discoveryControllerProvider).doctorAvailability.single.id, 'new');
+  });
+
   test('duplicate clinic requests are prevented', () async {
     final completer = Completer<ClinicListResponse>();
     final fake = _FakeDiscoveryApi()..clinicListResults.add(completer.future);

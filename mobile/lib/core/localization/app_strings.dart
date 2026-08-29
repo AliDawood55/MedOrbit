@@ -1757,6 +1757,22 @@ class AppStrings {
       _t('لا توجد تقييمات مدرجة.', 'No reviews are listed.');
   String get doctorReviewNoComment =>
       _t('لا يوجد تعليق مكتوب', 'No written comment');
+  String get doctorReviewAnonymous => _t('مريض', 'Patient');
+  String get doctorInfoSubSpecialty =>
+      _t('تخصص فرعي', 'Sub-specialty');
+  String get doctorInfoExpertise =>
+      _t('مجالات الخبرة', 'Areas of expertise');
+  String get doctorInfoInterests =>
+      _t('الاهتمامات المهنية', 'Professional interests');
+  String get doctorInfoLanguages => _t('اللغات', 'Languages');
+  String get doctorBookingUnavailableNotAccepting => _t(
+    'هذا الطبيب لا يستقبل مواعيد جديدة حاليًا.',
+    'This doctor is not accepting new appointments right now.',
+  );
+  String get doctorBookingUnavailableUnknown => _t(
+    'حالة استقبال المواعيد غير مؤكدة لهذا الطبيب. تواصل مع العيادة للتأكيد.',
+    "This doctor's availability is not confirmed. Contact the clinic to confirm.",
+  );
   String get doctorAvailabilityTitle => _t('الأوقات المتاحة', 'Availability');
   String get doctorChooseDateAction => _t('اختر التاريخ', 'Choose date');
   String get doctorAvailabilityLoadError =>
