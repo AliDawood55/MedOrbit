@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile/core/localization/app_strings.dart';
 import 'package:mobile/core/network/api_exception.dart';
 import 'package:mobile/core/providers/core_providers.dart';
@@ -14,10 +15,17 @@ import 'package:mobile/features/notifications/data/notifications_api.dart';
 import 'package:mobile/features/notifications/models/notification_model.dart';
 import 'package:mobile/features/notifications/providers/notifications_provider.dart';
 import 'package:mobile/features/notifications/screens/notifications_screen.dart';
+import 'package:mobile/routes/route_paths.dart';
 
 const _strings = AppStrings(false); // English, matching the default direction used below
 
-NotificationModel _notification({required String id, bool isRead = false, String type = 'appointment'}) {
+NotificationModel _notification({
+  required String id,
+  bool isRead = false,
+  String type = 'appointment',
+  String? referenceId,
+  String? referenceType,
+}) {
   return NotificationModel(
     id: id,
     notificationType: type,
@@ -28,6 +36,8 @@ NotificationModel _notification({required String id, bool isRead = false, String
     isRead: isRead,
     createdAt: DateTime.now().subtract(const Duration(hours: 2)),
     readAt: isRead ? DateTime.now() : null,
+    referenceId: referenceId,
+    referenceType: referenceType,
   );
 }
 
@@ -164,6 +174,37 @@ void main() {
     expect(api.deleteCalls, ['n1']);
   });
 
+  testWidgets('an allow-listed direct message marks read then opens its internal thread', (tester) async {
+    const conversationId = '123e4567-e89b-42d3-a456-426614174000';
+    final api = _FakeNotificationsApi()
+      ..listResults.add([
+        _notification(
+          id: 'n-message',
+          type: 'NEW_DIRECT_MESSAGE',
+          referenceId: conversationId,
+          referenceType: 'DIRECT_CONVERSATION',
+        ),
+      ])
+      ..markReadResults.add(
+        _notification(
+          id: 'n-message',
+          isRead: true,
+          type: 'NEW_DIRECT_MESSAGE',
+          referenceId: conversationId,
+          referenceType: 'DIRECT_CONVERSATION',
+        ),
+      );
+    await tester.pumpWidget(_routerApp(api));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('notification-n-message')));
+    await tester.pump();
+    await tester.pump();
+
+    expect(api.markReadCalls, ['n-message']);
+    expect(find.text('Opened $conversationId'), findsOneWidget);
+  });
+
   testWidgets('renders in Arabic RTL and at 2x text scale without throwing', (tester) async {
     final api = _FakeNotificationsApi()
       ..listResults.add([_notification(id: 'n1'), _notification(id: 'n2', isRead: true)]);
@@ -172,6 +213,34 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+}
+
+Widget _routerApp(NotificationsApi api) {
+  final router = GoRouter(
+    initialLocation: '/notifications-test',
+    routes: [
+      GoRoute(
+        path: '/notifications-test',
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.messageThread,
+        builder: (_, state) => Scaffold(
+          body: Text('Opened ${state.pathParameters['id']}'),
+        ),
+      ),
+    ],
+  );
+  return ProviderScope(
+    overrides: [
+      notificationsApiProvider.overrideWithValue(api),
+      secureStorageProvider.overrideWithValue(_FakeSecureStorage('en')),
+    ],
+    child: MaterialApp.router(
+      theme: AppTheme.light(),
+      routerConfig: router,
+    ),
+  );
 }
 
 Widget _app({

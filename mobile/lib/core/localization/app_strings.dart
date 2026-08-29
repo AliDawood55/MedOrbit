@@ -2522,6 +2522,120 @@ class AppStrings {
     ),
     _ => errorGeneric,
   };
+
+  // ================================================================
+  // DIRECT MESSAGING / CARE MESSAGES
+  // ================================================================
+  String get messagesTitle => _t('رسائل الرعاية', 'Care Messages');
+  String get messagesSubtitle => _t(
+    'محادثات نصية خاصة وآمنة بين المرضى والأطباء داخل MedOrbit',
+    'Private, secure text conversations between patients and doctors in MedOrbit',
+  );
+  String get messagesNew => _t('رسالة جديدة', 'New message');
+  String get messagesMessageDoctor => _t('مراسلة الطبيب', 'Message doctor');
+  String get messagesNewTitle => _t('بدء محادثة نصية', 'Start a text conversation');
+  String get messagesThreadTitle => _t('المحادثة', 'Conversation');
+  String get messagesRoleDoctor => _t('طبيب', 'Doctor');
+  String get messagesRolePatient => _t('مريض', 'Patient');
+  String get messagesVerifiedDoctor => _t('طبيب معتمد', 'Approved doctor');
+  String get messagesPatientOpenToRequests => _t('مريض يقبل طلبات المراسلة', 'Patient open to message requests');
+  String get messagesUnknownUser => _t('مستخدم MedOrbit', 'MedOrbit user');
+  String get messagesYou => _t('أنت', 'You');
+  String get messagesCounterpart => _t('الطرف الآخر', 'Other person');
+  String get messagesInboxEmptyTitle => _t('لا توجد محادثات بعد', 'No conversations yet');
+  String get messagesInboxEmptyHint => _t(
+    'ابدأ من زر رسالة جديدة للعثور على مستلم مؤهل.',
+    'Use New message to find an eligible recipient.',
+  );
+  String get messagesStartPreview => _t('ابدأ المحادثة', 'Start the conversation');
+  String get messagesRequestPendingPreview => _t('طلب مراسلة بانتظار الرد', 'Message request awaiting response');
+  String get messagesInboxLoadError => _t('تعذر تحميل المحادثات', 'Could not load conversations');
+  String get messagesThreadLoadError => _t('تعذر تحميل الرسائل', 'Could not load messages');
+  String get messagesSearchError => _t('تعذر البحث عن المستلمين', 'Could not search recipients');
+  String get messagesTextOnlyNotice => _t(
+    'هذه الخدمة للمراسلة النصية فقط، ولا تمنح بحد ذاتها صلاحية الوصول إلى السجلات الطبية.',
+    'This service is for text messaging only. It does not itself grant access to medical records.',
+  );
+  String messagesUnreadCount(int count) => _t('$count رسالة غير مقروءة', '$count unread message${count == 1 ? '' : 's'}');
+  String get messagesPatientRecipientHint => _t(
+    'ابحث عن طبيب معتمد بالاسم أو التخصص.',
+    'Find an approved doctor by name or specialty.',
+  );
+  String get messagesDoctorRecipientHint => _t(
+    'ابحث عن طبيب معتمد أو مريض اختار استقبال طلبات الأطباء.',
+    'Find an approved doctor or a patient who opted in to doctor requests.',
+  );
+  String get messagesRecipientSearchLabel => _t('بحث عن مستلم', 'Find a recipient');
+  String get messagesRecipientSearchHint => _t('الاسم أو التخصص أو المدينة', 'Name, specialty, or city');
+  String get messagesSearch => _t('بحث', 'Search');
+  String get messagesSearching => _t('جارٍ البحث...', 'Searching...');
+  String get messagesNoEligibleRecipients => _t('لا توجد نتائج مؤهلة', 'No eligible recipients');
+  String get messagesNoEligibleRecipientsHint => _t(
+    'غيّر عبارة البحث أو حاول لاحقًا. تظهر للأطباء فقط ملفات المرضى الذين اختاروا استقبال الطلبات.',
+    'Try another search. Doctors only see patients who opted in to requests.',
+  );
+  String get messagesStartingConversation => _t('جارٍ فتح المحادثة...', 'Opening conversation...');
+  String get messagesRequestSent => _t('تم إرسال طلب مراسلة آمن.', 'A secure message request was sent.');
+  String get messagesThreadEmptyTitle => _t('لا توجد رسائل بعد', 'No messages yet');
+  String get messagesThreadEmptyHint => _t('ابدأ بتحية واضحة.', 'Start with a clear greeting.');
+  String get messagesPendingEmptyTitle => _t('الطلب بانتظار الرد', 'Request awaiting response');
+  String get messagesPendingComposerDisabled => _t(
+    'تُفتح الرسائل بعد قبول المريض للطلب.',
+    'Messaging unlocks after the patient accepts the request.',
+  );
+  String get messagesHistoryLabel => _t('سجل الرسائل', 'Message history');
+  String get messagesLoadOlder => _t('تحميل رسائل أقدم', 'Load older messages');
+  String get messagesJumpToLatest => _t('الانتقال إلى أحدث رسالة', 'Jump to latest message');
+  String get messagesComposerHint => _t('اكتب رسالة نصية...', 'Write a text message...');
+  String get messagesSend => _t('إرسال', 'Send');
+  String get messagesSending => _t('جارٍ الإرسال...', 'Sending...');
+  String get messagesSendFailed => _t('تعذر الإرسال', 'Send failed');
+  String get messagesDismiss => _t('إخفاء', 'Dismiss');
+  String get messagesIncomingRequestTitle => _t('طلب مراسلة من طبيب معتمد', 'Message request from an approved doctor');
+  String get messagesOutgoingRequestTitle => _t('طلب المراسلة بانتظار المريض', 'Message request awaiting the patient');
+  String get messagesRequestTextOnlyWarning => _t(
+    'قبول الطلب يفتح المراسلة النصية فقط ولا يمنح أي صلاحية طبية أو وصول إلى السجلات.',
+    'Accepting opens text messaging only. It grants no clinical access or medical-record permission.',
+  );
+  String get messagesOutgoingRequestHint => _t(
+    'لن تتمكن من إرسال رسالة حتى يقبل المريض الطلب.',
+    'You cannot send until the patient accepts the request.',
+  );
+  String get messagesAccept => _t('قبول', 'Accept');
+  String get messagesDecline => _t('رفض', 'Decline');
+  String get messagesRequestAccepted => _t('تم قبول طلب المراسلة.', 'Message request accepted.');
+  String get messagesDeclineTitle => _t('رفض طلب المراسلة؟', 'Decline this message request?');
+  String get messagesDeclineBody => _t(
+    'سيُغلق الطلب ولن يتمكن الطبيب من إرسال رسائل في هذه المحادثة.',
+    'The request will close and the doctor will not be able to send messages in this conversation.',
+  );
+  String get messagesConnecting => _t('جارٍ الاتصال...', 'Connecting...');
+  String get messagesConnected => _t('متصل', 'Connected');
+  String get messagesReconnecting => _t('جارٍ إعادة الاتصال...', 'Reconnecting...');
+  String get messagesLiveUnavailable => _t(
+    'التحديث المباشر غير متاح. سنواصل مزامنة الرسائل بأمان.',
+    'Live updates are unavailable. Messages will continue to sync safely.',
+  );
+  String get messagesNotificationType => _t('رسائل الرعاية', 'Care message');
+  String get messagesOpenConversation => _t('فتح المحادثة', 'Open conversation');
+  String get messagesPrivacyTitle => _t('السماح بطلبات مراسلة الأطباء', 'Allow doctor message requests');
+  String get messagesPrivacyHelp => _t(
+    'عند التفعيل، يمكن للأطباء المعتمدين العثور على ملفك وبدء طلب مراسلة جديد. لا تتأثر المحادثات المقبولة الحالية عند الإيقاف.',
+    'When enabled, approved doctors can find your profile and start a new message request. Existing accepted conversations are unaffected when disabled.',
+  );
+
+  String messagingError(String? code) => switch (code) {
+    'UNAUTHORIZED' => _t('انتهت جلستك. سجّل الدخول من جديد ثم حاول مرة أخرى.', 'Your session has expired. Sign in again and retry.'),
+    'FORBIDDEN' || 'MESSAGING_FORBIDDEN' => _t('لا يملك هذا الحساب صلاحية تنفيذ إجراء المراسلة المطلوب.', 'This account cannot perform the requested messaging action.'),
+    'NOT_FOUND' => _t('لم تعد المحادثة أو جهة الاتصال متاحة.', 'This conversation or recipient is no longer available.'),
+    'REQUEST_NOT_PENDING' => _t('تمت معالجة طلب المراسلة بالفعل. حدّث المحادثة لرؤية حالته الحالية.', 'This request was already handled. Refresh to see its current status.'),
+    'MESSAGE_REQUEST_COOLDOWN' => _t('لا يمكن إرسال طلب جديد إلى هذا المريض حاليًا. حاول لاحقًا.', 'A new request cannot be sent to this patient yet. Try again later.'),
+    'MESSAGE_REQUEST_RATE_LIMITED' || 'RATE_LIMITED' => _t('تم إجراء محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.', 'Too many attempts. Wait a little while and try again.'),
+    'VALIDATION_ERROR' || 'INVALID_FORMAT' => _t('تحقق من البيانات المدخلة ثم حاول مرة أخرى.', 'Check the entered information and try again.'),
+    'CONNECT_TIMEOUT' || 'SEND_TIMEOUT' || 'RECEIVE_TIMEOUT' || 'SERVICE_UNAVAILABLE' => _t('تعذر الوصول إلى الخدمة. تحقق من اتصالك ثم حاول مرة أخرى.', 'Could not reach the service. Check your connection and try again.'),
+    'INVALID_RESPONSE' || 'EMPTY_RESPONSE' => _t('وصل رد غير مكتمل من الخدمة. حاول مرة أخرى.', 'The service returned an incomplete response. Please retry.'),
+    _ => _t('تعذر إكمال الإجراء. حاول مرة أخرى.', 'The action could not be completed. Please try again.'),
+  };
 }
 
 final appStringsProvider = Provider<AppStrings>((ref) {

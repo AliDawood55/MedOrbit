@@ -12,6 +12,7 @@ import 'features/chatbot/providers/conversations_provider.dart';
 import 'features/drug_checker/providers/drug_checker_provider.dart';
 import 'features/home/providers/user_provider.dart';
 import 'features/my_reports/providers/my_reports_provider.dart';
+import 'features/messaging/providers/messaging_providers.dart';
 import 'features/notifications/providers/notifications_provider.dart';
 import 'features/prescriptions/providers/prescriptions_provider.dart';
 import 'features/profile/providers/profile_provider.dart';
@@ -79,6 +80,10 @@ class MedOrbitApp extends ConsumerWidget {
       ref.invalidate(drugCheckerControllerProvider);
       ref.invalidate(reportSummarizerControllerProvider);
       ref.invalidate(myReportsControllerProvider);
+      ref.invalidate(messagingInboxProvider);
+      ref.invalidate(patientMessagingPreferenceProvider);
+      ref.invalidate(conversationThreadProvider);
+      ref.invalidate(recipientSearchProvider);
     });
   }
 }

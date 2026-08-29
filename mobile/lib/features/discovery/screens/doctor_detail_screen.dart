@@ -9,6 +9,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/doctor_models.dart';
 import '../providers/discovery_provider.dart';
 import '../widgets/doctor_detail_sections.dart';
@@ -113,6 +114,10 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
           ),
           const SizedBox(height: AppTheme.spaceLg),
           _BookingCta(strings: strings, doctor: doctor, doctorId: widget.doctorId),
+          if (doctor.extra['is_owner'] != true) ...[
+            const SizedBox(height: AppTheme.spaceMd),
+            _MessageDoctorCta(doctorId: widget.doctorId, strings: strings),
+          ],
           const SizedBox(height: AppTheme.spaceLg),
           _AvailabilitySection(
             strings: strings,
@@ -141,6 +146,23 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
           children: [ResponsiveContent(maxWidth: 960, child: content)],
         ),
       ),
+    );
+  }
+}
+
+class _MessageDoctorCta extends ConsumerWidget {
+  const _MessageDoctorCta({required this.doctorId, required this.strings});
+  final String doctorId;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
+    if (role == 'admin' || role == 'super_admin') return const SizedBox.shrink();
+    return OutlinedButton.icon(
+      onPressed: () => context.push(RoutePaths.newMessagePath(doctorId)),
+      icon: const Icon(Icons.forum_outlined),
+      label: Text(strings.messagesMessageDoctor),
     );
   }
 }

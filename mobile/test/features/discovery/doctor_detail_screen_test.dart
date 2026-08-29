@@ -26,6 +26,7 @@ void main() {
     expect(find.text('Mariam Saleh'), findsOneWidget); expect(find.text('Medical school'), findsOneWidget); expect(find.text('Course'), findsOneWidget); expect(find.text('Rafidia Clinic'), findsOneWidget); expect(find.text('Helpful'), findsOneWidget); expect(find.textContaining('verified'), findsNothing);
     expect(find.byKey(const ValueKey('discovery-map-place-c1')), findsOneWidget);
     expect(find.text(_strings.bookNewAppointment), findsOneWidget);
+    expect(find.text(_strings.messagesMessageDoctor), findsOneWidget);
   });
   testWidgets('missing optional detail, not found, error retry, and availability states are safe', (tester) async {
     final api = _DetailApi()..failures.add(const ApiException(message: 'Failed', code: 'FAILED'))..details.add(Future.value(const DoctorDetailResponse()));

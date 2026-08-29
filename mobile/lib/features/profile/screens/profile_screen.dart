@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/profile_edit_model.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/change_password_sheet.dart';
@@ -31,6 +32,8 @@ class ProfileScreen extends ConsumerWidget {
     final notifier = ref.read(profileControllerProvider.notifier);
     final avatarOrigin = ref.watch(activeOriginProvider);
     final themeMode = ref.watch(themeControllerProvider);
+    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
+    final canUseCareMessages = role == 'patient' || role == 'doctor';
 
     return AppScaffold(
       appBar: AppBar(title: Text(strings.profileTitle)),
@@ -121,6 +124,16 @@ class ProfileScreen extends ConsumerWidget {
                       onTap: () => context.push(RoutePaths.billing),
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
+                    if (canUseCareMessages) ...[
+                      FeatureCard(
+                        title: strings.messagesTitle,
+                        subtitle: strings.messagesSubtitle,
+                        icon: Icons.forum_outlined,
+                        onTap: () => context.push(RoutePaths.messages),
+                        semanticLabel: strings.messagesOpenConversation,
+                      ),
+                      const SizedBox(height: AppTheme.spaceLg),
+                    ],
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(AppTheme.spaceLg),

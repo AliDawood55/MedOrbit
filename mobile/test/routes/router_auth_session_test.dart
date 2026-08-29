@@ -33,6 +33,9 @@ void main() {
     RoutePaths.conversations,
     RoutePaths.chatbotConversation,
     RoutePaths.virtualDoctor,
+    RoutePaths.messages,
+    RoutePaths.messagesNew,
+    RoutePaths.messageThread,
   ];
 
   const public = [
@@ -96,6 +99,18 @@ void main() {
           RoutePaths.billingSandboxPath('checkout-token'),
         ),
         RoutePaths.login,
+      );
+    });
+
+    test('dynamic direct-message routes never expose private data', () {
+      const thread = '/messages/123e4567-e89b-42d3-a456-426614174000';
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          thread,
+          fullLocation: '$thread?from=notification',
+        ),
+        '/login?redirect=%2Fmessages%2F123e4567-e89b-42d3-a456-426614174000%3Ffrom%3Dnotification',
       );
     });
   });
@@ -226,14 +241,26 @@ void main() {
   });
 
   group('protected set', () {
-    test('covers exactly patient data, billing, chatbot, and voice routes', () {
+    test(
+      'covers exactly patient data, billing, chatbot, voice, and messaging routes',
+      () {
       expect(protectedRoutes, protected.toSet());
-    });
+      },
+    );
 
     test('excludes every public route', () {
       for (final route in public) {
         expect(protectedRoutes.contains(route), isFalse, reason: route);
       }
+    });
+  });
+
+  group('direct messaging route parsing', () {
+    test('accepts UUID conversation identifiers and rejects unsafe values', () {
+      const id = '123e4567-e89b-42d3-a456-426614174000';
+      expect(validMessageConversationId(id), id);
+      expect(validMessageConversationId('../records'), isNull);
+      expect(validMessageConversationId('not-a-uuid'), isNull);
     });
   });
 }

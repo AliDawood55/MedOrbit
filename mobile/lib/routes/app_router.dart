@@ -28,6 +28,9 @@ import '../features/drug_checker/screens/drug_checker_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/my_reports/screens/my_reports_screen.dart';
+import '../features/messaging/screens/message_thread_screen.dart';
+import '../features/messaging/screens/messaging_inbox_screen.dart';
+import '../features/messaging/screens/new_message_screen.dart';
 import '../features/my_doctors/models/patient_doctor_models.dart';
 import '../features/my_doctors/screens/my_doctors_screen.dart';
 import '../features/my_doctors/screens/shared_doctor_notes_screen.dart';
@@ -69,12 +72,16 @@ const Set<String> protectedRoutes = {
   RoutePaths.conversations,
   RoutePaths.chatbotConversation,
   RoutePaths.virtualDoctor,
+  RoutePaths.messages,
+  RoutePaths.messagesNew,
+  RoutePaths.messageThread,
 };
 
 bool isProtectedLocation(String location) {
   if (protectedRoutes.contains(location)) return true;
   return location.startsWith('${RoutePaths.conversations}/') ||
-      location.startsWith('/billing/sandbox/');
+      location.startsWith('/billing/sandbox/') ||
+      location.startsWith('${RoutePaths.messages}/');
 }
 
 String? sessionRedirect(
@@ -186,6 +193,28 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.conversations,
         builder: (context, state) => const ConversationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.messages,
+        builder: (context, state) => const MessagingInboxScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.messagesNew,
+        builder: (context, state) => NewMessageScreen(
+          initialCounterpartId: validMessageConversationId(
+            state.uri.queryParameters['counterpart'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.messageThread,
+        redirect: (context, state) =>
+            validMessageConversationId(state.pathParameters['id']) == null
+            ? RoutePaths.messages
+            : null,
+        builder: (context, state) => MessageThreadScreen(
+          conversationId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: RoutePaths.chatbotConversation,
@@ -325,3 +354,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+String? validMessageConversationId(String? value) {
+  final candidate = value?.trim() ?? '';
+  return RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+      ).hasMatch(candidate)
+      ? candidate
+      : null;
+}

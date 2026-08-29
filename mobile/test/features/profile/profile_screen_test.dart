@@ -10,6 +10,11 @@ import 'package:mobile/core/network/api_exception.dart';
 import 'package:mobile/core/providers/core_providers.dart';
 import 'package:mobile/core/storage/secure_storage_service.dart';
 import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/features/auth/data/auth_api.dart';
+import 'package:mobile/features/auth/data/google_auth_service.dart';
+import 'package:mobile/features/auth/models/user_model.dart';
+import 'package:mobile/features/auth/providers/auth_provider.dart';
+import 'package:mobile/features/auth/repositories/auth_repository.dart';
 import 'package:mobile/features/home/models/user_profile_model.dart';
 import 'package:mobile/features/profile/data/profile_api.dart';
 import 'package:mobile/features/profile/models/profile_edit_model.dart';
@@ -326,6 +331,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('care messages entry is available to care roles but not admins', (
+    tester,
+  ) async {
+    await _useTallSurface(tester);
+    final patientApi = _FakeProfileApi()..getMeResults.add(_profile());
+    await tester.pumpWidget(_app(api: patientApi, role: 'patient'));
+    await tester.pump();
+    expect(find.text(_strings.messagesTitle), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    final adminApi = _FakeProfileApi()..getMeResults.add(_profile());
+    await tester.pumpWidget(_app(api: adminApi, role: 'admin'));
+    await tester.pump();
+    expect(find.text(_strings.messagesTitle), findsNothing);
+  });
+
   testWidgets(
     'focusing a field does not throw or leave the save button unreachable',
     (tester) async {
@@ -351,10 +373,13 @@ Widget _app({
   bool isArabic = false,
   TextDirection direction = TextDirection.ltr,
   double textScale = 1,
+  String? role,
 }) {
   return ProviderScope(
     overrides: [
       profileApiProvider.overrideWithValue(api),
+      if (role != null)
+        authControllerProvider.overrideWith((ref) => _FakeAuth(role)),
       // The real secure storage plugin has no backing implementation under
       // `flutter_test` — covers locale, theme, and the change-password
       // success path's forced logout, all of which read/write it.
@@ -402,6 +427,24 @@ class _FakeSecureStorage extends SecureStorageService {
 
   @override
   Future<void> clear() async {}
+}
+
+class _FakeAuth extends AuthController {
+  _FakeAuth(String role)
+      : super(
+          AuthRepository(AuthApi(Dio()), SecureStorageService()),
+          GoogleAuthService(),
+          SecureStorageService(),
+        ) {
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      user: UserModel(
+        id: 'user-1',
+        email: 'care@example.test',
+        role: role,
+      ),
+    );
+  }
 }
 
 class _FakeProfileApi extends ProfileApi {

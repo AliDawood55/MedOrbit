@@ -39,6 +39,11 @@ class RoutePaths {
   static const String billingHistory = '/billing/history';
   static const String billingSandbox = '/billing/sandbox/:token';
 
+  // Direct Messaging / Care Messages
+  static const String messages = '/messages';
+  static const String messagesNew = '/messages/new';
+  static const String messageThread = '/messages/:id';
+
   static String clinicDetailPath(String id) =>
       '/clinics/${Uri.encodeComponent(id)}';
   static String doctorDetailPath(String id) =>
@@ -49,6 +54,10 @@ class RoutePaths {
       '/billing/sandbox/${Uri.encodeComponent(token)}';
   static String sharedDoctorNotesPath(String id) =>
       '/my-doctors/${Uri.encodeComponent(id)}/notes';
+  static String messageThreadPath(String id) =>
+      '/messages/${Uri.encodeComponent(id)}';
+  static String newMessagePath(String counterpartId) =>
+      '$messagesNew?counterpart=${Uri.encodeQueryComponent(counterpartId)}';
 
   static String appointmentBookingPath({String? doctorId}) {
     if (doctorId == null || doctorId.isEmpty) return appointmentBooking;
