@@ -13,6 +13,7 @@ const PUBLIC_HOME = 'home.html';
 
 const PROTECTED = [
         'admin-contact-messages.html',
+        'admin-clinic-applications.html',
         'admin-doctor-applications.html',
         'admin-invitation-accept.html',
         'admin-invitations.html',
@@ -25,6 +26,8 @@ const PROTECTED = [
 'billing-sandbox.html',
         'book-appointment.html',
         'clinic.html',
+        'clinic-application.html',
+        'clinic-workspace.html',
         'contact.html',
         'dashboard.html',
         'direct-messages.html',
@@ -78,12 +81,20 @@ const PROTECTED = [
     const ROLE_RESTRICTED = {
         'analytics.html': ['admin', 'super_admin'],
         'admin-contact-messages.html': ['admin', 'super_admin'],
+        'admin-clinic-applications.html': ['admin', 'super_admin'],
         'admin-doctor-applications.html': ['admin', 'super_admin'],
         'admin-social.html': ['admin', 'super_admin'],
         'admin-users.html': ['admin', 'super_admin'],
         'admin-invitations.html': ['super_admin'],
-
-'doctor-posts.html': ['doctor'],
+         // admin-invitation-accept.html is deliberately absent. Its backend
+        // route (POST /api/admin/invitations/accept) requires authenticate but
+        // NOT authorizeAdmin: the whole point of an invitation is that the
+        // invited account is not an admin yet. It is PROTECTED — you must be
+        // signed in as the invited account — and nothing more. Listing it here
+        // would describe a restriction the backend does not have, and would be
+        // the first step towards a frontend authorization system.
+         'doctor-posts.html': ['doctor'],
+         'clinic-workspace.html': ['clinic'],
         'doctor-profile-edit.html': ['doctor'],
         'my-patients.html': ['doctor'],
         'my-schedule.html': ['doctor'],
@@ -195,14 +206,23 @@ function isDoctorApplicationIntent() {
         return new URLSearchParams(window.location.search).get('intent') === 'doctor';
     }
 
+    function isClinicApplicationIntent() {
+        return new URLSearchParams(window.location.search).get('intent') === 'clinic';
+    }
+
     function defaultLandingPage(user) {
 
 if (user?.role === 'patient' && isDoctorApplicationIntent()) {
             return 'doctor-application.html';
         }
+        if (user?.role === 'patient' && isClinicApplicationIntent()) {
+            return 'clinic-application.html';
+        }
         switch (user?.role) {
             case 'doctor':
                 return 'my-schedule.html';
+            case 'clinic':
+                return 'clinic-workspace.html';
             case 'admin':
                 return 'analytics.html';
             case 'super_admin':
@@ -807,7 +827,8 @@ window.__medorbitAuthGateReady = true;
         clearIntendedDestination: clearIntendedDestination,
         defaultLandingPage: defaultLandingPage,
         isDoctorApplicationIntent: isDoctorApplicationIntent,
-
+         isClinicApplicationIntent: isClinicApplicationIntent,
+         // session
         verifySession: verifySession,
         getVerifiedUser: () => verifiedUser,
         getSessionState: () => sessionState,

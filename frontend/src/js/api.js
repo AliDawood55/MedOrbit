@@ -378,7 +378,23 @@ const doctors = {
 const clinics = {
         list: (query, options) => get('/clinics', query, options),
         nearby: (query, options) => get('/clinics/nearby', query, options),
-        get: (id, options) => get(`/clinics/${id}`, null, options)
+        get: (id, options) => get(`/clinics/${id}`, null, options),
+        directoryFilters: (options) => get('/clinics/directory-filters', null, options),
+        mine: (options) => get('/clinics/me', null, options),
+        updateMine: (payload, options) => put('/clinics/me', payload, options),
+        mineDoctors: (options) => get('/clinics/me/doctors', null, options),
+        eligibleDoctors: (options) => get('/clinics/eligible-doctors', null, options),
+        addMineDoctor: (payload, options) => post('/clinics/me/doctors', payload, options),
+        removeMineDoctor: (id, options) => del(`/clinics/me/doctors/${encodeURIComponent(id)}`, null, options)
+    };
+
+    const clinicApplications = {
+        mine: (options) => get('/clinic-applications/me', null, options),
+        submit: (payload, options) => post('/clinic-applications', payload, options),
+        withdraw: (id, options) => post(`/clinic-applications/${encodeURIComponent(id)}/withdraw`, {}, options),
+        adminList: (query, options) => get('/admin/clinic-applications', query, options),
+        approve: (id, options) => post(`/admin/clinic-applications/${encodeURIComponent(id)}/approve`, {}, options),
+        reject: (id, payload, options) => post(`/admin/clinic-applications/${encodeURIComponent(id)}/reject`, payload, options)
     };
 
 const users = {
@@ -577,7 +593,7 @@ const virtualDoctor = {
 
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, clinicApplications, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
         setSession, updateCurrentUser, refreshCurrentUser, displayName, profileAvatarUrl,
         clearSession, requireAuth, logout, getOrigin, assetUrl, resolveServiceOrigin, clearCache
