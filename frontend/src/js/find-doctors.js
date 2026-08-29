@@ -1,15 +1,8 @@
-/**
- * MedOrbit v2 - Find Doctors
- * GET /api/doctors with specialty filter + pagination.
- */
 const FindDoctors = (() => {
 
     const PAGE_SIZE = 12;
 
-    // Fallback labels keep discovery usable if reference-data loading fails.
-    // The live /specialties response replaces these entries with authoritative
-    // UUID-backed options before a recommendation signal can be emitted.
-    let specialties = [
+let specialties = [
         { en: 'Anesthesiology', ar: 'التخدير' },
         { en: 'Cardiology', ar: 'طب القلب' },
         { en: 'Dentistry', ar: 'طب الأسنان' },
@@ -43,8 +36,8 @@ const FindDoctors = (() => {
     let searchDebounceTimer = null;
     let activeController = null;
     let recommendedController = null;
-    let recommendedDoctors; // undefined = not loaded yet, null = errored, array = loaded (cached across language changes)
-    const LIST_CACHE_TTL = 60000; // 1 min — doctor list/filters rarely change that fast
+    let recommendedDoctors;
+    const LIST_CACHE_TTL = 60000;
 
     function isAr() {
         return (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar') === 'ar';
@@ -74,9 +67,7 @@ const FindDoctors = (() => {
         return (isAr() ? d.specialty_ar : d.specialty_en) || d.specialty_ar || d.specialty_en || '';
     }
 
-    // ================= SPECIALTY FILTER =================
-
-    function renderSpecialtyOptions() {
+function renderSpecialtyOptions() {
         const select = document.getElementById('specialtyFilter');
         if (!select) return;
         const selected = select.value;
@@ -104,18 +95,14 @@ const FindDoctors = (() => {
         }
     }
 
-    // ================= DATA =================
-
-    async function loadDoctors(page = 1) {
+async function loadDoctors(page = 1) {
         currentPage = page;
 
         const content = document.getElementById('doctorsContent');
         const pagination = document.getElementById('pagination');
         if (!content) return;
 
-        // Cancel a still-in-flight previous request so a slow earlier
-        // response can't land after a newer one and show stale results.
-        if (activeController) activeController.abort();
+if (activeController) activeController.abort();
         activeController = API.makeCancellable();
 
         content.innerHTML = renderSkeleton();
@@ -141,18 +128,13 @@ const FindDoctors = (() => {
             renderPagination(pageInfo);
 
         } catch (err) {
-            if (err.name === 'AbortError') return; // superseded — the newer request will render
+            if (err.name === 'AbortError') return;
             console.error('FindDoctors: failed to load doctors', err);
             content.innerHTML = renderError();
         }
     }
 
-    // ================= RECOMMENDED DOCTORS =================
-    // Independent surface from the ordinary catalogue below: separate
-    // request, separate loading/success/empty/error state, and a failure
-    // here must never break ordinary search/filter/pagination.
-
-    function renderRecommendedContent() {
+function renderRecommendedContent() {
         const content = document.getElementById('recommendedDoctorsContent');
         const section = document.getElementById('recommendedDoctorsSection');
         if (!content || !section) return;
@@ -194,16 +176,14 @@ const FindDoctors = (() => {
             recommendedDoctors = Array.isArray(res.data?.doctors) ? res.data.doctors : [];
             renderRecommendedContent();
         } catch (err) {
-            if (err.name === 'AbortError') return; // superseded by a newer request
+            if (err.name === 'AbortError') return;
             console.error('FindDoctors: failed to load recommended doctors', err);
             recommendedDoctors = null;
             renderRecommendedError();
         }
     }
 
-    // ================= RENDER =================
-
-    function skeletonCard() {
+function skeletonCard() {
         return '<div class="entity-card"><div class="entity-card-body">' +
             '<div class="skeleton" style="width:52px;height:52px;border-radius:50%;flex-shrink:0;"></div>' +
             '<div style="flex:1;"><div class="skeleton" style="height:16px;width:70%;margin-bottom:8px;"></div>' +
@@ -309,9 +289,7 @@ const FindDoctors = (() => {
         });
     }
 
-    // ================= INIT =================
-
-    async function init() {
+async function init() {
         try {
             await loadSpecialties();
         } catch (error) {
@@ -363,18 +341,13 @@ const FindDoctors = (() => {
         window.addEventListener('languageChanged', () => {
             renderSpecialtyOptions();
             loadDoctors(currentPage);
-            // Cached data has both AR/EN fields — re-render, don't refetch.
+
             if (Array.isArray(recommendedDoctors)) renderRecommendedContent();
             else if (recommendedDoctors === null) renderRecommendedError();
         });
     }
 
-    // Swaps a broken avatar <img> for the same plain-text initials fallback
-    // already used when no profile_image_url exists at all. Invoked from a
-    // static onerror="FindDoctors.__avatarFallback(this)" attribute (no
-    // user-derived string is ever embedded in executable JS); the initials
-    // travel only as an HTML-escaped data attribute.
-    function avatarFallback(img) {
+function avatarFallback(img) {
         img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
     }
 

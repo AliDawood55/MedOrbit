@@ -37,35 +37,16 @@ from typing import Dict, FrozenSet, Optional, Tuple, Union
 
 from chatbot.utils.text_normalizer import normalize_text
 
-# A Prolog atom we are willing to emit: lowercase ASCII, digits, underscore.
-# Nothing else. This single expression rejects uppercase (unbound variable)
-# payloads, quotes, parentheses, operators, newlines, NUL bytes, Unicode bidi
-# controls and every compound term, before a goal is ever built.
 _SAFE_ATOM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
-# Long atoms have no legitimate source in this vocabulary and are a cheap way
-# to stress the parser, so length is capped well above the longest real entry
-# ("associated_symptoms" is 19).
 MAX_ATOM_CHARS = 64
 
-# Substituted where a slot is genuinely present but its value carries no
-# canonical meaning (free-text answers, mostly). Keeps "the patient answered
-# this" true without asserting a value the rules could misread.
 UNKNOWN_VALUE = "unknown_value"
 
-# --- the one canonical urgency lattice --------------------------------------
-# routine < urgent < emergency. MedicalSafetyLayer speaks "normal" where this
-# scale says "routine"; that translation happens ONLY in canonical_urgency(),
-# the compatibility boundary, and nowhere else. There is exactly one ranking in
-# the symbolic layer, and rules/base.pl mirrors it as urgency_rank/2.
 URGENCY_LEVELS: Tuple[str, ...] = ("routine", "urgent", "emergency")
 URGENCY_RANK: Dict[str, int] = {level: i + 1 for i, level in enumerate(URGENCY_LEVELS)}
 _LEGACY_URGENCY = {"normal": "routine"}
 
-# --- canonical symptoms -----------------------------------------------------
-# Keys of medical_entities.json["symptoms"], which is what EntityExtractor
-# already emits, plus red-flag symptoms the safety layer names that the
-# extractor has no key for.
 SYMPTOMS: FrozenSet[str] = frozenset({
     "headache", "fever", "cough", "fatigue", "dizziness", "nausea",
     "chest_pain", "shortness_of_breath", "stomach_pain", "stomach_ache",
@@ -73,11 +54,6 @@ SYMPTOMS: FrozenSet[str] = frozenset({
     "hematuria", "flank_pain", "unconscious", "severe_bleeding", "seizure",
 })
 
-# Arabic and English surface forms -> canonical symptom. Sourced from
-# medical_entities.json's own "ar"/"en" lists so the symbolic layer and the
-# entity extractor cannot drift apart. Keys are stored already folded through
-# the project's existing normalizer (hamza / ta-marbuta folding), which is why
-# entries read e.g. "حكه" rather than "حكة".
 _SYMPTOM_SURFACE: Dict[str, str] = {
     "صداع": "headache", "وجع راس": "headache", "الم راس": "headache",
     "صداع نصفي": "headache", "headache": "headache", "migraine": "headache",
@@ -120,10 +96,6 @@ _SYMPTOM_SURFACE: Dict[str, str] = {
     "الخاصره": "flank_pain", "خاصره": "flank_pain", "flank pain": "flank_pain",
 }
 
-# --- canonical clinical slots ----------------------------------------------
-# Mirrors planner.KNOWN_FINDING_KEYS. Kept as a literal rather than imported
-# from planner, which would pull retrieval -> db into a module that must stay
-# import-cheap; a test asserts the two sets are equal so they cannot drift.
 CLINICAL_SLOTS: FrozenSet[str] = frozenset({
     "duration", "severity", "location", "location_character", "character",
     "radiation", "triggers", "appearance", "exposure", "associated_symptoms",
@@ -131,7 +103,6 @@ CLINICAL_SLOTS: FrozenSet[str] = frozenset({
 
 PATIENT_ATTRS: FrozenSet[str] = frozenset({"age", "sex"})
 
-# Mirrors retrieval.COMPLAINT_ANCHORS; a test asserts equality.
 COMPLAINTS: FrozenSet[str] = frozenset({
     "headache", "chest_pain", "abdominal_pain", "rash", "fever_cough", "generic",
 })
@@ -140,9 +111,6 @@ SYMPTOM_STATES: FrozenSet[str] = frozenset({"present", "absent", "uncertain"})
 
 SEX_VALUES: FrozenSet[str] = frozenset({"male", "female"})
 
-# Values a slot may take when the answer is recognisable. Anything else that is
-# genuinely present becomes UNKNOWN_VALUE — the slot still counts as answered,
-# but no rule can read meaning into free text.
 _SLOT_VALUE_SURFACE: Dict[str, str] = {
     "خفيف": "mild", "بسيط": "mild", "mild": "mild", "slight": "mild",
     "متوسط": "moderate", "moderate": "moderate",
@@ -154,25 +122,7 @@ _SLOT_VALUE_SURFACE: Dict[str, str] = {
 
 MIN_AGE, MAX_AGE = 1, 120
 
-# --- topic anchors, for clamping generated wording to the chosen topic ------
-# Phase 2 splits the interview into "Prolog picks the topic, the LLM words it".
-# That split is only real if wording that drifts to a DIFFERENT clinical topic
-# is caught, so a generated question is checked for at least one anchor of the
-# topic it was supposed to be about.
-#
-# Same shape and rationale as retrieval.TOPIC_LEXICON (substring matching,
-# because Arabic prefixes inflect: الألم / بالألم / للألم). Kept here rather
-# than imported from retrieval, which would pull `db` into a module that must
-# stay import-cheap.
-#
-# Calibrated against the flow files themselves: a test asserts every
-# question_ar and question_en in flows/*.json passes its own slot's anchors.
-# Those strings are the deterministic fallback, so if one failed its own check
-# the fallback would be rejected too.
 TOPIC_ANCHORS: Dict[str, Tuple[str, ...]] = {
-    # Anchors are stored ALREADY FOLDED, because that is what they are matched
-    # against: normalize_arabic maps ى->ي, ة->ه and أإآ->ا, so an anchor written
-    # in surface form ("منذ متى") can never match the folded text ("منذ متي").
     "duration": ("منذ متي", "متي", "مده", "المده", "ساعات", "ايام", "اسبوع", "يوم",
                  "بدا", "ظهر", "how long", "when did", "since", "hours", "days"),
     "severity": ("شده", "شدت", "قوه", "خفيف", "متوسط", "شديد", "درجه حرارت",
@@ -192,8 +142,6 @@ TOPIC_ANCHORS: Dict[str, Tuple[str, ...]] = {
                    "look like", "red", "raised", "itchy", "blister", "appear"),
     "exposure": ("خالطت", "مخالطه", "سافرت", "سفر", "مريض", "تعرضت",
                  "contact", "sick", "travel", "expos"),
-    # "دم في", not bare "دم": substring matching would otherwise fire on the
-    # everyday word "عندما".
     "associated_symptoms": ("اعراض", "اخري", "مرافقه", "غثيان", "تقيؤ", "حمي",
                             "ضيق تنفس", "دم في", "تعرق", "دوخه", "مفاصل",
                             "other symptoms", "alongside", "nausea", "vomiting",
@@ -363,21 +311,6 @@ def canonical_sex(raw: object) -> Optional[str]:
     return folded if folded in SEX_VALUES else None
 
 
-# --- opaque tokens for unrestricted free-text values (Phase 4) --------------
-# Contradiction reasoning needs to compare a patient's stored name with a newly
-# stated one. A name is arbitrary free text, so it can never be an atom — and
-# the allow-list is not going to be widened to admit it.
-#
-# It does not need to be. The only question the rules ask of such a value is
-# "is this the same as that one?", which a stable opaque token answers exactly
-# as well as the text would. So Python hashes the normalised value into
-# `v_<hex>` and keeps the mapping on its side; Prolog compares tokens and never
-# sees a name.
-#
-# Same-length prefix of SHA-256, so tokens are fixed-width, always valid atoms,
-# and stable across processes and restarts — the last property matters because
-# provenance is rebuilt from the database every turn and must produce the same
-# token for the same stored value.
 VALUE_TOKEN_HEX = 16
 _VALUE_TOKEN_RE = re.compile(r"^v_[0-9a-f]{%d}$" % VALUE_TOKEN_HEX)
 
@@ -394,26 +327,11 @@ def value_token(raw: object) -> Optional[Union[str, int]]:
     if isinstance(raw, bool):
         return None
     if isinstance(raw, int):
-        # Integers are already safe to compare directly, carry no free text and
-        # are far more useful than a hash in an evidence trace, so they pass
-        # through untokenised. An age of 23 really is `23` in the reasoning.
         return raw
     if isinstance(raw, str) and is_safe_atom(raw):
-        # Already a canonical atom (a slot value like `severe`): keep it
-        # readable rather than hashing meaning away.
         return raw
     if not isinstance(raw, str):
         return None
-    # Fold first, so "أحمد " and "أحمد" collapse to one token and a trailing
-    # space is not mistaken for a correction.
-    #
-    # Fall back to the raw (whitespace-stripped) value when folding erases
-    # everything: normalize_english strips every non-[a-z0-9] character, so a
-    # name written entirely in a script the normalizer does not handle — CJK,
-    # for instance — would otherwise produce no token at all, and a patient
-    # with such a name would silently get no contradiction detection. The
-    # fallback keeps every non-empty value representable; it only loses the
-    # variant-collapsing, which is the lesser property.
     basis = _fold(raw) or raw.strip()
     if not basis:
         return None

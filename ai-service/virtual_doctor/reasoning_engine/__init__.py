@@ -27,7 +27,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from . import fact_builder, prolog_engine, vocabulary
 from .prolog_engine import (
@@ -207,9 +207,6 @@ def decide_safety(fact_set: FactSet, session_key: str) -> SafetyVerdict:
         urgency = vocabulary.canonical_urgency(_atom(row.get("Urgency")))
         evidence = tuple(e for e in _atom_list(row.get("Evidence"))
                          if vocabulary.is_safe_atom(e))
-        # A row whose rule id or urgency did not survive validation is dropped
-        # rather than guessed at. Dropping can only LOSE an escalation, never
-        # invent one, which is the safe direction for a malformed result.
         if not rule_id or not vocabulary.is_safe_atom(rule_id) or urgency is None:
             logger.warning("Discarding malformed symbolic safety row: %r", row)
             continue

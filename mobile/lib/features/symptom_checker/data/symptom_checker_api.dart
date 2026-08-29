@@ -4,10 +4,14 @@ import '../../../core/config/app_config.dart';
 import '../models/symptom_check_request.dart';
 import '../models/symptom_check_result.dart';
 
-/// Client for the AI service's `POST /triage` — the exact same contract the
-/// web app uses (`frontend/src/js/symptom-checker.js`, `ai-service/chatbot/main.py`).
-/// No `/api` prefix, no auth, and the response is a flat JSON object rather
-/// than the backend's `{success, data}` envelope.
+/// Client for the authenticated MedOrbit backend's `POST /api/ai/triage`
+/// (`backend/src/routes/ai.routes.js`), which forwards internally to the AI
+/// service's `/triage` — the same contract the web app uses
+/// (`frontend/src/js/symptom-checker.js`). Goes through `dioProvider`, so it
+/// carries the `/api` base and the auth interceptor's bearer token; the
+/// response is still the AI service's flat JSON object, not the backend's
+/// usual `{success, data}` envelope, because the route passes it through
+/// unchanged.
 class SymptomCheckerApi {
   SymptomCheckerApi(this._dio);
 

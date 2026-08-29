@@ -1,13 +1,6 @@
-/**
- * MedOrbit v2 - Symptom Checker
- * Uses the authenticated backend gateway: POST /api/ai/triage.
- */
 const SymptomChecker = (() => {
 
-
-    // Matches real seeded symptom_specialty_mappings keywords so these
-    // quick-add chips reliably produce a good triage result.
-    const COMMON_SYMPTOMS = [
+const COMMON_SYMPTOMS = [
         { en: 'Chest pain', ar: 'ألم في الصدر' },
         { en: 'Headache', ar: 'صداع' },
         { en: 'Fever', ar: 'حمى' },
@@ -41,9 +34,7 @@ const SymptomChecker = (() => {
         document.getElementById('submitBtn')?.classList.toggle('loading', loading);
     }
 
-    // ================= QUICK CHIPS =================
-
-    function renderQuickChips() {
+function renderQuickChips() {
         const el = document.getElementById('quickChips');
         if (!el) return;
         const ar = isAr();
@@ -58,9 +49,7 @@ const SymptomChecker = (() => {
         });
     }
 
-    // ================= SUBMIT =================
-
-    async function submit() {
+async function submit() {
         FormAlert.clear();
         const symptoms = chipInput.getItems();
 
@@ -85,9 +74,7 @@ const SymptomChecker = (() => {
         }
     }
 
-    // ================= RENDER: STATES =================
-
-    function showLoading() {
+function showLoading() {
         document.getElementById('formSection')?.classList.add('hidden');
         const result = document.getElementById('resultSection');
         if (!result) return;
@@ -180,9 +167,7 @@ const SymptomChecker = (() => {
         document.getElementById('formSection')?.classList.remove('hidden');
     }
 
-    // ================= INIT =================
-
-    function init() {
+function init() {
         chipInput = ChipInput.create({
             inputId: 'symptomInput',
             addBtnId: 'addSymptomBtn',

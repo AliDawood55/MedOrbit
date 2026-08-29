@@ -1,16 +1,3 @@
-/**
- * MedOrbit v2 - My Reports
- * A personal summary built from endpoints that already work:
- *   GET /users/me, GET /appointments, GET /conversations,
- *   GET /users/me/saved-places
- * Prescriptions/medical-records have their own dedicated pages
- * (my-prescriptions.html / my-records.html) and are out of scope here.
- * Medical-record and prescription endpoints now exist. This legacy summary
- * intentionally remains limited to its original endpoint set until the new
- * client report experience is implemented.
- * Printing is plain browser window.print() against the print stylesheet
- * in reports.css — no PDF library.
- */
 const MyReports = (() => {
 
     const STATUS_KEY = {
@@ -83,9 +70,7 @@ const MyReports = (() => {
         ).join('');
     }
 
-    // ================= PERSONAL INFO =================
-
-    function renderPersonalInfo(profile) {
+function renderPersonalInfo(profile) {
         const fullName = isAr()
             ? [profile.first_name_ar, profile.last_name_ar].filter(Boolean).join(' ')
             : [profile.first_name_en, profile.last_name_en].filter(Boolean).join(' ');
@@ -104,9 +89,7 @@ const MyReports = (() => {
         ).join('');
     }
 
-    // ================= APPOINTMENTS =================
-
-    async function enrichDoctors(appts) {
+async function enrichDoctors(appts) {
         const ids = [...new Set(appts.map((a) => a.doctor_id).filter(Boolean))]
             .filter((id) => !doctorCache.has(id));
 
@@ -170,9 +153,7 @@ const MyReports = (() => {
         }
     }
 
-    // ================= CONVERSATIONS =================
-
-    async function loadConversationsSection() {
+async function loadConversationsSection() {
         try {
             const res = await API.conversations.list({ limit: 10 });
             const conversations = res?.data?.conversations || [];
@@ -205,9 +186,7 @@ const MyReports = (() => {
         }
     }
 
-    // ================= SAVED PLACES =================
-
-    async function loadSavedPlacesSection() {
+async function loadSavedPlacesSection() {
         try {
             const res = await API.users.savedPlaces();
             const places = res?.data?.places || [];
@@ -234,9 +213,7 @@ const MyReports = (() => {
         }
     }
 
-    // ================= INIT =================
-
-    async function load() {
+async function load() {
         document.getElementById('reportLoading').classList.remove('hidden');
         document.getElementById('reportError').classList.add('hidden');
         document.getElementById('reportContent').classList.add('hidden');

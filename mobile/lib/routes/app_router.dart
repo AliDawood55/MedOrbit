@@ -11,6 +11,7 @@ import '../features/doctor_workspace/screens/doctor_messages_screen.dart';
 import '../features/doctor_workspace/screens/doctor_schedule_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/care/screens/my_doctor_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
@@ -44,18 +45,6 @@ import '../features/virtual_doctor/screens/virtual_doctor_screen.dart';
 import 'main_shell.dart';
 import 'route_paths.dart';
 
-/// Routes that render data belonging to the signed-in patient.
-///
-/// Everything else — auth, clinic/doctor discovery, chatbot and Virtual Doctor
-/// — is public on mobile exactly as it is on the web, and is deliberately left
-/// reachable without a session. Symptom Checker, Drug Checker, and Report
-/// Summarizer are a special case: their AI-service calls (`/triage`,
-/// `/drug-interactions`, `/summarize`) need no auth either (same as
-/// Chatbot/Virtual Doctor), but all three are gated behind login anyway as a
-/// deliberate product decision, not a contract requirement. My Reports is
-/// gated for a real reason instead: its backend endpoint
-/// (`GET /api/reports/summaries`) requires a bearer token and filters by the
-/// authenticated user, so an unauthenticated request would 401 regardless.
 const Set<String> protectedRoutes = {
   RoutePaths.home,
   RoutePaths.feed,
@@ -73,31 +62,16 @@ const Set<String> protectedRoutes = {
   RoutePaths.myDoctors,
   RoutePaths.savedPlaces,
   RoutePaths.contact,
-  RoutePaths.adminManagement,
-  RoutePaths.doctorPatients,
-  RoutePaths.doctorSchedule,
-  RoutePaths.doctorPatientDetail,
-  RoutePaths.doctorProfessional,
-  RoutePaths.doctorPosts,
-  RoutePaths.doctorBilling,
-  RoutePaths.doctorMessages,
+
+  RoutePaths.myDoctor,
+
 };
 
-/// Redirect target for [location], or null to allow it.
-///
-/// Split out from the router so it can be unit-tested without pumping a widget
-/// tree. `AuthStatus.unknown` never redirects: that is the splash screen still
-/// reading persisted tokens, and bouncing to /login there would break the
-/// normal launch of an already-signed-in patient.
 String? sessionRedirect(AuthStatus status, String location) {
   if (status != AuthStatus.unauthenticated) return null;
   return protectedRoutes.contains(location) ? RoutePaths.login : null;
 }
 
-/// Bridges the auth [StateNotifier] to GoRouter, which needs a [Listenable].
-///
-/// Only status transitions matter here — notifying on every `AuthState` change
-/// would re-run redirects on unrelated updates such as `isSubmitting`.
 class AuthRouterRefresh extends ChangeNotifier {
   AuthRouterRefresh(Ref ref) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
@@ -106,12 +80,6 @@ class AuthRouterRefresh extends ChangeNotifier {
   }
 }
 
-/// The app's router.
-///
-/// A provider rather than a bare global so it can watch auth state. Kept as a
-/// plain (never invalidated) `Provider`, so the `GoRouter` is built once and
-/// navigation state survives the rebuilds `MedOrbitApp` performs on a locale
-/// change.
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = AuthRouterRefresh(ref);
   ref.onDispose(refresh.dispose);
@@ -267,6 +235,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               ? state.extra as PatientDoctor
               : null,
         ),
+      ),
+      GoRoute(
+        path: RoutePaths.myDoctor,
+        builder: (context, state) => const MyDoctorScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

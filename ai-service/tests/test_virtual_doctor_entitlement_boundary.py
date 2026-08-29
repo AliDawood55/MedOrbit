@@ -26,7 +26,6 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-# Pin a known internal credential before importing anything that reads it.
 os.environ["AI_INTERNAL_TOKEN"] = "test-internal-token-for-boundary-tests"
 
 from identity_boundary import (  # noqa: E402
@@ -56,9 +55,6 @@ def internal_headers(user_id=USER_ID, token=VALID_TOKEN):
     }
 
 
-# Every state-changing or data-returning route on the router. Listed
-# explicitly rather than discovered, so a new unprotected endpoint added later
-# does not quietly slip past this file.
 PROTECTED_ROUTES = [
     ("post", "/virtual-doctor/start", {"language": "en"}),
     ("post", "/virtual-doctor/message", {"session_id": "abc", "message": "hi"}),
@@ -78,8 +74,6 @@ class TestDirectAccessIsRefused:
 
     @pytest.mark.parametrize("method,path,body", PROTECTED_ROUTES)
     def test_no_credential_is_refused(self, client, method, path, body):
-        # client.request() rather than client.get()/post(): the GET helper on
-        # this TestClient version takes no json kwarg.
         response = client.request(method.upper(), path, json=body)
         assert response.status_code == 403, (
             f"{method.upper()} {path} answered {response.status_code} without a credential"

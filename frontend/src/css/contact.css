@@ -1,15 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Contact Us
-   (contact.html)
-
-   Loads after experience.css, which this page shares with
-   admin-contact-messages.html. Every rule here is scoped to
-   body.contact-page so nothing leaks onto other experience.css consumers.
-   =========================================== */
-
-/* experience.css's .experience-page sets max-width but no margin — this page
-   doesn't load listing.css (the usual source of .page-container centering),
-   so the shell stretches and clips flush to one side instead of centering. */
 body.contact-page .experience-page {
     width: 100%;
     max-width: 1040px;

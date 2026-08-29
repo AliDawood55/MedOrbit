@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/locale/locale_controller.dart';
+
 import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -14,7 +15,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../../shared/widgets/role_header_actions.dart';
+
 import '../models/clinic_models.dart';
 import '../models/location_models.dart';
 import '../providers/discovery_provider.dart';
@@ -60,18 +61,18 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(appStringsProvider);
     final discovery = ref.watch(discoveryControllerProvider);
-    final ar = ref.watch(localeControllerProvider).languageCode == 'ar';
+
     final location = ref.watch(locationControllerProvider);
     final clinics = _nearbyMode ? discovery.nearbyClinics : discovery.clinics;
     final loading = _nearbyMode ? discovery.isLoadingNearbyClinics : discovery.isLoadingClinics;
     final error = _nearbyMode ? discovery.nearbyError : discovery.clinicListError;
 
     return AppScaffold(
-      appBar: AppBar(
-        title: Text(ar ? 'اكتشاف العيادات' : 'Clinic discovery'),
-        actions: const [RoleHeaderActions(compact: true)],
-      ),
+
+      appBar: AppBar(title: Text(strings.clinicDiscoveryScreenTitle)),
+
       useSafeArea: true,
       keyboardAware: true,
       body: RefreshIndicator(
@@ -88,12 +89,15 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   PageIntro(
-                    title: ar ? 'ابحث عن رعاية صحية قريبة' : 'Find healthcare nearby',
-                    subtitle: ar ? 'ابحث عن العيادات والمستشفيات والصيدليات والمختبرات القريبة في نابلس.' : 'Search verified and community-listed clinics, hospitals, pharmacies, and labs around Nablus.',
+
+                    title: strings.clinicDiscoveryTitle,
+                    subtitle: strings.clinicDiscoverySubtitle,
+
                     icon: Icons.local_hospital_outlined,
                   ),
                   const SizedBox(height: AppTheme.spaceLg),
                   _SearchAndViewControls(
+                    strings: strings,
                     controller: _searchController,
                     mode: _mode,
                     onSearchChanged: _onSearchChanged,
@@ -102,6 +106,7 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                   ),
                   const SizedBox(height: AppTheme.spaceLg),
                   _NearbyCard(
+                    strings: strings,
                     locationState: location,
                     nearbyMode: _nearbyMode,
                     radius: _radius,
@@ -119,13 +124,14 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                   ),
                   if (_pickingMapPoint) ...[
                     const SizedBox(height: AppTheme.spaceMd),
-                    const InlineMessage(
-                      message: 'Tap the map to choose a manual nearby search point.',
+                    InlineMessage(
+                      message: strings.pickMapPointHint,
                       tone: InlineMessageTone.info,
                     ),
                   ],
                   const SizedBox(height: AppTheme.spaceLg),
                   _FilterSummary(
+                    strings: strings,
                     filters: discovery.clinicFilters,
                     nearbyMode: _nearbyMode,
                     resultCount: clinics.length,
@@ -135,13 +141,13 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                   ),
                   const SizedBox(height: AppTheme.spaceLg),
                   if (loading)
-                    const _LoadingClinicList()
+                    _LoadingClinicList(strings: strings)
                   else if (error != null)
                     Card(
                       child: ErrorRetryState(
-                        title: 'Could not load clinics',
+                        title: strings.clinicCouldNotLoadClinics,
                         message: error.message,
-                        retryLabel: 'Retry',
+                        retryLabel: strings.retry,
                         onRetry: () {
                           _refresh();
                         },
@@ -151,6 +157,7 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                     )
                   else if (_mode == _ClinicViewMode.list)
                     _ClinicListResults(
+                      strings: strings,
                       clinics: clinics,
                       nearbyMode: _nearbyMode,
                       canLoadMore: !_nearbyMode && discovery.canLoadMoreClinics,
@@ -161,6 +168,7 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                     )
                   else
                     _ClinicMapResults(
+                      strings: strings,
                       clinics: clinics,
                       nearbyMode: _nearbyMode,
                       userLocation: _nearbyMode ? location.currentLocation : null,
@@ -236,6 +244,7 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
       isScrollControlled: true,
       builder: (context) => LocationPickerSheet(
         permissionState: state.permissionState,
+        errorCode: state.errorCode,
         errorMessage: state.errorMessage,
         isBusy: state.status == LocationControllerStatus.locating ||
             state.status == LocationControllerStatus.checking ||
@@ -315,6 +324,7 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
 
 class _SearchAndViewControls extends StatelessWidget {
   const _SearchAndViewControls({
+    required this.strings,
     required this.controller,
     required this.mode,
     required this.onSearchChanged,
@@ -322,6 +332,7 @@ class _SearchAndViewControls extends StatelessWidget {
     required this.onModeChanged,
   });
 
+  final AppStrings strings;
   final TextEditingController controller;
   final _ClinicViewMode mode;
   final ValueChanged<String> onSearchChanged;
@@ -336,14 +347,14 @@ class _SearchAndViewControls extends StatelessWidget {
         child: Column(
           children: [
             AppTextField(
-              label: 'Search clinics',
-              hintText: 'Clinic, service, region',
+              label: strings.searchClinicsLabel,
+              hintText: strings.searchClinicsFieldHint,
               controller: controller,
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: controller.text.isEmpty
                   ? null
                   : IconButton(
-                      tooltip: 'Clear search',
+                      tooltip: strings.clearSearch,
                       onPressed: onClearSearch,
                       icon: const Icon(Icons.close_rounded),
                     ),
@@ -351,9 +362,9 @@ class _SearchAndViewControls extends StatelessWidget {
             ),
             const SizedBox(height: AppTheme.spaceMd),
             SegmentedButton<_ClinicViewMode>(
-              segments: const [
-                ButtonSegment(value: _ClinicViewMode.list, icon: Icon(Icons.list_alt_rounded), label: Text('List')),
-                ButtonSegment(value: _ClinicViewMode.map, icon: Icon(Icons.map_outlined), label: Text('Map')),
+              segments: [
+                ButtonSegment(value: _ClinicViewMode.list, icon: const Icon(Icons.list_alt_rounded), label: Text(strings.discoveryViewModeList)),
+                ButtonSegment(value: _ClinicViewMode.map, icon: const Icon(Icons.map_outlined), label: Text(strings.discoveryViewModeMap)),
               ],
               selected: {mode},
               onSelectionChanged: (selection) => onModeChanged(selection.single),
@@ -367,6 +378,7 @@ class _SearchAndViewControls extends StatelessWidget {
 
 class _NearbyCard extends StatelessWidget {
   const _NearbyCard({
+    required this.strings,
     required this.locationState,
     required this.nearbyMode,
     required this.radius,
@@ -376,6 +388,7 @@ class _NearbyCard extends StatelessWidget {
     required this.onExitNearby,
   });
 
+  final AppStrings strings;
   final LocationState locationState;
   final bool nearbyMode;
   final double radius;
@@ -388,10 +401,10 @@ class _NearbyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final location = locationState.currentLocation;
     final source = switch (location?.source) {
-      LocationSource.gps => 'GPS',
-      LocationSource.manualMap => 'manual map',
-      LocationSource.manualDistrict => 'approximate district',
-      null => 'none',
+      LocationSource.gps => strings.locationSourceGps,
+      LocationSource.manualMap => strings.locationSourceManualMap,
+      LocationSource.manualDistrict => strings.locationSourceManualDistrict,
+      null => strings.locationSourceNone,
     };
     return Card(
       child: Padding(
@@ -400,27 +413,27 @@ class _NearbyCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SectionHeader(
-              title: 'Nearby search',
+              title: strings.nearbySearchTitle,
               subtitle: nearbyMode
-                  ? 'Using $source location${location?.approximate == true ? ' · approximate' : ''}. Exact coordinates are not stored.'
-                  : 'Use GPS, a map point, or an approximate Nablus-area district.',
+                  ? strings.nearbySearchSubtitleActive(source, location?.approximate == true)
+                  : strings.nearbySearchSubtitleInactive,
             ),
             Wrap(
               spacing: AppTheme.spaceSm,
               runSpacing: AppTheme.spaceSm,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                PrimaryButton(label: 'Use GPS', icon: Icons.my_location_rounded, onPressed: onUseLocation),
+                PrimaryButton(label: strings.useGpsButton, icon: Icons.my_location_rounded, onPressed: onUseLocation),
                 OutlinedButton.icon(
                   onPressed: onPickLocation,
                   icon: const Icon(Icons.add_location_alt_outlined),
-                  label: const Text('Choose location'),
+                  label: Text(strings.chooseLocationButton),
                 ),
                 if (nearbyMode)
                   TextButton.icon(
                     onPressed: onExitNearby,
                     icon: const Icon(Icons.clear_rounded),
-                    label: const Text('Exit nearby'),
+                    label: Text(strings.exitNearbyButton),
                   ),
               ],
             ),
@@ -432,7 +445,7 @@ class _NearbyCard extends StatelessWidget {
                 children: [
                   for (final value in const [2.0, 5.0, 10.0])
                     ChoiceChip(
-                      label: Text('${value.toStringAsFixed(0)} km'),
+                      label: Text(strings.radiusKmValue(value.toStringAsFixed(0))),
                       selected: radius == value,
                       onSelected: (_) => onRadiusChanged(value),
                     ),
@@ -448,12 +461,14 @@ class _NearbyCard extends StatelessWidget {
 
 class _FilterSummary extends StatelessWidget {
   const _FilterSummary({
+    required this.strings,
     required this.filters,
     required this.nearbyMode,
     required this.resultCount,
     required this.onOpenFilters,
   });
 
+  final AppStrings strings;
   final ClinicFilters filters;
   final bool nearbyMode;
   final int resultCount;
@@ -462,20 +477,20 @@ class _FilterSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = [
-      if (filters.type != null) 'Type: ${filters.type}',
-      if (filters.region != null) 'Region: ${filters.region}',
-      if (filters.service != null) 'Service: ${filters.service}',
-      if (filters.insurance != null) 'Insurance: ${filters.insurance}',
-      if (filters.search != null) 'Search active',
-      if (nearbyMode) 'Nearby',
+      if (filters.type != null) strings.discoveryFilterSummaryTypeValue(strings.clinicTypeLabelFor(filters.type)),
+      if (filters.region != null) strings.discoveryFilterSummaryRegion(filters.region!),
+      if (filters.service != null) strings.discoveryFilterSummaryService(filters.service!),
+      if (filters.insurance != null) strings.discoveryFilterSummaryInsurance(filters.insurance!),
+      if (filters.search != null) strings.discoverySearchActiveLabel,
+      if (nearbyMode) strings.discoveryFilterSummaryNearby,
     ];
     return SectionHeader(
-      title: '$resultCount clinic result${resultCount == 1 ? '' : 's'}',
-      subtitle: active.isEmpty ? 'No active filters' : active.join(' · '),
+      title: strings.clinicResultsCount(resultCount),
+      subtitle: active.isEmpty ? strings.discoveryNoActiveFilters : active.join(' · '),
       trailing: OutlinedButton.icon(
         onPressed: onOpenFilters,
         icon: const Icon(Icons.filter_list_rounded),
-        label: const Text('Filters'),
+        label: Text(strings.discoveryFiltersButton),
       ),
     );
   }
@@ -483,6 +498,7 @@ class _FilterSummary extends StatelessWidget {
 
 class _ClinicListResults extends StatelessWidget {
   const _ClinicListResults({
+    required this.strings,
     required this.clinics,
     required this.nearbyMode,
     required this.canLoadMore,
@@ -490,6 +506,7 @@ class _ClinicListResults extends StatelessWidget {
     required this.onLoadMore,
   });
 
+  final AppStrings strings;
   final List<Clinic> clinics;
   final bool nearbyMode;
   final bool canLoadMore;
@@ -499,12 +516,12 @@ class _ClinicListResults extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (clinics.isEmpty) {
-      return const Card(
-        key: ValueKey('clinic-discovery-empty-state'),
+      return Card(
+        key: const ValueKey('clinic-discovery-empty-state'),
         child: EmptyState(
           icon: Icons.local_hospital_outlined,
-          title: 'No clinics found',
-          hint: 'Try clearing filters or choosing another nearby location.',
+          title: strings.clinicEmptyTitle,
+          hint: strings.clinicEmptyHint,
           variant: EmptyStateVariant.compact,
         ),
       );
@@ -518,7 +535,7 @@ class _ClinicListResults extends StatelessWidget {
         ],
         if (canLoadMore)
           PrimaryButton(
-            label: 'Load more',
+            label: strings.discoveryLoadMoreButton,
             isLoading: isLoadingMore,
             onPressed: onLoadMore,
           ),
@@ -529,6 +546,7 @@ class _ClinicListResults extends StatelessWidget {
 
 class _ClinicMapResults extends StatelessWidget {
   const _ClinicMapResults({
+    required this.strings,
     required this.clinics,
     required this.nearbyMode,
     required this.userLocation,
@@ -538,6 +556,7 @@ class _ClinicMapResults extends StatelessWidget {
     required this.onOpenDetail,
   });
 
+  final AppStrings strings;
   final List<Clinic> clinics;
   final bool nearbyMode;
   final AppLocation? userLocation;
@@ -550,7 +569,7 @@ class _ClinicMapResults extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = selectedClinic;
     final direction = Directionality.of(context);
-    final places = clinics.map((clinic) => _clinicMapPlace(clinic, direction)).whereType<DiscoveryMapPlace>().toList();
+    final places = clinics.map((clinic) => _clinicMapPlace(clinic, direction, strings)).whereType<DiscoveryMapPlace>().toList();
     return SizedBox(
       height: 520,
       child: Stack(
@@ -572,13 +591,13 @@ class _ClinicMapResults extends StatelessWidget {
             },
           ),
           if (places.isEmpty)
-            const Positioned.fill(
+            Positioned.fill(
               child: IgnorePointer(
                 child: Center(
                   child: Card(
                     child: Padding(
-                      padding: EdgeInsets.all(AppTheme.spaceLg),
-                      child: Text('No mapped clinic results.'),
+                      padding: const EdgeInsets.all(AppTheme.spaceLg),
+                      child: Text(strings.clinicNoMappedResults),
                     ),
                   ),
                 ),
@@ -602,18 +621,20 @@ class _ClinicMapResults extends StatelessWidget {
 }
 
 class _LoadingClinicList extends StatelessWidget {
-  const _LoadingClinicList();
+  const _LoadingClinicList({required this.strings});
+
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
+    return Card(
       child: Padding(
-        padding: EdgeInsets.all(AppTheme.spaceLg),
+        padding: const EdgeInsets.all(AppTheme.spaceLg),
         child: Row(
           children: [
-            SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2)),
-            SizedBox(width: AppTheme.spaceMd),
-            Expanded(child: Text('Loading clinics...')),
+            const SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: AppTheme.spaceMd),
+            Expanded(child: Text(strings.clinicLoadingClinics)),
           ],
         ),
       ),
@@ -625,7 +646,7 @@ List<String> _derive(List<Clinic> clinics, String? Function(Clinic clinic) read)
   return clinics.map(read).whereType<String>().where((value) => value.trim().isNotEmpty).toSet().toList()..sort();
 }
 
-DiscoveryMapPlace? _clinicMapPlace(Clinic clinic, TextDirection direction) {
+DiscoveryMapPlace? _clinicMapPlace(Clinic clinic, TextDirection direction, AppStrings strings) {
   final latitude = clinic.latitude;
   final longitude = clinic.longitude;
   if (latitude == null || longitude == null) return null;
@@ -634,6 +655,6 @@ DiscoveryMapPlace? _clinicMapPlace(Clinic clinic, TextDirection direction) {
     latitude: latitude,
     longitude: longitude,
     type: DiscoveryPlaceType.fromString(clinic.type),
-    label: clinicDisplayName(clinic, direction),
+    label: clinicDisplayName(clinic, direction, strings),
   );
 }

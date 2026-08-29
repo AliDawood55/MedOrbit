@@ -40,8 +40,6 @@ from virtual_doctor.config import env_int
 
 AI_SERVICE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-# The exact call db.py makes. Kept in one place so a divergence between what is
-# tested and what ships is impossible to introduce silently.
 DEFAULT_PORT = 5432
 PORT_MIN, PORT_MAX = 1, 65535
 
@@ -58,9 +56,6 @@ class _EnvCase(unittest.TestCase):
         config.reset_warning_state()
 
 
-# ===========================================================================
-# 1. Parsing behaviour
-# ===========================================================================
 
 class TestDbPortParsing(_EnvCase):
     def test_unset_uses_the_existing_default(self):
@@ -156,9 +151,6 @@ class TestWarnings(_EnvCase):
                 parse_port()
 
 
-# ===========================================================================
-# 2. Nothing else about the DB config changed
-# ===========================================================================
 
 class TestOtherDbConfigUnchanged(unittest.TestCase):
     def test_the_loaded_config_still_has_exactly_the_same_keys(self):
@@ -199,9 +191,6 @@ class TestOtherDbConfigUnchanged(unittest.TestCase):
         self.assertNotIn("def env_int", source)
 
 
-# ===========================================================================
-# 3. Import safety — a real interpreter, the property that was broken
-# ===========================================================================
 
 _PROBE = """
 import json

@@ -7,6 +7,7 @@ import 'package:open_filex/open_filex.dart';
 import '../../../core/locale/locale_controller.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/date_formatting.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
@@ -16,6 +17,38 @@ import '../../../shared/widgets/status_badge.dart';
 import '../models/consultation_models.dart';
 import '../providers/virtual_doctor_provider.dart';
 import '../widgets/voice_orb.dart';
+
+/// Entitlement denial codes from `VirtualDoctorController._failureCode` that
+/// should never be retried immediately: the backend enforces the same
+/// cooldown/quota/subscription rule server-side, so an instant retry cannot
+/// succeed and a full-screen "Try again" button would be misleading.
+const _nonRetryableEntitlementCodes = {
+  'voice_cooldown',
+  'free_quota_exhausted',
+  'subscription_required',
+  'subscription_inactive',
+};
+
+/// Every entitlement denial code, retryable or not — used to pick a warning
+/// tone instead of an error tone, since these are a real product rule being
+/// enforced, not something broken.
+const _entitlementCodes = {
+  ..._nonRetryableEntitlementCodes,
+  'voice_session_active',
+  'entitlement_unavailable',
+};
+
+/// [AppStrings.vdError] for the current failure, with the server-supplied
+/// cooldown-end time appended when the backend sent one for a
+/// `voice_cooldown` denial. Never invents a time itself — with no
+/// [VirtualDoctorState.entitlementRetryAt], only the base message is shown.
+String _cooldownMessage(AppStrings strings, VirtualDoctorState state) {
+  final base = strings.vdError(state.errorMessage ?? 'connect_failed');
+  final retryAt = state.entitlementRetryAt;
+  if (state.errorMessage != 'voice_cooldown' || retryAt == null) return base;
+  final when = formatDate(retryAt.toLocal(), localeCode: strings.isArabic ? 'ar' : 'en');
+  return '$base ${strings.vdCooldownUntilPrefix} $when';
+}
 
 class VirtualDoctorScreen extends ConsumerStatefulWidget {
   const VirtualDoctorScreen({super.key});
@@ -276,7 +309,9 @@ class _FatalErrorView extends StatelessWidget {
                       semanticLabel: strings.vdVoiceState(
                         micDenied
                             ? strings.vdMicDenied
-                            : strings.vdErrGeneric,
+                            : strings.vdErrorTitle(
+                                state.errorMessage ?? 'connect_failed',
+                              ),
                       ),
                     ),
                     const SizedBox(height: AppTheme.spaceMd),
@@ -303,9 +338,19 @@ class _FatalErrorView extends StatelessWidget {
                           icon: Icons.refresh_rounded,
                           onPressed: onRetry,
                         ),
-                    ] else
+                    ] else if (_nonRetryableEntitlementCodes.contains(state.errorMessage))
+                      // A denial the backend will repeat immediately: no retry
+                      // action, just the reason and (for a cooldown) the exact
+                      // server-supplied time it lifts, if one was sent.
+                      SectionHeader(
+                        title: strings.vdErrorTitle(state.errorMessage!),
+                        subtitle: _cooldownMessage(strings, state),
+                      )
+                    else
                       ErrorRetryState(
-                        title: strings.vdSessionErrorTitle,
+                        title: strings.vdErrorTitle(
+                          state.errorMessage ?? 'connect_failed',
+                        ),
                         message: strings.vdError(
                           state.errorMessage ?? 'connect_failed',
                         ),
@@ -578,8 +623,10 @@ class _VoicePanel extends StatelessWidget {
             if (state.errorMessage != null) ...[
               const SizedBox(height: AppTheme.spaceMd),
               InlineMessage(
-                message: strings.vdError(state.errorMessage!),
-                tone: InlineMessageTone.error,
+                message: _cooldownMessage(strings, state),
+                tone: _entitlementCodes.contains(state.errorMessage)
+                    ? InlineMessageTone.warning
+                    : InlineMessageTone.error,
               ),
               Align(
                 alignment: AlignmentDirectional.centerEnd,

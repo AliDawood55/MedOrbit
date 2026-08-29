@@ -100,9 +100,8 @@ const AdminInvitations = (() => {
         button.disabled = true;
         try {
             await API.adminInvitations.revoke(id);
-            // Remove it immediately; a later refresh remains available for
-            // reconciliation, but cancellation should never look stuck.
-            invitations = invitations.filter((invitation) => invitation.id !== id);
+
+invitations = invitations.filter((invitation) => invitation.id !== id);
             render();
             feedback(copy('تم إلغاء الدعوة.', 'Invitation revoked.'), 'success');
         } catch (err) {

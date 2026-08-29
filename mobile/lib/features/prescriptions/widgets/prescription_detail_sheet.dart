@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
@@ -6,7 +7,9 @@ import '../../../core/utils/date_formatting.dart';
 import '../../../shared/models/prescription_item_model.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../data/prescription_pdf_service.dart';
 import '../models/prescription_model.dart';
+import '../providers/prescriptions_provider.dart';
 
 (String, Color) prescriptionStatusVisual(String status, AppStrings strings) {
   switch (status) {
@@ -178,6 +181,15 @@ class _PrescriptionDetailContent extends StatelessWidget {
           ),
           sliver: SliverList.list(
             children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: _PrescriptionPdfButton(
+                  prescriptionId: prescription.id,
+                  prescriptionNumber: prescription.prescriptionNumber,
+                  strings: strings,
+                ),
+              ),
+              const SizedBox(height: AppTheme.spaceLg),
               _DetailSection(
                 title: strings.prescriptionDetailsTitle,
                 icon: Icons.info_outline_rounded,
@@ -257,16 +269,6 @@ class _PrescriptionDetailContent extends StatelessWidget {
                         ],
                       ),
               ),
-              if (prescription.doctorNotes?.trim().isNotEmpty == true) ...[
-                const SizedBox(height: AppTheme.spaceLg),
-                _DetailSection(
-                  title: strings.doctorNotes,
-                  icon: Icons.note_alt_outlined,
-                  child: _DetailTextCard(
-                    value: prescription.doctorNotes!.trim(),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -670,6 +672,73 @@ class _MedicationCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Downloads the server-generated PDF and hands it to the device's PDF
+/// viewer. The file lands only in app-private temporary storage — this is a
+/// "view it now" action, not a permanent save, so the label says "Open" and
+/// never "Download" or "Save".
+class _PrescriptionPdfButton extends ConsumerStatefulWidget {
+  const _PrescriptionPdfButton({
+    required this.prescriptionId,
+    required this.prescriptionNumber,
+    required this.strings,
+  });
+
+  final String prescriptionId;
+  final String prescriptionNumber;
+  final AppStrings strings;
+
+  @override
+  ConsumerState<_PrescriptionPdfButton> createState() =>
+      _PrescriptionPdfButtonState();
+}
+
+class _PrescriptionPdfButtonState extends ConsumerState<_PrescriptionPdfButton> {
+  bool _busy = false;
+
+  Future<void> _handleTap() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+
+    final service = ref.read(prescriptionPdfServiceProvider);
+    String? errorMessage;
+    try {
+      await service.downloadAndOpen(
+        prescriptionId: widget.prescriptionId,
+        prescriptionNumber: widget.prescriptionNumber,
+      );
+    } on PrescriptionPdfOpenException {
+      errorMessage = widget.strings.prescriptionPdfOpenFailed;
+    } catch (_) {
+      errorMessage = widget.strings.prescriptionPdfDownloadFailed;
+    }
+
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: _busy ? null : _handleTap,
+      icon: _busy
+          ? const SizedBox(
+              width: AppTheme.iconSm,
+              height: AppTheme.iconSm,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.picture_as_pdf_outlined),
+      label: Text(
+        _busy
+            ? widget.strings.preparingPrescriptionPdf
+            : widget.strings.openPrescriptionPdf,
       ),
     );
   }

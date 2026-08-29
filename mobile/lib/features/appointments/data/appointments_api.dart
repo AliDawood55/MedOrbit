@@ -1,16 +1,30 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../models/appointment_model.dart';
+
+const _invalidResponse = ApiException(
+  message: 'Unexpected response from server. Please try again.',
+  code: 'INVALID_RESPONSE',
+);
 
 class AppointmentsApi {
   AppointmentsApi(this._dio);
 
   final Dio _dio;
 
+  /// A malformed entry fails the whole fetch rather than being silently
+  /// dropped: an appointment quietly missing from the list would read to
+  /// the patient as "you have no appointment", which is worse than an error
+  /// state they can retry.
   Future<List<AppointmentModel>> list() async {
     final response = await _dio.get('/appointments');
-    final data = response.data['data'] as List;
-    return data.map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>)).toList();
+    final data = response.data is Map<String, dynamic> ? response.data['data'] : null;
+    if (data is! List) throw _invalidResponse;
+    return data.map((e) {
+      if (e is! Map<String, dynamic>) throw _invalidResponse;
+      return AppointmentModel.fromJson(e);
+    }).toList();
   }
 
   Future<AppointmentModel> cancel(String id, {String? reason}) async {
@@ -18,7 +32,9 @@ class AppointmentsApi {
       '/appointments/$id/cancel',
       data: {if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim()},
     );
-    return AppointmentModel.fromJson(response.data['data'] as Map<String, dynamic>);
+    final data = response.data is Map<String, dynamic> ? response.data['data'] : null;
+    if (data is! Map<String, dynamic>) throw _invalidResponse;
+    return AppointmentModel.fromJson(data);
   }
 
   /// Public endpoint — no auth middleware on `GET /doctors/:id`.

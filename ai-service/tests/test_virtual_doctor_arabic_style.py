@@ -42,8 +42,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from virtual_doctor import interview_engine, planner, reasoning
 from virtual_doctor.planner import LLMPlanner, PlannerInput
 
-# The specific stiff/robotic phrases the task calls out by name, checked
-# negatively across every "ar" template this batch touched.
 _ROBOTIC_PHRASES = (
     "ما الذي يزعجك اليوم",
     "تشرّفت بمعرفتك",
@@ -89,9 +87,6 @@ async def _run_turn(message, fake_session, planner_result=None):
     return result, fake_pool
 
 
-# ===========================================================================
-# 1. Initial greeting: natural Arabic, asks for name
-# ===========================================================================
 
 class TestGreetingIsNatural(unittest.TestCase):
     def test_greeting_asks_for_name_without_stiff_phrasing(self):
@@ -99,13 +94,9 @@ class TestGreetingIsNatural(unittest.TestCase):
 
         self.assertIn("اسمك", greeting)
         self.assertNotIn("مرحباً، أنا مساعد الطبيب الافتراضي", greeting)
-        # Short: one sentence, not a paragraph.
         self.assertLess(len(greeting), 80)
 
 
-# ===========================================================================
-# 2. After name, asks age naturally
-# ===========================================================================
 
 class TestAskAgeIsNatural(unittest.TestCase):
     def test_intake_turn_after_name_asks_age_without_formal_filler(self):
@@ -130,9 +121,6 @@ class TestAskAgeIsNatural(unittest.TestCase):
         self.assertNotIn("تشرّفت بمعرفتك", result.reply)
 
 
-# ===========================================================================
-# 3. After age, asks chief complaint naturally
-# ===========================================================================
 
 class TestAskChiefComplaintIsNatural(unittest.TestCase):
     def test_intake_turn_after_age_asks_complaint_without_stiff_phrasing(self):
@@ -157,30 +145,23 @@ class TestAskChiefComplaintIsNatural(unittest.TestCase):
         self.assertLess(len(result.reply), 40)
 
 
-# ===========================================================================
-# 4. Suspicious name confirmation is natural and short
-# ===========================================================================
 
 class TestSuspiciousNameConfirmationIsNatural(unittest.TestCase):
     def test_confirmation_question_is_short_and_not_stiff(self):
-        profile, phase, effective_message, reply = interview_engine._apply_confirmation_layer(
+        _, _, _, reply = interview_engine._apply_confirmation_layer(
             {}, "intake", "درج", "ar",
         )
 
         self.assertIn("درج", reply)
         for phrase in _ROBOTIC_PHRASES:
             self.assertNotIn(phrase, reply)
-        # Short — a voice-appropriate confirmation, not a paragraph.
         self.assertLess(len(reply), 60)
 
 
-# ===========================================================================
-# 5. Misheard headache confirmation is natural, never mentions "الصدمة"
-# ===========================================================================
 
 class TestMisheardHeadacheConfirmationIsNatural(unittest.TestCase):
     def test_confirmation_question_matches_expected_wording_not_shock(self):
-        profile, phase, effective_message, reply = interview_engine._apply_confirmation_layer(
+        _, _, _, reply = interview_engine._apply_confirmation_layer(
             {}, "greeting", "عندي صدق شديد فجأة", "ar",
         )
 
@@ -189,9 +170,6 @@ class TestMisheardHeadacheConfirmationIsNatural(unittest.TestCase):
         self.assertLess(len(reply), 40)
 
 
-# ===========================================================================
-# 6. Urgent continuation warning: not a hard-stop, concise Arabic
-# ===========================================================================
 
 class TestUrgentContinuationIsConciseAndContinues(unittest.IsolatedAsyncioTestCase):
     async def test_hematuria_warns_concisely_and_keeps_interviewing(self):
@@ -203,17 +181,12 @@ class TestUrgentContinuationIsConciseAndContinues(unittest.IsolatedAsyncioTestCa
         result, _ = await _run_turn("عندي دم بالبول", fake_session, plan)
 
         self.assertEqual(result["urgency_level"], "urgent")
-        self.assertNotEqual(result["phase"], "complete")  # not a hard-stop
+        self.assertNotEqual(result["phase"], "complete")
         self.assertIn("تقييمًا طبيًا عاجلًا", result["reply"])
-        # The old Levantine transition phrase is gone; the current formal
-        # wording still promises to keep asking quick, important questions.
         self.assertNotIn("بس خليني", result["reply"])
         self.assertIn("سأطرح عليك", result["reply"])
 
 
-# ===========================================================================
-# 7. LLMPlanner prompt carries Arabic style constraints
-# ===========================================================================
 
 class TestLLMPlannerPromptCarriesArabicStyleRules(unittest.IsolatedAsyncioTestCase):
     def _make_planner(self):
@@ -251,11 +224,11 @@ class TestLLMPlannerPromptCarriesArabicStyleRules(unittest.IsolatedAsyncioTestCa
     async def test_arabic_prompt_contains_style_constraints(self):
         prompt = await self._captured_prompt("ar")
 
-        self.assertIn("EXACTLY ONE question", prompt)        # one question per turn
-        self.assertIn("Modern Standard Arabic", prompt)       # formal MSA, not dialect
-        self.assertIn("NOT Levantine/Palestinian dialect", prompt)  # dialect explicitly forbidden
-        self.assertIn("definitive diagnosis", prompt)         # no definitive diagnosis
-        self.assertIn("one short sentence", prompt)           # concise voice response
+        self.assertIn("EXACTLY ONE question", prompt)
+        self.assertIn("Modern Standard Arabic", prompt)
+        self.assertIn("NOT Levantine/Palestinian dialect", prompt)
+        self.assertIn("definitive diagnosis", prompt)
+        self.assertIn("one short sentence", prompt)
 
     async def test_english_prompt_does_not_carry_the_arabic_specific_rule(self):
         """The Arabic style bullet is gated on ctx.lang == "ar" — it must not
@@ -265,9 +238,6 @@ class TestLLMPlannerPromptCarriesArabicStyleRules(unittest.IsolatedAsyncioTestCa
         self.assertNotIn("Modern Standard Arabic", prompt)
 
 
-# ===========================================================================
-# 8. Static/fallback questions avoid the worst robotic phrases
-# ===========================================================================
 
 class TestStaticFallbackAvoidsWorstRoboticPhrases(unittest.TestCase):
     def test_top_level_intake_templates_are_clean(self):

@@ -1,13 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Super Admin Invitations
-   (admin-invitations.html)
-
-   Loads after experience.css and doctor-applications.css, both shared with
-   other pages. Every rule here is scoped to body.admin-invitations-page so
-   nothing leaks onto other consumers of those two files.
-   =========================================== */
-
-/* === Page header === */
 body.admin-invitations-page .experience-heading {
     padding-block-end: 16px;
     margin-block: 4px 20px;
@@ -26,7 +16,6 @@ body.admin-invitations-page #invitationSubtitle {
     line-height: 1.6;
 }
 
-/* === Create invitation form === */
 body.admin-invitations-page #invitationEmail {
     min-height: 44px;
     border: 1px solid var(--border);
@@ -56,13 +45,11 @@ body.admin-invitations-page #sendInvitation:focus-visible {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
-/* === Feedback === */
 body.admin-invitations-page #invitationFeedback {
     margin-block-start: 14px;
     overflow-wrap: anywhere;
 }
 
-/* === Manual delivery note === */
 body.admin-invitations-page #manualInvitation {
     margin-block-start: 14px;
     display: grid;
@@ -75,10 +62,6 @@ body.admin-invitations-page #manualInvitationHint {
     line-height: 1.6;
 }
 
-/* The acceptance URL is security-sensitive capability data — it must stay
-   fully visible and functional, never truncated. overflow-wrap keeps it from
-   blowing out the layout, and plaintext bidi keeps the LTR-shaped URL
-   readable inside an RTL page. */
 body.admin-invitations-page #manualInvitationLink {
     display: block;
     overflow-wrap: anywhere;
@@ -92,7 +75,6 @@ body.admin-invitations-page #manualInvitationLink:focus-visible {
     outline-offset: 2px;
 }
 
-/* === Invitation history card === */
 body.admin-invitations-page .admin-invitations-list-card {
     margin-block-start: 18px;
 }
@@ -116,7 +98,6 @@ body.admin-invitations-page .application-history-item {
     align-items: flex-start;
 }
 
-/* === Invitation identity block === */
 body.admin-invitations-page .application-history-item > div:first-child {
     display: grid;
     gap: 4px;
@@ -135,7 +116,6 @@ body.admin-invitations-page .application-history-item .text-muted {
     overflow-wrap: anywhere;
 }
 
-/* === Action area === */
 body.admin-invitations-page .application-actions {
     flex: 0 0 auto;
     align-items: center;
@@ -146,7 +126,6 @@ body.admin-invitations-page .application-actions .btn {
     min-height: 44px;
 }
 
-/* === Status badges — invitation lifecycle values not styled by shared CSS === */
 body.admin-invitations-page .application-status.accepted {
     background: #dcfce7;
     color: #166534;
@@ -182,7 +161,6 @@ body[data-theme="dark"].admin-invitations-page .application-status.expired {
     color: #f87171;
 }
 
-/* === Loading / empty state (unstyled by this page's other stylesheets) === */
 body.admin-invitations-page .profile-compact-empty {
     display: grid;
     justify-items: center;

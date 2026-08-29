@@ -1,23 +1,3 @@
-/**
- * MedOrbit — the sandbox hosted checkout.
- *
- * Stands in for the page a payment provider would host on its own domain.
- * It shows what is being bought and offers the outcomes a real checkout can
- * end in, and that is the whole of its authority: clicking "successful
- * payment" does not make anyone Pro. It asks the backend to have the mock
- * provider emit the event a real provider would have sent, and that event
- * goes through signature verification, idempotent recording and the
- * subscription state machine like any other.
- *
- * There are no card fields on this page, and there never will be. Card entry
- * belongs on a provider's PCI DSS validated pages; building a fake card form
- * here would be rehearsing an architecture MedOrbit is specifically designed
- * not to have.
- *
- * The plan and the price are read from the backend against the stored
- * checkout attempt, never from the query string, so editing the URL changes
- * nothing except which attempt is not found.
- */
 const BillingSandbox = (() => {
 
     let token = null;
@@ -82,15 +62,7 @@ const BillingSandbox = (() => {
             </p>`;
     }
 
-    /**
-     * Resolve the attempt, then go where the backend says.
-     *
-     * The destination comes from the response — the return path the backend
-     * stored when the checkout was created — rather than from a query
-     * parameter, so this page cannot be turned into an open redirect by
-     * editing its URL.
-     */
-    async function complete(outcome, button) {
+async function complete(outcome, button) {
         const buttons = Array.from(document.querySelectorAll('[data-outcome]'));
         buttons.forEach((node) => { node.disabled = true; });
         if (button) button.dataset.busy = 'true';
@@ -104,14 +76,12 @@ const BillingSandbox = (() => {
                 return;
             }
             if (outcome === 'failure') {
-                // A declined payment is not a subscription. The user goes back
-                // to billing, still on the free plan, with nothing charged.
-                window.location.href = 'billing.html?state=failed';
+
+window.location.href = 'billing.html?state=failed';
                 return;
             }
-            // Success: return to whatever the user was doing when they hit the
-            // limit, if the backend recorded one.
-            window.location.href = returnPath || 'billing.html?state=success';
+
+window.location.href = returnPath || 'billing.html?state=success';
         } catch (err) {
             buttons.forEach((node) => { node.disabled = false; });
             if (button) delete button.dataset.busy;
@@ -120,15 +90,7 @@ const BillingSandbox = (() => {
         }
     }
 
-    /**
-     * The page with nothing on it.
-     *
-     * Reached when the backend reports no sandbox — which is what every
-     * deployed environment reports, because the sandbox routes are not
-     * mounted there at all. The URL is guessable; what it leads to is not a
-     * checkout, and nothing below this line renders a control.
-     */
-    function renderUnavailable() {
+function renderUnavailable() {
         el('sandboxBody').innerHTML = `
             <p class="sandbox-error" role="alert">${esc(t('billing.sandboxUnavailable',
                 'Sandbox checkout is not enabled in this environment.',
@@ -140,11 +102,7 @@ const BillingSandbox = (() => {
     async function init() {
         if (!API.isAuthenticated?.()) return;
 
-        // Asked before anything else, and answered by the backend rather than
-        // by this page: with mock billing off there is no checkout to show
-        // and no outcome to simulate, so the page renders its dead end and
-        // never binds a single button.
-        const cfg = await API.billing.config().catch(() => null);
+const cfg = await API.billing.config().catch(() => null);
         if (!cfg?.data?.sandbox) {
             renderUnavailable();
             return;
@@ -175,9 +133,8 @@ const BillingSandbox = (() => {
             }
             render();
         } catch (err) {
-            // 404 covers both "no such attempt" and "somebody else's attempt".
-            // The page cannot tell the difference, and neither should it.
-            renderError(t('billing.sandboxNotFound',
+
+renderError(t('billing.sandboxNotFound',
                 'This checkout session was not found.', 'لم يتم العثور على جلسة الدفع هذه.'));
         }
     }

@@ -3,7 +3,7 @@ import os
 import re
 from typing import Dict, Optional, Tuple
 
-from chatbot.utils.text_normalizer import normalize_text, detect_language, normalize_arabic, normalize_english
+from chatbot.utils.text_normalizer import detect_language, normalize_arabic, normalize_english
 
 
 class TextNormalizer:
@@ -28,7 +28,6 @@ class TextNormalizer:
     def _build_spell_map(self):
         """Build common Arabic misspelling corrections."""
         self.spell_corrections = {
-            # Common misspellings
             "مستشفا": "مستشفى",
             "مستشفي": "مستشفى",
             "صيدليه": "صيدلية",
@@ -49,7 +48,6 @@ class TextNormalizer:
             "الصدر": "الصدر",
             "الراس": "الرأس",
             "البطن": "البطن",
-            # Common English misspellings
             "medecine": "medicine",
             "medicin": "medicine",
             "medacine": "medicine",
@@ -96,13 +94,10 @@ class TextNormalizer:
 
         original = text.strip()
 
-        # Step 1: Spell correction
         corrected = self._apply_spell_correction(original)
 
-        # Step 2: Dialect normalization
         normalized_dialect = self._normalize_dialect(corrected)
 
-        # Step 3: Standard normalization
         lang = detect_language(normalized_dialect)
         if lang == "ar":
             result = normalize_arabic(normalized_dialect)
@@ -156,8 +151,7 @@ class TextNormalizer:
 
         result = text
 
-        # Process all dialect categories
-        for category, expressions in self.dialect_data.items():
+        for expressions in self.dialect_data.values():
             if not isinstance(expressions, dict):
                 continue
             for dialect_expr, standard in expressions.items():
@@ -197,7 +191,6 @@ class TextNormalizer:
         if not a or not b:
             return 0.0
 
-        # Optimize by using shorter string as reference
         if len(a) > len(b):
             a, b = b, a
 
@@ -228,15 +221,15 @@ class TextNormalizer:
             for j in range(1, len_b + 1):
                 cost = 0 if a[i - 1] == b[j - 1] else 1
                 d[i][j] = min(
-                    d[i - 1][j] + 1,        # deletion
-                    d[i][j - 1] + 1,        # insertion
-                    d[i - 1][j - 1] + cost,  # substitution
+                    d[i - 1][j] + 1,
+                    d[i][j - 1] + 1,
+                    d[i - 1][j - 1] + cost,
                 )
                 if (
                     i > 1 and j > 1
                     and a[i - 1] == b[j - 2]
                     and a[i - 2] == b[j - 1]
                 ):
-                    d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)  # adjacent transposition
+                    d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
 
         return d[len_a][len_b]

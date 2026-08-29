@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/network/api_host_resolver.dart';
 import 'package:mobile/core/network/dio_client.dart';
 import 'package:mobile/core/providers/core_providers.dart';
 import 'package:mobile/core/storage/secure_storage_service.dart';
@@ -13,7 +14,9 @@ import 'package:mobile/features/auth/screens/login_screen.dart';
 import 'package:mobile/main.dart';
 
 void main() {
-  testWidgets('App boots through the splash to the login screen', (WidgetTester tester) async {
+  testWidgets('App boots through the splash to the login screen', (
+    WidgetTester tester,
+  ) async {
     // Startup does real work on the first frame: a host-reachability probe and
     // a secure-storage read for a persisted session. Neither has a backing
     // implementation under `flutter_test` — the probe would outlive the test
@@ -30,12 +33,19 @@ void main() {
             ..dio.httpClientAdapter = _OfflineAdapter()
             ..refreshClient.httpClientAdapter = _OfflineAdapter(),
         ),
+        // Production requires MEDORBIT_API_URL and probes real hosts; neither
+        // is available under `flutter_test`, so startup host resolution is
+        // stubbed out here rather than weakened in production.
+        apiHostResolverProvider.overrideWithValue(_StubApiHostResolver()),
       ],
     );
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
-      UncontrolledProviderScope(container: container, child: const MedOrbitApp()),
+      UncontrolledProviderScope(
+        container: container,
+        child: const MedOrbitApp(),
+      ),
     );
     await tester.pumpAndSettle();
 
@@ -44,6 +54,16 @@ void main() {
     // the patient on an indefinite splash.
     expect(find.byType(LoginScreen), findsOneWidget);
   });
+}
+
+/// Bypasses startup host resolution — production requires a compile-time
+/// `MEDORBIT_API_URL` and probes real candidate hosts over the network,
+/// neither of which is available under `flutter_test`.
+class _StubApiHostResolver extends ApiHostResolver {
+  _StubApiHostResolver() : super(Dio());
+
+  @override
+  Future<String> resolve() async => 'https://backend.example/api';
 }
 
 /// Answers every request as unreachable, which is what a test host actually is.
@@ -80,8 +100,7 @@ class _InMemorySecureStorage implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async =>
-      _values[key];
+  }) async => _values[key];
 
   @override
   Future<void> write({

@@ -28,24 +28,14 @@ from .result_models import Fact, FactSet, RejectedValue, StatedFact
 
 logger = logging.getLogger("medorbit-ai.virtual_doctor.reasoning_engine")
 
-# Profile keys that are dialogue bookkeeping rather than clinical findings.
-# They are skipped silently — reporting them as rejections every single turn
-# would bury the rejections that actually mean something.
 _NON_CLINICAL_PROFILE_KEYS = frozenset({
     "name", "age", "chief_complaint_description", "associated_symptoms_detected",
     "pending_confirmation", "pending_correction", "confirmed_fields",
     "uncertain_fields", "correction_history", "safety_warning_shown_for",
     "safety_flags_detected", "name_repeat_attempts", "other",
-    # SymbolicPlanner's own bookkeeping (planner.ASKED_TOPICS_KEY) — the
-    # topics already put to the patient. Not imported from planner.py to
-    # avoid a reasoning_engine -> planner dependency; the two must stay in
-    # sync, which test_fact_builder_ignores_symbolic_asked_topics pins.
     "symbolic_asked_topics",
 })
 
-# Reported symptoms outrank denials, which outrank nothing. If one turn somehow
-# yields both "chest pain" and "no chest pain", the symptom is what gets
-# asserted — the conservative direction for a safety-critical system.
 _SYMPTOM_STATE_PRECEDENCE = {"present": 3, "uncertain": 2, "absent": 1}
 
 
@@ -95,7 +85,6 @@ class _Accumulator:
                 str(existing.value), 0
             ):
                 self._facts[key] = fact
-        # Any other repeat is a duplicate: first write wins, silently.
 
     def reject(self, field: str, reason: str, raw: Any) -> None:
         self._rejected.append(RejectedValue.of(field, reason, raw))
@@ -164,14 +153,6 @@ def _add_interview_state(
         acc.add("asked", topic, "true")
 
 
-# Which topic to explore FIRST when the deterministic layer has flagged a turn.
-#
-# `associated_symptoms` and nothing cleverer, for a specific reason: it is the
-# one slot all six flows declare, and its existing question text is already the
-# red-flag enumeration ("shortness of breath, sweating, dizziness", "blood in
-# your stool", "fever"). Choosing anything else would mean inventing a
-# symptom-to-topic mapping the application does not have — an expansion of
-# medical knowledge rather than a migration of it.
 SAFETY_FOLLOW_UP_TOPIC = "associated_symptoms"
 
 
@@ -221,9 +202,6 @@ def _add_slots(acc: _Accumulator, profile: Mapping[str, Any]) -> None:
         acc.add("slot", slot, vocabulary.canonical_slot_value(value) or vocabulary.UNKNOWN_VALUE)
         acc.add("answered", slot, "true")
 
-    # The slot vocabulary itself, so unanswered/2 has something to subtract
-    # from. Static and identical every turn — knowledge state, not a decision
-    # about what to ask next, which is Phase 2's job.
     for slot in sorted(vocabulary.CLINICAL_SLOTS):
         acc.add("expected_slot", slot, "true")
 
@@ -255,8 +233,6 @@ def _add_safety(acc: _Accumulator, safety_result: Optional[Mapping[str, Any]]) -
         acc.reject("deterministic_urgency", "unknown severity", safety_result.get("severity"))
         return
     if level == "routine":
-        # Nothing fired. Recording a "routine" verdict would add a fact that
-        # says only "no red flag", which final_urgency/2 already defaults to.
         return
 
     matched = safety_result.get("matched_patterns") or []
@@ -266,7 +242,6 @@ def _add_safety(acc: _Accumulator, safety_result: Optional[Mapping[str, Any]]) -
             continue
         rule_id = _SAFETY_RULE_IDS.get(entry.get("pattern"))
         if rule_id is None:
-            # Entity-based matches carry no regex; they are still real signals.
             rule_id = f"safety_{entry.get('type', 'unknown')}"
         if vocabulary.is_safe_atom(rule_id):
             rule_ids.append(rule_id)
@@ -275,10 +250,6 @@ def _add_safety(acc: _Accumulator, safety_result: Optional[Mapping[str, Any]]) -
         acc.add("deterministic_urgency", rule_id, level)
 
 
-# Slots whose provenance is worth tracking: the identity slots the correction
-# layer maintains, plus the clinical slots, so a change to either is
-# expressible. Mirrors contradictions.pl's identity_slot/1 + clinical_slot/1; a
-# test asserts the two agree.
 PROVENANCE_IDENTITY_SLOTS = ("name", "age", "sex", "chief_complaint")
 
 
@@ -335,8 +306,6 @@ def _add_provenance(
             if token is None:
                 continue
             if token in seen:
-                # A restated identical value is not a new statement. Dropping it
-                # keeps "said 24 twice" from looking like a contradiction.
                 continue
             seen.add(token)
             try:
@@ -428,8 +397,6 @@ def build_facts(
 
     _add_flow_slots(acc, flow_slots)
     _add_interview_state(acc, profile, asked_topics)
-    # Derived from the verdict when not supplied, so a caller that has the
-    # safety result cannot forget to prioritise the follow-up.
     _add_safety_topics(
         acc, safety_topics if safety_topics is not None else safety_topics_for(safety_result)
     )

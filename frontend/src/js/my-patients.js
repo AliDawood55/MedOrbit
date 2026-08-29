@@ -1,12 +1,3 @@
-/**
- * MedOrbit v2 - My Patients (doctor's patient list)
- *
- * GET /doctors/me/patients (backend/src/routes/doctor.routes.js) — the
- * doctor id is resolved server-side from the JWT, never accepted from the
- * client, so a caller can only ever see their own roster. The list is
- * derived from appointment history (no dedicated relationship table), same
- * approach patient-detail.html's ownership check will need.
- */
 const MyPatients = (() => {
 
     let patients = [];
@@ -42,9 +33,7 @@ const MyPatients = (() => {
         return (first + ' ' + last).trim() || p.email || '';
     }
 
-    // GET /doctors/me/patients — always called (matches this codebase's
-    // convention), rendering whatever comes back.
-    async function loadPatients() {
+async function loadPatients() {
         const content = document.getElementById('patientsContent');
         if (!content) return;
 
@@ -120,10 +109,7 @@ const MyPatients = (() => {
         '</div>';
     }
 
-    // Search/filter matched zero of an otherwise non-empty roster. Runtime
-    // bilingual copy (not an i18n.js key) since this state has no key of its
-    // own yet — see PHASE 4 WAVE D1.
-    function renderFilteredEmpty() {
+function renderFilteredEmpty() {
         const ar = isAr();
         return '<div class="empty-state">' +
             '<div class="empty-state-icon"><i class="fas fa-magnifying-glass"></i></div>' +
@@ -184,11 +170,8 @@ const MyPatients = (() => {
             document.getElementById('patientsContent')?.addEventListener('click', (e) => {
                 if (e.target.closest('#patientsRetryBtn')) loadPatients();
             });
-            // Filtered-empty copy is runtime bilingual text (not data-i18n),
-            // so it needs its own re-render on language switch; skip this
-            // while loading/error/true-empty/card-grid are showing so we
-            // never clobber those states (mirrors my-records.js).
-            window.addEventListener('languageChanged', () => {
+
+window.addEventListener('languageChanged', () => {
                 if (patients.length && !filteredPatients().length) render();
             });
         }).catch((err) => {
@@ -197,11 +180,7 @@ const MyPatients = (() => {
         });
     }
 
-    // Swaps a broken avatar <img> for the same plain-text initials fallback
-    // already used when no profile_image_url exists at all (mirrors
-    // my-doctor.js). Invoked from a static onerror="MyPatients.__avatarFallback(this)"
-    // attribute; the initials travel only as an HTML-escaped data attribute.
-    function avatarFallback(img) {
+function avatarFallback(img) {
         img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
     }
 

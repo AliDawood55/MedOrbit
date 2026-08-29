@@ -1,0 +1,145 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/core/network/api_exception.dart';
+import 'package:mobile/features/prescriptions/data/prescription_pdf_service.dart';
+import 'package:mobile/features/prescriptions/data/prescriptions_api.dart';
+import 'package:open_filex/open_filex.dart';
+
+void main() {
+  late Directory tempRoot;
+
+  setUp(() {
+    tempRoot = Directory.systemTemp.createTempSync('prescription_pdf_service_test');
+  });
+
+  tearDown(() {
+    if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+  });
+
+  group('PrescriptionPdfService.downloadAndOpen', () {
+    test('writes the downloaded bytes to a sanitized filename and opens it', () async {
+      final api = _FakePrescriptionsApi()..bytes = [1, 2, 3];
+      String? openedPath;
+      final service = PrescriptionPdfService(
+        api,
+        () async => tempRoot,
+        (path) async {
+          openedPath = path;
+          return OpenResult(type: ResultType.done);
+        },
+      );
+
+      await service.downloadAndOpen(prescriptionId: 'abc-123', prescriptionNumber: 'RX-2026-001');
+
+      expect(openedPath, isNotNull);
+      expect(openedPath, '${tempRoot.path}/MedOrbit_RX-2026-001.pdf');
+      final written = File(openedPath!);
+      expect(written.existsSync(), isTrue);
+      expect(written.readAsBytesSync(), [1, 2, 3]);
+    });
+
+    test('strips path separators, .., and control characters from the prescription number', () async {
+      final api = _FakePrescriptionsApi()..bytes = [1];
+      String? openedPath;
+      final service = PrescriptionPdfService(
+        api,
+        () async => tempRoot,
+        (path) async {
+          openedPath = path;
+          return OpenResult(type: ResultType.done);
+        },
+      );
+
+      await service.downloadAndOpen(
+        prescriptionId: 'abc-123',
+        prescriptionNumber: '../../etc/passwd\u0000RX 1',
+      );
+
+      // Only [A-Za-z0-9_-] survives, so no traversal segment or separator
+      // reaches the filesystem path, and the file lands exactly in tempRoot.
+      expect(openedPath, '${tempRoot.path}/MedOrbit_etcpasswdRX1.pdf');
+      expect(File(openedPath!).parent.path, tempRoot.path);
+    });
+
+    test('falls back to the prescription id when the number sanitizes to empty', () async {
+      final api = _FakePrescriptionsApi()..bytes = [1];
+      String? openedPath;
+      final service = PrescriptionPdfService(
+        api,
+        () async => tempRoot,
+        (path) async {
+          openedPath = path;
+          return OpenResult(type: ResultType.done);
+        },
+      );
+
+      await service.downloadAndOpen(prescriptionId: 'id-42', prescriptionNumber: '///');
+
+      expect(openedPath, '${tempRoot.path}/MedOrbit_id-42.pdf');
+    });
+
+    test('propagates the ApiException from a download failure without opening anything', () async {
+      final api = _FakePrescriptionsApi()
+        ..error = const ApiException(message: 'nope', code: 'INVALID_RESPONSE');
+      var openCalled = false;
+      final service = PrescriptionPdfService(
+        api,
+        () async => tempRoot,
+        (path) async {
+          openCalled = true;
+          return OpenResult(type: ResultType.done);
+        },
+      );
+
+      await expectLater(
+        service.downloadAndOpen(prescriptionId: 'abc-123'),
+        throwsA(isA<ApiException>().having((e) => e.code, 'code', 'INVALID_RESPONSE')),
+      );
+      expect(openCalled, isFalse);
+    });
+
+    test('throws PrescriptionPdfOpenException when the device has no compatible app', () async {
+      final api = _FakePrescriptionsApi()..bytes = [1];
+      final service = PrescriptionPdfService(
+        api,
+        () async => tempRoot,
+        (path) async => OpenResult(type: ResultType.noAppToOpen),
+      );
+
+      await expectLater(
+        service.downloadAndOpen(prescriptionId: 'abc-123'),
+        throwsA(isA<PrescriptionPdfOpenException>()),
+      );
+    });
+
+    test('throws PrescriptionPdfOpenException when opening throws', () async {
+      final api = _FakePrescriptionsApi()..bytes = [1];
+      final service = PrescriptionPdfService(
+        api,
+        () async => tempRoot,
+        (path) async => throw Exception('platform failure'),
+      );
+
+      await expectLater(
+        service.downloadAndOpen(prescriptionId: 'abc-123'),
+        throwsA(isA<PrescriptionPdfOpenException>()),
+      );
+    });
+  });
+}
+
+class _FakePrescriptionsApi extends PrescriptionsApi {
+  _FakePrescriptionsApi() : super(Dio());
+
+  List<int>? bytes;
+  Object? error;
+
+  @override
+  Future<Uint8List> downloadPdf(String id) async {
+    if (error != null) throw error!;
+    return Uint8List.fromList(bytes!);
+  }
+}

@@ -1,22 +1,9 @@
-/**
- * MedOrbit v2 - DOM Utilities
- * Small helpers to reduce boilerplate.
- */
-
 const Dom = (() => {
-    /**
-     * Shorthand querySelector
-     */
-    const $ = (sel, root = document) => root.querySelector(sel);
+
+const $ = (sel, root = document) => root.querySelector(sel);
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-    /**
-     * Create an HTML element with attributes and children
-     * @param {string} tag - HTML tag name
-     * @param {Object} attrs - attributes (class, id, data-*, etc.)
-     * @param {Array|string|HTMLElement} children - children to append
-     */
-    function el(tag, attrs = {}, children = []) {
+function el(tag, attrs = {}, children = []) {
         const node = document.createElement(tag);
 
         for (const [key, val] of Object.entries(attrs)) {
@@ -32,7 +19,7 @@ const Dom = (() => {
             } else if (val === true) {
                 node.setAttribute(key, '');
             } else if (val === false || val == null) {
-                // skip
+
             } else {
                 node.setAttribute(key, val);
             }
@@ -53,10 +40,7 @@ const Dom = (() => {
         return node;
     }
 
-    /**
-     * Debounce: call fn after `wait` ms of silence
-     */
-    function debounce(fn, wait = 300) {
+function debounce(fn, wait = 300) {
         let timer = null;
         return function (...args) {
             clearTimeout(timer);
@@ -64,10 +48,7 @@ const Dom = (() => {
         };
     }
 
-    /**
-     * Throttle: call fn at most once per `wait` ms
-     */
-    function throttle(fn, wait = 300) {
+function throttle(fn, wait = 300) {
         let last = 0;
         let timer = null;
         return function (...args) {
@@ -85,10 +66,7 @@ const Dom = (() => {
         };
     }
 
-    /**
-     * Escape HTML special chars
-     */
-    function escapeHtml(s) {
+function escapeHtml(s) {
         if (s == null) return '';
         return String(s)
             .replace(/&/g, '&amp;')
@@ -98,23 +76,14 @@ const Dom = (() => {
             .replace(/'/g, '&#039;');
     }
 
-    /**
-     * Smooth scroll an element to bottom
-     */
-    function scrollToBottom(el) {
+function scrollToBottom(el) {
         if (!el) return;
         requestAnimationFrame(() => {
             el.scrollTop = el.scrollHeight;
         });
     }
 
-    /**
-     * Reference-counted body scroll lock — for overlays (drawer, mobile
-     * sidebar, bottom sheet) that should block background scroll while
-     * open. Counted so two overlays opening/closing in any order can never
-     * unlock the body while another is still up.
-     */
-    let scrollLockCount = 0;
+let scrollLockCount = 0;
     function lockScroll() {
         scrollLockCount++;
         document.body.classList.add('scroll-locked');

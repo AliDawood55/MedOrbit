@@ -1,21 +1,3 @@
-/**
- * MedOrbit — the shared upgrade experience.
- *
- * One pricing dialog, opened from wherever a limit is met: the chatbot
- * composer, the Voice Doctor cooldown, or the billing page. Having a single
- * one matters for more than tidiness — every price shown anywhere in the
- * product comes from this module, and this module only ever renders numbers
- * that /api/billing/plans returned. There is no hardcoded 20 or 200 in the
- * frontend, so the UI cannot drift out of step with what checkout charges.
- *
- * The savings figure on the annual plan is derived from those same two
- * server numbers rather than written down, for the same reason: a price
- * change is one database UPDATE and every screen follows it.
- *
- * This module has no authority. It starts a checkout and it displays what
- * the backend says; it cannot grant, extend or refresh entitlement, and
- * nothing it puts in the DOM is read back as truth.
- */
 const BillingUI = (() => {
 
     let dialog = null;
@@ -33,13 +15,7 @@ const BillingUI = (() => {
         return isArabic() ? ar : en;
     }
 
-    /**
-     * Render a price the backend supplied.
-     *
-     * Minor units in, formatted string out. Whole amounts lose the ".00" —
-     * "$20/month" reads like a price, "$20.00/month" reads like an invoice.
-     */
-    function formatPrice(cents, currency = 'USD') {
+function formatPrice(cents, currency = 'USD') {
         const amount = Number(cents || 0) / 100;
         const fractionDigits = Number.isInteger(amount) ? 0 : 2;
         try {
@@ -60,14 +36,7 @@ const BillingUI = (() => {
         return '';
     }
 
-    /**
-     * What an annual plan saves against paying monthly for a year.
-     *
-     * Computed from the two prices the backend returned, never from a
-     * remembered "$40". Returns null when the catalogue does not contain
-     * both plans, so a missing plan produces no claim rather than a wrong one.
-     */
-    function annualSaving(plans) {
+function annualSaving(plans) {
         const monthly = plans.find((p) => p.billing_interval === 'month' && p.grants_pro);
         const annual = plans.find((p) => p.billing_interval === 'year' && p.grants_pro);
         if (!monthly || !annual) return null;
@@ -94,11 +63,7 @@ const BillingUI = (() => {
         return { plans: cachedPlans, config: cachedConfig };
     }
 
-    // -----------------------------------------------------------------
-    // Rendering
-    // -----------------------------------------------------------------
-
-    function planFeatures(plan) {
+function planFeatures(plan) {
         if (!plan.grants_pro) {
             return [
                 t('billing.freeVoice', '1 Voice Doctor consultation per free allowance',
@@ -182,19 +147,14 @@ const BillingUI = (() => {
             </div>`;
     }
 
-    // -----------------------------------------------------------------
-    // Dialog
-    // -----------------------------------------------------------------
-
-    function focusableNodes() {
+function focusableNodes() {
         if (!dialog) return [];
         return Array.from(dialog.querySelectorAll(
             'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         )).filter((node) => node.offsetParent !== null);
     }
 
-    /** Keep Tab inside the dialog; Escape closes it. */
-    function onKeydown(event) {
+function onKeydown(event) {
         if (event.key === 'Escape') {
             event.preventDefault();
             close();
@@ -222,22 +182,12 @@ const BillingUI = (() => {
         dialog.remove();
         dialog = null;
         document.body.style.overflow = '';
-        // Return focus to whatever opened the dialog, so a keyboard user is
-        // not dropped back at the top of the document.
-        if (previouslyFocused && document.contains(previouslyFocused)) previouslyFocused.focus();
+
+if (previouslyFocused && document.contains(previouslyFocused)) previouslyFocused.focus();
         previouslyFocused = null;
     }
 
-    /**
-     * Open the pricing dialog.
-     *
-     * `returnPath` records where the user was when they hit the limit, so a
-     * successful checkout can put them back there. It is sent to the backend
-     * and stored against the checkout attempt rather than kept in the URL,
-     * because a return target that survives a round trip through the browser
-     * is an open redirect waiting to happen.
-     */
-    async function openPricing({ returnPath = null, reason = null } = {}) {
+async function openPricing({ returnPath = null, reason = null } = {}) {
         if (dialog) close();
         if (!API.isAuthenticated?.()) {
             window.location.href = 'login.html';
@@ -309,15 +259,7 @@ const BillingUI = (() => {
         }
     }
 
-    /**
-     * Hand off to the provider's checkout.
-     *
-     * The only thing sent is a plan code. Nothing about the resulting
-     * subscription is decided here, or on the page the user lands on when
-     * they come back — entitlement changes when a verified provider event
-     * says it did, and not a moment sooner.
-     */
-    async function startCheckout(planCode, returnPath, trigger) {
+async function startCheckout(planCode, returnPath, trigger) {
         if (!planCode) return;
         if (trigger) {
             trigger.disabled = true;
@@ -343,8 +285,7 @@ const BillingUI = (() => {
         }
     }
 
-    /** The page the user is on, as a relative path the backend will validate. */
-    function currentReturnPath() {
+function currentReturnPath() {
         const file = window.location.pathname.split('/').pop() || '';
         return file ? `${file}${window.location.search || ''}` : null;
     }

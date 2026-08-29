@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/page_sections.dart';
@@ -9,7 +11,7 @@ import '../models/doctor_models.dart';
 import 'clinic_mini_map.dart';
 import 'doctor_result_card.dart';
 
-class DoctorDetailSections extends StatelessWidget {
+class DoctorDetailSections extends ConsumerWidget {
   const DoctorDetailSections({
     super.key,
     required this.doctor,
@@ -20,7 +22,8 @@ class DoctorDetailSections extends StatelessWidget {
   final List<DoctorClinicSummary> clinics;
   final List<DoctorReview> reviews;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = ref.watch(appStringsProvider);
     final direction = Directionality.of(context);
     final bio =
         doctor.professionalBio ??
@@ -38,15 +41,15 @@ class DoctorDetailSections extends StatelessWidget {
               children: [
                 StatusBadge(
                   label: doctor.isAcceptingPatients == true
-                      ? 'Accepting patients'
-                      : 'Availability not confirmed',
+                      ? strings.doctorAcceptingPatients
+                      : strings.doctorAvailabilityNotConfirmed,
                   color: doctor.isAcceptingPatients == true
                       ? AppTheme.success
                       : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(height: AppTheme.spaceMd),
                 Text(
-                  doctorDisplayName(doctor, direction),
+                  doctorDisplayName(doctor, direction, strings),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 if (doctorDisplaySpecialty(doctor, direction) != null) ...[
@@ -65,44 +68,46 @@ class DoctorDetailSections extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppTheme.spaceLg),
-        _InfoSection(doctor: doctor),
+        _InfoSection(doctor: doctor, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
         _ListSection(
-          title: 'Education',
+          title: strings.doctorSectionEducation,
           values: doctor.education,
-          empty: 'No education details are listed.',
+          empty: strings.doctorSectionEducationEmpty,
         ),
         const SizedBox(height: AppTheme.spaceLg),
         _ListSection(
-          title: 'Certifications',
+          title: strings.doctorSectionCertifications,
           values: doctor.certifications,
-          empty: 'No certifications are listed.',
+          empty: strings.doctorSectionCertificationsEmpty,
         ),
         const SizedBox(height: AppTheme.spaceLg),
-        _ClinicsSection(clinics: clinics),
+        _ClinicsSection(clinics: clinics, strings: strings),
         const SizedBox(height: AppTheme.spaceLg),
-        _ReviewsSection(reviews: reviews),
+        _ReviewsSection(reviews: reviews, strings: strings),
       ],
     );
   }
 }
 
 class _InfoSection extends StatelessWidget {
-  const _InfoSection({required this.doctor});
+  const _InfoSection({required this.doctor, required this.strings});
   final Doctor doctor;
+  final AppStrings strings;
   @override
   Widget build(BuildContext context) {
     final rows = <String>[
-      if (doctor.yearsOfExperience != null)
-        'Experience: ${doctor.yearsOfExperience} years',
+      if (doctor.yearsOfExperience != null) strings.doctorInfoExperience(doctor.yearsOfExperience!),
       if (doctor.consultationFee != null)
-        'Consultation fee: ${doctor.consultationFee!.toStringAsFixed(0)} ILS',
+        strings.doctorInfoConsultationFee(doctor.consultationFee!.toStringAsFixed(0)),
       if (doctor.consultationDuration != null)
-        'Consultation duration: ${doctor.consultationDuration} min',
+        strings.doctorInfoConsultationDuration(doctor.consultationDuration!),
       if (doctor.averageRating != null)
-        'Rating: ${doctor.averageRating!.toStringAsFixed(1)}${doctor.totalRatings == null ? '' : ' (${doctor.totalRatings} ratings)'}',
+        doctor.totalRatings == null
+            ? strings.doctorInfoRating(doctor.averageRating!.toStringAsFixed(1))
+            : strings.doctorInfoRatingWithCount(doctor.averageRating!.toStringAsFixed(1), doctor.totalRatings!),
       if (doctor.medicalLicenseNumber?.trim().isNotEmpty == true)
-        'Medical license: ${doctor.medicalLicenseNumber}',
+        strings.doctorInfoMedicalLicense(doctor.medicalLicenseNumber!),
     ];
     return Card(
       child: Padding(
@@ -110,9 +115,9 @@ class _InfoSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader(title: 'Professional details'),
+            SectionHeader(title: strings.doctorSectionProfessionalDetails),
             if (rows.isEmpty)
-              const Text('No additional professional details are listed.')
+              Text(strings.doctorSectionProfessionalDetailsEmpty)
             else
               for (final row in rows)
                 Padding(
@@ -157,8 +162,9 @@ class _ListSection extends StatelessWidget {
 }
 
 class _ClinicsSection extends StatelessWidget {
-  const _ClinicsSection({required this.clinics});
+  const _ClinicsSection({required this.clinics, required this.strings});
   final List<DoctorClinicSummary> clinics;
+  final AppStrings strings;
   @override
   Widget build(BuildContext context) {
     final direction = Directionality.of(context);
@@ -168,15 +174,15 @@ class _ClinicsSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader(title: 'Associated clinics'),
+            SectionHeader(title: strings.doctorSectionAssociatedClinics),
             if (clinics.isEmpty)
-              const Text('No associated clinics are listed.')
+              Text(strings.doctorSectionAssociatedClinicsEmpty)
             else ...[
               for (final clinic in clinics)
                 ListTile(
                   key: ValueKey('doctor-clinic-${clinic.id}'),
                   contentPadding: EdgeInsets.zero,
-                  title: Text(clinicDisplayName(clinic, direction)),
+                  title: Text(clinicDisplayName(clinic, direction, strings)),
                   subtitle: Text(
                     [
                       if ((direction == TextDirection.rtl
@@ -208,8 +214,9 @@ class _ClinicsSection extends StatelessWidget {
 }
 
 class _ReviewsSection extends StatelessWidget {
-  const _ReviewsSection({required this.reviews});
+  const _ReviewsSection({required this.reviews, required this.strings});
   final List<DoctorReview> reviews;
+  final AppStrings strings;
   @override
   Widget build(BuildContext context) => Card(
     child: Padding(
@@ -217,9 +224,9 @@ class _ReviewsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SectionHeader(title: 'Reviews'),
+          SectionHeader(title: strings.doctorSectionReviews),
           if (reviews.isEmpty)
-            const Text('No reviews are listed.')
+            Text(strings.doctorSectionReviewsEmpty)
           else
             for (final review in reviews)
               ListTile(
@@ -229,7 +236,7 @@ class _ReviewsSection extends StatelessWidget {
                     : Text(review.rating!.toStringAsFixed(1)),
                 title: review.comment?.trim().isNotEmpty == true
                     ? Text(review.comment!)
-                    : const Text('No written comment'),
+                    : Text(strings.doctorReviewNoComment),
                 subtitle: review.createdAt == null
                     ? null
                     : Text(

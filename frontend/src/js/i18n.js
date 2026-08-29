@@ -1,8 +1,3 @@
-/**
- * MedOrbit v2 - i18n Module
- * Shared across every page (chat app, auth pages, future content pages).
- * Reads/persists language via Store; toggles document dir/lang.
- */
 const I18n = (() => {
     const dict = {
         ar: {
@@ -33,8 +28,7 @@ const I18n = (() => {
             'layers': 'تغيير الخريطة',
             'fitAll': 'عرض الكل',
 
-            // Navigation
-            'nav.home': 'الرئيسية',
+'nav.home': 'الرئيسية',
             'nav.feed': 'المنشورات الصحية',
             'nav.socialModeration': 'إدارة المحتوى',
             'nav.chat': 'المحادثة',
@@ -70,8 +64,7 @@ const I18n = (() => {
             'nav.contactUs': 'تواصل معنا',
             'nav.userManagement': 'إدارة المستخدمين',
 
-            // Admin user management
-            'adminUsers.title': 'إدارة المستخدمين',
+'adminUsers.title': 'إدارة المستخدمين',
             'adminUsers.subtitle': 'إدارة حسابات المنصة',
             'adminUsers.searchPlaceholder': 'ابحث بالبريد الإلكتروني أو الاسم...',
             'adminUsers.roleAll': 'كل الأدوار',
@@ -98,17 +91,14 @@ const I18n = (() => {
             'adminUsers.retry': 'إعادة المحاولة',
             'adminUsers.dashDesc': 'إدارة حسابات المرضى والأطباء والمشرفين',
 
-            // Auth
-            'auth.login': 'تسجيل الدخول',
+'auth.login': 'تسجيل الدخول',
             'auth.register': 'إنشاء حساب',
             'auth.logout': 'تسجيل الخروج',
 
-            // Footer
-            'footer.tagline': 'منصة الرعاية الصحية الذكية لنابلس',
+'footer.tagline': 'منصة الرعاية الصحية الذكية لنابلس',
             'footer.rights': 'جميع الحقوق محفوظة',
 
-            // Auth pages
-            'auth.loginTitle': 'تسجيل الدخول',
+'auth.loginTitle': 'تسجيل الدخول',
             'auth.loginSubtitle': 'أهلاً بعودتك، سجّل الدخول إلى حسابك',
             'auth.registerTitle': 'إنشاء حساب جديد',
             'auth.registerSubtitle': 'انضم إلى MedOrbit وابدأ رحلتك الصحية',
@@ -121,8 +111,7 @@ const I18n = (() => {
             'auth.verify.loginAction': 'إعادة إرسال رابط التفعيل',
             'auth.orDivider': 'أو',
 
-            // Global authentication gate + "sign in to continue" modal
-            'authModal.title': 'سجّل الدخول للمتابعة',
+'authModal.title': 'سجّل الدخول للمتابعة',
             'authModal.desc': 'أنشئ حسابك للوصول إلى جميع خدمات MedOrbit وحفظ بياناتك وتجربتك بأمان.',
             'authModal.createAccount': 'إنشاء حساب جديد',
             'authModal.haveAccount': 'لديك حساب بالفعل؟',
@@ -168,13 +157,11 @@ const I18n = (() => {
             'auth.resend.title': 'لم يصلك رابط التفعيل؟',
             'auth.resend.submit': 'إعادة إرسال رابط التفعيل',
 
-            // Conversation sidebar
-            'sidebar.newChat': 'محادثة جديدة',
+'sidebar.newChat': 'محادثة جديدة',
             'sidebar.searchPlaceholder': 'ابحث في المحادثات...',
             'sidebar.toggle': 'سجل المحادثات',
 
-            // Home / landing page
-            'home.badge': 'نابلس، فلسطين',
+'home.badge': 'نابلس، فلسطين',
             'home.heroTitle': 'رعاية صحية <span>ذكية</span> في متناول يدك',
             'home.heroSubtitle': 'اعثر على أقرب طبيب أو عيادة أو صيدلية، تحدث مع مساعدنا الذكي، واحصل على إجابات طبية موثوقة — كل ذلك في مكان واحد.',
             'home.startChat': 'ابدأ محادثة',
@@ -198,8 +185,7 @@ const I18n = (() => {
             'home.ctaTitle': 'ابدأ رحلتك الصحية اليوم',
             'home.ctaSubtitle': 'أنشئ حساباً مجانياً لحفظ محادثاتك والوصول السريع لأطبائك المفضلين',
 
-            // Find Doctors
-            'doctors.title': 'الأطباء',
+'doctors.title': 'الأطباء',
             'doctors.subtitle': 'ابحث عن الطبيب المناسب لاحتياجك الصحي',
             'doctors.searchPlaceholder': 'ابحث بالاسم...',
             'doctors.filters': 'تصفية',
@@ -218,8 +204,7 @@ const I18n = (() => {
             'doctors.reasonTrending': 'طبيب شائع',
             'doctors.reasonRecent': 'اكتشاف الأطباء',
 
-            // Doctor profile
-            'doctor.notFound': 'الطبيب غير موجود',
+'doctor.notFound': 'الطبيب غير موجود',
             'doctor.about': 'نبذة',
             'doctor.availability': 'مواعيد الدوام',
             'doctor.clinics': 'العيادات',
@@ -236,8 +221,7 @@ const I18n = (() => {
             'doctor.postsEmptyTitle': 'لا توجد منشورات بعد',
             'doctor.postsEmptyHint': 'لم يشارك هذا الطبيب أي مقالات أو إعلانات بعد.',
 
-            // Find Clinics
-            'clinics.title': 'العيادات والمراكز الطبية',
+'clinics.title': 'العيادات والمراكز الطبية',
             'clinics.subtitle': 'اعثر على أقرب مرفق طبي إليك',
             'clinics.searchPlaceholder': 'ابحث بالاسم...',
             'clinics.nearMe': 'بالقرب مني',
@@ -247,8 +231,7 @@ const I18n = (() => {
             'clinics.error': 'تعذر تحميل قائمة العيادات',
             'clinics.typeAll': 'الكل',
 
-            // Clinic profile
-            'clinic.notFound': 'العيادة غير موجودة',
+'clinic.notFound': 'العيادة غير موجودة',
             'clinic.hours': 'ساعات العمل',
             'clinic.services': 'الخدمات',
             'clinic.insurance': 'شركات التأمين المقبولة',
@@ -258,8 +241,7 @@ const I18n = (() => {
             'clinic.backToList': 'العودة لقائمة العيادات',
             'clinic.verified': 'موثقة',
 
-            // Days of week
-            'day.sun': 'الأحد',
+'day.sun': 'الأحد',
             'day.mon': 'الإثنين',
             'day.tue': 'الثلاثاء',
             'day.wed': 'الأربعاء',
@@ -267,8 +249,7 @@ const I18n = (() => {
             'day.fri': 'الجمعة',
             'day.sat': 'السبت',
 
-            // Common
-            'common.loading': 'جارٍ التحميل...',
+'common.loading': 'جارٍ التحميل...',
             'common.retry': 'إعادة المحاولة',
             'common.error': 'حدث خطأ',
             'common.page': 'صفحة',
@@ -278,13 +259,11 @@ const I18n = (() => {
             'common.showList': 'عرض القائمة',
             'common.showChat': 'عرض المحادثة',
 
-            // AI Tools — shared
-            'aitools.disclaimer': 'هذه الأداة لا تُقدّم تشخيصاً طبياً ولا تُغني عن استشارة الطبيب. في حال وجود أعراض خطيرة أو حالة طارئة، توجّه فوراً لأقرب مستشفى أو اتصل بالإسعاف.',
+'aitools.disclaimer': 'هذه الأداة لا تُقدّم تشخيصاً طبياً ولا تُغني عن استشارة الطبيب. في حال وجود أعراض خطيرة أو حالة طارئة، توجّه فوراً لأقرب مستشفى أو اتصل بالإسعاف.',
             'aitools.loginPrompt': 'سجّل الدخول لحفظ سجل استخدامك لهذه الأداة',
             'aitools.serverError': 'الخدمة غير متاحة حالياً. تحقق من اتصالك ثم حاول مرة أخرى.',
 
-            // Symptom Checker
-            'symptomChecker.title': 'فحص الأعراض',
+'symptomChecker.title': 'فحص الأعراض',
             'symptomChecker.subtitle': 'أدخل أعراضك وسنساعدك في معرفة التخصص الطبي المناسب',
             'symptomChecker.inputPlaceholder': 'اكتب عرضاً واضغط Enter، مثال: صداع',
             'symptomChecker.addBtn': 'إضافة',
@@ -301,8 +280,7 @@ const I18n = (() => {
             'symptomChecker.findSpecialist': 'ابحث عن أطباء هذا التخصص',
             'symptomChecker.checkAnother': 'فحص أعراض أخرى',
 
-            // Drug Interaction Checker
-            'drugChecker.title': 'التحقق من تداخل الأدوية',
+'drugChecker.title': 'التحقق من تداخل الأدوية',
             'drugChecker.subtitle': 'أضف الأدوية التي تتناولها للتحقق من وجود تداخلات محتملة بينها',
             'drugChecker.inputPlaceholder': 'اكتب اسم الدواء واضغط Enter',
             'drugChecker.quickChipsLabel': 'أدوية شائعة',
@@ -319,8 +297,7 @@ const I18n = (() => {
             'drugChecker.disclaimer': 'استشر الصيدلاني أو الطبيب دائماً قبل إجراء أي تغيير على أدويتك.',
             'drugChecker.bleedingRiskWarning': 'خطر نزيف شديد متزايد. قد يُستخدم الدواءان معاً فقط تحت متابعة يحددها الطبيب؛ لا تبدأ أو توقف أيًّا منهما قبل استشارة الطبيب أو الصيدلي.',
 
-            // Report Summarizer
-            'reportSummary.title': 'تلخيص التقارير الطبية',
+'reportSummary.title': 'تلخيص التقارير الطبية',
             'reportSummary.subtitle': 'ارفع تقريرك الطبي (PDF أو صورة) للحصول على ملخص فوري بالعربية والإنجليزية',
             'reportSummary.dropzoneTitle': 'اسحب الملف هنا أو انقر للاختيار',
             'reportSummary.dropzoneHint': 'PDF أو صورة (JPG, PNG) — حتى 10 ميجابايت',
@@ -337,8 +314,7 @@ const I18n = (() => {
             'reportSummary.errorFileSize': 'حجم الملف كبير جداً (الحد الأقصى 10 ميجابايت)',
             'reportSummary.disclaimer': 'هذا الملخص للاسترشاد فقط ولا يُغني عن مراجعة طبيبك للتقرير الأصلي.',
 
-            // Profile page
-            'profile.title': 'حسابي',
+'profile.title': 'حسابي',
             'profile.subtitle': 'إدارة معلوماتك الشخصية وإعدادات حسابك',
             'profile.memberSince': 'عضو منذ',
             'profile.changePhoto': 'تغيير الصورة',
@@ -365,8 +341,7 @@ const I18n = (() => {
             'profile.errorRequired': 'يرجى ملء جميع الحقول المطلوبة',
             'profile.loadError': 'تعذر تحميل بيانات حسابك',
 
-            // Dashboard
-            'dashboard.welcomeBack': 'مرحباً بعودتك،',
+'dashboard.welcomeBack': 'مرحباً بعودتك،',
             'dashboard.subtitle': 'إليك نظرة سريعة على حسابك',
             'dashboard.quickActions': 'إجراءات سريعة',
             'dashboard.recentConversations': 'المحادثات الأخيرة',
@@ -380,8 +355,7 @@ const I18n = (() => {
             'dashboard.medicalRecords': 'السجلات الطبية',
             'dashboard.errorLoad': 'تعذر تحميل بيانات لوحة التحكم',
 
-            // Appointments — shared labels
-            'appt.typeInPerson': 'حضوري',
+'appt.typeInPerson': 'حضوري',
             'appt.typeTelemedicine': 'استشارة عبر الإنترنت',
             'appt.statusScheduled': 'مجدول',
             'appt.statusConfirmed': 'مؤكد',
@@ -399,8 +373,7 @@ const I18n = (() => {
             'appt.appointmentNumber': 'رقم الموعد',
             'appt.meetingLink': 'رابط الاستشارة',
 
-            // Book Appointment wizard
-            'bookAppt.title': 'حجز موعد',
+'bookAppt.title': 'حجز موعد',
             'bookAppt.subtitle': 'احجز موعدك مع الطبيب المناسب خلال ثلاث خطوات بسيطة',
             'bookAppt.step1': 'الطبيب',
             'bookAppt.step2': 'الموعد',
@@ -433,8 +406,7 @@ const I18n = (() => {
             'bookAppt.doctorNotFound': 'الطبيب غير موجود',
             'bookAppt.doctorLoadError': 'تعذر تحميل بيانات الطبيب',
 
-            // My Appointments
-            'myAppts.title': 'مواعيدي',
+'myAppts.title': 'مواعيدي',
             'myAppts.subtitle': 'إدارة مواعيدك الطبية القادمة والسابقة',
             'myAppts.bookNew': 'حجز موعد جديد',
             'myAppts.tabUpcoming': 'القادمة',
@@ -456,8 +428,7 @@ const I18n = (() => {
             'myAppts.cancelSuccess': 'تم إلغاء الموعد بنجاح',
             'myAppts.cancelError': 'تعذر إلغاء الموعد، حاول مرة أخرى',
 
-            // Dashboard — redesign additions
-            'dashboard.statUpcoming': 'مواعيد قادمة',
+'dashboard.statUpcoming': 'مواعيد قادمة',
             'dashboard.statUnread': 'إشعارات غير مقروءة',
             'dashboard.statConversations': 'محادثات',
             'dashboard.upcomingAppointments': 'المواعيد القادمة',
@@ -473,8 +444,7 @@ const I18n = (() => {
             'dashboard.showMore': 'عرض المزيد',
             'dashboard.showLess': 'عرض أقل',
 
-            // Prescriptions (no backend yet — full UI shell + honest empty state)
-            'prescriptions.title': 'وصفاتي الطبية',
+'prescriptions.title': 'وصفاتي الطبية',
             'prescriptions.subtitle': 'تتبع وصفاتك الطبية الحالية والسابقة',
             'prescriptions.searchPlaceholder': 'ابحث باسم الدواء...',
             'prescriptions.filterAll': 'كل الوصفات',
@@ -486,8 +456,7 @@ const I18n = (() => {
             'prescriptions.emptyTitle': 'لا توجد وصفات طبية لعرضها',
             'prescriptions.emptyHint': 'ستظهر هنا الوصفات الطبية التي تتم مشاركتها مع حسابك.',
 
-            // Medical records (no backend yet — full UI shell + honest empty state)
-            'records.title': 'سجلاتي الطبية',
+'records.title': 'سجلاتي الطبية',
             'records.subtitle': 'السجل الزمني لمواعيدك وتشخيصاتك ووصفاتك الطبية',
             'records.searchPlaceholder': 'ابحث في السجلات...',
             'records.filterAllTypes': 'كل الأنواع',
@@ -500,8 +469,7 @@ const I18n = (() => {
             'records.emptyTitle': 'لا يوجد سجل طبي بعد',
             'records.emptyHint': 'ستظهر هنا مواعيدك وتشخيصاتك ووصفاتك الطبية بمجرد توفرها.',
 
-            // My Reports (real data summary — see my-reports.js for exact endpoints used)
-            'reports.title': 'ملخصي الشخصي',
+'reports.title': 'ملخصي الشخصي',
             'reports.subtitle': 'ملخص لبياناتك الحقيقية على المنصة، جاهز للطباعة أو الحفظ كـ PDF',
             'reports.print': 'طباعة / حفظ PDF',
             'reports.generatedAt': 'تاريخ الإنشاء:',
@@ -518,10 +486,7 @@ const I18n = (() => {
             'reports.prescriptionsRecordsUnavailable': 'الوصفات الطبية والسجلات الطبية غير متاحة بعد على المنصة، لذلك لا يمكن تضمينها في هذا الملخص.',
             'reports.statTotal': 'الإجمالي',
 
-            // Billing & subscriptions. Prices are never listed here — they
-            // come from /api/billing/plans so the UI cannot disagree with
-            // what checkout actually charges.
-            'billing.pageTitle': 'الاشتراك والفوترة',
+'billing.pageTitle': 'الاشتراك والفوترة',
             'billing.pageSubtitle': 'خطتك الحالية واستخدامك وسجل الفوترة',
             'billing.usageTitle': 'استخدامك الحالي',
             'billing.historyTitle': 'سجل الفوترة',
@@ -531,8 +496,7 @@ const I18n = (() => {
             'billing.sandboxFooter': 'بيئة تطوير MedOrbit — لا تُستخدم أموال حقيقية.',
             'billing.upgrade': 'الترقية إلى Pro',
 
-            // Feedback (no backend yet — honest "not connected" message on submit)
-            'feedback.title': 'شاركنا رأيك',
+'feedback.title': 'شاركنا رأيك',
             'feedback.subtitle': 'رأيك يساعدنا على تحسين المنصة لجميع المستخدمين',
             'feedback.overallRating': 'تقييمك العام للتجربة',
             'feedback.categoriesLabel': 'تقييم تفصيلي',
@@ -554,8 +518,7 @@ const I18n = (() => {
             'feedback.errorHint': 'حدث خطأ أثناء الإرسال. الرجاء المحاولة مرة أخرى.',
             'feedback.startOver': 'البدء من جديد',
 
-            // Analytics (no backend yet — awaiting-data overlays, admin only)
-            'analytics.title': 'التحليلات',
+'analytics.title': 'التحليلات',
             'analytics.subtitle': 'إحصاءات مجمّعة عن استخدام المنصة',
             'analytics.restrictedTitle': 'هذه الصفحة مخصصة للمشرفين',
             'analytics.restrictedHint': 'تحليلات المنصة متاحة فقط لحسابات المشرفين. إذا كنت تعتقد أن هذا خطأ، تواصل مع الدعم الفني.',
@@ -590,8 +553,7 @@ const I18n = (() => {
             'analytics.clinicTypeOptical': 'بصريات',
             'analytics.clinicTypeVaccinationCenter': 'مركز تطعيم',
 
-            // Feedback dashboard (home.html, bottom section)
-            'feedbackDash.title': 'آراء مستخدمينا',
+'feedbackDash.title': 'آراء مستخدمينا',
             'feedbackDash.subtitle': 'تقييمات حقيقية ومحدّثة لحظياً من مجتمع MedOrbit',
             'feedbackDash.totalFeedback': 'إجمالي التقييمات',
             'feedbackDash.averageRating': 'متوسط التقييم',
@@ -607,8 +569,7 @@ const I18n = (() => {
             'feedbackDash.usersTitle': 'شكراً لكل من شاركنا رأيه',
             'feedbackDash.live': 'مباشر',
 
-            // Dashboard hub — search + quick-action groups
-            'dashboard.searchPlaceholder': 'ابحث في لوحة التحكم...',
+'dashboard.searchPlaceholder': 'ابحث في لوحة التحكم...',
             'dashboard.searchNoResults': 'لا توجد نتائج مطابقة',
             'dashboard.groupCare': 'الرعاية الصحية',
             'dashboard.groupAiTools': 'أدوات ذكية',
@@ -632,8 +593,7 @@ const I18n = (() => {
             'dashboard.descNotifications': 'عرض كل إشعاراتك',
             'dashboard.descAnalytics': 'إحصاءات استخدام المنصة',
 
-            // Notifications (full inbox page)
-            'notifications.title': 'الإشعارات',
+'notifications.title': 'الإشعارات',
             'notifications.subtitle': 'كل إشعاراتك في مكان واحد',
             'notifications.unreadOnly': 'إظهار غير المقروءة فقط',
             'notifications.errorLoad': 'تعذر تحميل الإشعارات',
@@ -644,14 +604,12 @@ const I18n = (() => {
             'notifications.emptyUnreadTitle': 'لا توجد إشعارات غير مقروءة',
             'notifications.emptyUnreadHint': 'أحسنت! لقد اطلعت على كل شيء',
 
-            // Care (doctor<->patient role-gate notices, shared)
-            'care.doctorOnlyTitle': 'هذه الصفحة مخصصة للأطباء',
+'care.doctorOnlyTitle': 'هذه الصفحة مخصصة للأطباء',
             'care.doctorOnlyHint': 'هذه الصفحة متاحة فقط لحسابات الأطباء.',
             'care.patientOnlyTitle': 'هذه الصفحة مخصصة للمرضى',
             'care.patientOnlyHint': 'هذه الصفحة متاحة فقط لحسابات المرضى.',
 
-            // Health Feed (public feed page)
-            'feed.composerLabel': 'إنشاء منشور',
+'feed.composerLabel': 'إنشاء منشور',
             'feed.composerPlaceholder': 'شارك معلومة أو تحديثاً صحياً...',
             'feed.composerCategory': 'التصنيف',
             'feed.publish': 'نشر',
@@ -674,8 +632,7 @@ const I18n = (() => {
             'feed.likeError': 'تعذر تحديث الإعجاب',
             'feed.commentError': 'تعذر تحميل التعليقات',
 
-            // Doctor Posts (management — no backend yet)
-            'doctorPosts.title': 'منشوراتي',
+'doctorPosts.title': 'منشوراتي',
             'doctorPosts.subtitle': 'شارك مقالات وإعلانات مع مرضاك',
             'doctorPosts.newPost': 'منشور جديد',
             'doctorPosts.postTitle': 'عنوان المنشور',
@@ -715,8 +672,7 @@ const I18n = (() => {
             'doctorPosts.errorTitleRequired': 'الرجاء إدخال عنوان بالعربية أو الإنجليزية',
             'doctorPosts.errorBodyRequired': 'الرجاء إدخال محتوى المنشور',
 
-            // My Patients (doctor's patient list)
-            'myPatients.title': 'مرضاي',
+'myPatients.title': 'مرضاي',
             'myPatients.subtitle': 'قائمة المرضى الذين لديهم مواعيد معك',
             'myPatients.searchPlaceholder': 'ابحث باسم المريض...',
             'myPatients.filterAll': 'كل المرضى',
@@ -730,8 +686,7 @@ const I18n = (() => {
             'myPatients.lastVisit': 'آخر زيارة',
             'myPatients.upcomingBadge': 'لديه موعد قادم',
 
-            // Patient Detail (doctor's view of one patient)
-            'patientDetail.noIdTitle': 'لم يتم تحديد مريض',
+'patientDetail.noIdTitle': 'لم يتم تحديد مريض',
             'patientDetail.noIdHint': 'الرجاء اختيار مريض من قائمة مرضاك.',
             'patientDetail.notFoundTitle': 'هذا المريض غير موجود في سجلاتك',
             'patientDetail.notFoundHint': 'لم يسبق أن كان لديك موعد مع هذا المريض.',
@@ -805,7 +760,7 @@ const I18n = (() => {
             'patientDetail.deleteConfirmBtn': 'حذف',
             'patientDetail.deleteSuccess': 'تم حذف السجل',
             'patientDetail.deleteError': 'تعذر حذف السجل',
-            // My Doctor (patient's view of their doctor — no backend yet)
+
             'myDoctor.title': 'طبيبي',
             'myDoctor.subtitle': 'الأطباء المعالجون لك والملاحظات المشتركة معك',
             'myDoctor.yourDoctors': 'أطباؤك',
@@ -817,8 +772,7 @@ const I18n = (() => {
             'myDoctor.error': 'تعذر تحميل بيانات طبيبك',
             'myDoctor.noUpcoming': 'لا توجد مواعيد قادمة',
 
-            // Avatar preview (standalone spike page, not linked from nav)
-            'avatarPreview.title': 'الطبيب الافتراضي',
+'avatarPreview.title': 'الطبيب الافتراضي',
             'avatarPreview.subtitle': 'استشارة صوتية موجهة.',
             'avatarPreview.statusIdle': 'خامل',
             'avatarPreview.statusThinking': 'يفكّر',
@@ -828,7 +782,7 @@ const I18n = (() => {
             'avatarPreview.speakArBtn': 'تحدّث (عربي)',
             'avatarPreview.moodHappy': 'سعيد',
             'avatarPreview.moodNeutral': 'محايد',
-            // --- Microphone errors ---
+
             'stt.errDenied': 'تم رفض إذن الميكروفون. لن تعمل الاستشارة الصوتية حتى تسمح بالوصول إليه.',
             'stt.errNoDevice': 'لم يتم العثور على ميكروفون. وصّل ميكروفوناً ثم حاول مرة أخرى.',
             'stt.errBusy': 'الميكروفون قيد الاستخدام من تطبيق آخر. أغلقه ثم حاول مرة أخرى.',
@@ -841,8 +795,7 @@ const I18n = (() => {
             'stt.errTimeout': 'استغرق تحويل الكلام وقتاً طويلاً. يرجى إعادة ما قلته.',
             'stt.errGeneric': 'حدث خطأ غير متوقع في الميكروفون. حاول مرة أخرى.',
 
-            // --- Hands-free consultation ---
-            'consult.title': 'الاستشارة الصوتية مع الطبيب الافتراضي',
+'consult.title': 'الاستشارة الصوتية مع الطبيب الافتراضي',
             'consult.subtitle': 'تحدّث بشكل طبيعي — الطبيب يستمع ويجيب دون الحاجة للضغط على أي زر.',
             'consult.startHeading': 'استشارة بدون استخدام اليدين',
             'consult.startBody': 'سنطلب إذن الميكروفون مرة واحدة فقط. بعدها يبدأ الطبيب بالتحدث معك، وكل ما عليك هو الإجابة بصوتك.',
@@ -905,8 +858,7 @@ const I18n = (() => {
             'layers': 'Toggle layers',
             'fitAll': 'Fit all',
 
-            // Navigation
-            'nav.home': 'Home',
+'nav.home': 'Home',
             'nav.feed': 'Health Feed',
             'nav.socialModeration': 'Social Moderation',
             'nav.chat': 'Chat',
@@ -942,8 +894,7 @@ const I18n = (() => {
             'nav.contactUs': 'Contact Us',
             'nav.userManagement': 'User Management',
 
-            // Admin user management
-            'adminUsers.title': 'User Management',
+'adminUsers.title': 'User Management',
             'adminUsers.subtitle': 'Manage platform accounts',
             'adminUsers.searchPlaceholder': 'Search by email or name...',
             'adminUsers.roleAll': 'All roles',
@@ -970,17 +921,14 @@ const I18n = (() => {
             'adminUsers.retry': 'Retry',
             'adminUsers.dashDesc': 'Manage patient, doctor, and admin accounts',
 
-            // Auth
-            'auth.login': 'Log in',
+'auth.login': 'Log in',
             'auth.register': 'Sign up',
             'auth.logout': 'Log out',
 
-            // Footer
-            'footer.tagline': 'Smart healthcare platform for Nablus',
+'footer.tagline': 'Smart healthcare platform for Nablus',
             'footer.rights': 'All rights reserved',
 
-            // Auth pages
-            'auth.loginTitle': 'Log in',
+'auth.loginTitle': 'Log in',
             'auth.loginSubtitle': 'Welcome back — log in to your account',
             'auth.registerTitle': 'Create your account',
             'auth.registerSubtitle': 'Join MedOrbit and start your health journey',
@@ -993,8 +941,7 @@ const I18n = (() => {
             'auth.verify.loginAction': 'Resend verification link',
             'auth.orDivider': 'or',
 
-            // Global authentication gate + "sign in to continue" modal
-            'authModal.title': 'Sign in to continue',
+'authModal.title': 'Sign in to continue',
             'authModal.desc': 'Create your account to reach every MedOrbit service and keep your data and history saved securely.',
             'authModal.createAccount': 'Create new account',
             'authModal.haveAccount': 'Already have an account?',
@@ -1040,13 +987,11 @@ const I18n = (() => {
             'auth.resend.title': "Didn't get a verification link?",
             'auth.resend.submit': 'Resend verification link',
 
-            // Conversation sidebar
-            'sidebar.newChat': 'New chat',
+'sidebar.newChat': 'New chat',
             'sidebar.searchPlaceholder': 'Search conversations...',
             'sidebar.toggle': 'Conversation history',
 
-            // Home / landing page
-            'home.badge': 'Nablus, Palestine',
+'home.badge': 'Nablus, Palestine',
             'home.heroTitle': 'Smart healthcare, <span>right</span> at your fingertips',
             'home.heroSubtitle': 'Find the nearest doctor, clinic, or pharmacy, chat with our AI assistant, and get trustworthy medical answers — all in one place.',
             'home.startChat': 'Start chatting',
@@ -1070,8 +1015,7 @@ const I18n = (() => {
             'home.ctaTitle': 'Start your health journey today',
             'home.ctaSubtitle': 'Create a free account to save your conversations and quickly reach your favorite doctors',
 
-            // Find Doctors
-            'doctors.title': 'Doctors',
+'doctors.title': 'Doctors',
             'doctors.subtitle': 'Find the right doctor for your healthcare needs',
             'doctors.searchPlaceholder': 'Search by name...',
             'doctors.filters': 'Filters',
@@ -1090,8 +1034,7 @@ const I18n = (() => {
             'doctors.reasonTrending': 'Popular doctor',
             'doctors.reasonRecent': 'Doctor discovery',
 
-            // Doctor profile
-            'doctor.notFound': 'Doctor not found',
+'doctor.notFound': 'Doctor not found',
             'doctor.about': 'About',
             'doctor.availability': 'Weekly Schedule',
             'doctor.clinics': 'Clinics',
@@ -1108,8 +1051,7 @@ const I18n = (() => {
             'doctor.postsEmptyTitle': 'No posts yet',
             'doctor.postsEmptyHint': "This doctor hasn't shared any articles or announcements yet.",
 
-            // Find Clinics
-            'clinics.title': 'Clinics & Medical Centers',
+'clinics.title': 'Clinics & Medical Centers',
             'clinics.subtitle': 'Find the nearest medical facility to you',
             'clinics.searchPlaceholder': 'Search by name...',
             'clinics.nearMe': 'Near me',
@@ -1119,8 +1061,7 @@ const I18n = (() => {
             'clinics.error': 'Could not load the clinics list',
             'clinics.typeAll': 'All',
 
-            // Clinic profile
-            'clinic.notFound': 'Clinic not found',
+'clinic.notFound': 'Clinic not found',
             'clinic.hours': 'Working Hours',
             'clinic.services': 'Services',
             'clinic.insurance': 'Accepted Insurance',
@@ -1130,8 +1071,7 @@ const I18n = (() => {
             'clinic.backToList': 'Back to clinics',
             'clinic.verified': 'Verified',
 
-            // Days of week
-            'day.sun': 'Sunday',
+'day.sun': 'Sunday',
             'day.mon': 'Monday',
             'day.tue': 'Tuesday',
             'day.wed': 'Wednesday',
@@ -1139,8 +1079,7 @@ const I18n = (() => {
             'day.fri': 'Friday',
             'day.sat': 'Saturday',
 
-            // Common
-            'common.loading': 'Loading...',
+'common.loading': 'Loading...',
             'common.retry': 'Retry',
             'common.error': 'Something went wrong',
             'common.page': 'Page',
@@ -1150,13 +1089,11 @@ const I18n = (() => {
             'common.showList': 'Show list',
             'common.showChat': 'Show conversation',
 
-            // AI Tools — shared
-            'aitools.disclaimer': 'This tool does not provide a medical diagnosis and is not a substitute for seeing a doctor. If you have severe symptoms or a medical emergency, go to the nearest emergency room or call an ambulance immediately.',
+'aitools.disclaimer': 'This tool does not provide a medical diagnosis and is not a substitute for seeing a doctor. If you have severe symptoms or a medical emergency, go to the nearest emergency room or call an ambulance immediately.',
             'aitools.loginPrompt': 'Log in to save your history for this tool',
             'aitools.serverError': 'This service is temporarily unavailable. Check your connection and try again.',
 
-            // Symptom Checker
-            'symptomChecker.title': 'Symptom Checker',
+'symptomChecker.title': 'Symptom Checker',
             'symptomChecker.subtitle': 'Enter your symptoms and we\'ll help you find the right specialty',
             'symptomChecker.inputPlaceholder': 'Type a symptom and press Enter, e.g. headache',
             'symptomChecker.addBtn': 'Add',
@@ -1173,8 +1110,7 @@ const I18n = (() => {
             'symptomChecker.findSpecialist': 'Find doctors in this specialty',
             'symptomChecker.checkAnother': 'Check other symptoms',
 
-            // Drug Interaction Checker
-            'drugChecker.title': 'Drug Interaction Checker',
+'drugChecker.title': 'Drug Interaction Checker',
             'drugChecker.subtitle': 'Add the medications you take to check for potential interactions between them',
             'drugChecker.inputPlaceholder': 'Type a medication name and press Enter',
             'drugChecker.quickChipsLabel': 'Common medications',
@@ -1191,8 +1127,7 @@ const I18n = (() => {
             'drugChecker.disclaimer': 'Always consult a pharmacist or doctor before making any change to your medications.',
             'drugChecker.bleedingRiskWarning': 'Severe increased bleeding risk. Using both medicines together may be intentional only with prescriber-directed monitoring; do not start or stop either medicine without consulting a clinician or pharmacist.',
 
-            // Report Summarizer
-            'reportSummary.title': 'Medical Report Summarizer',
+'reportSummary.title': 'Medical Report Summarizer',
             'reportSummary.subtitle': 'Upload your medical report (PDF or image) for an instant bilingual summary',
             'reportSummary.dropzoneTitle': 'Drag a file here or click to choose',
             'reportSummary.dropzoneHint': 'PDF or image (JPG, PNG) — up to 10MB',
@@ -1209,8 +1144,7 @@ const I18n = (() => {
             'reportSummary.errorFileSize': 'File is too large (10MB max)',
             'reportSummary.disclaimer': 'This summary is for guidance only and does not replace your doctor\'s review of the original report.',
 
-            // Profile page
-            'profile.title': 'My Account',
+'profile.title': 'My Account',
             'profile.subtitle': 'Manage your personal information and account settings',
             'profile.memberSince': 'Member since',
             'profile.changePhoto': 'Change photo',
@@ -1237,8 +1171,7 @@ const I18n = (() => {
             'profile.errorRequired': 'Please fill in all required fields',
             'profile.loadError': 'Could not load your account data',
 
-            // Dashboard
-            'dashboard.welcomeBack': 'Welcome back,',
+'dashboard.welcomeBack': 'Welcome back,',
             'dashboard.subtitle': "Here's a quick look at your account",
             'dashboard.quickActions': 'Quick actions',
             'dashboard.recentConversations': 'Recent conversations',
@@ -1252,8 +1185,7 @@ const I18n = (() => {
             'dashboard.medicalRecords': 'Medical records',
             'dashboard.errorLoad': 'Could not load your dashboard data',
 
-            // Appointments — shared labels
-            'appt.typeInPerson': 'In-person',
+'appt.typeInPerson': 'In-person',
             'appt.typeTelemedicine': 'Online Consultation',
             'appt.statusScheduled': 'Scheduled',
             'appt.statusConfirmed': 'Confirmed',
@@ -1271,8 +1203,7 @@ const I18n = (() => {
             'appt.appointmentNumber': 'Appointment number',
             'appt.meetingLink': 'Consultation link',
 
-            // Book Appointment wizard
-            'bookAppt.title': 'Book Appointment',
+'bookAppt.title': 'Book Appointment',
             'bookAppt.subtitle': 'Book your appointment with the right doctor in three simple steps',
             'bookAppt.step1': 'Doctor',
             'bookAppt.step2': 'Time Slot',
@@ -1305,8 +1236,7 @@ const I18n = (() => {
             'bookAppt.doctorNotFound': 'Doctor not found',
             'bookAppt.doctorLoadError': 'Could not load this doctor\'s data',
 
-            // My Appointments
-            'myAppts.title': 'My Appointments',
+'myAppts.title': 'My Appointments',
             'myAppts.subtitle': 'Manage your upcoming and past medical appointments',
             'myAppts.bookNew': 'Book new appointment',
             'myAppts.tabUpcoming': 'Upcoming',
@@ -1328,8 +1258,7 @@ const I18n = (() => {
             'myAppts.cancelSuccess': 'Appointment cancelled successfully',
             'myAppts.cancelError': 'Could not cancel the appointment, please try again',
 
-            // Dashboard — redesign additions
-            'dashboard.statUpcoming': 'Upcoming appointments',
+'dashboard.statUpcoming': 'Upcoming appointments',
             'dashboard.statUnread': 'Unread notifications',
             'dashboard.statConversations': 'Conversations',
             'dashboard.upcomingAppointments': 'Upcoming Appointments',
@@ -1345,8 +1274,7 @@ const I18n = (() => {
             'dashboard.showMore': 'Show more',
             'dashboard.showLess': 'Show less',
 
-            // Prescriptions (no backend yet — full UI shell + honest empty state)
-            'prescriptions.title': 'My Prescriptions',
+'prescriptions.title': 'My Prescriptions',
             'prescriptions.subtitle': 'Track your current and past medical prescriptions',
             'prescriptions.searchPlaceholder': 'Search by medication name...',
             'prescriptions.filterAll': 'All prescriptions',
@@ -1358,8 +1286,7 @@ const I18n = (() => {
             'prescriptions.emptyTitle': 'No prescriptions to show',
             'prescriptions.emptyHint': 'Prescriptions shared with your account will appear here.',
 
-            // Medical records (no backend yet — full UI shell + honest empty state)
-            'records.title': 'My Medical Records',
+'records.title': 'My Medical Records',
             'records.subtitle': 'A timeline of your appointments, diagnoses, and prescriptions',
             'records.searchPlaceholder': 'Search records...',
             'records.filterAllTypes': 'All types',
@@ -1372,8 +1299,7 @@ const I18n = (() => {
             'records.emptyTitle': "No medical history yet",
             'records.emptyHint': "Your appointments, diagnoses, and prescriptions will show up here once they're available.",
 
-            // My Reports (real data summary — see my-reports.js for exact endpoints used)
-            'reports.title': 'My Reports',
+'reports.title': 'My Reports',
             'reports.subtitle': 'A summary of your real data on the platform, ready to print or save as a PDF',
             'reports.print': 'Print / Save as PDF',
             'reports.generatedAt': 'Generated on:',
@@ -1390,10 +1316,7 @@ const I18n = (() => {
             'reports.prescriptionsRecordsUnavailable': "Prescriptions and medical records aren't available on the platform yet, so they can't be included in this summary.",
             'reports.statTotal': 'Total',
 
-            // Billing & subscriptions. Prices are never listed here — they
-            // come from /api/billing/plans so the UI cannot disagree with
-            // what checkout actually charges.
-            'billing.pageTitle': 'Subscription & billing',
+'billing.pageTitle': 'Subscription & billing',
             'billing.pageSubtitle': 'Your current plan, usage and billing history',
             'billing.usageTitle': 'Your usage',
             'billing.historyTitle': 'Billing history',
@@ -1403,8 +1326,7 @@ const I18n = (() => {
             'billing.sandboxFooter': 'MedOrbit development environment — no real money is used.',
             'billing.upgrade': 'Upgrade to Pro',
 
-            // Feedback (no backend yet — honest "not connected" message on submit)
-            'feedback.title': 'Share Your Feedback',
+'feedback.title': 'Share Your Feedback',
             'feedback.subtitle': 'Your feedback helps us improve the platform for everyone',
             'feedback.overallRating': 'Your overall experience',
             'feedback.categoriesLabel': 'Detailed ratings',
@@ -1426,8 +1348,7 @@ const I18n = (() => {
             'feedback.errorHint': 'Something went wrong while submitting. Please try again.',
             'feedback.startOver': 'Start over',
 
-            // Analytics (no backend yet — awaiting-data overlays, admin only)
-            'analytics.title': 'Analytics',
+'analytics.title': 'Analytics',
             'analytics.subtitle': 'Aggregate statistics about platform usage',
             'analytics.restrictedTitle': 'This page is for administrators only',
             'analytics.restrictedHint': "Platform analytics are only available to admin accounts. If you think this is a mistake, contact support.",
@@ -1462,8 +1383,7 @@ const I18n = (() => {
             'analytics.clinicTypeOptical': 'Optical',
             'analytics.clinicTypeVaccinationCenter': 'Vaccination Center',
 
-            // Feedback dashboard (home.html, bottom section)
-            'feedbackDash.title': 'What Our Users Say',
+'feedbackDash.title': 'What Our Users Say',
             'feedbackDash.subtitle': 'Real, live-updating feedback from the MedOrbit community',
             'feedbackDash.totalFeedback': 'Total feedback',
             'feedbackDash.averageRating': 'Average rating',
@@ -1479,8 +1399,7 @@ const I18n = (() => {
             'feedbackDash.usersTitle': 'Thanks to everyone who shared their feedback',
             'feedbackDash.live': 'Live',
 
-            // Dashboard hub — search + quick-action groups
-            'dashboard.searchPlaceholder': 'Search the dashboard...',
+'dashboard.searchPlaceholder': 'Search the dashboard...',
             'dashboard.searchNoResults': 'No matching results',
             'dashboard.groupCare': 'Care',
             'dashboard.groupAiTools': 'AI Tools',
@@ -1504,8 +1423,7 @@ const I18n = (() => {
             'dashboard.descNotifications': 'View all your notifications',
             'dashboard.descAnalytics': 'Platform-wide usage statistics',
 
-            // Notifications (full inbox page)
-            'notifications.title': 'Notifications',
+'notifications.title': 'Notifications',
             'notifications.subtitle': 'All your notifications in one place',
             'notifications.unreadOnly': 'Show unread only',
             'notifications.errorLoad': 'Could not load your notifications',
@@ -1516,14 +1434,12 @@ const I18n = (() => {
             'notifications.emptyUnreadTitle': 'No unread notifications',
             'notifications.emptyUnreadHint': "Nice — you're all caught up",
 
-            // Care (doctor<->patient role-gate notices, shared)
-            'care.doctorOnlyTitle': 'This page is for doctors only',
+'care.doctorOnlyTitle': 'This page is for doctors only',
             'care.doctorOnlyHint': 'This page is only available to doctor accounts.',
             'care.patientOnlyTitle': 'This page is for patients only',
             'care.patientOnlyHint': 'This page is only available to patient accounts.',
 
-            // Health Feed (public feed page)
-            'feed.composerLabel': 'Create post',
+'feed.composerLabel': 'Create post',
             'feed.composerPlaceholder': 'Share a health tip or update...',
             'feed.composerCategory': 'Category',
             'feed.publish': 'Publish',
@@ -1546,8 +1462,7 @@ const I18n = (() => {
             'feed.likeError': 'Could not update like',
             'feed.commentError': 'Could not load comments',
 
-            // Doctor Posts (management — no backend yet)
-            'doctorPosts.title': 'My Posts',
+'doctorPosts.title': 'My Posts',
             'doctorPosts.subtitle': 'Share articles and announcements with your patients',
             'doctorPosts.newPost': 'New Post',
             'doctorPosts.postTitle': 'Post title',
@@ -1587,8 +1502,7 @@ const I18n = (() => {
             'doctorPosts.errorTitleRequired': 'Please enter a title in Arabic or English',
             'doctorPosts.errorBodyRequired': 'Please enter the post content',
 
-            // My Patients (doctor's patient list)
-            'myPatients.title': 'My Patients',
+'myPatients.title': 'My Patients',
             'myPatients.subtitle': 'Patients who have appointments with you',
             'myPatients.searchPlaceholder': 'Search by patient name...',
             'myPatients.filterAll': 'All patients',
@@ -1602,8 +1516,7 @@ const I18n = (() => {
             'myPatients.lastVisit': 'Last visit',
             'myPatients.upcomingBadge': 'Has upcoming appointment',
 
-            // Patient Detail (doctor's view of one patient — no backend yet)
-            'patientDetail.noIdTitle': 'No patient selected',
+'patientDetail.noIdTitle': 'No patient selected',
             'patientDetail.noIdHint': 'Please choose a patient from your patient list.',
             'patientDetail.notFoundTitle': "This patient isn't in your records",
             'patientDetail.notFoundHint': "You've never had an appointment with this patient.",
@@ -1677,7 +1590,7 @@ const I18n = (() => {
             'patientDetail.deleteConfirmBtn': 'Delete',
             'patientDetail.deleteSuccess': 'Record deleted',
             'patientDetail.deleteError': "Couldn't delete the record",
-            // My Doctor (patient's view of their doctor — no backend yet)
+
             'myDoctor.title': 'My Doctor',
             'myDoctor.subtitle': 'Your treating doctor(s) and notes shared with you',
             'myDoctor.yourDoctors': 'Your Doctors',
@@ -1689,8 +1602,7 @@ const I18n = (() => {
             'myDoctor.error': "Could not load your doctor's data",
             'myDoctor.noUpcoming': 'No upcoming appointments',
 
-            // Avatar preview (standalone spike page, not linked from nav)
-            'avatarPreview.title': 'Virtual Doctor',
+'avatarPreview.title': 'Virtual Doctor',
             'avatarPreview.subtitle': 'A guided voice consultation.',
             'avatarPreview.statusIdle': 'Idle',
             'avatarPreview.statusThinking': 'Thinking',
@@ -1700,7 +1612,7 @@ const I18n = (() => {
             'avatarPreview.speakArBtn': 'Speak (Arabic)',
             'avatarPreview.moodHappy': 'Happy',
             'avatarPreview.moodNeutral': 'Neutral',
-            // --- Microphone errors ---
+
             'stt.errDenied': 'Microphone permission was denied. The voice consultation cannot run until you allow access.',
             'stt.errNoDevice': 'No microphone found. Connect one and try again.',
             'stt.errBusy': 'The microphone is in use by another app. Close it and try again.',
@@ -1713,8 +1625,7 @@ const I18n = (() => {
             'stt.errTimeout': 'That took too long to transcribe. Please say it again.',
             'stt.errGeneric': 'An unexpected microphone error occurred. Please try again.',
 
-            // --- Hands-free consultation ---
-            'consult.title': 'Voice Consultation with the Virtual Doctor',
+'consult.title': 'Voice Consultation with the Virtual Doctor',
             'consult.subtitle': 'Just speak naturally — the doctor listens and replies, no buttons to press.',
             'consult.startHeading': 'Hands-free consultation',
             'consult.startBody': 'We will ask for microphone permission once. After that the doctor starts talking to you, and all you have to do is answer out loud.',
@@ -1769,27 +1680,22 @@ const I18n = (() => {
         setPlaceholder('chatInput', t('chat.placeholder'));
         setPlaceholder('quickSearch', t('search.placeholder'));
 
-        // Keep icon-only controls understandable to both pointer users and
-        // assistive technology in every language.
-        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+document.querySelectorAll('[data-i18n-title]').forEach(el => {
             const key = el.getAttribute('data-i18n-title');
             const text = t(key);
-            // HTML provides a readable fallback.  Do not replace it with a
-            // missing dictionary key when a browser has a stale JS response.
-            if (!text || text === key) return;
+
+if (!text || text === key) return;
             el.title = text;
             el.setAttribute('aria-label', text);
         });
 
-        // Translate all data-i18n elements
-        document.querySelectorAll('[data-i18n]').forEach(el => {
+document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             const text = t(key);
             if (text && text !== key) el.textContent = text;
         });
 
-        // Translate placeholders
-        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
             const key = el.getAttribute('data-i18n-placeholder');
             const text = t(key);
             if (text && text !== key) el.placeholder = text;
@@ -1801,9 +1707,7 @@ const I18n = (() => {
             if (text && text !== key) el.setAttribute('aria-label', text);
         });
 
-        // Translate rich-text elements (dictionary value may contain inline markup,
-        // e.g. a styled <span> inside a heading) — developer-controlled, not user input.
-        document.querySelectorAll('[data-i18n-html]').forEach(el => {
+document.querySelectorAll('[data-i18n-html]').forEach(el => {
             const key = el.getAttribute('data-i18n-html');
             const html = t(key);
             if (html && html !== key) el.innerHTML = html;

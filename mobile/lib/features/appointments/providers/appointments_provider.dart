@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
 import '../data/appointments_api.dart';
 import '../models/enriched_appointment.dart';
@@ -56,7 +57,14 @@ class AppointmentsController extends StateNotifier<AsyncValue<List<EnrichedAppoi
         ]);
       }
       return true;
-    } catch (_) {
+    } catch (error) {
+      // A 404 here means the appointment is no longer cancellable by this
+      // caller (already cancelled/actioned elsewhere, or never existed) —
+      // reload so the stale card converges to server truth instead of
+      // continuing to show a cancel button that will just fail again.
+      if (ApiException.from(error).statusCode == 404) {
+        await load();
+      }
       return false;
     }
   }

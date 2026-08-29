@@ -1,11 +1,3 @@
-/**
- * MedOrbit v2 - Book Appointment
- * 3-step wizard: doctor -> time slot -> confirm.
- * GET /api/doctors/:id (profile + clinics), GET /api/appointments/available-slots
- * (returns exact server-derived slots after blocks/bookings are removed), and
- * POST /api/appointments to book. Submit is revalidated transactionally and
- * SLOT_BUSY refreshes the selected date when another patient wins the slot.
- */
 const BookAppointment = (() => {
 
     const state = {
@@ -52,9 +44,7 @@ const BookAppointment = (() => {
         return new URLSearchParams(window.location.search).get('doctorId');
     }
 
-    // ================= DATE/TIME HELPERS =================
-
-    function pad2(n) {
+function pad2(n) {
         return String(n).padStart(2, '0');
     }
 
@@ -110,9 +100,7 @@ const BookAppointment = (() => {
         return slots;
     }
 
-    // ================= STEP NAVIGATION =================
-
-    function goToStep(n) {
+function goToStep(n) {
         document.querySelectorAll('.wizard-step').forEach((el) => {
             const step = Number(el.dataset.step);
             el.classList.toggle('active', step === n);
@@ -123,9 +111,7 @@ const BookAppointment = (() => {
         });
     }
 
-    // ================= STEP 1: DOCTOR =================
-
-    async function loadDoctorById(id) {
+async function loadDoctorById(id) {
         state.doctorId = id;
 
         document.getElementById('wizardLoading').classList.remove('hidden');
@@ -257,9 +243,7 @@ const BookAppointment = (() => {
         searchTimeout = setTimeout(() => runDoctorSearch(query), 300);
     }
 
-    // ================= STEP 2: TIME SLOT =================
-
-    function setupClinicSelect() {
+function setupClinicSelect() {
         const wrap = document.getElementById('clinicFieldBlock');
         const select = document.getElementById('clinicSelect');
 
@@ -333,10 +317,7 @@ const BookAppointment = (() => {
         document.getElementById('step2NextBtn').disabled = false;
     }
 
-    // Rebuilds the slot grid markup from already-fetched data (no network
-    // call) — used both after a fresh fetch and to re-translate slot labels
-    // on a language change without losing the current selection.
-    function renderSlotGrid(slots) {
+function renderSlotGrid(slots) {
         const grid = document.getElementById('slotGrid');
         grid.innerHTML = slots.map(renderSlotBtn).join('');
         grid.querySelectorAll('.slot-btn').forEach((btn, i) => {
@@ -396,9 +377,7 @@ const BookAppointment = (() => {
         loadSlots();
     }
 
-    // ================= STEP 3: CONFIRM =================
-
-    function summaryRow(label, value) {
+function summaryRow(label, value) {
         return '<div class="booking-summary-row"><span class="label">' + escapeHtml(label) + '</span><span class="value">' + value + '</span></div>';
     }
 
@@ -466,9 +445,7 @@ const BookAppointment = (() => {
         document.getElementById('successApptNumber').textContent = appointment?.appointment_number || '';
     }
 
-    // ================= INIT =================
-
-    function wireEvents() {
+function wireEvents() {
         document.getElementById('doctorSearchInput')?.addEventListener('input', onSearchInput);
         document.getElementById('changeDoctorBtn')?.addEventListener('click', onChangeDoctor);
 

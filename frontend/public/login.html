@@ -17,9 +17,8 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/forms.css">
     <link rel="stylesheet" href="../src/css/auth.css">
-    <!-- Global authentication gate: must load in <head>, before any
-         protected markup is parsed (see frontend/src/js/auth-gate.js). -->
-    <script src="../src/js/auth-gate.js"></script>
+
+<script src="../src/js/auth-gate.js"></script>
 </head>
 <body class="site-page" data-theme="light">
   <a class="skip-link" href="#main-content" data-i18n="a11y.skipToContent">تجاوز إلى المحتوى الرئيسي</a>
@@ -115,15 +114,14 @@
 
     <footer class="site-footer" id="siteFooter"></footer>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+<div class="toast-container" id="toastContainer"></div>
 
     <script src="../src/utils/dom.js"></script>
     <script src="../src/utils/format.js"></script>
     <script src="../src/utils/store.js"></script>
 
     <script src="../src/js/api.js"></script>
-    <!-- Versioned because these auth pages add new translation keys over time. -->
+
     <script src="../src/js/i18n.js?v=auth-doctor-signup-20260825"></script>
     <script src="../src/js/theme.js"></script>
     <script src="../src/js/toast.js"></script>
@@ -131,11 +129,6 @@
     <script src="../src/js/google-signin.js"></script>
     <script src="../src/js/auth.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            Layout.init();
-            GoogleSignIn.init('googleSignInBtn');
-        });
-    </script>
+    <script src="../src/js/pages/login.js"></script>
 </body>
 </html>

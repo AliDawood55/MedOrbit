@@ -65,44 +65,17 @@ logger = logging.getLogger("medorbit-ai.virtual_doctor.reasoning")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen2:7b")
 
-# The generate-only endpoint has no role separation, so a language directive
-# can only ever live in the user prompt. /api/chat supports a real system
-# role, which is where a language instruction belongs and is far less likely
-# to get diluted by the rest of the prompt. Derived from OLLAMA_URL rather
-# than a second required env var — same host, same model.
 OLLAMA_CHAT_URL = os.environ.get("OLLAMA_CHAT_URL", OLLAMA_URL.replace("/api/generate", "/api/chat"))
 
-# RAG retrieval now lives in virtual_doctor/retrieval.py so the per-turn
-# planner and this final-diagnosis pass share one implementation, one cache and
-# one similarity threshold. The behaviour here is unchanged — the same query is
-# built from the same profile and scored against the same 0.60 floor; only the
-# code's address moved. Re-exported below for callers that referenced these
-# names on this module.
 RAG_MIN_SCORE = retrieval.RAG_MIN_SCORE
 RAG_TOP_K = retrieval.RAG_TOP_K
 EMBED_MODEL = retrieval.EMBED_MODEL
 
-# emergency > urgent > routine — used to decide which of the two urgency
-# opinions (rule engine vs LLM) wins. Higher number always wins.
-#
-# DERIVED, not restated (Phase 3). The values are byte-identical to the literal
-# that used to live here; the change is that there is now exactly one urgency
-# ranking in the service, in reasoning_engine.vocabulary, and every other
-# module reads it. Two independently-maintained rank tables in a safety path is
-# a latent bug waiting for someone to edit one of them.
 _URGENCY_RANK = dict(reasoning_engine.vocabulary.URGENCY_RANK)
 _VALID_URGENCY = set(_URGENCY_RANK)
 
 _symptom_engine = SymptomSpecialtyEngine()
 
-# Seed phrases fed to the rule engine's substring matcher, in the exact
-# wording stored in the DB's symptom_specialty_mappings table (schema kept
-# locally, not tracked in git — see backend/migrations for what is tracked),
-# so the DB-backed lookup fires even when the patient's free-text answers
-# are terse (e.g. a one-word severity answer).
-#
-# Same table retrieval.py uses to anchor its queries in English — aliased
-# rather than copied so the two can never drift apart.
 _CHIEF_COMPLAINT_PHRASES: Dict[str, List[str]] = retrieval.COMPLAINT_ANCHORS
 
 _FALLBACK_NEXT_STEP = {
@@ -112,25 +85,18 @@ _FALLBACK_NEXT_STEP = {
 
 _URGENCY_LABEL_AR = {"emergency": "طارئة", "urgent": "عاجلة", "routine": "روتينية"}
 
-# CJK ranges (Han + common extensions, Hiragana/Katakana, Hangul, CJK
-# compatibility ideographs). Any of these in patient-facing text is an
-# automatic reject, regardless of which language was requested.
 _CJK_RE = re.compile(
     "["
-    "㐀-䶿"  # CJK Unified Ideographs Extension A
-    "一-鿿"  # CJK Unified Ideographs
-    "぀-ヿ"  # Hiragana + Katakana
-    "가-힣"  # Hangul Syllables
-    "豈-﫿"  # CJK Compatibility Ideographs
+    "㐀-䶿"
+    "一-鿿"
+    "぀-ヿ"
+    "가-힣"
+    "豈-﫿"
     "]"
 )
 _ARABIC_RE = re.compile("[؀-ۿݐ-ݿ]")
 _LATIN_RE = re.compile("[A-Za-z]")
 
-# Common function words. A real sentence of 2+ words almost always contains
-# at least one of these; letter-salad essentially never does by chance. This
-# catches the case script-membership checks alone miss: text that is
-# correctly Arabic (or English) *script* but not actually coherent language.
 _COMMON_WORDS = {
     "ar": {"و", "في", "من", "إلى", "على", "مع", "أو", "لا", "أن", "هذا", "هذه", "ثم", "بعد", "قبل", "قد", "يجب", "مع"},
     "en": {"the", "a", "an", "to", "and", "or", "of", "in", "on", "with", "for", "is", "are", "your", "you"},
@@ -152,11 +118,6 @@ _SYSTEM_PROMPTS = {
     ),
 }
 
-# Used INSTEAD of _SYSTEM_PROMPTS when retrieval actually returned passages.
-# The grounding directive is prepended to — not substituted for — the existing
-# language and JSON directives: those are load-bearing (see the language-drift
-# note in the module docstring) and dropping them here would reintroduce the
-# Chinese-output bug this file already fixed once.
 _RAG_SYSTEM_PROMPTS = {
     "ar": (
         "أنت نظام ذكاء اصطناعي طبي. "
@@ -177,12 +138,6 @@ _RAG_SYSTEM_PROMPTS = {
 }
 
 _STRICT_SYSTEM_PROMPTS = {
-    # Deliberately short and single-directive: an earlier, longer, multi-
-    # warning version of this prompt (stacked on top of the JSON-schema
-    # instructions) measurably degraded qwen2:7b's output on retry — it still
-    # obeyed the script constraint, but produced incoherent letter strings
-    # instead of real words. A shorter, calmer instruction plus a lower
-    # temperature (see _call_llm_once) fixed that.
     "ar": "أعد المحاولة. اكتب ردك بالكامل بلغة عربية فصحى صحيحة وواضحة ومفهومة. ممنوع أي حرف من لغة أخرى.",
     "en": "Try again. Write your entire response in clear, correct, natural English. Do not use any other language.",
 }
@@ -202,16 +157,6 @@ def _build_symptom_list(chief_complaint: str, profile: Dict[str, Any]) -> List[s
     return symptoms
 
 
-# ---------------------------------------------------------------------------
-# RAG retrieval — thin adapters over virtual_doctor.retrieval
-# ---------------------------------------------------------------------------
-# These wrappers exist so the rest of this module keeps its original call
-# sites while the implementation lives in one shared place (retrieval.py).
-# Only the two names this file actually calls are kept — the others
-# (_build_retrieval_query, _embed_query, _cite, embed_cache_stats) had no
-# remaining call sites anywhere in the codebase and were removed rather than
-# carried forward as unused aliases. Call retrieval.build_profile_query /
-# .embed / .cite / .get_stats() directly if one of them is needed again.
 
 _retrieve_medical_context = retrieval.retrieve_for_profile
 _format_medical_context = retrieval.format_context
@@ -255,7 +200,7 @@ def _looks_coherent(text: str, lang: str) -> bool:
     words = [w.strip(_WORD_STRIP) for w in text.split()]
     words = [w for w in words if w]
     if len(words) < 2:
-        return True  # too short to judge either way — don't penalize it
+        return True
     common = _COMMON_WORDS.get(lang)
     if not common:
         return True
@@ -324,15 +269,6 @@ def _build_user_prompt(
     profile_lines = "\n".join(f"- {key}: {value}" for key, value in profile.items() if value)
     language_name = "Arabic" if lang == "ar" else "English"
 
-    # Optional: the raw transcript, alongside (not instead of) the structured
-    # "Patient details" summary below. The summary is the planner's own
-    # extraction and is occasionally imprecise (a finding filed under the
-    # wrong key, a nuance flattened away); the transcript lets this stronger
-    # model see what the patient actually said and correct for that on its
-    # own read, rather than being limited to whatever the smaller model chose
-    # to write down turn by turn. Empty whenever no history was supplied,
-    # which keeps every existing call site (and every test that doesn't pass
-    # history) byte-for-byte unchanged.
     history_section = f"\nFull conversation so far:\n{history_block}\n" if history_block else ""
     extra_warning = (
         f"\nFINAL REMINDER: write ONLY in {language_name} script. Any other script will be rejected.\n"
@@ -340,16 +276,7 @@ def _build_user_prompt(
         else ""
     )
 
-    # Only present when retrieval succeeded — see _retrieve_medical_context.
     context_section = f"\n{context_block}\n" if context_block else ""
-    # The second sentence is not cosmetic. Grounding the model in textbook
-    # prose pushes it towards terse clinical noun-phrases ("فحص الطوارئ
-    # للتشخيص والعلاج الفوري"). That is correct Arabic, but _looks_coherent
-    # looks for a standalone function word, and Arabic attaches those as
-    # prefixes (و+العلاج -> والعلاج), so such answers get falsely rejected and
-    # thrown away for templated boilerplate. Asking for a full sentence fixes
-    # the cause instead of loosening the safety check. Applied only on the
-    # grounded path so the already-clean non-RAG prompt is untouched.
     grounding_rule = (
         "- Base your differential on the MEDICAL CONTEXT above together with the patient details. "
         "Do not assert anything that neither supports.\n"
@@ -389,14 +316,6 @@ async def _call_llm_once(
     history_block: str = "",
 ) -> Optional[dict]:
     if strict:
-        # The strict retry prompt is deliberately short and single-directive
-        # (see _STRICT_SYSTEM_PROMPTS) — stacking the grounding directive onto
-        # it is exactly the kind of prompt bloat that previously degraded
-        # qwen2 into letter-salad. The context still reaches the model through
-        # the user prompt. The transcript is dropped on the retry for the same
-        # reason: it is the largest single block in the prompt, and the retry
-        # exists specifically to recover from a model that just produced
-        # incoherent output under too much prompt weight.
         system_prompt = _STRICT_SYSTEM_PROMPTS[lang]
         user_prompt = _build_user_prompt(chief_complaint, profile, lang, strict, context_block)
     else:
@@ -408,12 +327,6 @@ async def _call_llm_once(
             chief_complaint, profile, lang, strict, context_block, history_block
         )
 
-    # Lower temperature on the retry: a longer, more constrained retry prompt
-    # combined with the model's default sampling temperature was observed to
-    # produce incoherent, letter-salad output that still technically passed
-    # a script-only check. A more deterministic, focused generation is far
-    # less likely to wander off into gibberish while still following the
-    # (now much shorter) strict instruction.
     temperature = 0.2 if strict else 0.4
 
     try:
@@ -435,7 +348,7 @@ async def _call_llm_once(
         data = response.json()
         content = data.get("message", {}).get("content", "")
         return _extract_json(content)
-    except Exception as exc:  # LLM unavailable/timeout — never break reasoning
+    except Exception as exc:
         logger.warning("Reasoning LLM call failed (strict=%s): %s", strict, exc)
         return None
 
@@ -485,28 +398,6 @@ async def run_reasoning(
     """
     symptom_list = _build_symptom_list(chief_complaint, profile)
 
-    # The rule-engine match and the RAG retrieval are independent — the rule
-    # engine works off the symptom list, retrieval off the chief complaint and
-    # profile, and neither reads the other's result. Only combined afterward,
-    # so run them concurrently rather than paying two round trips back to
-    # back. Retrieval already never raises (fails soft to [] — see below), so
-    # this is not wrapped in return_exceptions=True: if the rule engine raises,
-    # the exception still propagates to the caller exactly as it did when this
-    # was sequential.
-    #
-    # RAG: ground the LLM in the textbook before asking it for a differential.
-    # Returns [] on any failure, in which case _call_llm behaves exactly as it
-    # did before this feature existed.
-    #
-    # Built from the FULLY ACCUMULATED profile — every finding gathered across
-    # every turn of the interview — rather than reusing any single turn's own
-    # retrieval. This is deliberately not a re-threading of the per-turn RAG
-    # chunks the planner saw while asking questions: a query built from "chest
-    # pain" alone (turn 1, before anything else was known) is strictly less
-    # informative than one built from "chest pain, 3 hours, pressure,
-    # radiates to the left arm" (everything known by the end), and the
-    # profile-wide query already contains and exceeds what any per-turn query
-    # covered. See retrieval.retrieve_for_profile / build_profile_query.
     rule_result, context_chunks = await asyncio.gather(
         _symptom_engine.match(symptoms=symptom_list or [chief_complaint]),
         _retrieve_medical_context(chief_complaint, profile),
@@ -523,9 +414,6 @@ async def run_reasoning(
         "conditions": llm_result["differential"],
         "confidence": llm_result["confidence"],
         "next_step": llm_result["recommended_next_step"],
-        # Persisted into virtual_doctor_sessions.differential (JSONB) by
-        # interview_engine, and read back by report_generator to print the
-        # cited textbook pages. Empty list when retrieval found nothing.
         "sources": [
             {
                 "source": c["source"],
@@ -546,11 +434,6 @@ async def run_reasoning(
     }
 
     if lang == "ar":
-        # Simplified formal Arabic (Virtual Doctor Formal Arabic Voice
-        # Quality batch), superseding an earlier dialect version
-        # ("حسب اللي حكيتلي إياه، الأفضل تراجع ..."). Wording only — the
-        # specialty, the urgency level and the next step are the exact same
-        # values, and the urgency label table is unchanged.
         reply = (
             f"بحسب المعلومات التي ذكرتها، يُفضّل مراجعة {rule_result['recommended_specialty_name_ar']} قريبًا. "
             f"الأولوية: {_URGENCY_LABEL_AR[final_urgency]}. {llm_result['recommended_next_step']}"

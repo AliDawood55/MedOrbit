@@ -41,8 +41,6 @@ def _load_flow(name):
         return json.load(fh)
 
 
-# The machine-readable mapping this phase is migrating. complaint -> ordered
-# slots, read off flows/*.json at the time of writing.
 EXPECTED_FLOW_ORDER = {
     "abdominal_pain": ["duration", "location_character", "associated_symptoms", "triggers"],
     "chest_pain": ["duration", "character", "radiation", "associated_symptoms"],
@@ -62,9 +60,6 @@ EXPECTED_MATCH_SYMPTOMS = {
 }
 
 
-# ===========================================================================
-# 1. The flow files themselves
-# ===========================================================================
 
 class TestFlowDefinitions(unittest.TestCase):
     def test_slot_order_is_exactly_as_recorded(self):
@@ -118,9 +113,6 @@ class TestFlowDefinitions(unittest.TestCase):
                     self.assertTrue(slot["question_ar"].strip())
 
 
-# ===========================================================================
-# 2. _next_unfilled_slot — the behaviour being migrated
-# ===========================================================================
 
 class TestNextUnfilledSlotOrder(unittest.TestCase):
     """The whole of today's question selection, in one function: walk the
@@ -172,9 +164,6 @@ class TestNextUnfilledSlotOrder(unittest.TestCase):
                 self.assertIsNone(self._next(complaint, {k: "x" for k in order}))
 
 
-# ===========================================================================
-# 3. Complaint detection
-# ===========================================================================
 
 class TestChiefComplaintDetection(unittest.TestCase):
     def test_each_match_symptom_routes_to_its_complaint(self):
@@ -192,9 +181,6 @@ class TestChiefComplaintDetection(unittest.TestCase):
         self.assertEqual(interview_engine._detect_chief_complaint({}), "generic")
 
 
-# ===========================================================================
-# 4. StaticPlanner end to end — intake first, then the flow in order
-# ===========================================================================
 
 class TestStaticPlannerQuestionSequence(unittest.IsolatedAsyncioTestCase):
     def _planner(self):
@@ -306,9 +292,6 @@ class TestStaticPlannerQuestionSequence(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.reply, generic_assoc)
 
 
-# ===========================================================================
-# 5. LLMPlanner's turn cap and readiness gate
-# ===========================================================================
 
 class TestLLMPlannerInterviewBounds(unittest.TestCase):
     def test_turn_cap_and_readiness_thresholds_are_as_recorded(self):

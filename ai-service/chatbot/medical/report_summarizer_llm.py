@@ -7,7 +7,6 @@ and persists results to `report_summarizations` table.
 """
 
 import os
-import json
 import time
 import logging
 import requests
@@ -53,16 +52,13 @@ class ReportSummarizerLLM:
         if not extracted_text or not extracted_text.strip():
             raise ValueError("No text to summarize")
 
-        # Truncate extremely long text to avoid Ollama context limits
         truncated = self._truncate(extracted_text, max_chars=6000)
 
-        # Generate bilingual summaries
         summary_ar = self._generate_summary(truncated, lang="ar")
         summary_en = self._generate_summary(truncated, lang="en")
 
         processing_ms = int((time.time() - start) * 1000)
 
-        # Persist to DB
         pool = await get_pool()
         row = await pool.fetchrow(
             """
@@ -163,7 +159,6 @@ Include: Key Findings, Diagnosis (if mentioned), Symptoms, Treatment Plan, Recom
         if len(text) <= max_chars:
             return text
         truncated = text[:max_chars]
-        # Find last sentence boundary
         for sep in [".\n", ". ", "。", "\n"]:
             last = truncated.rfind(sep)
             if last > max_chars * 0.7:

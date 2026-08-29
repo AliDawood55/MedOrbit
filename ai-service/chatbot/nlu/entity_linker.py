@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 
 class EntityLinker:
@@ -9,7 +9,6 @@ class EntityLinker:
     """
 
     def __init__(self):
-        # Local entity cache (populated by backend responses)
         self._specialty_cache = {}
         self._doctor_cache = {}
         self._clinic_cache = {}
@@ -25,11 +24,9 @@ class EntityLinker:
 
         name_lower = specialty_name.lower().strip()
 
-        # Check cache first
         if name_lower in self._specialty_cache:
             return self._specialty_cache[name_lower]
 
-        # Check provided list
         if specialties_list:
             for spec in specialties_list:
                 spec_name_en = (spec.get("name_en") or "").lower()
@@ -173,7 +170,6 @@ class EntityLinker:
         """
         linked = dict(entities)
 
-        # Link specialty
         specialty = entities.get("specialty")
         if specialty:
             specialties_list = (available_data or {}).get("specialties")
@@ -182,7 +178,6 @@ class EntityLinker:
                 linked["specialty_id"] = linked_specialty.get("id")
                 linked["specialty_linked"] = linked_specialty
 
-        # Link medication
         medications = entities.get("medications", [])
         if medications:
             meds_list = (available_data or {}).get("medications")

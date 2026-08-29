@@ -1,13 +1,3 @@
-/**
- * Global Toast component — live-region ownership and safe message rendering.
- *
- * P5A found two issues sharing one root cause: Toast.show() builds its DOM
- * via innerHTML, so an untrusted message (e.g. err.message from the server)
- * is parsed as markup instead of displayed as text, and the toast carries no
- * live-region contract for assistive tech. Both are fixed at the shared
- * component; this test boots toast.js in a minimal DOM stub (no jsdom) and
- * exercises the real module, not its source text.
- */
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -34,10 +24,6 @@ function frontendFile(relativePath) {
 }
 
 console.log('\nGlobal Toast tests\n');
-
-// =====================================================================
-// Load Toast in a DOM stub
-// =====================================================================
 
 function element(tag = 'div') {
     const el = {
@@ -97,10 +83,6 @@ try {
     process.exit(1);
 }
 
-// =====================================================================
-// A. Safe message rendering — untrusted text is never parsed as HTML
-// =====================================================================
-
 const PAYLOAD = '<img src=x onerror=alert(1)>';
 
 Toast.error(PAYLOAD, 10000);
@@ -113,10 +95,6 @@ check('the message span has no HTML children (no img element was created)',
     errorText.children.length === 0);
 check('the message is set via textContent, not innerHTML',
     errorText._html === undefined);
-
-// =====================================================================
-// B. Announcement model — one owner, urgency-matched
-// =====================================================================
 
 check('error toasts mark the container as an assertive alert',
     container.getAttribute('role') === 'alert' && container.getAttribute('aria-live') === 'assertive');
@@ -137,10 +115,6 @@ Toast.info('FYI', 10000);
 check('info toasts are treated as polite, same as success',
     container.getAttribute('role') === 'status' && container.getAttribute('aria-live') === 'polite');
 
-// =====================================================================
-// C. Decorative icon is hidden from the accessibility tree
-// =====================================================================
-
 const infoToast = container.children[container.children.length - 1];
 const infoIcon = infoToast.children.find((c) => c.tagName === 'i');
 check('the icon is hidden from assistive tech',
@@ -148,20 +122,12 @@ check('the icon is hidden from assistive tech',
 check('the icon carries the expected fontawesome class',
     infoIcon.className.includes('fa-info-circle'));
 
-// =====================================================================
-// D. Helper methods still delegate to the right type/icon
-// =====================================================================
-
 ['success', 'error', 'warning', 'info'].forEach((type) => {
     Toast[type](`${type} message`, 10000);
     const toast = container.children[container.children.length - 1];
     check(`Toast.${type} delegates with the "${type}" class`,
         toast.className === `toast ${type}`);
 });
-
-// =====================================================================
-// E. Dismissal still works (auto-remove after duration)
-// =====================================================================
 
 const before = container.children.length;
 Toast.info('Will disappear', 5);

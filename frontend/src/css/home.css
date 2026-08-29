@@ -1,7 +1,3 @@
-/* ===========================================
-   MedOrbit v2 - Landing Page (home.html)
-   =========================================== */
-
 .hero {
     position: relative;
     padding: 64px 20px 56px;
@@ -93,7 +89,6 @@
     font-size: 15px;
 }
 
-/* === Hero search === */
 .hero-search {
     max-width: 560px;
     margin: 0 auto;
@@ -153,7 +148,6 @@
     background: var(--primary-dark);
 }
 
-/* === Feature Grid === */
 .features {
     max-width: 1100px;
     margin: 0 auto;
@@ -234,7 +228,6 @@
     color: var(--primary);
 }
 
-/* === Bottom CTA band === */
 .cta-band {
     max-width: 1100px;
     margin: 0 auto 60px;
@@ -269,7 +262,6 @@
     transform: translateY(-1px);
 }
 
-/* === Responsive === */
 @media (max-width: 768px) {
     .hero {
         padding: 44px 16px 40px;
