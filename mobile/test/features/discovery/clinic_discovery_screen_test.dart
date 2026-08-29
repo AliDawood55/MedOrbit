@@ -93,7 +93,9 @@ void main() {
     },
   );
 
-  testWidgets('type filter sends supported backend filter', (tester) async {
+  testWidgets('type filter sends supported backend filter via advanced sheet', (
+    tester,
+  ) async {
     final api = _FakeDiscoveryApi()
       ..clinicListResults.add(Future.value(const ClinicListResponse()))
       ..clinicListResults.add(
@@ -106,7 +108,12 @@ void main() {
 
     await tester.pumpWidget(_app(api));
     await tester.pump();
-    await tester.tap(find.text(_strings.discoveryFiltersButton));
+    final mainScrollable = find.byKey(
+      const PageStorageKey<String>('clinic-discovery-scroll'),
+    );
+    final filtersButton = find.text(_strings.discoveryFiltersButton);
+    await dragUntilHitTestable(tester, filtersButton, mainScrollable);
+    await tester.tap(filtersButton.hitTestable());
     await tester.pumpAndSettle();
     final sheetScrollable = find.descendant(
       of: find.byKey(const ValueKey('clinic-filter-scrollable')),
@@ -129,6 +136,31 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(api.clinicListCalls.last.type, 'pharmacy');
+  });
+
+  testWidgets('compact facility-type chip sends the raw backend enum', (
+    tester,
+  ) async {
+    final api = _FakeDiscoveryApi()
+      ..clinicListResults.add(Future.value(const ClinicListResponse()))
+      ..clinicListResults.add(
+        Future.value(
+          const ClinicListResponse(
+            clinics: [Clinic(id: 'dental-1', nameEn: 'Bright Dental')],
+          ),
+        ),
+      );
+
+    await tester.pumpWidget(_app(api, isArabic: true));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey('facility-type-quick-dental')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(api.clinicListCalls.last.type, 'dental');
+    expect(api.clinicListCalls.last.page, 1);
+    expect(find.text('Bright Dental'), findsOneWidget);
   });
 
   testWidgets('English search, filter, and location labels render in English', (
@@ -189,9 +221,11 @@ void main() {
       // ('pharmacy') is proven stable by the separate "type filter sends
       // supported backend filter" test above, which applies the filter and
       // asserts the exact wire value sent.
+      // The compact facility-type chip and the result card both render the
+      // localized label, so more than one match is expected here.
       expect(
         find.text(_arStrings.clinicTypeLabelFor('pharmacy')),
-        findsOneWidget,
+        findsWidgets,
       );
     },
   );
