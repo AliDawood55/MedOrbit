@@ -364,8 +364,8 @@ class AppStrings {
   );
   String get adminMobileDashboardTitle => _t('مساحة الإدارة', 'Administration');
   String get adminMobileDashboardHint => _t(
-    'لا تتضمن حسابات الإدارة بيانات صحية أو أدوات طبية. استخدم لوحة الويب لإدارة الطلبات والمستخدمين وإعدادات النظام.',
-    'Administration accounts do not include health data or medical tools. Use the web dashboard to manage applications, users, and system settings.',
+    'لا تتضمن حسابات الإدارة بيانات صحية أو أدوات طبية. أدوات الإدارة أدناه تعمل على البيانات التشغيلية فقط.',
+    'Administration accounts do not include health data or medical tools. The tools below act on operational data only.',
   );
   String get adminStatsUsers => _t('إجمالي المستخدمين', 'Total users');
   String get adminStatsPatients => _t('المرضى', 'Patients');
@@ -2761,6 +2761,576 @@ class AppStrings {
       'The service returned an incomplete response. Try again.',
     ),
     _ => errorGeneric,
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ADMINISTRATION (admin / super_admin)
+  //
+  // Every string used by `lib/features/admin/**`. Kept in one delimited
+  // block at the end of the table so the administration workstream never
+  // reorders or reformats the strings above it.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // ── Shared admin chrome ────────────────────────────────────────────────
+  String get roleSuperAdmin => _t('مسؤول أعلى', 'Super administrator');
+  String get adminToolsTitle => _t('أدوات الإدارة', 'Administration tools');
+  String get adminToolsSubtitle => _t(
+    'إدارة الحسابات والطلبات والمحتوى.',
+    'Manage accounts, requests, and content.',
+  );
+  String get adminRestrictedTitle =>
+      _t('هذه المساحة للمسؤولين', 'Administrators only');
+  String get adminRestrictedBody => _t(
+    'حسابك لا يملك صلاحية الوصول إلى هذه الصفحة.',
+    'Your account does not have access to this page.',
+  );
+  String get adminSuperAdminOnlyTitle =>
+      _t('للمسؤول الأعلى فقط', 'Super administrators only');
+  String get adminSuperAdminOnlyBody => _t(
+    'إدارة دعوات المشرفين متاحة لحساب المسؤول الأعلى فقط.',
+    'Managing administrator invitations is restricted to the super administrator account.',
+  );
+  String get adminLoadErrorTitle =>
+      _t('تعذر تحميل البيانات', 'Could not load this data');
+  String get adminActionFailedTitle =>
+      _t('تعذر إتمام الإجراء', 'The action could not be completed');
+  String get adminRefreshTooltip => _t('تحديث', 'Refresh');
+  String get adminFiltersTitle => _t('عوامل التصفية', 'Filters');
+  String get adminFiltersTooltip => _t('فتح عوامل التصفية', 'Open filters');
+  String get adminFilterAll => _t('الكل', 'All');
+  String get adminClearFilters => _t('مسح التصفية', 'Clear filters');
+  String get adminApplyFilters => _t('تطبيق', 'Apply');
+  String get adminNoResultsTitle => _t('لا توجد نتائج', 'No results');
+  String get adminNoResultsHint => _t(
+    'جرّب تعديل عوامل التصفية أو كلمة البحث.',
+    'Try adjusting the filters or your search term.',
+  );
+  String get adminLoadingMore => _t('جارٍ تحميل المزيد…', 'Loading more…');
+  String get adminEndOfList => _t('نهاية القائمة', 'End of list');
+  String adminShowingCount(int count) =>
+      _t('$count عنصراً معروضاً', '$count shown');
+  String get adminCopy => _t('نسخ', 'Copy');
+  String get adminCopied => _t('تم النسخ', 'Copied');
+  String get adminDetailsTitle => _t('التفاصيل', 'Details');
+
+  // ── Admin hub tools ────────────────────────────────────────────────────
+  String get adminToolUsers => _t('إدارة المستخدمين', 'User management');
+  String get adminToolUsersDescription => _t(
+    'ابحث في الحسابات وفعّلها أو أوقفها.',
+    'Search accounts and activate or deactivate them.',
+  );
+  String get adminToolApplications =>
+      _t('طلبات الأطباء', 'Doctor applications');
+  String get adminToolApplicationsDescription => _t(
+    'راجع طلبات الانضمام واعتمدها أو ارفضها.',
+    'Review join requests and approve or reject them.',
+  );
+  String get adminToolContact => _t('رسائل التواصل', 'Contact messages');
+  String get adminToolContactDescription => _t(
+    'راجع رسائل الدعم وحدّث حالتها.',
+    'Review support messages and keep their status current.',
+  );
+  String get adminToolModeration => _t('مراجعة المحتوى', 'Content moderation');
+  String get adminToolModerationDescription => _t(
+    'اعتمد أو أخفِ منشورات الأطباء والتعليقات.',
+    'Approve or hide doctor posts and comments.',
+  );
+  String get adminToolInvitations => _t('دعوات المشرفين', 'Admin invitations');
+  String get adminToolInvitationsDescription => _t(
+    'ادعُ حسابات موثقة لتصبح مشرفين.',
+    'Invite verified accounts to become administrators.',
+  );
+  String get adminToolAnalytics => _t('التحليلات', 'Analytics');
+  String get adminToolAnalyticsDescription => _t(
+    'اتجاهات المنصة وتوزيع الاستخدام.',
+    'Platform trends and usage distribution.',
+  );
+  String get adminToolAuditLogs => _t('سجل التدقيق', 'Audit log');
+  String get adminToolAuditLogsDescription => _t(
+    'سجل للقراءة فقط بالإجراءات الإدارية.',
+    'A read-only record of administrative actions.',
+  );
+  String get adminStatsAppointmentsCompleted =>
+      _t('مواعيد مكتملة', 'Completed appointments');
+  String get adminStatsAppointmentsScheduled =>
+      _t('مواعيد مجدولة', 'Scheduled appointments');
+  String get adminStatsAppointmentsCancelled =>
+      _t('مواعيد ملغاة', 'Cancelled appointments');
+
+  // ── Analytics ──────────────────────────────────────────────────────────
+  String get adminAnalyticsTitle => _t('التحليلات', 'Analytics');
+  String get adminAnalyticsSubtitle => _t(
+    'ملخص تشغيلي مجمّع للمنصة. لا يتضمن بيانات مريض فردية.',
+    'Aggregate operational summary. No individual patient data is included.',
+  );
+  String get adminAnalyticsAppointmentsOverTime =>
+      _t('المواعيد عبر الوقت', 'Appointments over time');
+  String get adminAnalyticsUsersByRole =>
+      _t('المستخدمون حسب الدور', 'Users by role');
+  String get adminAnalyticsTopSpecialties =>
+      _t('أكثر التخصصات طلباً', 'Top specialties');
+  String get adminAnalyticsConversationsPerWeek =>
+      _t('محادثات المساعد أسبوعياً', 'AI conversations per week');
+  String get adminAnalyticsTriageLevels =>
+      _t('مستويات الأولوية', 'Triage levels');
+  String get adminAnalyticsClinicTypes => _t('أنواع المنشآت', 'Facility types');
+  String get adminAnalyticsAwaitingData => _t(
+    'لا توجد بيانات كافية بعد.',
+    'Not enough data yet.',
+  );
+  String get adminAnalyticsSectionUnavailable => _t(
+    'هذا القسم غير متاح حالياً.',
+    'This section is unavailable right now.',
+  );
+  String get adminAnalyticsAllUnavailableTitle =>
+      _t('التحليلات غير متاحة', 'Analytics unavailable');
+  String get adminAnalyticsAllUnavailableHint => _t(
+    'تعذر حساب أي قسم من التحليلات. حاول التحديث لاحقاً.',
+    'None of the analytics sections could be computed. Try refreshing later.',
+  );
+  String get adminAnalyticsWeeklyTrendHint => _t(
+    'آخر ١٢ أسبوعاً، أسبوع لكل عمود.',
+    'The last 12 weeks, one bar per week.',
+  );
+  String adminAnalyticsTotalLabel(int total) =>
+      _t('الإجمالي: $total', 'Total: $total');
+  String adminAnalyticsShare(String label, int count, String percent) =>
+      _t('$label: $count ($percent٪)', '$label: $count ($percent%)');
+  String adminAnalyticsWeekOf(String date) =>
+      _t('أسبوع $date', 'Week of $date');
+
+  /// Facility type labels, matching `CLINIC_TYPE_LABEL_KEYS` in
+  /// `frontend/src/js/analytics.js`. An unmapped value renders as-is.
+  String adminClinicTypeLabel(String type) => switch (type) {
+    'clinic' => _t('عيادة', 'Clinic'),
+    'hospital' => _t('مستشفى', 'Hospital'),
+    'pharmacy' => _t('صيدلية', 'Pharmacy'),
+    'medical_center' => _t('مركز طبي', 'Medical center'),
+    'laboratory' => _t('مختبر', 'Laboratory'),
+    'radiology' => _t('أشعة', 'Radiology'),
+    'dental' => _t('أسنان', 'Dental'),
+    'emergency' => _t('طوارئ', 'Emergency'),
+    'optical' => _t('بصريات', 'Optical'),
+    'vaccination_center' => _t('مركز تطعيم', 'Vaccination center'),
+    _ => type,
+  };
+
+  /// Triage labels, matching `TRIAGE_LABEL_KEYS` in `analytics.js`.
+  String adminTriageLabel(String level) => switch (level) {
+    'emergency' => _t('طارئ', 'Emergency'),
+    'urgent' => _t('عاجل', 'Urgent'),
+    'routine' => _t('روتيني', 'Routine'),
+    _ => level,
+  };
+
+  /// Role labels for both the analytics breakdown and the user list.
+  String adminRoleLabel(String role) => switch (role) {
+    'patient' => rolePatient,
+    'doctor' => roleDoctor,
+    'admin' => roleAdmin,
+    'super_admin' => roleSuperAdmin,
+    _ => role,
+  };
+
+  // ── User management ────────────────────────────────────────────────────
+  String get adminUsersTitle => _t('إدارة المستخدمين', 'User management');
+  String get adminUsersSubtitle =>
+      _t('إدارة حسابات المنصة.', 'Manage platform accounts.');
+  String get adminUsersSearchLabel => _t('ابحث عن المستخدمين', 'Search users');
+  String get adminUsersSearchHint => _t(
+    'الاسم أو البريد الإلكتروني',
+    'Name or email address',
+  );
+  String get adminUsersRoleFilterLabel => _t('الدور', 'Role');
+  String get adminUsersStatusFilterLabel => _t('الحالة', 'Status');
+  String get adminUsersStatusActive => _t('نشط', 'Active');
+  String get adminUsersStatusInactive => _t('موقوف', 'Inactive');
+  String get adminUsersVerified => _t('بريد موثق', 'Email verified');
+  String get adminUsersUnverified => _t('بريد غير موثق', 'Email not verified');
+  String get adminUsersDeactivate => _t('إيقاف', 'Deactivate');
+  String get adminUsersReactivate => _t('إعادة تفعيل', 'Reactivate');
+  String get adminUsersCurrentAccount => _t('حسابك', 'Your account');
+  String get adminUsersProtectedAccount => _t('حساب محمي', 'Protected account');
+  String get adminUsersProtectedHint => _t(
+    'لا يمكن تعديل حسابات المسؤولين من هنا.',
+    'Administrator accounts cannot be changed from here.',
+  );
+  String get adminUsersSelfHint => _t(
+    'لا يمكن للمسؤول تعديل حالة حسابه.',
+    'Administrators cannot change their own account state.',
+  );
+  String adminUsersConfirmDeactivateTitle(String name) =>
+      _t('إيقاف $name؟', 'Deactivate $name?');
+  String get adminUsersConfirmDeactivateBody => _t(
+    'سيتم إنهاء جميع جلسات هذا الحساب فوراً ولن يتمكن من تسجيل الدخول حتى إعادة تفعيله.',
+    'Every session for this account ends immediately, and the account cannot sign in again until it is reactivated.',
+  );
+  String adminUsersConfirmReactivateTitle(String name) =>
+      _t('إعادة تفعيل $name؟', 'Reactivate $name?');
+  String get adminUsersConfirmReactivateBody => _t(
+    'سيتمكن هذا الحساب من تسجيل الدخول مجدداً. سيُطلب منه تسجيل دخول جديد.',
+    'This account will be able to sign in again. It will need to sign in fresh.',
+  );
+  String get adminUsersDeactivateSuccess =>
+      _t('تم إيقاف الحساب.', 'The account was deactivated.');
+  String get adminUsersReactivateSuccess =>
+      _t('تمت إعادة تفعيل الحساب.', 'The account was reactivated.');
+  String get adminUsersEmptyTitle =>
+      _t('لا توجد حسابات', 'No accounts to show');
+  String get adminUsersEmptyHint => _t(
+    'لا توجد حسابات مطابقة لعوامل التصفية الحالية.',
+    'No accounts match the current filters.',
+  );
+  String get adminUsersRoleChangeNote => _t(
+    'تغيير الأدوار معطّل في الخادم؛ استخدم دعوة مشرف لترقية حساب.',
+    'Role changes are disabled on the server. Use an admin invitation to promote an account.',
+  );
+
+  // ── Doctor application review ──────────────────────────────────────────
+  String get adminApplicationsTitle =>
+      _t('مراجعة طلبات الأطباء', 'Doctor application review');
+  String get adminApplicationsSubtitle => _t(
+    'راجع طلبات الانضمام واتخذ قراراً.',
+    'Review join requests and record a decision.',
+  );
+  String get adminApplicationsStatusPending => _t('قيد المراجعة', 'Pending');
+  String get adminApplicationsStatusApproved => _t('مقبول', 'Approved');
+  String get adminApplicationsStatusRejected => _t('مرفوض', 'Rejected');
+  String get adminApplicationsStatusWithdrawn => _t('مسحوب', 'Withdrawn');
+  String get adminApplicationsEmptyTitle =>
+      _t('لا توجد طلبات', 'No applications');
+  String get adminApplicationsEmptyHint => _t(
+    'لا توجد طلبات بهذه الحالة حالياً.',
+    'There are no applications in this state right now.',
+  );
+  String get adminApplicationsLimitNote => _t(
+    'يعرض الخادم أحدث ١٠٠ طلب.',
+    'The server returns the 100 most recent applications.',
+  );
+  String get adminApplicationDetailTitle => _t('تفاصيل الطلب', 'Application');
+  String get adminApplicationApplicantSection =>
+      _t('بيانات مقدّم الطلب', 'Applicant');
+  String get adminApplicationProfessionalSection =>
+      _t('البيانات المهنية', 'Professional details');
+  String get adminApplicationSpecialty => _t('التخصص', 'Specialty');
+  String get adminApplicationLicense => _t('رقم الترخيص', 'Medical license');
+  String get adminApplicationSubSpecialty =>
+      _t('التخصص الدقيق', 'Sub-specialty');
+  String get adminApplicationExperience => _t('سنوات الخبرة', 'Experience');
+  String get adminApplicationEducation => _t('التعليم', 'Education');
+  String get adminApplicationCertifications => _t('الشهادات', 'Certifications');
+  String get adminApplicationBio => _t('نبذة مهنية', 'Professional bio');
+  String get adminApplicationSubmittedAt => _t('تاريخ التقديم', 'Submitted');
+  String get adminApplicationReviewedAt => _t('تاريخ المراجعة', 'Reviewed');
+  String get adminApplicationRejectionReason => _t('سبب الرفض', 'Rejection reason');
+  String get adminApplicationApprove => _t('اعتماد', 'Approve');
+  String get adminApplicationReject => _t('رفض', 'Reject');
+  String get adminApplicationApproveTitle =>
+      _t('اعتماد هذا الطلب؟', 'Approve this application?');
+  String get adminApplicationApproveBody => _t(
+    'سيتحول الحساب إلى حساب طبيب ويُطلب منه تسجيل دخول جديد. لا يمكن التراجع عن هذا الإجراء من التطبيق.',
+    'The account becomes a doctor account and will be asked to sign in again. This cannot be undone from the app.',
+  );
+  String get adminApplicationRejectTitle =>
+      _t('رفض هذا الطلب؟', 'Reject this application?');
+  String get adminApplicationRejectBody => _t(
+    'سيُبلَّغ مقدّم الطلب بالرفض مع السبب الذي تكتبه.',
+    'The applicant is notified of the rejection together with the reason you write.',
+  );
+  String get adminApplicationRejectReasonLabel =>
+      _t('سبب الرفض', 'Rejection reason');
+  String get adminApplicationRejectReasonHint => _t(
+    'اشرح سبب الرفض للمتقدّم',
+    'Explain the decision to the applicant',
+  );
+  String get adminApplicationRejectReasonRequired =>
+      _t('سبب الرفض مطلوب.', 'A rejection reason is required.');
+  String get adminApplicationApprovedSuccess =>
+      _t('تم اعتماد الطلب.', 'The application was approved.');
+  String get adminApplicationRejectedSuccess =>
+      _t('تم رفض الطلب.', 'The application was rejected.');
+  String get adminApplicationDecidedNote => _t(
+    'تمت مراجعة هذا الطلب بالفعل.',
+    'This application has already been reviewed.',
+  );
+  String adminApplicationYears(int years) => _t('$years سنة', '$years years');
+
+  // ── Admin invitations (super_admin) ────────────────────────────────────
+  String get adminInvitationsTitle =>
+      _t('دعوات المشرفين', 'Admin invitations');
+  String get adminInvitationsSubtitle => _t(
+    'ادعُ حسابات موثقة وأدر الدعوات المعلقة.',
+    'Invite verified accounts and manage pending invitations.',
+  );
+  String get adminInvitationEmailLabel =>
+      _t('البريد الإلكتروني للحساب', 'Account email');
+  String get adminInvitationSend => _t('إرسال الدعوة', 'Send invitation');
+  String get adminInvitationPendingSection =>
+      _t('الدعوات المعلقة', 'Pending invitations');
+  String get adminInvitationHistorySection =>
+      _t('دعوات سابقة', 'Past invitations');
+  String get adminInvitationStatusPending => _t('معلقة', 'Pending');
+  String get adminInvitationStatusAccepted => _t('مقبولة', 'Accepted');
+  String get adminInvitationStatusRevoked => _t('ملغاة', 'Revoked');
+  String get adminInvitationStatusExpired => _t('منتهية', 'Expired');
+  String get adminInvitationRevoke => _t('إلغاء الدعوة', 'Revoke');
+  String adminInvitationRevokeTitle(String email) =>
+      _t('إلغاء دعوة $email؟', 'Revoke the invitation for $email?');
+  String get adminInvitationRevokeBody => _t(
+    'لن يعود الرابط صالحاً. يمكنك إرسال دعوة جديدة لاحقاً.',
+    'The link stops working. You can send a new invitation later.',
+  );
+  String get adminInvitationRevokedSuccess =>
+      _t('تم إلغاء الدعوة.', 'The invitation was revoked.');
+  String get adminInvitationCreatedSent => _t(
+    'تم إنشاء الدعوة وإرسال البريد. يظهر رابط احتياطي أدناه.',
+    'Invitation created and emailed. A backup link is shown below.',
+  );
+  String get adminInvitationCreatedManual => _t(
+    'تم إنشاء الدعوة، لكن يلزم تسليم الرابط يدوياً.',
+    'Invitation created, but the link needs manual delivery.',
+  );
+  String get adminInvitationLinkTitle =>
+      _t('رابط القبول لمرة واحدة', 'One-time acceptance link');
+  String get adminInvitationLinkHint => _t(
+    'أرسل هذا الرابط إلى البريد المدعو فقط. يظهر مرة واحدة ولن يمكن استرجاعه لاحقاً.',
+    'Send this link only to the invited email address. It is shown once and cannot be retrieved later.',
+  );
+  String get adminInvitationLinkHide => _t('إخفاء الرابط', 'Hide link');
+  String get adminInvitationExpiresOn => _t('تنتهي في', 'Expires');
+  String get adminInvitationCreatedOn => _t('أُنشئت في', 'Created');
+  String get adminInvitationsEmptyTitle =>
+      _t('لا توجد دعوات', 'No invitations');
+  String get adminInvitationsEmptyHint => _t(
+    'لم يتم إنشاء أي دعوة مشرف بعد.',
+    'No administrator invitation has been created yet.',
+  );
+
+  // ── Invitation acceptance (the invited account) ────────────────────────
+  String get adminInvitationAcceptTitle =>
+      _t('قبول دعوة الإشراف', 'Accept admin invitation');
+  String get adminInvitationAcceptSubtitle => _t(
+    'الصق رابط الدعوة أو الرمز الذي وصلك، ثم أكّد القبول من هذا الحساب.',
+    'Paste the invitation link or code you received, then confirm from this account.',
+  );
+  String get adminInvitationAcceptEntryHint => _t(
+    'إن وصلتك دعوة لتصبح مشرفاً، الصق رابطها هنا لقبولها.',
+    'If you were invited to become an administrator, paste the invitation link here to accept it.',
+  );
+  String get adminInvitationAcceptTokenLabel =>
+      _t('رابط الدعوة أو الرمز', 'Invitation link or code');
+  String get adminInvitationAcceptTokenHint =>
+      _t('الصق الرابط كاملاً', 'Paste the full link');
+  String get adminInvitationAcceptTokenHelper => _t(
+    'يجب أن تكون مسجلاً الدخول بالحساب الذي وُجهت إليه الدعوة.',
+    'You must be signed in as the account the invitation was addressed to.',
+  );
+  String get adminInvitationAcceptTokenRequired =>
+      _t('أدخل رابط الدعوة أو الرمز.', 'Enter the invitation link or code.');
+  String get adminInvitationAcceptSubmit => _t('قبول الدعوة', 'Accept invitation');
+  String get adminInvitationAcceptSuccessTitle =>
+      _t('تم قبول الدعوة', 'Invitation accepted');
+  String get adminInvitationAcceptSuccessBody => _t(
+    'أصبح حسابك حساب مشرف. سجّل الخروج ثم الدخول من جديد لتفعيل الصلاحيات.',
+    'Your account is now an administrator account. Sign out and sign in again to activate the new permissions.',
+  );
+  String get adminInvitationAcceptSignOut =>
+      _t('تسجيل الخروج الآن', 'Sign out now');
+  String get adminInvitationAcceptAlreadyAdminTitle =>
+      _t('حسابك مشرف بالفعل', 'This account is already an administrator');
+  String get adminInvitationAcceptAlreadyAdminBody => _t(
+    'لا حاجة لقبول دعوة على هذا الحساب.',
+    'There is no invitation to accept on this account.',
+  );
+
+  // ── Contact inbox ──────────────────────────────────────────────────────
+  String get adminContactTitle => _t('رسائل التواصل', 'Contact messages');
+  String get adminContactSubtitle => _t(
+    'راجع طلبات الدعم الجديدة وحافظ على تحديث حالتها.',
+    'Review new support requests and keep their status current.',
+  );
+  String get adminContactStatusNew => _t('جديدة', 'New');
+  String get adminContactStatusRead => _t('مقروءة', 'Read');
+  String get adminContactStatusResolved => _t('محلولة', 'Resolved');
+  String get adminContactEmptyTitle => _t('لا توجد رسائل', 'No messages');
+  String get adminContactEmptyHint => _t(
+    'لا توجد رسائل بهذه الحالة.',
+    'There are no messages in this state.',
+  );
+  String get adminContactSender => _t('المرسل', 'From');
+  String get adminContactReceived => _t('وصلت في', 'Received');
+  String get adminContactMessageLabel => _t('نص الرسالة', 'Message');
+  String get adminContactSenderVerified =>
+      _t('حساب مسجّل', 'Signed-in account');
+  String get adminContactResolve => _t('وضع علامة كمحلولة', 'Mark resolved');
+  String get adminContactResolveTitle =>
+      _t('وضع علامة كمحلولة؟', 'Mark this message resolved?');
+  String get adminContactResolveBody => _t(
+    'ستنتقل الرسالة إلى الحالة "محلولة" وتُسجَّل باسمك.',
+    'The message moves to the resolved state and is recorded against your account.',
+  );
+  String get adminContactResolvedSuccess =>
+      _t('تم وضع علامة على الرسالة كمحلولة.', 'The message was marked resolved.');
+  String get adminContactAutoReadNote => _t(
+    'تُوضع علامة "مقروءة" تلقائياً عند فتح رسالة جديدة.',
+    'Opening a new message marks it as read automatically.',
+  );
+
+  // ── Content moderation ─────────────────────────────────────────────────
+  String get adminModerationTitle => _t('مراجعة المحتوى', 'Content moderation');
+  String get adminModerationSubtitle => _t(
+    'اعتمد أو ارفض أو أخفِ منشورات الأطباء وتعليقات المستخدمين.',
+    'Approve, reject, or hide doctor posts and user comments.',
+  );
+  String get adminModerationPostsTab => _t('المنشورات', 'Posts');
+  String get adminModerationCommentsTab => _t('التعليقات', 'Comments');
+  String get adminModerationStatusPending => _t('قيد المراجعة', 'Pending');
+  String get adminModerationStatusApproved => _t('معتمد', 'Approved');
+  String get adminModerationStatusRejected => _t('مرفوض', 'Rejected');
+  String get adminModerationStatusHidden => _t('مخفي', 'Hidden');
+  String get adminModerationApprove => _t('اعتماد', 'Approve');
+  String get adminModerationReject => _t('رفض', 'Reject');
+  String get adminModerationHide => _t('إخفاء', 'Hide');
+  String get adminModerationApproveTitle =>
+      _t('اعتماد هذا المحتوى؟', 'Approve this content?');
+  String get adminModerationApproveBody => _t(
+    'سيصبح المحتوى مرئياً للمستخدمين في الخلاصة.',
+    'The content becomes visible to users in the feed.',
+  );
+  String get adminModerationRejectTitle =>
+      _t('رفض هذا المحتوى؟', 'Reject this content?');
+  String get adminModerationRejectBody => _t(
+    'سيُخفى المحتوى عن الخلاصة ويُسجَّل كمرفوض.',
+    'The content is removed from the feed and recorded as rejected.',
+  );
+  String get adminModerationHideTitle =>
+      _t('إخفاء هذا المحتوى؟', 'Hide this content?');
+  String get adminModerationHideBody => _t(
+    'سيُخفى المحتوى عن الخلاصة ويمكن اعتماده لاحقاً.',
+    'The content is hidden from the feed and can be approved again later.',
+  );
+  String get adminModerationSuccess =>
+      _t('تم تطبيق قرار المراجعة.', 'The moderation decision was applied.');
+  String get adminModerationPostsEmptyTitle =>
+      _t('لا توجد منشورات', 'No posts');
+  String get adminModerationCommentsEmptyTitle =>
+      _t('لا توجد تعليقات', 'No comments');
+  String get adminModerationEmptyHint => _t(
+    'لا يوجد محتوى بهذه الحالة.',
+    'There is no content in this state.',
+  );
+  String get adminModerationUntitled => _t('بدون عنوان', 'Untitled');
+  String get adminModerationPublishState => _t('حالة النشر', 'Publish state');
+  String get adminModerationLimitNote => _t(
+    'يعرض الخادم أحدث ١٠٠ عنصر.',
+    'The server returns the 100 most recent items.',
+  );
+
+  // ── Audit log (read only) ──────────────────────────────────────────────
+  String get adminAuditTitle => _t('سجل التدقيق', 'Audit log');
+  String get adminAuditSubtitle => _t(
+    'سجل للقراءة فقط بالإجراءات الإدارية. لا يمكن تعديله أو حذفه.',
+    'A read-only record of administrative actions. It cannot be edited or deleted.',
+  );
+  String get adminAuditRangeDay => _t('٢٤ ساعة', '24 hours');
+  String get adminAuditRangeWeek => _t('٧ أيام', '7 days');
+  String get adminAuditRangeMonth => _t('٣٠ يوماً', '30 days');
+  String get adminAuditRangeLabel => _t('الفترة', 'Time range');
+  String get adminAuditEntityLabel => _t('نوع السجل', 'Entity type');
+  String get adminAuditEmptyTitle => _t('لا توجد أحداث', 'No events');
+  String get adminAuditEmptyHint => _t(
+    'لا توجد إجراءات مسجّلة ضمن هذه الفترة.',
+    'No actions were recorded in this range.',
+  );
+  String get adminAuditActor => _t('المنفّذ', 'Performed by');
+  String get adminAuditEntity => _t('السجل', 'Entity');
+  String get adminAuditWhen => _t('التوقيت', 'When');
+  String get adminAuditIpAddress => _t('عنوان IP', 'IP address');
+  String get adminAuditUserAgent => _t('العميل', 'Client');
+  String get adminAuditPayloadNote => _t(
+    'لا يعرض التطبيق محتوى الحقول القديمة/الجديدة لأنها قد تتضمن بيانات شخصية أو مهنية.',
+    'Before/after field values are not shown in the app: they can contain personal or professional detail.',
+  );
+  String get adminAuditSystemActor => _t('النظام', 'System');
+  String get adminAuditAction => _t('الإجراء', 'Action');
+  String adminAuditTruncatedNote(int limit) => _t(
+    'يعرض أحدث $limit حدثاً فقط. ضيّق الفترة أو نوع السجل لرؤية المزيد.',
+    'Showing only the $limit most recent events. Narrow the range or entity type to see more.',
+  );
+
+  /// Safe localized copy for an administration backend/transport error code.
+  ///
+  /// Never renders a backend message: the administration endpoints quote
+  /// account emails, invitation state, and moderation targets in theirs.
+  /// Codes verified against `admin.routes.js`, `admin-invitation.routes.js`,
+  /// `doctor-application.routes.js`, `contact.routes.js`, `social.routes.js`,
+  /// `audit-log.routes.js`, `middleware/errorHandler.js`, and the transport
+  /// codes on [ApiException].
+  String adminError(String? code) => switch (code) {
+    'UNAUTHORIZED' || 'TOKEN_EXPIRED' => _t(
+      'انتهت جلستك. سجّل الدخول من جديد ثم حاول مجدداً.',
+      'Your session has expired. Sign in again and try once more.',
+    ),
+    'FORBIDDEN' => _t(
+      'حسابك لا يملك صلاحية تنفيذ هذا الإجراء.',
+      'Your account is not allowed to perform this action.',
+    ),
+    'NOT_FOUND' => _t(
+      'لم يعد هذا العنصر متاحاً. حدّث القائمة.',
+      'This item is no longer available. Refresh the list.',
+    ),
+    'VALIDATION_ERROR' || 'INVALID_FORMAT' || 'INVALID_REFERENCE' => _t(
+      'تحقّق من البيانات المدخلة ثم حاول مرة أخرى.',
+      'Check the details you entered and try again.',
+    ),
+    'DUPLICATE_ENTRY' => _t(
+      'هذا العنصر موجود بالفعل.',
+      'This item already exists.',
+    ),
+    'INVALID_TARGET' => _t(
+      'هذا الحساب غير مؤهل لهذا الإجراء.',
+      'This account is not eligible for that action.',
+    ),
+    'INVITATION_EXISTS' => _t(
+      'توجد دعوة نشطة لهذا البريد بالفعل.',
+      'An active invitation already exists for this email.',
+    ),
+    'INVITATION_UNAVAILABLE' => _t(
+      'لم تعد هذه الدعوة متاحة.',
+      'This invitation is no longer available.',
+    ),
+    'INVITATION_EXPIRED' => _t(
+      'انتهت صلاحية هذه الدعوة. اطلب دعوة جديدة.',
+      'This invitation has expired. Ask for a new one.',
+    ),
+    'INVALID_INVITATION' => _t(
+      'رابط أو رمز الدعوة غير صحيح.',
+      'That invitation link or code is not valid.',
+    ),
+    'INVITATION_ACCOUNT_MISMATCH' => _t(
+      'هذه الدعوة موجهة لحساب آخر. سجّل الدخول بالحساب المدعو.',
+      'This invitation belongs to a different account. Sign in as the invited account.',
+    ),
+    'RATE_LIMITED' || 'CONTACT_RATE_LIMITED' => _t(
+      'محاولات كثيرة. انتظر قليلاً ثم حاول مجدداً.',
+      'Too many attempts. Wait a little while and try again.',
+    ),
+    'INVALID_RESPONSE' => _t(
+      'وصل رد غير مكتمل من الخادم. أعد المحاولة.',
+      'The server sent an incomplete response. Please try again.',
+    ),
+    'CONNECT_TIMEOUT' ||
+    'SEND_TIMEOUT' ||
+    'RECEIVE_TIMEOUT' ||
+    'SERVICE_UNAVAILABLE' ||
+    'CERTIFICATE_ERROR' => _t(
+      'تعذّر الوصول إلى الخدمة. تحقّق من اتصالك ثم حاول مرة أخرى.',
+      'Could not reach the service. Check your connection and try again.',
+    ),
+    _ => _t(
+      'حدث خطأ ما. حاول مرة أخرى.',
+      'Something went wrong. Please try again.',
+    ),
   };
 
   // ================================================================

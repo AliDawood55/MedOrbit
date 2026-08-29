@@ -52,6 +52,28 @@ class RoutePaths {
   static const String doctorPatient = '/doctor/patients/:id';
   static const String doctorPosts = '/doctor/posts';
 
+  // ── Administration (admin / super_admin) ───────────────────────────────
+  static const String adminDashboard = '/admin';
+  static const String adminAnalytics = '/admin/analytics';
+  static const String adminUsers = '/admin/users';
+  static const String adminDoctorApplications = '/admin/doctor-applications';
+  static const String adminDoctorApplicationDetail =
+      '/admin/doctor-applications/:id';
+  static const String adminContactMessages = '/admin/contact-messages';
+  static const String adminModeration = '/admin/moderation';
+  static const String adminAuditLogs = '/admin/audit-logs';
+
+  /// Super-admin only, mirroring `authorizeSuperAdmin` on
+  /// `/api/admin/invitations`.
+  static const String adminInvitations = '/admin/invitations';
+
+  /// Deliberately **not** administrator-gated: the person accepting an
+  /// invitation is still a patient/doctor account at that moment.
+  static const String adminInvitationAccept = '/admin/invitation-accept';
+
+  static String adminDoctorApplicationDetailPath(String id) =>
+      '/admin/doctor-applications/${Uri.encodeComponent(id)}';
+
   static String clinicDetailPath(String id) =>
       '/clinics/${Uri.encodeComponent(id)}';
   static String doctorDetailPath(String id) =>
