@@ -194,6 +194,13 @@ class AuthController extends StateNotifier<AuthState> {
         errorCode: e.code,
       );
       return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
+      return false;
     }
   }
 
@@ -209,6 +216,13 @@ class AuthController extends StateNotifier<AuthState> {
         isSubmitting: false,
         errorMessage: e.message,
         errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
       );
       return false;
     }

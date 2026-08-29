@@ -319,14 +319,26 @@ class AppStrings {
   );
   String get backToLogin => _t('العودة لتسجيل الدخول', 'Back to Login');
 
-  String? verificationError(String? code, String? fallback) => switch (code) {
+  /// Maps a backend/transport error code to safe localized verification copy.
+  /// The raw server [message] is never rendered: [hadError] is only a signal
+  /// that an error exists (so a genuinely error-free state returns null), and
+  /// any unrecognized code falls back to [errorGeneric].
+  ///
+  /// Verified `/auth/verify-email` codes: VALIDATION_ERROR (400),
+  /// INVALID_VERIFICATION_TOKEN (400), VERIFICATION_TOKEN_USED (409),
+  /// VERIFICATION_TOKEN_EXPIRED (410), RATE_LIMITED (429). Transport codes
+  /// come from [ApiException] (`network/api_exception.dart`).
+  String? verificationError(String? code, {required bool hadError}) => switch (code) {
     'INVALID_VERIFICATION_TOKEN' => invalidVerificationCode,
     'VERIFICATION_TOKEN_EXPIRED' => expiredVerificationCode,
     'VERIFICATION_TOKEN_USED' => usedVerificationCode,
     'RATE_LIMITED' => verificationRateLimited,
     'VALIDATION_ERROR' => verificationValidationError,
-    null => fallback,
-    _ => fallback ?? errorGeneric,
+    'CONNECT_TIMEOUT' ||
+    'SEND_TIMEOUT' ||
+    'RECEIVE_TIMEOUT' ||
+    'SERVICE_UNAVAILABLE' => authConnectionError,
+    _ => hadError ? errorGeneric : null,
   };
 
   // Bottom nav

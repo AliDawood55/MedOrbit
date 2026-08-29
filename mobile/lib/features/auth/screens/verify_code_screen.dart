@@ -41,6 +41,11 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
   bool _resent = false;
   bool _checkingLink = false;
 
+  /// True once THIS screen has made a verify or resend attempt. A shared
+  /// [AuthState] error is only rendered while this is set, so an error left
+  /// behind by Login / Register / Forgot / Reset can never be shown here.
+  bool _attempted = false;
+
   String get _normalizedEmail => _emailController.text.trim().toLowerCase();
   bool get _hasRegistrationEmail => (widget.initialEmail ?? '').trim().isNotEmpty;
 
@@ -61,9 +66,28 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     if (RegExp(r'^\d{6}$').hasMatch(initialToken)) {
       _initialCode = initialToken;
       _code = initialToken;
+      _scheduleStaleErrorClear();
     } else if (initialToken.isNotEmpty) {
+      // A real verification link — auto-verify exactly once, mirroring the web
+      // verify-email page. verifyEmail() clears any prior auth error itself.
       WidgetsBinding.instance.addPostFrameCallback((_) => _verifyLink(initialToken));
+    } else {
+      _scheduleStaleErrorClear();
     }
+  }
+
+  /// Drops an error left on the shared [AuthState] by Login / Register / Forgot
+  /// Password / Reset Password so it can never flash as this screen's own
+  /// error. Deferred to after the first frame — mutating a Riverpod provider
+  /// synchronously inside initState throws "Tried to modify a provider while
+  /// the widget tree was building".
+  void _scheduleStaleErrorClear() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(authControllerProvider).errorMessage != null) {
+        ref.read(authControllerProvider.notifier).clearError();
+      }
+    });
   }
 
   @override
@@ -111,6 +135,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
     setState(() {
       _checkingLink = true;
       _verifyInFlight = true;
+      _attempted = true;
       _localError = null;
     });
     final success = await ref.read(authControllerProvider.notifier).verifyEmail(token: token);
@@ -140,6 +165,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
     setState(() {
       _verifyInFlight = true;
+      _attempted = true;
       _localError = null;
     });
     final success = await ref.read(authControllerProvider.notifier).verifyEmail(
@@ -170,6 +196,7 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
     setState(() {
       _resendInFlight = true;
+      _attempted = true;
       _resent = false;
       _localError = null;
     });
@@ -187,14 +214,21 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
 
   void _onCodeChanged(String value) {
     _code = value;
-    if (_localError != null || ref.read(authControllerProvider).errorMessage != null) {
-      setState(() => _localError = null);
+    if (_localError != null || _attempted || ref.read(authControllerProvider).errorMessage != null) {
+      setState(() {
+        _localError = null;
+        _attempted = false;
+      });
       ref.read(authControllerProvider.notifier).clearError();
     }
   }
 
   Widget _errorMessage(AuthState authState, AppStrings strings) {
-    final message = _localError ?? strings.verificationError(authState.errorCode, authState.errorMessage);
+    final message = _localError ??
+        strings.verificationError(
+          authState.errorCode,
+          hadError: _attempted && authState.errorMessage != null,
+        );
     if (message == null) return const SizedBox.shrink();
     return InlineMessage(message: message, tone: InlineMessageTone.error);
   }
@@ -277,7 +311,10 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                                   textDirection: TextDirection.ltr,
                                   prefixIcon: const Icon(Icons.mail_outline_rounded, size: AppTheme.iconMd),
                                   onChanged: (_) {
-                                    setState(() => _localError = null);
+                                    setState(() {
+                                      _localError = null;
+                                      _attempted = false;
+                                    });
                                     ref.read(authControllerProvider.notifier).clearError();
                                   },
                                 ),
@@ -293,7 +330,8 @@ class _VerifyCodeScreenState extends ConsumerState<VerifyCodeScreen> {
                                 onChanged: _onCodeChanged,
                                 onCompleted: _verifyCode,
                               ),
-                              if (_localError != null || authState.errorMessage != null) ...[
+                              if (_localError != null ||
+                                  (_attempted && authState.errorMessage != null)) ...[
                                 const SizedBox(height: AppTheme.spaceMd),
                                 _errorMessage(authState, strings),
                               ],
