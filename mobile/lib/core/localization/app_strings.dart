@@ -1664,6 +1664,7 @@ class AppStrings {
   String get searchDoctorsFieldHint =>
       _t('الاسم أو التخصص', 'Name or specialty');
   String get doctorFilterSpecialtyLabel => _t('التخصص', 'Specialty');
+  String get doctorSpecialtyFilterAll => _t('كل التخصصات', 'All specialties');
   String get doctorFilterRegionLabel => _t('المنطقة', 'Region');
   String get doctorFilterMinRatingLabel =>
       _t('الحد الأدنى للتقييم', 'Minimum rating');
@@ -1690,6 +1691,20 @@ class AppStrings {
       _t('التوفر غير مؤكد', 'Availability not confirmed');
   String get doctorNotAcceptingPatients =>
       _t('لا يستقبل مرضى جدد', 'Not accepting patients');
+  String get doctorRecommendedTitle =>
+      _t('أطباء مقترحون لك', 'Recommended doctors');
+  String get doctorRecommendedSubtitle =>
+      _t('بناءً على نشاطك واهتماماتك', 'Based on your activity and interests');
+  String get doctorRecommendedUnavailable => _t(
+    'تعذر تحميل الاقتراحات المخصصة حالياً',
+    'Personalized suggestions are unavailable right now',
+  );
+  String get doctorReasonFollowed =>
+      _t('لأنك تتابع هذا الطبيب', 'Because you follow this doctor');
+  String get doctorReasonSpecialty =>
+      _t('بناءً على اهتمامك بهذا التخصص', 'Based on your specialty interest');
+  String get doctorReasonTrending => _t('طبيب شائع', 'Popular doctor');
+  String get doctorReasonRecent => _t('اكتشاف الأطباء', 'Doctor discovery');
   String get doctorFallbackName => _t('طبيب', 'Doctor');
   String get clinicFallbackName => _t('عيادة', 'Clinic');
   String get healthcareFacilityFallbackName =>

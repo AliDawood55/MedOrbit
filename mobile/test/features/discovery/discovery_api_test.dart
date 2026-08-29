@@ -150,6 +150,72 @@ void main() {
     expect(response.doctors.single.clinics.single.nameEn, 'Nablus Clinic');
   });
 
+  test('specialties list parses the array envelope and keeps both names', () async {
+    final fake = _FakeDio([
+      {
+        'success': true,
+        'data': [
+          {'id': 's1', 'name_en': 'Cardiology', 'name_ar': 'طب القلب'},
+          {'id': 's2', 'name_en': 'Pediatrics'},
+          {'id': 's3', 'name_ar': 'بلا اسم إنجليزي'},
+        ],
+      },
+    ]);
+    final api = DiscoveryApi(fake.dio);
+
+    final specialties = await api.listSpecialties();
+
+    expect(fake.requests.single.path, '/specialties');
+    expect(specialties.map((s) => s.nameEn), ['Cardiology', 'Pediatrics']);
+    expect(specialties.first.label(true), 'طب القلب');
+    expect(specialties[1].label(true), 'Pediatrics');
+  });
+
+  test('specialties list returns empty on an unexpected payload', () async {
+    final fake = _FakeDio([
+      {
+        'success': true,
+        'data': {'nope': true},
+      },
+    ]);
+    final api = DiscoveryApi(fake.dio);
+
+    expect(await api.listSpecialties(), isEmpty);
+  });
+
+  test('recommended doctors sends limit and surfaces reason_code via extra', () async {
+    final fake = _FakeDio([
+      {
+        'success': true,
+        'data': {
+          'doctors': [
+            {'id': 'rec-1', 'first_name_en': 'Rita', 'specialty_name_en': 'Cardiology', 'reason_code': 'FOLLOWED_DOCTOR'},
+          ],
+        },
+      },
+    ]);
+    final api = DiscoveryApi(fake.dio);
+
+    final doctors = await api.recommendedDoctors(limit: 4);
+
+    expect(fake.requests.single.path, '/recommendations/doctors');
+    expect(fake.requests.single.queryParameters, {'limit': 4});
+    expect(doctors.single.id, 'rec-1');
+    expect(doctors.single.extra['reason_code'], 'FOLLOWED_DOCTOR');
+  });
+
+  test('recordSpecialtySearch posts to the per-specialty search endpoint', () async {
+    final fake = _FakeDio([
+      {'success': true, 'data': {'recorded': true}},
+    ]);
+    final api = DiscoveryApi(fake.dio);
+
+    await api.recordSpecialtySearch('spec-uuid');
+
+    expect(fake.requests.single.method, 'POST');
+    expect(fake.requests.single.path, '/recommendations/specialties/spec-uuid/search');
+  });
+
   test('doctor detail and availability parse correctly', () async {
     final fake = _FakeDio([
       {

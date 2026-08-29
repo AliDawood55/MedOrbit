@@ -2,11 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../data/discovery_api.dart';
 import '../models/clinic_models.dart';
 import '../models/doctor_models.dart';
 
 final discoveryApiProvider = Provider<DiscoveryApi>((ref) => DiscoveryApi(ref.watch(dioProvider)));
+
+/// Whether the viewer is signed in. Gates the authenticated-only
+/// recommended-doctors strip and the specialty-search telemetry ping,
+/// mirroring the web Find Doctors page's `API.isAuthenticated()` checks.
+final discoveryViewerAuthenticatedProvider = Provider<bool>(
+  (ref) => ref.watch(authControllerProvider).status == AuthStatus.authenticated,
+);
 
 class DiscoveryError {
   const DiscoveryError({required this.message, required this.code, this.statusCode, this.retryable = true});
@@ -152,6 +160,10 @@ class DiscoveryState {
     this.selectedClinicDetail,
     this.doctorFilters = const DoctorFilters(),
     this.doctors = const [],
+    this.specialties = const [],
+    this.recommendedDoctors = const [],
+    this.isLoadingRecommendedDoctors = false,
+    this.recommendedDoctorsError,
     this.doctorPagination,
     this.selectedDoctorDetail,
     this.doctorAvailability = const [],
@@ -178,6 +190,10 @@ class DiscoveryState {
   final ClinicDetailResponse? selectedClinicDetail;
   final DoctorFilters doctorFilters;
   final List<Doctor> doctors;
+  final List<Specialty> specialties;
+  final List<Doctor> recommendedDoctors;
+  final bool isLoadingRecommendedDoctors;
+  final DiscoveryError? recommendedDoctorsError;
   final DoctorPagination? doctorPagination;
   final DoctorDetailResponse? selectedDoctorDetail;
   final List<DoctorAvailabilitySlot> doctorAvailability;
@@ -224,6 +240,11 @@ class DiscoveryState {
     bool clearSelectedClinicDetail = false,
     DoctorFilters? doctorFilters,
     List<Doctor>? doctors,
+    List<Specialty>? specialties,
+    List<Doctor>? recommendedDoctors,
+    bool? isLoadingRecommendedDoctors,
+    DiscoveryError? recommendedDoctorsError,
+    bool clearRecommendedDoctorsError = false,
     DoctorPagination? doctorPagination,
     bool clearDoctorPagination = false,
     DoctorDetailResponse? selectedDoctorDetail,
@@ -260,6 +281,12 @@ class DiscoveryState {
           : (selectedClinicDetail ?? this.selectedClinicDetail),
       doctorFilters: doctorFilters ?? this.doctorFilters,
       doctors: doctors ?? this.doctors,
+      specialties: specialties ?? this.specialties,
+      recommendedDoctors: recommendedDoctors ?? this.recommendedDoctors,
+      isLoadingRecommendedDoctors: isLoadingRecommendedDoctors ?? this.isLoadingRecommendedDoctors,
+      recommendedDoctorsError: clearRecommendedDoctorsError
+          ? null
+          : (recommendedDoctorsError ?? this.recommendedDoctorsError),
       doctorPagination: clearDoctorPagination ? null : (doctorPagination ?? this.doctorPagination),
       selectedDoctorDetail: clearSelectedDoctorDetail
           ? null
@@ -408,6 +435,74 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
     } catch (error) {
       _set(state.copyWith(isLoadingClinicDetail: false, clinicDetailError: _safeError(error)));
       return false;
+    }
+  }
+
+  /// Best-effort load of the canonical specialty list for the doctor
+  /// filter. Never surfaces an error: the directory screen falls back to
+  /// [kDoctorSpecialtyFallback] when this leaves [DiscoveryState.specialties]
+  /// empty.
+  Future<void> loadSpecialties() async {
+    if (state.specialties.isNotEmpty) return;
+    try {
+      final specialties = await _api.listSpecialties();
+      if (specialties.isNotEmpty) _set(state.copyWith(specialties: specialties));
+    } catch (_) {
+      // Ignored on purpose — the screen has a built-in fallback list.
+    }
+  }
+
+  /// Drops the personalized recommended-doctor list and its loading/error
+  /// flags. Called when the directory screen mounts and whenever the viewer
+  /// signs out, so one viewer's recommendations are never shown to the next.
+  void clearRecommendedDoctors() {
+    if (state.recommendedDoctors.isEmpty &&
+        !state.isLoadingRecommendedDoctors &&
+        state.recommendedDoctorsError == null) {
+      return;
+    }
+    _set(
+      state.copyWith(
+        recommendedDoctors: const [],
+        isLoadingRecommendedDoctors: false,
+        clearRecommendedDoctorsError: true,
+      ),
+    );
+  }
+
+  /// Loads the authenticated "Recommended doctors" strip. Fully isolated
+  /// from the main list: an error only sets [DiscoveryState.recommendedDoctorsError]
+  /// and never touches [DiscoveryState.doctors]. Clears any previous list up
+  /// front so a prior viewer's recommendations aren't shown while loading.
+  Future<void> loadRecommendedDoctors({int limit = 6}) async {
+    if (state.isLoadingRecommendedDoctors) return;
+    _set(
+      state.copyWith(
+        recommendedDoctors: const [],
+        isLoadingRecommendedDoctors: true,
+        clearRecommendedDoctorsError: true,
+      ),
+    );
+    try {
+      final doctors = await _api.recommendedDoctors(limit: limit);
+      _set(state.copyWith(recommendedDoctors: doctors, isLoadingRecommendedDoctors: false));
+    } catch (error) {
+      _set(
+        state.copyWith(
+          isLoadingRecommendedDoctors: false,
+          recommendedDoctorsError: _safeError(error),
+        ),
+      );
+    }
+  }
+
+  /// Best-effort specialty-search telemetry ping. Never throws, never
+  /// blocks filtering, and swallows failures silently.
+  Future<void> recordSpecialtySearch(String specialtyId) async {
+    try {
+      await _api.recordSpecialtySearch(specialtyId);
+    } catch (_) {
+      // Telemetry only — a failure must never reach the user.
     }
   }
 

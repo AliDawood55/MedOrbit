@@ -482,6 +482,85 @@ class DoctorReview {
   };
 }
 
+/// A medical specialty from `GET /specialties`. [nameEn] is the value sent
+/// back to the `/doctors` specialty filter (the backend matches either the
+/// English or Arabic name); [label] picks the locale-appropriate text.
+class Specialty {
+  const Specialty({required this.nameEn, required this.nameAr, this.id});
+
+  final String? id;
+  final String nameEn;
+  final String nameAr;
+
+  String label(bool isArabic) =>
+      isArabic ? (nameAr.isEmpty ? nameEn : nameAr) : nameEn;
+
+  factory Specialty.fromJson(Map<String, dynamic> json) {
+    final en = _asString(_read(json, 'name_en', 'nameEn'))?.trim() ?? '';
+    final ar = _asString(_read(json, 'name_ar', 'nameAr'))?.trim() ?? '';
+    return Specialty(
+      id: _asString(json['id']),
+      nameEn: en,
+      nameAr: ar.isEmpty ? en : ar,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Specialty &&
+      other.id == id &&
+      other.nameEn == nameEn &&
+      other.nameAr == nameAr;
+
+  @override
+  int get hashCode => Object.hash(id, nameEn, nameAr);
+}
+
+/// Parses the `GET /specialties` array envelope (`{ success, data: [...] }`).
+/// Returns an empty list on any unexpected shape so callers can fall back
+/// to [kDoctorSpecialtyFallback] instead of failing the screen.
+List<Specialty> parseSpecialtyList(Map<String, dynamic>? envelope) {
+  if (envelope == null) return const [];
+  final data = envelope['data'] ?? envelope['specialties'];
+  if (data is! List) return const [];
+  return data
+      .whereType<Map>()
+      .map((row) => Specialty.fromJson(Map<String, dynamic>.from(row)))
+      .where((specialty) => specialty.nameEn.isNotEmpty)
+      .toList();
+}
+
+/// Offline fallback specialty list, mirroring the hard-coded list the web
+/// Find Doctors page ships (`frontend/src/js/find-doctors.js`) for when
+/// `GET /specialties` is unavailable.
+const List<Specialty> kDoctorSpecialtyFallback = [
+  Specialty(nameEn: 'Anesthesiology', nameAr: 'التخدير'),
+  Specialty(nameEn: 'Cardiology', nameAr: 'طب القلب'),
+  Specialty(nameEn: 'Dentistry', nameAr: 'طب الأسنان'),
+  Specialty(nameEn: 'Dermatology', nameAr: 'طب الجلدية'),
+  Specialty(nameEn: 'Emergency Medicine', nameAr: 'طب الطوارئ'),
+  Specialty(nameEn: 'Endocrinology', nameAr: 'طب الغدد الصماء'),
+  Specialty(nameEn: 'ENT', nameAr: 'طب الأنف والأذن والحنجرة'),
+  Specialty(nameEn: 'Gastroenterology', nameAr: 'طب الجهاز الهضمي'),
+  Specialty(nameEn: 'General Practice', nameAr: 'طب عام'),
+  Specialty(nameEn: 'General Surgery', nameAr: 'جراحة عامة'),
+  Specialty(nameEn: 'Geriatrics', nameAr: 'طب الشيخوخة'),
+  Specialty(nameEn: 'Hematology', nameAr: 'طب الدم'),
+  Specialty(nameEn: 'Nephrology', nameAr: 'طب الكلى'),
+  Specialty(nameEn: 'Neurology', nameAr: 'طب الأعصاب'),
+  Specialty(nameEn: 'Obstetrics & Gynecology', nameAr: 'طب النساء والتوليد'),
+  Specialty(nameEn: 'Oncology', nameAr: 'طب الأورام'),
+  Specialty(nameEn: 'Ophthalmology', nameAr: 'طب العيون'),
+  Specialty(nameEn: 'Orthopedics', nameAr: 'جراحة العظام'),
+  Specialty(nameEn: 'Pediatrics', nameAr: 'طب الأطفال'),
+  Specialty(nameEn: 'Physiotherapy', nameAr: 'طب إعادة التأهيل'),
+  Specialty(nameEn: 'Psychiatry', nameAr: 'طب نفسي'),
+  Specialty(nameEn: 'Pulmonology', nameAr: 'طب الرئة'),
+  Specialty(nameEn: 'Radiology', nameAr: 'الأشعة'),
+  Specialty(nameEn: 'Rheumatology', nameAr: 'طب الروماتيزم'),
+  Specialty(nameEn: 'Urology', nameAr: 'جراحة المسالك البولية'),
+];
+
 class DoctorPagination {
   const DoctorPagination({
     this.page,

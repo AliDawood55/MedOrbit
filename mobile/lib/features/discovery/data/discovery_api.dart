@@ -82,6 +82,36 @@ class DiscoveryApi {
     return DoctorListResponse.fromJson(_envelopeData(response.data));
   }
 
+  /// `GET /specialties` — the canonical specialty list that backs the Find
+  /// Doctors specialty filter. Returns an empty list on an unexpected
+  /// payload; callers fall back to [kDoctorSpecialtyFallback].
+  Future<List<Specialty>> listSpecialties() async {
+    final response = await _dio.get<Map<String, dynamic>>('/specialties');
+    return parseSpecialtyList(response.data);
+  }
+
+  /// `GET /recommendations/doctors` — the authenticated "Recommended
+  /// doctors" strip on the web Find Doctors page. Backend caps `limit` at
+  /// 30 and returns ranked doctors carrying a `reason_code` (surfaced via
+  /// [Doctor.extra]).
+  Future<List<Doctor>> recommendedDoctors({int limit = 6}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/recommendations/doctors',
+      queryParameters: {'limit': limit},
+    );
+    return DoctorListResponse.fromJson(_envelopeData(response.data)).doctors;
+  }
+
+  /// `POST /recommendations/specialties/:id/search` — best-effort telemetry
+  /// the web page fires when a signed-in user picks a specialty. The
+  /// backend rate-limits and de-duplicates per user/specialty/day, so
+  /// callers just fire and forget.
+  Future<void> recordSpecialtySearch(String specialtyId) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/recommendations/specialties/$specialtyId/search',
+    );
+  }
+
   Future<DoctorDetailResponse> getDoctor(String id) async {
     final response = await _dio.get<Map<String, dynamic>>('/doctors/$id');
     return DoctorDetailResponse.fromJson(_envelopeData(response.data));

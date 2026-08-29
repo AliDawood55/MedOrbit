@@ -8,9 +8,8 @@ import '../../../shared/widgets/primary_button.dart';
 import '../providers/discovery_provider.dart';
 
 class DoctorFilterSheet extends ConsumerStatefulWidget {
-  const DoctorFilterSheet({super.key, required this.initialFilters, required this.specialties, required this.regions, required this.onApply, required this.onClear});
+  const DoctorFilterSheet({super.key, required this.initialFilters, required this.regions, required this.onApply, required this.onClear});
   final DoctorFilters initialFilters;
-  final List<String> specialties;
   final List<String> regions;
   final ValueChanged<DoctorFilters> onApply;
   final VoidCallback onClear;
@@ -35,7 +34,6 @@ class _DoctorFilterSheetState extends ConsumerState<DoctorFilterSheet> {
       child: ConstrainedBox(constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .82), child: SingleChildScrollView(
         key: const ValueKey('doctor-filter-scrollable'), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Text(strings.doctorFilterSheetTitle, style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: AppTheme.spaceMd),
-          _Choices(title: strings.doctorFilterSpecialtyLabel, anyLabel: strings.discoveryAnyOption, selected: _filters.specialty, items: widget.specialties, onChanged: (v) => setState(() => _filters = _filters.copyWith(specialty: v, clearSpecialty: v == null))),
           _Choices(title: strings.doctorFilterRegionLabel, anyLabel: strings.discoveryAnyOption, selected: _filters.region, items: widget.regions, onChanged: (v) => setState(() => _filters = _filters.copyWith(region: v, clearRegion: v == null))),
           _Choices(title: strings.doctorFilterMinRatingLabel, anyLabel: strings.discoveryAnyOption, selected: _filters.minRating?.toString(), items: const ['3', '4', '4.5'], onChanged: (v) => setState(() => _filters = _filters.copyWith(minRating: double.tryParse(v ?? ''), clearMinRating: v == null))),
           Row(children: [Expanded(child: AppTextField(label: strings.doctorFilterMinFeeLabel, controller: _minFee, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (v) => setState(() => _filters = _filters.copyWith(minFee: double.tryParse(v), clearMinFee: v.isEmpty)))), const SizedBox(width: AppTheme.spaceSm), Expanded(child: AppTextField(label: strings.doctorFilterMaxFeeLabel, controller: _maxFee, keyboardType: const TextInputType.numberWithOptions(decimal: true), errorText: invalidFee ? strings.doctorFilterFeeRangeError : null, onChanged: (v) => setState(() => _filters = _filters.copyWith(maxFee: double.tryParse(v), clearMaxFee: v.isEmpty))))]),

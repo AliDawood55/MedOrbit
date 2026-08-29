@@ -165,7 +165,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.doctors,
-        builder: (context, state) => const DoctorDirectoryScreen(),
+        builder: (context, state) => DoctorDirectoryScreen(
+          initialSearch: state.uri.queryParameters['search'],
+          initialSpecialty: state.uri.queryParameters['specialty'],
+        ),
       ),
       GoRoute(
         path: RoutePaths.clinicDetail,

@@ -9,10 +9,14 @@ import '../../../shared/widgets/status_badge.dart';
 import '../models/doctor_models.dart';
 
 class DoctorResultCard extends ConsumerWidget {
-  const DoctorResultCard({super.key, required this.doctor, this.onTap});
+  const DoctorResultCard({super.key, required this.doctor, this.onTap, this.reasonLabel});
 
   final Doctor doctor;
   final VoidCallback? onTap;
+
+  /// Localized recommendation reason, shown as a badge. Set only by the
+  /// "Recommended doctors" strip; null in the main directory list.
+  final String? reasonLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -48,9 +52,18 @@ class DoctorResultCard extends ConsumerWidget {
                 runSpacing: AppTheme.spaceSm,
                 children: [
                   StatusBadge(
-                    label: doctor.isAcceptingPatients == true ? strings.doctorAcceptingPatients : strings.doctorAvailabilityNotConfirmed,
-                    color: doctor.isAcceptingPatients == true ? AppTheme.success : Theme.of(context).colorScheme.onSurfaceVariant,
+                    label: switch (doctor.isAcceptingPatients) {
+                      true => strings.doctorAcceptingPatients,
+                      false => strings.doctorNotAcceptingPatients,
+                      null => strings.doctorAvailabilityNotConfirmed,
+                    },
+                    color: switch (doctor.isAcceptingPatients) {
+                      true => AppTheme.success,
+                      false => AppTheme.danger,
+                      null => Theme.of(context).colorScheme.onSurfaceVariant,
+                    },
                   ),
+                  if (reasonLabel != null) StatusBadge(label: reasonLabel!, color: AppTheme.info),
                 ],
               ),
               const SizedBox(height: AppTheme.spaceMd),
@@ -110,6 +123,19 @@ String? doctorDisplaySpecialty(Doctor doctor, TextDirection direction) {
       ? doctor.specialtyNameAr ?? doctor.specialtyAr ?? doctor.specialtyNameEn ?? doctor.specialtyEn
       : doctor.specialtyNameEn ?? doctor.specialtyEn ?? doctor.specialtyNameAr ?? doctor.specialtyAr;
   return value?.trim().isEmpty == true ? null : value;
+}
+
+/// Maps the backend `reason_code` (carried in [Doctor.extra]) to localized
+/// copy, matching the web Find Doctors page's `REASON_KEYS`. Returns null
+/// for an absent or unrecognized code.
+String? doctorRecommendationReason(Doctor doctor, AppStrings strings) {
+  return switch (doctor.extra['reason_code']) {
+    'FOLLOWED_DOCTOR' => strings.doctorReasonFollowed,
+    'INTEREST_SPECIALTY' => strings.doctorReasonSpecialty,
+    'TRENDING' => strings.doctorReasonTrending,
+    'RECENT' => strings.doctorReasonRecent,
+    _ => null,
+  };
 }
 
 String clinicDisplayName(DoctorClinicSummary clinic, TextDirection direction, [AppStrings? strings]) {
