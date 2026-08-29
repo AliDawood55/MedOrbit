@@ -3,7 +3,7 @@ const multer = require('multer');
 const { createAiFeatureLimiter } = require('../middleware/rateLimit');
 
 const db = require('../config/database');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const { internalIdentityHeaders } = require('../services/aiBoundary.service');
 const entitlementService = require('../services/entitlement.service');
 const { ERROR_CODES, policy } = require('../config/billing');
@@ -32,6 +32,7 @@ const logger = require('../utils/logger');
  */
 
 const router = express.Router();
+router.use(authenticate, authorize('patient', 'doctor'));
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
 

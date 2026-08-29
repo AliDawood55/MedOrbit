@@ -21,7 +21,7 @@ function appointmentDto(row) {
 // Server-generated bookable slots. The array shape remains compatible with
 // existing web/mobile clients, but each row is now one exact slot after
 // weekly rules, date overrides, blocks, past time, and bookings are removed.
-router.get('/available-slots', authenticate, async (req, res, next) => {
+router.get('/available-slots', authenticate, authorize('patient'), async (req, res, next) => {
     try {
         const { doctor_id, clinic_id, date } = req.query;
         if (!doctor_id || !date) {
@@ -36,7 +36,7 @@ router.get('/available-slots', authenticate, async (req, res, next) => {
 
 // Booking is revalidated inside a serialized transaction. Client-supplied
 // duration/end/type must exactly match a currently generated server slot.
-router.post('/', authenticate, async (req, res, next) => {
+router.post('/', authenticate, authorize('patient'), async (req, res, next) => {
     try {
         const appointment = await scheduling.bookAppointment(req.user.sub, req.body);
         return success(res, appointmentDto(appointment), 'Appointment booked', 201);
@@ -47,7 +47,7 @@ router.post('/', authenticate, async (req, res, next) => {
 
 // Patient appointment history. Doctor schedule views use
 // GET /api/doctors/me/schedule and receive only appropriate patient identity.
-router.get('/', authenticate, async (req, res, next) => {
+router.get('/', authenticate, authorize('patient'), async (req, res, next) => {
     try {
         const patient = await db.query(
             'SELECT id FROM medorbit.patients WHERE user_id=$1',
@@ -66,7 +66,7 @@ router.get('/', authenticate, async (req, res, next) => {
     }
 });
 
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', authenticate, authorize('patient'), async (req, res, next) => {
     try {
         const patient = await db.query(
             'SELECT id FROM medorbit.patients WHERE user_id=$1',

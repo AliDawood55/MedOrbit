@@ -53,7 +53,29 @@ const PROTECTED = [
         'symptom-checker.html'
     ];
 
-const ROLE_RESTRICTED = {
+    // Platform operators manage the service; they do not use personal-care
+    // pages. This is presentation routing only — backend routes remain the
+    // authorization authority for every request.
+    const PLATFORM_EXCLUDED_PAGES = new Set([
+        'avatar-preview.html', 'billing-sandbox.html', 'billing.html',
+        'book-appointment.html', 'contact.html', 'direct-messages.html',
+        'doctor-application.html', 'doctor-posts.html',
+        'doctor-profile-edit.html', 'drug-checker.html', 'feedback.html',
+        'index.html', 'my-appointments.html', 'my-doctor.html',
+        'my-patients.html', 'my-prescriptions.html', 'my-records.html',
+        'my-reports.html', 'my-schedule.html', 'patient-detail.html',
+        'patient-profile.html', 'report-summary.html', 'symptom-checker.html'
+    ]);
+
+    /**
+     * Roles each protected page is meant for, where the page and its backend
+     * routes already restrict by role. Documentation and test-matrix input
+     * ONLY — the gate deliberately does not enforce it, because authorization
+     * belongs to the backend and to the existing per-page checks. Being
+     * authenticated is not the same as being allowed; this module answers only
+     * the first question and must never be read as answering the second.
+     */
+    const ROLE_RESTRICTED = {
         'analytics.html': ['admin', 'super_admin'],
         'admin-contact-messages.html': ['admin', 'super_admin'],
         'admin-doctor-applications.html': ['admin', 'super_admin'],
@@ -380,7 +402,16 @@ function denyToHome(reason) {
 window.location.replace(PUBLIC_HOME + '?' + params.toString());
     }
 
-async function resolveProtectedPage() {
+    function redirectPlatformOperatorFromPersonalCare() {
+        const role = String(verifiedUser?.role || '').trim().toLowerCase();
+        if (!['admin', 'super_admin'].includes(role) || !PLATFORM_EXCLUDED_PAGES.has(thisPage)) return false;
+        window.location.replace('dashboard.html?access=platform');
+        return true;
+    }
+
+    // ================= PROTECTED PAGE BOOT =================
+
+    async function resolveProtectedPage() {
 
 if (window.__medorbitNavigatingAway) return;
 
@@ -395,6 +426,7 @@ if (window.__medorbitNavigatingAway) return;
         const state = await withTimeout(verifySession(), VERIFY_TIMEOUT_MS);
 
         if (state === 'valid') {
+            if (redirectPlatformOperatorFromPersonalCare()) return;
             lowerShield();
             clearIntendedDestination();
             document.dispatchEvent(new CustomEvent('authgate:allowed', { detail: { user: verifiedUser } }));

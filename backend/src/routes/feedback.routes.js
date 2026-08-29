@@ -6,7 +6,8 @@ const db = require("../config/database");
 
 const {
     authenticate,
-    authenticateOptional
+    authenticateOptional,
+    authorize
 } = require("../middleware/auth");
 
 const {
@@ -25,6 +26,7 @@ const {
 router.post(
     "/",
     authenticate,
+    authorize("patient", "doctor"),
 
     async (req, res, next) => {
 

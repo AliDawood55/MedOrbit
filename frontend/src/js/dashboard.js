@@ -71,7 +71,8 @@ const QUICK_GROUPS = [
                 { href: 'admin-contact-messages.html', icon: 'fa-envelope-open-text', titleKey: 'Contact Messages', descKey: 'Review support messages', adminOnly: true },
                 { href: 'admin-social.html', icon: 'fa-shield-halved', titleKey: 'Social Moderation', descKey: 'Moderate posts and comments', adminOnly: true },
                 { href: 'admin-invitations.html', icon: 'fa-user-plus', titleKey: 'Admin Invitations', descKey: 'Invite and manage administrators', superAdminOnly: true },
-                { href: 'admin-users.html', icon: 'fa-users-gear', titleKey: 'nav.userManagement', descKey: 'adminUsers.dashDesc', adminOnly: true }
+                { href: 'admin-users.html', icon: 'fa-users-gear', titleKey: 'nav.userManagement', descKey: 'adminUsers.dashDesc', adminOnly: true },
+                { href: 'profile.html', icon: 'fa-user-gear', titleKey: 'nav.account', descKey: 'dashboard.descProfile', adminOnly: true }
             ]
         }
     ];
@@ -183,14 +184,23 @@ function displayName() {
         return ['admin', 'super_admin'].includes(profile?.role);
     }
 
-function applyRoleAwareness() {
+    // ================= ROLE-AWARE SECTIONS =================
+
+    function applyRoleAwareness() {
+        const admin = isAdmin();
         const doctor = isDoctor();
 
         const statTile = document.getElementById('statApptTile');
         const viewAll = document.getElementById('dashboardAppointmentsLink');
-        if (statTile) statTile.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
-        if (viewAll) viewAll.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
-        document.getElementById('dashboardBookAppointment')?.classList.toggle('hidden', doctor);
+        if (!admin) {
+            if (statTile) statTile.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
+            if (viewAll) viewAll.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
+        }
+        document.getElementById('dashboardBookAppointment')?.classList.toggle('hidden', admin || doctor);
+
+        // Platform operators do not have a personal care workspace.
+        document.getElementById('statsRow')?.classList.toggle('hidden', admin);
+        document.querySelector('.dashboard-main')?.classList.toggle('hidden', admin);
 
 document.getElementById('apptDoctorNotice')?.classList.add('hidden');
         document.getElementById('apptEmpty')?.classList.add('hidden');
@@ -198,7 +208,13 @@ document.getElementById('apptDoctorNotice')?.classList.add('hidden');
         document.getElementById('apptList')?.classList.add('hidden');
     }
 
-function tileVisible(tile) {
+    // ================= QUICK ACTION GROUPS: RENDER =================
+
+    function tileVisible(tile) {
+        // Admin and Super Admin can manage the platform and receive
+        // notifications, but never use patient/doctor care, AI, reporting,
+        // or feedback actions from this dashboard.
+        if (isAdmin() && !tile.adminOnly && !tile.superAdminOnly && tile.href !== 'notifications.html') return false;
         if (tile.adminOnly && !isAdmin()) return false;
         if (tile.superAdminOnly && profile?.role !== 'super_admin') return false;
         if (tile.patientOnly && profile?.role !== 'patient') return false;
