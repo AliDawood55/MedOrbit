@@ -1405,6 +1405,12 @@ class AppStrings {
       'subscription_required' => vdErrSubscriptionRequired,
       'subscription_inactive' => vdErrSubscriptionInactive,
       'entitlement_unavailable' => vdErrEntitlementUnavailable,
+      'rate_limited' => chatRateLimited,
+      'session_starting' => _t(
+        'لا تزال الاستشارة قيد البدء. انتظر قليلًا ثم حاول الاستئناف.',
+        'Your consultation is still starting. Wait a moment, then resume.',
+      ),
+      'end_failed' => voiceEndFailed,
       'ai_failed' ||
       'stt_failed' ||
       'engine_failed' ||
@@ -2210,6 +2216,311 @@ class AppStrings {
       'حدث خطأ ما. حاول مرة أخرى.',
       'Something went wrong. Please try again.',
     ),
+  };
+
+  // ========================================================================
+  // BILLING / AI ENTITLEMENT
+  // Additive section: keep separate from Admin and existing feature strings.
+  // ========================================================================
+  String get billingTitle => _t('الخطة والفوترة', 'Plan & Billing');
+  String get billingSubtitle => _t(
+    'راجع خطتك وحدود خدمات الذكاء الاصطناعي وإدارة اشتراكك.',
+    'Review your plan, AI access, and subscription.',
+  );
+  String get billingProfileDescription => _t(
+    'الخطة الحالية والترقية وسجل الفوترة',
+    'Current plan, upgrades, and billing history',
+  );
+  String get billingCurrentPlan => _t('الخطة الحالية', 'Current plan');
+  String get billingFreePlan => _t('مجانية', 'Free');
+  String get billingProPlan => _t('Pro', 'Pro');
+  String get billingProBadge => _t('مشترك Pro', 'Pro member');
+  String get billingFreeBadge => _t('الخطة المجانية', 'Free plan');
+  String get billingPlansTitle => _t('الخطط المتاحة', 'Available plans');
+  String get billingPlansSubtitle => _t(
+    'الأسعار والعملات وفترات الفوترة مقدمة من الخادم.',
+    'Prices, currencies, and billing periods come from the server.',
+  );
+  String get billingMonthly => _t('شهريًا', 'Monthly');
+  String get billingAnnual => _t('سنويًا', 'Annual');
+  String get billingIntervalMonth => _t('كل شهر', 'per month');
+  String get billingIntervalYear => _t('كل سنة', 'per year');
+  String billingInterval(String value, int count) {
+    if (value == 'month') {
+      return count == 1
+          ? billingIntervalMonth
+          : _t('كل $count أشهر', 'every $count months');
+    }
+    if (value == 'year') {
+      return count == 1
+          ? billingIntervalYear
+          : _t('كل $count سنوات', 'every $count years');
+    }
+    return _t('فترة الفوترة من الخادم', 'Server billing interval');
+  }
+
+  String get billingUpgrade => _t('الترقية إلى Pro', 'Upgrade to Pro');
+  String get billingCurrentPlanAction => _t('خطتك الحالية', 'Current plan');
+  String get billingCheckoutUnavailable => _t(
+    'الترقية غير متاحة حاليًا. لن تتأثر مزايا خطتك المجانية.',
+    'Upgrades are currently unavailable. Your free access is unaffected.',
+  );
+  String get billingOpeningCheckout =>
+      _t('جارٍ فتح الدفع الآمن...', 'Opening secure checkout...');
+  String get billingHostedCheckoutHint => _t(
+    'سيُفتح الدفع لدى مزود خارجي. لن يصبح حسابك Pro إلا بعد تأكيد الخادم للدفع.',
+    'Checkout opens with the provider. Pro activates only after server confirmation.',
+  );
+  String get billingCheckoutLaunchFailed => _t(
+    'تعذّر فتح صفحة الدفع الآمنة.',
+    'Could not open the secure checkout page.',
+  );
+  String get billingCheckoutReturnHint => _t(
+    'عد إلى التطبيق بعد إكمال الدفع لتحديث حالة اشتراكك.',
+    'Return to the app after checkout to refresh your subscription.',
+  );
+  String get billingRefresh =>
+      _t('تحديث حالة الفوترة', 'Refresh billing status');
+  String get billingLoadErrorTitle =>
+      _t('تعذّر تحميل الفوترة', 'Could not load billing');
+  String get billingLoadErrorMessage => _t(
+    'لم نتمكن من قراءة حالة خطتك من الخادم. لا نفترض أنك على الخطة المجانية.',
+    'We could not read your plan state from the server. We will not assume Free.',
+  );
+  String get billingUsageTitle =>
+      _t('استخدام خدمات الذكاء الاصطناعي', 'AI access');
+  String billingChatRemaining(int remaining, int limit) => _t(
+    '$remaining من $limit رسالة مجانية متبقية',
+    '$remaining of $limit free messages remaining',
+  );
+  String get billingChatUnlimited =>
+      _t('محادثة طبية غير محدودة', 'Unlimited medical chat');
+  String get billingChatUnavailable =>
+      _t('المحادثة غير متاحة الآن', 'Chat is unavailable now');
+  String get billingVoiceUnlimited =>
+      _t('الطبيب الصوتي متاح مع Pro', 'Voice Doctor included with Pro');
+  String get billingVoiceAvailable =>
+      _t('استشارة مجانية متاحة', 'Free consultation available');
+  String get billingVoiceActive => _t(
+    'لديك استشارة نشطة يمكن استئنافها',
+    'An active consultation can be resumed',
+  );
+  String get billingVoiceCooldown => _t(
+    'الاستشارة المجانية في فترة انتظار',
+    'Free consultation is on cooldown',
+  );
+  String get billingResetsAt => _t('يتجدد الحد في', 'Allowance resets');
+  String get billingNextFreeAt =>
+      _t('الاستشارة المجانية التالية', 'Next free consultation');
+  String get billingUnlimited => _t('غير محدود', 'Unlimited');
+
+  String get subscriptionTitle => _t('إدارة الاشتراك', 'Manage subscription');
+  String get subscriptionNoActive =>
+      _t('لا يوجد اشتراك نشط', 'No active subscription');
+  String get subscriptionStatus => _t('الحالة', 'Status');
+  String get subscriptionPeriod => _t('فترة الاشتراك', 'Subscription period');
+  String get subscriptionRenewsAt => _t('موعد التجديد', 'Renews on');
+  String get subscriptionEndsAt => _t('ينتهي في', 'Ends on');
+  String get subscriptionGraceEndsAt =>
+      _t('تنتهي المهلة في', 'Grace period ends');
+  String get subscriptionActive => _t('نشط', 'Active');
+  String get subscriptionPastDue => _t('مشكلة في الدفع', 'Payment problem');
+  String get subscriptionIncomplete =>
+      _t('الدفع غير مكتمل', 'Payment incomplete');
+  String get subscriptionCanceling =>
+      _t('سينتهي بنهاية الفترة', 'Ending at period end');
+  String get subscriptionCanceled => _t('ملغى', 'Canceled');
+  String get subscriptionExpired => _t('منتهي', 'Expired');
+  String get subscriptionUnknown => _t('غير معروف', 'Unknown');
+  String subscriptionStatusLabel(String? status, bool cancelAtPeriodEnd) {
+    if (status == 'active' && cancelAtPeriodEnd) return subscriptionCanceling;
+    return switch (status) {
+      'active' => subscriptionActive,
+      'past_due' => subscriptionPastDue,
+      'incomplete' => subscriptionIncomplete,
+      'canceled' => subscriptionCanceled,
+      'expired' => subscriptionExpired,
+      _ => status == null ? subscriptionNoActive : subscriptionUnknown,
+    };
+  }
+
+  String get subscriptionPastDueHint => _t(
+    'قد تستمر مزايا Pro مؤقتًا خلال المهلة التي حددها الخادم.',
+    'Pro may remain available during the server-provided grace period.',
+  );
+  String get subscriptionCancel => _t('إيقاف التجديد', 'Stop renewal');
+  String get subscriptionCancelTitle =>
+      _t('إيقاف التجديد التلقائي؟', 'Stop automatic renewal?');
+  String get subscriptionCancelBody => _t(
+    'سيظل اشتراك Pro متاحًا حتى نهاية الفترة الحالية. لن يتم الإلغاء فورًا.',
+    'Pro remains available through the current period. Cancellation is not immediate.',
+  );
+  String get subscriptionResume => _t('استئناف التجديد', 'Resume renewal');
+  String get subscriptionResumeTitle =>
+      _t('استئناف التجديد؟', 'Resume automatic renewal?');
+  String get subscriptionResumeBody => _t(
+    'سيعود الاشتراك للتجدد وفق الخطة الحالية.',
+    'The subscription will renew on the current plan.',
+  );
+  String get subscriptionChangePlan =>
+      _t('تغيير خطة التجديد', 'Change renewal plan');
+  String subscriptionChangeTitle(String plan) =>
+      _t('التغيير إلى $plan؟', 'Change to $plan?');
+  String subscriptionChangeBody(String plan) => _t(
+    'سيطبق الخادم خطة $plan عند موعد التجديد التالي.',
+    'The server will apply $plan at the next renewal.',
+  );
+  String get subscriptionPendingPlan =>
+      _t('التغيير المجدول', 'Scheduled change');
+  String subscriptionPendingPlanHint(String plan, String date) =>
+      _t('سيتم التغيير إلى $plan في $date.', 'Changes to $plan on $date.');
+  String get subscriptionActionSuccess =>
+      _t('تم تحديث الاشتراك.', 'Subscription updated.');
+  String get confirm => _t('تأكيد', 'Confirm');
+
+  String get billingHistoryTitle => _t('سجل الفوترة', 'Billing history');
+  String get billingHistorySubtitle => _t(
+    'الأحداث التي عالجها الخادم لحسابك.',
+    'Server-processed events for your account.',
+  );
+  String get billingHistoryEmpty =>
+      _t('لا توجد أحداث فوترة بعد.', 'No billing events yet.');
+  String billingHistoryEvent(String type) => switch (type) {
+    'checkout.completed' => _t('اكتمل الدفع', 'Checkout completed'),
+    'subscription.activated' => _t(
+      'تم تفعيل الاشتراك',
+      'Subscription activated',
+    ),
+    'subscription.renewed' => _t('تم تجديد الاشتراك', 'Subscription renewed'),
+    'subscription.updated' => _t('تم تحديث الاشتراك', 'Subscription updated'),
+    'subscription.cancel_at_period_end' => _t(
+      'تم تحديث التجديد',
+      'Renewal preference updated',
+    ),
+    'subscription.canceled' => _t('انتهى الاشتراك', 'Subscription ended'),
+    'payment.failed' => _t('تعذر الدفع', 'Payment failed'),
+    'payment.recovered' => _t('تمت استعادة الدفع', 'Payment recovered'),
+    _ => _t('حدث فوترة', 'Billing event'),
+  };
+
+  String get sandboxBillingTitle => _t('الدفع التجريبي', 'Sandbox checkout');
+  String get sandboxBillingBanner => _t(
+    'محاكاة للتطوير فقط — لا تتم معالجة أي دفعة حقيقية.',
+    'Development simulation only — no real payment is processed.',
+  );
+  String get sandboxNoCard => _t(
+    'لن يطلب التطبيق أي رقم بطاقة أو رمز أمان ولن يخزنه.',
+    'The app never asks for or stores card numbers or security codes.',
+  );
+  String get sandboxSimulateSuccess =>
+      _t('محاكاة دفع ناجح', 'Simulate successful payment');
+  String get sandboxSimulateFailure =>
+      _t('محاكاة فشل الدفع', 'Simulate payment failure');
+  String get sandboxSimulateCancel =>
+      _t('إلغاء العملية التجريبية', 'Cancel simulated checkout');
+  String get sandboxCheckoutClosed => _t(
+    'تم إغلاق جلسة الدفع أو انتهت صلاحيتها.',
+    'This checkout is closed or expired.',
+  );
+  String get sandboxLifecycleTitle =>
+      _t('محاكاة دورة الاشتراك', 'Simulate subscription lifecycle');
+  String get sandboxRenewal => _t('تجديد ناجح', 'Successful renewal');
+  String get sandboxRenewalFailure => _t('فشل التجديد', 'Renewal failure');
+  String get sandboxPaymentRecovered =>
+      _t('استعادة الدفع', 'Payment recovered');
+  String get sandboxSubscriptionEnded =>
+      _t('انتهاء الاشتراك', 'Subscription ended');
+  String get sandboxDisabled => _t(
+    'الدفع التجريبي غير مفعّل على الخادم.',
+    'Sandbox billing is not enabled by the server.',
+  );
+
+  String get entitlementUpgradeAction => _t('عرض خطط Pro', 'View Pro plans');
+  String get chatQuotaTitle =>
+      _t('حد الرسائل المجانية', 'Free message allowance');
+  String get chatQuotaExhaustedBody => _t(
+    'يمكنك قراءة محادثاتك السابقة. للرسائل الجديدة، انتظر التجديد أو اختر Pro.',
+    'You can still read prior conversations. For new messages, wait for reset or choose Pro.',
+  );
+  String get chatQuotaPro => _t('محادثة Pro غير محدودة', 'Unlimited Pro chat');
+  String get chatRateLimited => _t(
+    'طلبات كثيرة خلال وقت قصير. انتظر قليلًا ثم حاول مجددًا.',
+    'Too many requests in a short time. Wait a moment and try again.',
+  );
+  String get voiceEntitlementPro =>
+      _t('وصول Pro للطبيب الصوتي', 'Pro Voice Doctor access');
+  String get voiceEntitlementEligible =>
+      _t('استشارتك المجانية متاحة', 'Your free consultation is available');
+  String get voiceEntitlementResume =>
+      _t('استئناف الاستشارة النشطة', 'Resume active consultation');
+  String get voiceEntitlementCooldown => _t(
+    'الاستشارة المجانية غير متاحة بعد',
+    'Free consultation is not available yet',
+  );
+  String get voiceEnding =>
+      _t('جارٍ إنهاء الاستشارة...', 'Ending consultation...');
+  String get voiceEndFailed => _t(
+    'تعذر إنهاء الاستشارة على الخادم. يمكنك المحاولة مجددًا.',
+    'The server could not end the consultation. You can try again.',
+  );
+  String get voiceResumed =>
+      _t('تم استئناف الاستشارة النشطة', 'Active consultation resumed');
+  String get voiceNextFree =>
+      _t('الاستشارة المجانية التالية', 'Next free consultation');
+  String voiceRecordingEnds(int seconds) =>
+      _t('ينتهي التسجيل خلال $seconds ث', 'Recording ends in ${seconds}s');
+
+  String billingError(String? code) => switch (code) {
+    'VALIDATION_ERROR' => _t(
+      'الطلب غير صالح. حدّث الصفحة وحاول مجددًا.',
+      'The request was invalid. Refresh and try again.',
+    ),
+    'UNAUTHORIZED' => _t(
+      'انتهت جلستك. سجّل الدخول مجددًا.',
+      'Your session expired. Sign in again.',
+    ),
+    'FORBIDDEN' => _t(
+      'لا يملك هذا الحساب صلاحية تنفيذ الإجراء.',
+      'This account cannot perform that action.',
+    ),
+    'RATE_LIMITED' => chatRateLimited,
+    'FREE_QUOTA_EXHAUSTED' => chatQuotaExhaustedBody,
+    'DUPLICATE_IN_FLIGHT' => chatErrDuplicateMessage,
+    'VOICE_COOLDOWN' => voiceEntitlementCooldown,
+    'VOICE_SESSION_ACTIVE' => voiceEntitlementResume,
+    'SUBSCRIPTION_REQUIRED' => chatErrSubscriptionRequired,
+    'SUBSCRIPTION_INACTIVE' => chatErrSubscriptionInactive,
+    'ENTITLEMENT_UNAVAILABLE' => _t(
+      'تعذر التحقق من حالة الاستحقاق الآن. حاول مجددًا.',
+      'Entitlement status is unavailable. Try again.',
+    ),
+    'CHECKOUT_NOT_FOUND' => _t(
+      'لم يتم العثور على جلسة الدفع.',
+      'Checkout session was not found.',
+    ),
+    'CHECKOUT_NOT_OPEN' => sandboxCheckoutClosed,
+    'SUBSCRIPTION_NOT_FOUND' => subscriptionNoActive,
+    'SUBSCRIPTION_ALREADY_LIVE' => _t(
+      'يوجد اشتراك قائم لهذا الحساب بالفعل.',
+      'This account already has a live subscription.',
+    ),
+    'PLAN_CHANGE_INVALID' => _t(
+      'لا يمكن جدولة هذا التغيير للخطة.',
+      'This plan change cannot be scheduled.',
+    ),
+    'SANDBOX_DISABLED' => sandboxDisabled,
+    'INVALID_RESPONSE' => _t(
+      'أرسل الخادم استجابة غير متوقعة.',
+      'The server returned an unexpected response.',
+    ),
+    'CONNECT_TIMEOUT' ||
+    'SEND_TIMEOUT' ||
+    'RECEIVE_TIMEOUT' ||
+    'SERVICE_UNAVAILABLE' => _t(
+      'تعذر الوصول إلى خدمة الفوترة. تحقق من اتصالك.',
+      'Could not reach billing. Check your connection.',
+    ),
+    _ => errorGeneric,
   };
 }
 

@@ -109,6 +109,18 @@ class ProfileScreen extends ConsumerWidget {
                           .setThemeMode(mode),
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
+                    FeatureCard(
+                      title: strings.billingTitle,
+                      subtitle: strings.billingProfileDescription,
+                      icon: Icons.workspace_premium_outlined,
+                      color: AppTheme.violet,
+                      trailing: Icon(
+                        AppTheme.directionalForwardIconOf(context),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      onTap: () => context.push(RoutePaths.billing),
+                    ),
+                    const SizedBox(height: AppTheme.spaceLg),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(AppTheme.spaceLg),

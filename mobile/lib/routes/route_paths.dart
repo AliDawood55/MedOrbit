@@ -34,6 +34,10 @@ class RoutePaths {
   static const String chatbot = '/chatbot';
   static const String conversations = '/chatbot/conversations';
   static const String chatbotConversation = '/chatbot/conversations/:id';
+  static const String billing = '/billing';
+  static const String subscription = '/billing/subscription';
+  static const String billingHistory = '/billing/history';
+  static const String billingSandbox = '/billing/sandbox/:token';
 
   static String clinicDetailPath(String id) =>
       '/clinics/${Uri.encodeComponent(id)}';
@@ -41,6 +45,8 @@ class RoutePaths {
       '/doctors/${Uri.encodeComponent(id)}';
   static String chatbotConversationPath(String id) =>
       '/chatbot/conversations/${Uri.encodeComponent(id)}';
+  static String billingSandboxPath(String token) =>
+      '/billing/sandbox/${Uri.encodeComponent(token)}';
   static String sharedDoctorNotesPath(String id) =>
       '/my-doctors/${Uri.encodeComponent(id)}/notes';
 

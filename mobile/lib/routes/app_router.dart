@@ -11,6 +11,10 @@ import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/verify_code_screen.dart';
+import '../features/billing/screens/billing_history_screen.dart';
+import '../features/billing/screens/billing_screen.dart';
+import '../features/billing/screens/sandbox_checkout_screen.dart';
+import '../features/billing/screens/subscription_screen.dart';
 import '../features/discovery/screens/clinic_detail_screen.dart';
 import '../features/discovery/screens/clinic_discovery_screen.dart';
 import '../features/discovery/screens/doctor_detail_screen.dart';
@@ -57,7 +61,21 @@ const Set<String> protectedRoutes = {
   RoutePaths.contact,
   RoutePaths.myDoctor,
   RoutePaths.doctorApplication,
+  RoutePaths.billing,
+  RoutePaths.subscription,
+  RoutePaths.billingHistory,
+  RoutePaths.billingSandbox,
+  RoutePaths.chatbot,
+  RoutePaths.conversations,
+  RoutePaths.chatbotConversation,
+  RoutePaths.virtualDoctor,
 };
+
+bool isProtectedLocation(String location) {
+  if (protectedRoutes.contains(location)) return true;
+  return location.startsWith('${RoutePaths.conversations}/') ||
+      location.startsWith('/billing/sandbox/');
+}
 
 String? sessionRedirect(
   AuthStatus status,
@@ -65,7 +83,7 @@ String? sessionRedirect(
   String? fullLocation,
 }) {
   if (status != AuthStatus.unauthenticated) return null;
-  if (!protectedRoutes.contains(location)) return null;
+  if (!isProtectedLocation(location)) return null;
   if (fullLocation == null) return RoutePaths.login;
   return Uri(
     path: RoutePaths.login,
@@ -82,7 +100,7 @@ String? intendedDestinationFromLoginUri(Uri uri) {
   if (destination == null ||
       destination.hasScheme ||
       destination.hasAuthority ||
-      !protectedRoutes.contains(destination.path)) {
+      !isProtectedLocation(destination.path)) {
     return null;
   }
   return destination.toString();
@@ -143,6 +161,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.virtualDoctor,
         builder: (context, state) => const VirtualDoctorScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.billing,
+        builder: (context, state) => const BillingScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.subscription,
+        builder: (context, state) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.billingHistory,
+        builder: (context, state) => const BillingHistoryScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.billingSandbox,
+        builder: (context, state) =>
+            SandboxCheckoutScreen(token: state.pathParameters['token'] ?? ''),
       ),
       GoRoute(
         path: RoutePaths.chatbot,

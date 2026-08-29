@@ -7,56 +7,102 @@ import 'package:mobile/features/chatbot/data/chatbot_api.dart';
 import 'package:mobile/features/chatbot/models/chatbot_models.dart';
 
 void main() {
-  test('sendMessage builds POST body and parses places doctors suggestions metadata', () async {
-    final fake = _FakeDio([
-      {
-        'success': true,
-        'data': {
-          'conversationId': 'conversation-1',
-          'reply': 'Visit a nearby clinic.',
-          'intent': 'find_clinic',
-          'confidence': '0.94',
-          'places': [
-            {
-              'id': 'place-1',
-              'name_en': 'Nablus Clinic',
-              'latitude': '32.2211',
-              'longitude': '35.2544',
-              'metadata': {'latitude': '32.2211', 'longitude': '35.2544'},
-            },
-          ],
-          'doctors': [
-            {'id': 'doctor-1', 'first_name_en': 'Mariam', 'average_rating': '4.8'},
-          ],
-          'suggestions': [
-            {'text': 'Show clinic details', 'metadata': {'source': 'triage'}},
-          ],
+  test(
+    'sendMessage builds POST body and parses places doctors suggestions metadata',
+    () async {
+      final fake = _FakeDio([
+        {
+          'success': true,
+          'data': {
+            'conversationId': 'conversation-1',
+            'reply': 'Visit a nearby clinic.',
+            'intent': 'find_clinic',
+            'confidence': '0.94',
+            'places': [
+              {
+                'id': 'place-1',
+                'name_en': 'Nablus Clinic',
+                'latitude': '32.2211',
+                'longitude': '35.2544',
+                'metadata': {'latitude': '32.2211', 'longitude': '35.2544'},
+              },
+            ],
+            'doctors': [
+              {
+                'id': 'doctor-1',
+                'first_name_en': 'Mariam',
+                'average_rating': '4.8',
+              },
+            ],
+            'suggestions': [
+              {
+                'text': 'Show clinic details',
+                'metadata': {'source': 'triage'},
+              },
+            ],
+          },
         },
-      },
-    ]);
-    final api = ChatbotApi(fake.dio);
+      ]);
+      final api = ChatbotApi(fake.dio);
 
-    final response = await api.sendMessage(
-      const ChatMessageRequest(
-        message: 'I need a clinic',
-        conversationId: 'conversation-1',
-        latitude: 32.2211,
-        longitude: 35.2544,
-      ),
-    );
+      final response = await api.sendMessage(
+        const ChatMessageRequest(
+          message: 'I need a clinic',
+          conversationId: 'conversation-1',
+          latitude: 32.2211,
+          longitude: 35.2544,
+        ),
+      );
 
-    expect(fake.requests.single.method, 'POST');
-    expect(fake.requests.single.path, '/chat/message');
-    expect(fake.requests.single.data, {
-      'message': 'I need a clinic',
-      'conversationId': 'conversation-1',
-      'latitude': 32.2211,
-      'longitude': 35.2544,
-    });
-    expect(response.places.single.metadata.latitude, 32.2211);
-    expect(response.doctors.single.averageRating, 4.8);
-    expect(response.suggestions.single.metadata.values['source'], 'triage');
-  });
+      expect(fake.requests.single.method, 'POST');
+      expect(fake.requests.single.path, '/chat/message');
+      expect(fake.requests.single.data, {
+        'message': 'I need a clinic',
+        'conversationId': 'conversation-1',
+        'latitude': 32.2211,
+        'longitude': 35.2544,
+      });
+      expect(response.places.single.metadata.latitude, 32.2211);
+      expect(response.doctors.single.averageRating, 4.8);
+      expect(response.suggestions.single.metadata.values['source'], 'triage');
+    },
+  );
+
+  test(
+    'sendMessage carries the backend idempotency key and parses quota snapshot',
+    () async {
+      final fake = _FakeDio([
+        {
+          'success': true,
+          'data': {
+            'conversationId': 'conversation-1',
+            'reply': 'Accepted once.',
+            'quota': {
+              'used': 3,
+              'limit': 7,
+              'remaining': 4,
+              'resets_at': '2026-08-30T10:00:00Z',
+            },
+          },
+        },
+      ]);
+
+      final response = await ChatbotApi(fake.dio).sendMessage(
+        const ChatMessageRequest(
+          message: 'One logical message',
+          clientMessageId: 'mobile-request-1',
+        ),
+      );
+
+      expect(fake.requests.single.data, {
+        'message': 'One logical message',
+        'client_message_id': 'mobile-request-1',
+      });
+      expect(response.quota?.remaining, 4);
+      expect(response.quota?.unlimited, isFalse);
+      expect(response.quota?.resetsAt, DateTime.parse('2026-08-30T10:00:00Z'));
+    },
+  );
 
   test('conversation list search and detail parse correctly', () async {
     final fake = _FakeDio([
@@ -100,10 +146,18 @@ void main() {
 
     final list = await api.listConversations(search: 'headache');
     final search = await api.searchConversations('clinic');
-    final detail = await api.getConversation('conversation-1', limit: 25, offset: 5);
+    final detail = await api.getConversation(
+      'conversation-1',
+      limit: 25,
+      offset: 5,
+    );
 
     expect(fake.requests[0].path, '/conversations');
-    expect(fake.requests[0].queryParameters, {'page': 1, 'limit': 50, 'search': 'headache'});
+    expect(fake.requests[0].queryParameters, {
+      'page': 1,
+      'limit': 50,
+      'search': 'headache',
+    });
     expect(list.conversations.single.messageCount, 2);
     expect(list.pagination?.total, 1);
     expect(fake.requests[1].path, '/conversations/search');
@@ -115,34 +169,40 @@ void main() {
     expect(detail.places.single.nameEn, 'Saved Clinic');
   });
 
-  test('rename delete and generated title endpoints use correct method path and body', () async {
-    final fake = _FakeDio([
-      {
-        'success': true,
-        'data': {'id': 'conversation-1', 'title': 'Updated title'},
-      },
-      {'success': true, 'data': null},
-      {
-        'success': true,
-        'data': {'id': 'conversation-1', 'title': 'Auto title'},
-      },
-    ]);
-    final api = ChatbotApi(fake.dio);
+  test(
+    'rename delete and generated title endpoints use correct method path and body',
+    () async {
+      final fake = _FakeDio([
+        {
+          'success': true,
+          'data': {'id': 'conversation-1', 'title': 'Updated title'},
+        },
+        {'success': true, 'data': null},
+        {
+          'success': true,
+          'data': {'id': 'conversation-1', 'title': 'Auto title'},
+        },
+      ]);
+      final api = ChatbotApi(fake.dio);
 
-    final renamed = await api.renameConversation('conversation-1', title: 'Updated title');
-    await api.deleteConversation('conversation-1');
-    final generated = await api.generateConversationTitle('conversation-1');
+      final renamed = await api.renameConversation(
+        'conversation-1',
+        title: 'Updated title',
+      );
+      await api.deleteConversation('conversation-1');
+      final generated = await api.generateConversationTitle('conversation-1');
 
-    expect(renamed.title, 'Updated title');
-    expect(fake.requests[0].method, 'PUT');
-    expect(fake.requests[0].path, '/conversations/conversation-1');
-    expect(fake.requests[0].data, {'title': 'Updated title'});
-    expect(fake.requests[1].method, 'DELETE');
-    expect(fake.requests[1].path, '/conversations/conversation-1');
-    expect(fake.requests[2].method, 'POST');
-    expect(fake.requests[2].path, '/conversations/conversation-1/title');
-    expect(generated.title, 'Auto title');
-  });
+      expect(renamed.title, 'Updated title');
+      expect(fake.requests[0].method, 'PUT');
+      expect(fake.requests[0].path, '/conversations/conversation-1');
+      expect(fake.requests[0].data, {'title': 'Updated title'});
+      expect(fake.requests[1].method, 'DELETE');
+      expect(fake.requests[1].path, '/conversations/conversation-1');
+      expect(fake.requests[2].method, 'POST');
+      expect(fake.requests[2].path, '/conversations/conversation-1/title');
+      expect(generated.title, 'Auto title');
+    },
+  );
 
   test('saved places endpoints parse and preserve optional fields', () async {
     final fake = _FakeDio([
@@ -192,50 +252,69 @@ void main() {
     expect(saved.extra['rating'], '4.5');
   });
 
-  test('createConversation omits null language and success false throws ApiException', () async {
-    final fake = _FakeDio([
-      {
-        'success': true,
-        'data': {'id': 'conversation-1', 'title': null},
-      },
-      {'success': false, 'message': 'Cannot create conversation', 'data': {'raw': 'not exposed'}},
-    ]);
-    final api = ChatbotApi(fake.dio);
+  test(
+    'createConversation omits null language and success false throws ApiException',
+    () async {
+      final fake = _FakeDio([
+        {
+          'success': true,
+          'data': {'id': 'conversation-1', 'title': null},
+        },
+        {
+          'success': false,
+          'message': 'Cannot create conversation',
+          'data': {'raw': 'not exposed'},
+        },
+      ]);
+      final api = ChatbotApi(fake.dio);
 
-    final conversation = await api.createConversation();
+      final conversation = await api.createConversation();
 
-    expect(conversation.id, 'conversation-1');
-    expect(fake.requests.first.data, isEmpty);
-    await expectLater(
-      api.createConversation(language: 'en'),
-      throwsA(
-        isA<ApiException>()
-            .having((error) => error.code, 'code', 'BACKEND_FAILURE')
-            .having((error) => error.message, 'message', 'Cannot create conversation')
-            .having((error) => error.details, 'details', isNull),
-      ),
-    );
-  });
+      expect(conversation.id, 'conversation-1');
+      expect(fake.requests.first.data, isEmpty);
+      await expectLater(
+        api.createConversation(language: 'en'),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.code, 'code', 'BACKEND_FAILURE')
+              .having(
+                (error) => error.message,
+                'message',
+                'Cannot create conversation',
+              )
+              .having((error) => error.details, 'details', isNull),
+        ),
+      );
+    },
+  );
 
-  test('client does not print or manually log request or response bodies', () async {
-    final fake = _FakeDio([
-      {
-        'success': true,
-        'data': {'conversationId': 'conversation-1', 'reply': 'Private medical reply'},
-      },
-    ]);
-    final api = ChatbotApi(fake.dio);
-    final printed = <String>[];
+  test(
+    'client does not print or manually log request or response bodies',
+    () async {
+      final fake = _FakeDio([
+        {
+          'success': true,
+          'data': {
+            'conversationId': 'conversation-1',
+            'reply': 'Private medical reply',
+          },
+        },
+      ]);
+      final api = ChatbotApi(fake.dio);
+      final printed = <String>[];
 
-    await runZoned(
-      () => api.sendMessage(const ChatMessageRequest(message: 'Private medical message')),
-      zoneSpecification: ZoneSpecification(
-        print: (_, _, _, line) => printed.add(line),
-      ),
-    );
+      await runZoned(
+        () => api.sendMessage(
+          const ChatMessageRequest(message: 'Private medical message'),
+        ),
+        zoneSpecification: ZoneSpecification(
+          print: (_, _, _, line) => printed.add(line),
+        ),
+      );
 
-    expect(printed, isEmpty);
-  });
+      expect(printed, isEmpty);
+    },
+  );
 }
 
 class _FakeDio {
@@ -249,7 +328,9 @@ class _FakeDio {
               method: options.method,
               path: options.path,
               data: options.data,
-              queryParameters: Map<String, dynamic>.from(options.queryParameters),
+              queryParameters: Map<String, dynamic>.from(
+                options.queryParameters,
+              ),
             ),
           );
           handler.resolve(

@@ -29,11 +29,10 @@ class ChatbotApi {
     return ChatMessageResponse.fromJson(_envelopeData(response.data));
   }
 
-  Future<({List<ConversationSummary> conversations, ChatPagination? pagination})> listConversations({
-    int page = 1,
-    int limit = 50,
-    String? search,
-  }) async {
+  Future<
+    ({List<ConversationSummary> conversations, ChatPagination? pagination})
+  >
+  listConversations({int page = 1, int limit = 50, String? search}) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/conversations',
       queryParameters: _withoutNulls({
@@ -44,8 +43,12 @@ class ChatbotApi {
     );
     final data = _envelopeData(response.data);
     return (
-      conversations: _list(data['conversations']).map(ConversationSummary.fromJson).toList(),
-      pagination: _map(data['pagination']) == null ? null : ChatPagination.fromJson(_map(data['pagination'])!),
+      conversations: _list(
+        data['conversations'],
+      ).map(ConversationSummary.fromJson).toList(),
+      pagination: _map(data['pagination']) == null
+          ? null
+          : ChatPagination.fromJson(_map(data['pagination'])!),
     );
   }
 
@@ -63,10 +66,16 @@ class ChatbotApi {
       queryParameters: {'q': query},
     );
     final data = _envelopeData(response.data);
-    return _list(data['conversations']).map(ConversationSummary.fromJson).toList();
+    return _list(
+      data['conversations'],
+    ).map(ConversationSummary.fromJson).toList();
   }
 
-  Future<ConversationDetail> getConversation(String id, {int limit = 50, int offset = 0}) async {
+  Future<ConversationDetail> getConversation(
+    String id, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/conversations/$id',
       queryParameters: {'limit': limit, 'offset': offset},
@@ -74,7 +83,10 @@ class ChatbotApi {
     return ConversationDetail.fromJson(_envelopeData(response.data));
   }
 
-  Future<ConversationSummary> renameConversation(String id, {required String title}) async {
+  Future<ConversationSummary> renameConversation(
+    String id, {
+    required String title,
+  }) async {
     final response = await _dio.put<Map<String, dynamic>>(
       '/conversations/$id',
       data: {'title': title},
@@ -83,17 +95,23 @@ class ChatbotApi {
   }
 
   Future<void> deleteConversation(String id) async {
-    final response = await _dio.delete<Map<String, dynamic>>('/conversations/$id');
+    final response = await _dio.delete<Map<String, dynamic>>(
+      '/conversations/$id',
+    );
     _envelopeData(response.data, allowNullData: true);
   }
 
   Future<ConversationSummary> generateConversationTitle(String id) async {
-    final response = await _dio.post<Map<String, dynamic>>('/conversations/$id/title');
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/conversations/$id/title',
+    );
     return ConversationSummary.fromJson(_envelopeData(response.data));
   }
 
   Future<List<ChatConversationPlace>> listConversationPlaces(String id) async {
-    final response = await _dio.get<Map<String, dynamic>>('/conversations/$id/places');
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/conversations/$id/places',
+    );
     final data = _envelopeData(response.data);
     return _list(data['places']).map(ChatConversationPlace.fromJson).toList();
   }
@@ -126,13 +144,28 @@ class ChatbotApi {
   }
 }
 
-Map<String, dynamic> _envelopeData(Map<String, dynamic>? envelope, {bool allowNullData = false}) {
+Map<String, dynamic> _envelopeData(
+  Map<String, dynamic>? envelope, {
+  bool allowNullData = false,
+}) {
   if (envelope == null) {
     if (allowNullData) return const {};
-    throw const ApiException(message: 'Empty response from server.', code: 'EMPTY_RESPONSE');
+    throw const ApiException(
+      message: 'Empty response from server.',
+      code: 'EMPTY_RESPONSE',
+    );
   }
 
   if (envelope['success'] == false) {
+    final rawError = envelope['error'];
+    if (rawError is Map) {
+      final error = Map<String, dynamic>.from(rawError);
+      throw ApiException(
+        message: error['message'] as String? ?? 'Request failed.',
+        code: error['code'] as String? ?? 'BACKEND_FAILURE',
+        details: error['details'],
+      );
+    }
     throw ApiException(
       message: envelope['message'] as String? ?? 'Request failed.',
       code: 'BACKEND_FAILURE',
@@ -143,16 +176,25 @@ Map<String, dynamic> _envelopeData(Map<String, dynamic>? envelope, {bool allowNu
   if (data == null && allowNullData) return const {};
   if (data is Map<String, dynamic>) return data;
   if (data is Map) return Map<String, dynamic>.from(data);
-  throw const ApiException(message: 'Unexpected response from server.', code: 'INVALID_RESPONSE');
+  throw const ApiException(
+    message: 'Unexpected response from server.',
+    code: 'INVALID_RESPONSE',
+  );
 }
 
 Map<String, dynamic> _withoutNulls(Map<String, dynamic> value) {
-  return Map<String, dynamic>.fromEntries(value.entries.where((entry) => entry.value != null));
+  return Map<String, dynamic>.fromEntries(
+    value.entries.where((entry) => entry.value != null),
+  );
 }
 
-Map<String, dynamic>? _map(Object? value) => value is Map ? Map<String, dynamic>.from(value) : null;
+Map<String, dynamic>? _map(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : null;
 
 List<Map<String, dynamic>> _list(Object? value) {
   if (value is! List) return const [];
-  return value.whereType<Map>().map((item) => Map<String, dynamic>.from(item)).toList();
+  return value
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .toList();
 }

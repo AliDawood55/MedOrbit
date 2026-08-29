@@ -25,6 +25,14 @@ void main() {
     RoutePaths.contact,
     RoutePaths.myDoctor,
     RoutePaths.doctorApplication,
+    RoutePaths.billing,
+    RoutePaths.subscription,
+    RoutePaths.billingHistory,
+    RoutePaths.billingSandbox,
+    RoutePaths.chatbot,
+    RoutePaths.conversations,
+    RoutePaths.chatbotConversation,
+    RoutePaths.virtualDoctor,
   ];
 
   const public = [
@@ -36,9 +44,6 @@ void main() {
     RoutePaths.resetPassword,
     RoutePaths.clinics,
     RoutePaths.doctors,
-    RoutePaths.chatbot,
-    RoutePaths.conversations,
-    RoutePaths.virtualDoctor,
     RoutePaths.mapFoundation,
   ];
 
@@ -63,21 +68,34 @@ void main() {
       }
     });
 
-    test('discovery detail routes stay public', () {
-      expect(
-        sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'),
-        isNull,
-      );
-      expect(
-        sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'),
-        isNull,
-      );
+    test(
+      'discovery detail routes stay public while conversation details are protected',
+      () {
+        expect(
+          sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'),
+          isNull,
+        );
+        expect(
+          sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'),
+          isNull,
+        );
+        expect(
+          sessionRedirect(
+            AuthStatus.unauthenticated,
+            '/chatbot/conversations/abc',
+          ),
+          RoutePaths.login,
+        );
+      },
+    );
+
+    test('dynamic sandbox checkout path is protected', () {
       expect(
         sessionRedirect(
           AuthStatus.unauthenticated,
-          '/chatbot/conversations/abc',
+          RoutePaths.billingSandboxPath('checkout-token'),
         ),
-        isNull,
+        RoutePaths.login,
       );
     });
   });
@@ -208,12 +226,9 @@ void main() {
   });
 
   group('protected set', () {
-    test(
-      'covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, my reports, my doctors, saved places, contact, my doctor, and the doctor application',
-      () {
-        expect(protectedRoutes, protected.toSet());
-      },
-    );
+    test('covers exactly patient data, billing, chatbot, and voice routes', () {
+      expect(protectedRoutes, protected.toSet());
+    });
 
     test('excludes every public route', () {
       for (final route in public) {

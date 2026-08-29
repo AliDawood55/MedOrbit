@@ -2,18 +2,23 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_filex/open_filex.dart';
 
 import '../../../core/locale/locale_controller.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/date_formatting.dart';
+import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/status_badge.dart';
+import '../../billing/models/billing_models.dart';
+import '../../billing/providers/billing_provider.dart';
+import '../../billing/widgets/billing_formatters.dart';
+import '../../billing/widgets/server_countdown.dart';
 import '../models/consultation_models.dart';
 import '../providers/virtual_doctor_provider.dart';
 import '../widgets/voice_orb.dart';
@@ -46,7 +51,7 @@ String _cooldownMessage(AppStrings strings, VirtualDoctorState state) {
   final base = strings.vdError(state.errorMessage ?? 'connect_failed');
   final retryAt = state.entitlementRetryAt;
   if (state.errorMessage != 'voice_cooldown' || retryAt == null) return base;
-  final when = formatDate(retryAt.toLocal(), localeCode: strings.isArabic ? 'ar' : 'en');
+  final when = formatBillingDateTime(retryAt, isArabic: strings.isArabic);
   return '$base ${strings.vdCooldownUntilPrefix} $when';
 }
 
@@ -58,7 +63,8 @@ class VirtualDoctorScreen extends ConsumerStatefulWidget {
       _VirtualDoctorScreenState();
 }
 
-class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with WidgetsBindingObserver {
+class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen>
+    with WidgetsBindingObserver {
   final _scrollController = ScrollController();
   int _lastTranscriptLength = 0;
   ConsultState? _lastConsultState;
@@ -78,7 +84,14 @@ class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with 
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
-    if (lifecycle == AppLifecycleState.inactive || lifecycle == AppLifecycleState.paused || lifecycle == AppLifecycleState.detached) {
+    if (lifecycle == AppLifecycleState.resumed) {
+      unawaited(
+        ref.read(billingControllerProvider.notifier).refreshEntitlements(),
+      );
+    }
+    if (lifecycle == AppLifecycleState.inactive ||
+        lifecycle == AppLifecycleState.paused ||
+        lifecycle == AppLifecycleState.detached) {
       final controller = ref.read(virtualDoctorControllerProvider.notifier);
       unawaited(controller.cancelRecording());
       unawaited(controller.skipSpeech());
@@ -89,14 +102,9 @@ class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with 
     if (!_scrollController.hasClients) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
-      final duration = AppTheme.motionDuration(
-        context,
-        AppTheme.motionBase,
-      );
+      final duration = AppTheme.motionDuration(context, AppTheme.motionBase);
       if (duration == Duration.zero) {
-        _scrollController.jumpTo(
-          _scrollController.position.maxScrollExtent,
-        );
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
         return;
       }
       _scrollController.animateTo(
@@ -110,12 +118,14 @@ class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with 
   @override
   Widget build(BuildContext context) {
     final strings = ref.watch(appStringsProvider);
-    final isArabic =
-        ref.watch(localeControllerProvider).languageCode == 'ar';
+    final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
     final state = ref.watch(virtualDoctorControllerProvider);
     final controller = ref.read(virtualDoctorControllerProvider.notifier);
+    final billing = ref.watch(billingControllerProvider);
+    final voiceEntitlement = billing.entitlements?.voiceDoctor;
 
-    final completedNow = state.state == ConsultState.complete &&
+    final completedNow =
+        state.state == ConsultState.complete &&
         _lastConsultState != ConsultState.complete;
     if (state.transcript.length != _lastTranscriptLength || completedNow) {
       _lastTranscriptLength = state.transcript.length;
@@ -125,26 +135,30 @@ class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with 
 
     final body = switch (state.state) {
       ConsultState.idle => _StartView(
-          strings: strings,
-          onStart: () => controller.startConsultation(
-            isArabic ? 'ar' : 'en',
-          ),
-        ),
+        strings: strings,
+        entitlement: voiceEntitlement,
+        serverTime: billing.entitlements?.serverTime,
+        entitlementLoading: billing.isLoading,
+        onStart: () => controller.startConsultation(isArabic ? 'ar' : 'en'),
+        onUpgrade: () => context.push(RoutePaths.billing),
+        onEntitlementRefresh: ref
+            .read(billingControllerProvider.notifier)
+            .refreshEntitlements,
+      ),
       ConsultState.error => _FatalErrorView(
-          state: state,
-          strings: strings,
-          onRetry: () => controller.startConsultation(
-            isArabic ? 'ar' : 'en',
-          ),
-          onOpenSettings: controller.openMicSettings,
-        ),
+        state: state,
+        strings: strings,
+        onRetry: () => controller.startConsultation(isArabic ? 'ar' : 'en'),
+        onOpenSettings: controller.openMicSettings,
+        onUpgrade: () => context.push(RoutePaths.billing),
+      ),
       _ => _ConsultationView(
-          state: state,
-          strings: strings,
-          isArabic: isArabic,
-          controller: controller,
-          scrollController: _scrollController,
-        ),
+        state: state,
+        strings: strings,
+        isArabic: isArabic,
+        controller: controller,
+        scrollController: _scrollController,
+      ),
     };
 
     return AppScaffold(
@@ -154,7 +168,7 @@ class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with 
           if (state.isActive)
             IconButton(
               tooltip: strings.endConsultation,
-              onPressed: controller.endConsultation,
+              onPressed: state.isEnding ? null : controller.endConsultation,
               icon: const Icon(Icons.close_rounded),
             ),
         ],
@@ -169,10 +183,23 @@ class _VirtualDoctorScreenState extends ConsumerState<VirtualDoctorScreen> with 
 }
 
 class _StartView extends StatelessWidget {
-  const _StartView({required this.strings, required this.onStart});
+  const _StartView({
+    required this.strings,
+    required this.entitlement,
+    required this.serverTime,
+    required this.entitlementLoading,
+    required this.onStart,
+    required this.onUpgrade,
+    required this.onEntitlementRefresh,
+  });
 
   final AppStrings strings;
+  final VoiceEntitlement? entitlement;
+  final DateTime? serverTime;
+  final bool entitlementLoading;
   final VoidCallback onStart;
+  final VoidCallback onUpgrade;
+  final VoidCallback onEntitlementRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -199,16 +226,14 @@ class _StartView extends StatelessWidget {
                   children: [
                     VoiceOrb(
                       state: ConsultState.idle,
-                      semanticLabel: strings.vdVoiceState(
-                        strings.vdStateIdle,
-                      ),
+                      semanticLabel: strings.vdVoiceState(strings.vdStateIdle),
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
                     Text(
                       strings.vdWelcomeTitle,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: AppTheme.weightExtraBold,
-                          ),
+                        fontWeight: AppTheme.weightExtraBold,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: AppTheme.spaceSm),
@@ -216,10 +241,8 @@ class _StartView extends StatelessWidget {
                       strings.vdWelcomeBody,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -254,12 +277,108 @@ class _StartView extends StatelessWidget {
               color: AppTheme.accent,
             ),
             const SizedBox(height: AppTheme.spaceLg),
+            if (entitlementLoading && entitlement == null)
+              const LinearProgressIndicator()
+            else if (entitlement != null)
+              _VoiceEntitlementCard(
+                entitlement: entitlement!,
+                serverTime: serverTime,
+                strings: strings,
+                onUpgrade: onUpgrade,
+                onRefresh: onEntitlementRefresh,
+              ),
+            if (entitlementLoading || entitlement != null)
+              const SizedBox(height: AppTheme.spaceMd),
             PrimaryButton(
-              label: strings.startConsultation,
-              semanticLabel: strings.startConsultation,
+              label: entitlement?.canResume == true
+                  ? strings.voiceEntitlementResume
+                  : strings.startConsultation,
+              semanticLabel: entitlement?.canResume == true
+                  ? strings.voiceEntitlementResume
+                  : strings.startConsultation,
               icon: Icons.play_arrow_rounded,
-              onPressed: onStart,
+              onPressed:
+                  entitlement != null &&
+                      !entitlement!.allowed &&
+                      !entitlement!.canResume
+                  ? null
+                  : onStart,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VoiceEntitlementCard extends StatelessWidget {
+  const _VoiceEntitlementCard({
+    required this.entitlement,
+    required this.serverTime,
+    required this.strings,
+    required this.onUpgrade,
+    required this.onRefresh,
+  });
+
+  final VoiceEntitlement entitlement;
+  final DateTime? serverTime;
+  final AppStrings strings;
+  final VoidCallback onUpgrade;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = entitlement.canResume
+        ? strings.voiceEntitlementResume
+        : entitlement.unlimited
+        ? strings.voiceEntitlementPro
+        : entitlement.allowed
+        ? strings.voiceEntitlementEligible
+        : strings.voiceEntitlementCooldown;
+    final color = entitlement.unlimited || entitlement.allowed
+        ? AppTheme.success
+        : AppTheme.warning;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SectionHeader(
+              title: title,
+              trailing: Icon(
+                entitlement.unlimited
+                    ? Icons.workspace_premium_outlined
+                    : entitlement.canResume
+                    ? Icons.restore_rounded
+                    : entitlement.allowed
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.schedule_rounded,
+                color: color,
+              ),
+            ),
+            if (!entitlement.allowed &&
+                entitlement.nextFreeAt != null &&
+                serverTime != null) ...[
+              Row(
+                children: [
+                  Expanded(child: Text(strings.voiceNextFree)),
+                  ServerCountdown(
+                    target: entitlement.nextFreeAt!,
+                    serverTime: serverTime!,
+                    isArabic: strings.isArabic,
+                    onElapsed: onRefresh,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spaceMd),
+            ],
+            if (!entitlement.unlimited)
+              OutlinedButton.icon(
+                onPressed: onUpgrade,
+                icon: const Icon(Icons.workspace_premium_outlined),
+                label: Text(strings.entitlementUpgradeAction),
+              ),
           ],
         ),
       ),
@@ -273,12 +392,14 @@ class _FatalErrorView extends StatelessWidget {
     required this.strings,
     required this.onRetry,
     required this.onOpenSettings,
+    required this.onUpgrade,
   });
 
   final VirtualDoctorState state;
   final AppStrings strings;
   final VoidCallback onRetry;
   final VoidCallback onOpenSettings;
+  final VoidCallback onUpgrade;
 
   @override
   Widget build(BuildContext context) {
@@ -338,15 +459,23 @@ class _FatalErrorView extends StatelessWidget {
                           icon: Icons.refresh_rounded,
                           onPressed: onRetry,
                         ),
-                    ] else if (_nonRetryableEntitlementCodes.contains(state.errorMessage))
+                    ] else if (_nonRetryableEntitlementCodes.contains(
+                      state.errorMessage,
+                    )) ...[
                       // A denial the backend will repeat immediately: no retry
                       // action, just the reason and (for a cooldown) the exact
                       // server-supplied time it lifts, if one was sent.
                       SectionHeader(
                         title: strings.vdErrorTitle(state.errorMessage!),
                         subtitle: _cooldownMessage(strings, state),
-                      )
-                    else
+                      ),
+                      const SizedBox(height: AppTheme.spaceMd),
+                      OutlinedButton.icon(
+                        onPressed: onUpgrade,
+                        icon: const Icon(Icons.workspace_premium_outlined),
+                        label: Text(strings.entitlementUpgradeAction),
+                      ),
+                    ] else
                       ErrorRetryState(
                         title: strings.vdErrorTitle(
                           state.errorMessage ?? 'connect_failed',
@@ -474,7 +603,8 @@ class _ConsultationView extends StatelessWidget {
         const SizedBox(height: AppTheme.spaceMd),
         ConstrainedBox(
           constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height *
+            maxHeight:
+                MediaQuery.sizeOf(context).height *
                 (state.state == ConsultState.complete ? 0.42 : 0.26),
           ),
           child: SingleChildScrollView(
@@ -501,7 +631,14 @@ class _StatusStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visual = _consultStateVisual(state.state, strings, context);
+    final visual = state.isEnding
+        ? _ConsultStateVisual(
+            label: strings.voiceEnding,
+            color: AppTheme.warning,
+            icon: Icons.sync_rounded,
+            busy: true,
+          )
+        : _consultStateVisual(state.state, strings, context);
     final phase = state.phase?.trim();
     final reducedMotion = AppTheme.prefersReducedMotion(context);
     return FeatureCard(
@@ -581,9 +718,9 @@ class _VoicePanel extends StatelessWidget {
               visual.label,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: visual.color,
-                    fontWeight: AppTheme.weightBold,
-                  ),
+                color: visual.color,
+                fontWeight: AppTheme.weightBold,
+              ),
             ),
             if (state.state == ConsultState.thinking) ...[
               const SizedBox(height: AppTheme.spaceSm),
@@ -591,10 +728,8 @@ class _VoicePanel extends StatelessWidget {
                 strings.vdThinkingHint,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
             if (state.subtitle?.trim().isNotEmpty == true) ...[
@@ -610,11 +745,21 @@ class _VoicePanel extends StatelessWidget {
             ],
             if (state.recoveredSession) ...[
               const SizedBox(height: AppTheme.spaceMd),
-              const InlineMessage(message: 'Recovered consultation session.', tone: InlineMessageTone.info),
+              InlineMessage(
+                message: strings.voiceResumed,
+                tone: InlineMessageTone.info,
+              ),
             ],
-            if (state.recordingRemainingSeconds != null && state.recordingRemainingSeconds! <= 5) ...[
+            if (state.recordingRemainingSeconds != null &&
+                state.recordingRemainingSeconds! <= 5) ...[
               const SizedBox(height: AppTheme.spaceMd),
-              Directionality(textDirection: TextDirection.ltr, child: Text(Directionality.of(context) == TextDirection.rtl ? 'ينتهي التسجيل خلال ${state.recordingRemainingSeconds} ث' : 'Recording ends in ${state.recordingRemainingSeconds}s', textAlign: TextAlign.center)),
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Text(
+                  strings.voiceRecordingEnds(state.recordingRemainingSeconds!),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ],
             if (urgency != null) ...[
               const SizedBox(height: AppTheme.spaceMd),
@@ -674,9 +819,9 @@ class _SubtitleCard extends StatelessWidget {
               child: Text(
                 text,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: AppTheme.weightMedium,
-                    ),
+                  color: Colors.white,
+                  fontWeight: AppTheme.weightMedium,
+                ),
               ),
             ),
           ],
@@ -704,10 +849,7 @@ class _TranscriptPanel extends StatelessWidget {
     final name = _profileValue(state.profileSnapshot, 'name');
     final age = _profileValue(state.profileSnapshot, 'age');
     final complaint = _firstValue([
-      _profileValue(
-        state.profileSnapshot,
-        'chief_complaint_description',
-      ),
+      _profileValue(state.profileSnapshot, 'chief_complaint_description'),
       state.chiefComplaint,
     ]);
     final hasProfile = name != null || age != null;
@@ -729,11 +871,7 @@ class _TranscriptPanel extends StatelessWidget {
                 : null,
           ),
           if (hasProfile) ...[
-            _PatientInfoCard(
-              name: name,
-              age: age,
-              strings: strings,
-            ),
+            _PatientInfoCard(name: name, age: age, strings: strings),
             const SizedBox(height: AppTheme.spaceMd),
           ],
           if (complaint != null) ...[
@@ -796,10 +934,7 @@ class _PatientInfoCard extends StatelessWidget {
         runSpacing: AppTheme.spaceSm,
         children: [
           if (name != null)
-            _MetadataValue(
-              label: strings.vdPatientName,
-              value: name!,
-            ),
+            _MetadataValue(label: strings.vdPatientName, value: name!),
           if (age != null)
             _MetadataValue(
               label: strings.vdPatientAge,
@@ -848,9 +983,9 @@ class _ContextCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: color,
-                        fontWeight: AppTheme.weightBold,
-                      ),
+                    color: color,
+                    fontWeight: AppTheme.weightBold,
+                  ),
                 ),
               ),
             ],
@@ -890,8 +1025,8 @@ class _MetadataValue extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: AppTheme.spaceXs),
           Directionality(
@@ -899,8 +1034,8 @@ class _MetadataValue extends StatelessWidget {
             child: Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: AppTheme.weightSemibold,
-                  ),
+                fontWeight: AppTheme.weightSemibold,
+              ),
             ),
           ),
         ],
@@ -934,9 +1069,7 @@ class _ConversationBubble extends StatelessWidget {
             ? AlignmentDirectional.centerStart
             : AlignmentDirectional.centerEnd,
         child: FractionallySizedBox(
-          widthFactor: AppTheme.usesLargeText(context)
-              ? 1
-              : 0.88,
+          widthFactor: AppTheme.usesLargeText(context) ? 1 : 0.88,
           child: Container(
             padding: const EdgeInsets.all(AppTheme.spaceMd),
             decoration: BoxDecoration(
@@ -970,10 +1103,7 @@ class _ConversationBubble extends StatelessWidget {
                   textDirection: language == 'ar'
                       ? TextDirection.rtl
                       : TextDirection.ltr,
-                  child: Text(
-                    entry.text,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  child: Text(entry.text, style: theme.textTheme.bodyMedium),
                 ),
               ],
             ),
@@ -1000,10 +1130,7 @@ class _ConsultationSummary extends StatelessWidget {
     final name = _profileValue(state.profileSnapshot, 'name');
     final age = _profileValue(state.profileSnapshot, 'age');
     final complaint = _firstValue([
-      _profileValue(
-        state.profileSnapshot,
-        'chief_complaint_description',
-      ),
+      _profileValue(state.profileSnapshot, 'chief_complaint_description'),
       state.chiefComplaint,
     ]);
     final specialty = _firstValue(
@@ -1024,10 +1151,7 @@ class _ConsultationSummary extends StatelessWidget {
       if (complaint != null)
         _SummaryField(label: strings.vdChiefComplaint, value: complaint),
       if (specialty != null)
-        _SummaryField(
-          label: strings.vdRecommendedSpecialty,
-          value: specialty,
-        ),
+        _SummaryField(label: strings.vdRecommendedSpecialty, value: specialty),
     ];
 
     return Semantics(
@@ -1048,21 +1172,19 @@ class _ConsultationSummary extends StatelessWidget {
               title: strings.vdSummaryTitle,
               trailing: urgency == null
                   ? null
-                  : StatusBadge(
-                      label: urgency.label,
-                      color: urgency.color,
-                    ),
+                  : StatusBadge(label: urgency.label, color: urgency.color),
             ),
             if (fields.isNotEmpty)
               LayoutBuilder(
                 builder: (context, constraints) {
                   final largeText = AppTheme.usesLargeText(context);
-                  final columns = constraints.maxWidth >=
-                              AppTheme.wideBreakpoint &&
+                  final columns =
+                      constraints.maxWidth >= AppTheme.wideBreakpoint &&
                           !largeText
                       ? 2
                       : 1;
-                  final width = (constraints.maxWidth -
+                  final width =
+                      (constraints.maxWidth -
                           AppTheme.spaceMd * (columns - 1)) /
                       columns;
                   return Wrap(
@@ -1110,8 +1232,8 @@ class _SummaryFieldView extends StatelessWidget {
         Text(
           field.label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: AppTheme.spaceXs),
         Directionality(
@@ -1119,8 +1241,8 @@ class _SummaryFieldView extends StatelessWidget {
           child: Text(
             field.value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: AppTheme.weightSemibold,
-                ),
+              fontWeight: AppTheme.weightSemibold,
+            ),
           ),
         ),
       ],
@@ -1151,26 +1273,19 @@ class _UrgencyCard extends StatelessWidget {
           builder: (context, constraints) {
             final heading = Row(
               children: [
-                Icon(
-                  visual.icon,
-                  color: visual.color,
-                  size: AppTheme.iconMd,
-                ),
+                Icon(visual.icon, color: visual.color, size: AppTheme.iconMd),
                 const SizedBox(width: AppTheme.spaceSm),
                 Expanded(
                   child: Text(
                     strings.vdUrgencyTitle,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: AppTheme.weightBold,
-                        ),
+                      fontWeight: AppTheme.weightBold,
+                    ),
                   ),
                 ),
               ],
             );
-            final badge = StatusBadge(
-              label: visual.label,
-              color: visual.color,
-            );
+            final badge = StatusBadge(label: visual.label, color: visual.color);
             if (constraints.maxWidth < AppTheme.compactBreakpoint ||
                 AppTheme.usesLargeText(context)) {
               return Column(
@@ -1281,25 +1396,23 @@ class _ControlPanel extends StatelessWidget {
                 label: Text(strings.vdSkipSpeech),
               )
             : recording
-                ? FilledButton.icon(
-                    onPressed: controller.stopRecordingAndSubmit,
-                    icon: const Icon(Icons.stop_rounded),
-                    label: Text(strings.vdTapToStop),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.danger,
-                      minimumSize: const Size(
-                        AppTheme.minTouchTarget,
-                        AppTheme.minTouchTarget,
-                      ),
-                    ),
-                  )
-                : PrimaryButton(
-                    label: strings.vdTapToSpeak,
-                    icon: Icons.mic_rounded,
-                    onPressed: state.canRecord
-                        ? controller.startRecording
-                        : null,
+            ? FilledButton.icon(
+                onPressed: controller.stopRecordingAndSubmit,
+                icon: const Icon(Icons.stop_rounded),
+                label: Text(strings.vdTapToStop),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.danger,
+                  minimumSize: const Size(
+                    AppTheme.minTouchTarget,
+                    AppTheme.minTouchTarget,
                   ),
+                ),
+              )
+            : PrimaryButton(
+                label: strings.vdTapToSpeak,
+                icon: Icons.mic_rounded,
+                onPressed: state.canRecord ? controller.startRecording : null,
+              ),
       ),
     );
   }
@@ -1371,13 +1484,9 @@ class _ElapsedTimerState extends State<_ElapsedTimer> {
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: Container(
-          constraints: const BoxConstraints(
-            minHeight: AppTheme.minTouchTarget,
-          ),
+          constraints: const BoxConstraints(minHeight: AppTheme.minTouchTarget),
           alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppTheme.spaceMd,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceMd),
           decoration: BoxDecoration(
             color: AppTheme.mutedSurfaceOf(context),
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
@@ -1385,9 +1494,9 @@ class _ElapsedTimerState extends State<_ElapsedTimer> {
           child: Text(
             value,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontWeight: AppTheme.weightBold,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+              fontWeight: AppTheme.weightBold,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ),
@@ -1416,59 +1525,59 @@ _ConsultStateVisual _consultStateVisual(
 ) {
   return switch (state) {
     ConsultState.idle => _ConsultStateVisual(
-        label: strings.vdStateIdle,
-        color: Theme.of(context).colorScheme.primary,
-        icon: Icons.medical_services_outlined,
-        busy: false,
-      ),
+      label: strings.vdStateIdle,
+      color: Theme.of(context).colorScheme.primary,
+      icon: Icons.medical_services_outlined,
+      busy: false,
+    ),
     ConsultState.connecting => _ConsultStateVisual(
-        label: strings.vdStateConnecting,
-        color: Theme.of(context).colorScheme.primary,
-        icon: Icons.cloud_sync_outlined,
-        busy: true,
-      ),
+      label: strings.vdStateConnecting,
+      color: Theme.of(context).colorScheme.primary,
+      icon: Icons.cloud_sync_outlined,
+      busy: true,
+    ),
     ConsultState.listening => _ConsultStateVisual(
-        label: strings.vdStateListening,
-        color: AppTheme.success,
-        icon: Icons.hearing_rounded,
-        busy: false,
-      ),
+      label: strings.vdStateListening,
+      color: AppTheme.success,
+      icon: Icons.hearing_rounded,
+      busy: false,
+    ),
     ConsultState.recording => _ConsultStateVisual(
-        label: strings.vdStateRecording,
-        color: AppTheme.danger,
-        icon: Icons.mic_rounded,
-        busy: false,
-      ),
+      label: strings.vdStateRecording,
+      color: AppTheme.danger,
+      icon: Icons.mic_rounded,
+      busy: false,
+    ),
     ConsultState.transcribing => _ConsultStateVisual(
-        label: strings.vdStateTranscribing,
-        color: AppTheme.accent,
-        icon: Icons.graphic_eq_rounded,
-        busy: true,
-      ),
+      label: strings.vdStateTranscribing,
+      color: AppTheme.accent,
+      icon: Icons.graphic_eq_rounded,
+      busy: true,
+    ),
     ConsultState.thinking => _ConsultStateVisual(
-        label: strings.vdStateThinking,
-        color: AppTheme.warning,
-        icon: Icons.psychology_outlined,
-        busy: true,
-      ),
+      label: strings.vdStateThinking,
+      color: AppTheme.warning,
+      icon: Icons.psychology_outlined,
+      busy: true,
+    ),
     ConsultState.speaking => _ConsultStateVisual(
-        label: strings.vdStateSpeaking,
-        color: Theme.of(context).colorScheme.primary,
-        icon: Icons.volume_up_rounded,
-        busy: true,
-      ),
+      label: strings.vdStateSpeaking,
+      color: Theme.of(context).colorScheme.primary,
+      icon: Icons.volume_up_rounded,
+      busy: true,
+    ),
     ConsultState.complete => _ConsultStateVisual(
-        label: strings.vdStateComplete,
-        color: AppTheme.success,
-        icon: Icons.check_circle_outline_rounded,
-        busy: false,
-      ),
+      label: strings.vdStateComplete,
+      color: AppTheme.success,
+      icon: Icons.check_circle_outline_rounded,
+      busy: false,
+    ),
     ConsultState.error => _ConsultStateVisual(
-        label: strings.vdErrGeneric,
-        color: Theme.of(context).colorScheme.error,
-        icon: Icons.error_outline_rounded,
-        busy: false,
-      ),
+      label: strings.vdErrGeneric,
+      color: Theme.of(context).colorScheme.error,
+      icon: Icons.error_outline_rounded,
+      busy: false,
+    ),
   };
 }
 
@@ -1487,25 +1596,25 @@ class _UrgencyVisual {
 _UrgencyVisual? _urgencyVisual(String? value, AppStrings strings) {
   return switch (value?.toLowerCase()) {
     'emergency' => _UrgencyVisual(
-        label: strings.vdUrgencyEmergency,
-        color: AppTheme.danger,
-        icon: Icons.emergency_outlined,
-      ),
+      label: strings.vdUrgencyEmergency,
+      color: AppTheme.danger,
+      icon: Icons.emergency_outlined,
+    ),
     'urgent' => _UrgencyVisual(
-        label: strings.vdUrgencyUrgent,
-        color: AppTheme.warning,
-        icon: Icons.warning_amber_rounded,
-      ),
+      label: strings.vdUrgencyUrgent,
+      color: AppTheme.warning,
+      icon: Icons.warning_amber_rounded,
+    ),
     'routine' => _UrgencyVisual(
-        label: strings.vdUrgencyRoutine,
-        color: AppTheme.success,
-        icon: Icons.event_available_outlined,
-      ),
+      label: strings.vdUrgencyRoutine,
+      color: AppTheme.success,
+      icon: Icons.event_available_outlined,
+    ),
     'unknown' => _UrgencyVisual(
-        label: strings.vdUrgencyUnknown,
-        color: AppTheme.info,
-        icon: Icons.help_outline_rounded,
-      ),
+      label: strings.vdUrgencyUnknown,
+      color: AppTheme.info,
+      icon: Icons.help_outline_rounded,
+    ),
     _ => null,
   };
 }
