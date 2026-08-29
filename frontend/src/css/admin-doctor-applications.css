@@ -165,8 +165,49 @@ body.admin-doctor-applications-page .application-actions .btn {
     min-height: 44px;
 }
 
+/* Clinic applications reuse the administration page shell. Keep its shorter
+   one-line document header aligned even when the account chip is present. */
+body.admin-doctor-applications-page .app-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+body.admin-doctor-applications-page .app-header .header-brand,
+body.admin-doctor-applications-page .app-header .site-nav,
+body.admin-doctor-applications-page .app-header .header-actions {
+    min-width: 0;
+}
+
+body.admin-doctor-applications-page .app-header .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-start: auto;
+    flex: 0 0 auto;
+}
+
+body.admin-doctor-applications-page .app-header #authArea {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+body.admin-doctor-applications-page .app-header .brand-name {
+    display: block;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
 @media (max-width: 480px) {
     body.admin-doctor-applications-page .application-actions .btn {
         flex: 1 1 100%;
+    }
+
+    body.admin-doctor-applications-page .app-header {
+        gap: 8px;
     }
 }

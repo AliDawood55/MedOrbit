@@ -103,7 +103,23 @@ async function queueVerificationEmail(client, email, userId) {
  * - Sends verification email (not console.log)
  */
 async function register(userData) {
-    const { email, password, role, firstNameAr, lastNameAr, firstNameEn, lastNameEn, phone, gender } = userData;
+    const { email, password, role, firstNameAr, lastNameAr, firstNameEn, lastNameEn, phone, gender, socialLinks } = userData;
+
+    const allowedSocialLinkKeys = new Set(['website', 'instagram', 'facebook', 'tiktok', 'linkedin', 'whatsapp', 'x', 'youtube']);
+    const safeSocialLinks = {};
+    if (socialLinks != null) {
+        if (typeof socialLinks !== 'object' || Array.isArray(socialLinks)) {
+            throw authError('Invalid social links', 400, 'VALIDATION_ERROR');
+        }
+        for (const [key, value] of Object.entries(socialLinks)) {
+            const link = String(value || '').trim();
+            if (!link || !allowedSocialLinkKeys.has(key)) continue;
+            if (link.length > 500 || !/^https:\/\//i.test(link)) {
+                throw authError('Social links must use HTTPS URLs', 400, 'VALIDATION_ERROR');
+            }
+            safeSocialLinks[key] = link;
+        }
+    }
 
     if (role != null && role !== "patient") {
         throw authError("Public registration only supports patient accounts", 400, "INVALID_ROLE");
@@ -150,6 +166,21 @@ async function register(userData) {
         );
 
         await client.query(`INSERT INTO medorbit.patients (user_id) VALUES($1)`, [user.id]);
+
+        // `preferences` exists in current installations. The catalog check keeps
+        // public registration compatible with an older restored database until
+        // its optional JSON column is added, without blocking account creation.
+        if (Object.keys(safeSocialLinks).length) {
+            const preferencesColumn = await client.query(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='medorbit' AND table_name='users' AND column_name='preferences') AS present"
+            );
+            if (preferencesColumn.rows[0].present) {
+                await client.query(
+                    "UPDATE medorbit.users SET preferences=jsonb_set(COALESCE(preferences,'{}'::jsonb),'{social_links}',$1::jsonb,true), updated_at=NOW() WHERE id=$2",
+                    [JSON.stringify(safeSocialLinks), user.id]
+                );
+            }
+        }
 
         await queueVerificationEmail(client, normalizedEmail, user.id);
 

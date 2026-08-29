@@ -175,6 +175,70 @@ min-height: 44px;
     font-weight: 700;
 }
 
+/* Optional public links use the same quiet, bordered treatment as the other
+   registration guidance rather than creating a separate visual system. */
+.social-links-signup {
+    margin: 4px 0 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-soft);
+}
+
+.social-links-signup legend {
+    padding: 0 6px;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.social-links-signup .field-hint {
+    margin: 0 0 12px;
+    color: var(--text-mute);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.social-links-signup label i {
+    width: 18px;
+    color: var(--primary);
+}
+
+.social-links-signup .form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0 0 12px;
+}
+
+.social-links-signup input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--bg-card);
+    color: var(--text);
+    font: inherit;
+    transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.social-links-signup input:focus {
+    outline: 0;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+
+@media (max-width: 520px) {
+    .social-links-signup {
+        padding: 12px;
+    }
+
+    .social-links-signup .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .auth-doctor-signup {
     white-space: nowrap;
 }

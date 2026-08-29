@@ -42,6 +42,7 @@ router.get(
             u.email,
             u.role,
             u.preferred_language,
+            to_jsonb(u)->'preferences'->'social_links' AS social_links,
             u.created_at,
 
             p.first_name_ar,
@@ -268,30 +269,52 @@ router.put(
       const userId = req.user.sub;
 
 
-      const {
-        language
-      } = req.body;
+      const { language, social_links: socialLinks } = req.body;
+      if (socialLinks !== undefined && ['admin', 'super_admin', 'patient'].includes(req.user.role)) {
+        return error(res, 'This account type cannot publish social links', 403, 'FORBIDDEN');
+      }
+      const allowedLinks = req.user.role === 'patient'
+        ? ['whatsapp']
+        : ['website', 'instagram', 'facebook', 'tiktok', 'linkedin', 'whatsapp', 'x', 'youtube'];
+      let safeSocialLinks = null;
+      if (socialLinks !== undefined) {
+        if (!socialLinks || typeof socialLinks !== 'object' || Array.isArray(socialLinks)) return error(res, 'Invalid social links', 400, 'VALIDATION_ERROR');
+        safeSocialLinks = {};
+        for (const [key, value] of Object.entries(socialLinks)) {
+          if (!allowedLinks.includes(key) || !String(value || '').trim()) continue;
+          const link = String(value).trim();
+          if (key === 'whatsapp') {
+            const number = link.replace(/[^\d]/g, '').replace(/^00/, '');
+            if (number.length < 8 || number.length > 15) return error(res, 'WhatsApp must be a valid international phone number', 400, 'VALIDATION_ERROR');
+            safeSocialLinks[key] = number;
+            continue;
+          }
+          if (link.length > 500 || !/^https:\/\//i.test(link)) return error(res, 'Social links must use HTTPS URLs', 400, 'VALIDATION_ERROR');
+          safeSocialLinks[key] = link;
+        }
+      }
 
 
 
-      await db.query(
-        `
-
+      const preferenceColumn = await db.query(
+        `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='medorbit' AND table_name='users' AND column_name='preferences') AS present`
+      );
+      if (socialLinks !== undefined && !preferenceColumn.rows[0].present) {
+        return error(res, 'Social links are unavailable until the existing preferences field is enabled', 409, 'FEATURE_UNAVAILABLE');
+      }
+      const query = preferenceColumn.rows[0].present ? `
 UPDATE medorbit.users
-
-SET
-
-preferred_language=
-COALESCE($1,preferred_language),
-
-updated_at=NOW()
-
-
-WHERE id=$2
-
-`,
+SET preferred_language=COALESCE($1,preferred_language),
+    preferences=CASE WHEN $2::jsonb IS NULL THEN preferences ELSE jsonb_set(COALESCE(preferences,'{}'::jsonb),'{social_links}',$2::jsonb,true) END,
+    updated_at=NOW()
+WHERE id=$3
+` : `
+UPDATE medorbit.users SET preferred_language=COALESCE($1,preferred_language),updated_at=NOW() WHERE id=$3
+`;
+      await db.query(
+        query,
         [
-          language,
+          language, safeSocialLinks === null ? null : JSON.stringify(safeSocialLinks),
           userId
         ]);
 

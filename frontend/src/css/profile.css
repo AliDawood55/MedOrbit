@@ -152,6 +152,39 @@
     margin-top: 6px;
 }
 
+/* Public contact fields remain visually part of the existing account card.
+   Colours are token based, so light and dark themes inherit correctly. */
+.social-links-form {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-soft);
+}
+
+.social-links-form .form-row {
+    margin-bottom: 12px;
+}
+
+.social-links-form .form-row:last-of-type {
+    margin-bottom: 0;
+}
+
+.social-links-form label {
+    color: var(--text-soft);
+    font-weight: 600;
+}
+
+.social-links-form label i {
+    width: 18px;
+    color: var(--primary);
+}
+
+.social-links-form input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 [dir="rtl"] .profile-save-row {
     justify-content: flex-start;
 }
@@ -181,5 +214,9 @@
 
     .profile-save-row .btn {
         width: 100%;
+    }
+
+    .social-links-form {
+        padding: 12px;
     }
 }
