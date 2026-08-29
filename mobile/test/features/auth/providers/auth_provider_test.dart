@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/core/constants/storage_keys.dart';
+import 'package:mobile/core/network/api_exception.dart';
 import 'package:mobile/core/storage/secure_storage_service.dart';
 import 'package:mobile/features/auth/data/auth_api.dart';
 import 'package:mobile/features/auth/data/google_auth_service.dart';
@@ -57,6 +60,91 @@ void main() {
       expect(controller.state.status, AuthStatus.unauthenticated);
     });
   });
+
+  group('AuthController.resetPassword', () {
+    test(
+      'rejects a duplicate in-flight reset and preserves exact inputs',
+      () async {
+        final pending = Completer<void>();
+        final storage = SecureStorageService(
+          storage: _InMemorySecureStorage({}),
+        );
+        final repository = _ResetRepository(storage, pending: pending);
+        final controller = AuthController(
+          repository,
+          GoogleAuthService(),
+          storage,
+        );
+        addTearDown(controller.dispose);
+
+        final first = controller.resetPassword(
+          token: 'token+/_=-value',
+          newPassword: 'Strong1!',
+        );
+        final duplicate = await controller.resetPassword(
+          token: 'different-token',
+          newPassword: 'Different2@',
+        );
+
+        expect(duplicate, isFalse);
+        expect(repository.calls, 1);
+        expect(repository.tokens, ['token+/_=-value']);
+        expect(repository.passwords, ['Strong1!']);
+        expect(controller.state.isSubmitting, isTrue);
+
+        pending.complete();
+        expect(await first, isTrue);
+        expect(controller.state.isSubmitting, isFalse);
+      },
+    );
+
+    test('preserves ApiException code and internal message', () async {
+      const failure = ApiException(
+        message: 'Invalid or expired token from provider',
+        code: 'INVALID_TOKEN',
+        statusCode: 400,
+      );
+      final storage = SecureStorageService(storage: _InMemorySecureStorage({}));
+      final controller = AuthController(
+        _ResetRepository(storage, error: failure),
+        GoogleAuthService(),
+        storage,
+      );
+      addTearDown(controller.dispose);
+
+      final result = await controller.resetPassword(
+        token: 'reset-token',
+        newPassword: 'Strong1!',
+      );
+
+      expect(result, isFalse);
+      expect(controller.state.isSubmitting, isFalse);
+      expect(controller.state.errorCode, 'INVALID_TOKEN');
+      expect(
+        controller.state.errorMessage,
+        'Invalid or expired token from provider',
+      );
+    });
+
+    test('recovers from an unexpected repository exception', () async {
+      final storage = SecureStorageService(storage: _InMemorySecureStorage({}));
+      final controller = AuthController(
+        _ResetRepository(storage, error: StateError('repository failure')),
+        GoogleAuthService(),
+        storage,
+      );
+      addTearDown(controller.dispose);
+
+      final result = await controller.resetPassword(
+        token: 'reset-token',
+        newPassword: 'Strong1!',
+      );
+
+      expect(result, isFalse);
+      expect(controller.state.isSubmitting, isFalse);
+      expect(controller.state.errorCode, ApiException.codeUnknown);
+    });
+  });
 }
 
 AuthController _controller(Map<String, String> seed) => _controllerFor(_InMemorySecureStorage(seed));
@@ -65,6 +153,29 @@ AuthController _controllerFor(FlutterSecureStorage backing) {
   final storage = SecureStorageService(storage: backing);
   final repository = AuthRepository(AuthApi(Dio()), storage);
   return AuthController(repository, GoogleAuthService(), storage);
+}
+
+class _ResetRepository extends AuthRepository {
+  _ResetRepository(SecureStorageService storage, {this.pending, this.error})
+    : super(AuthApi(Dio()), storage);
+
+  final Completer<void>? pending;
+  final Object? error;
+  final List<String> tokens = [];
+  final List<String> passwords = [];
+  int calls = 0;
+
+  @override
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    calls++;
+    tokens.add(token);
+    passwords.add(newPassword);
+    await pending?.future;
+    if (error != null) throw error!;
+  }
 }
 
 class _InMemorySecureStorage implements FlutterSecureStorage {

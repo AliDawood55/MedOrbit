@@ -288,6 +288,16 @@ class AppStrings {
   String get resetTokenLabel => _t('رمز/رابط التحقق', 'Reset Token / Code');
   String get resetTokenPlaceholder =>
       _t('أدخل الرمز من البريد الإلكتروني', 'Enter the code from your email');
+  String get resetTokenRequired =>
+      _t('رمز إعادة التعيين مطلوب.', 'Reset token is required.');
+  String get resetInvalidToken => _t(
+    'رابط إعادة التعيين غير صالح أو منتهي الصلاحية.',
+    'This reset link is invalid or has expired.',
+  );
+  String get resetValidationError => _t(
+    'تحقق من رمز إعادة التعيين ومتطلبات كلمة المرور ثم حاول مجددًا.',
+    'Check the reset token and password requirements, then try again.',
+  );
   String get newPasswordLabel => _t('كلمة المرور الجديدة', 'New Password');
   String get newPasswordPlaceholder =>
       _t('أدخل كلمة المرور الجديدة', 'Enter your new password');
