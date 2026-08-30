@@ -46,7 +46,7 @@ class GeneratedSlot {
     required this.isTelemedicine,
   });
 
-  /// `startMinutes|durationMinutes|isTelemedicine` — stable identity for
+  /// `startMinutes|endMinutes|durationMinutes|isTelemedicine` — stable identity for
   /// selection/highlighting. The same start time can legitimately appear
   /// twice (an in-person and a telemedicine window starting together, or two
   /// windows with different durations), so identity can't be `startMinutes`

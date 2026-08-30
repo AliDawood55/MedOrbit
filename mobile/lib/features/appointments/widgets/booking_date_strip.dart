@@ -7,7 +7,12 @@ import '../../../core/theme/app_theme.dart';
 /// `renderDatePills()` in the web wizard. Only future/today dates are ever
 /// rendered, so there is no separate "past date" state to handle.
 class BookingDateStrip extends StatelessWidget {
-  const BookingDateStrip({super.key, required this.selected, required this.onSelect, required this.isArabic});
+  const BookingDateStrip({
+    super.key,
+    required this.selected,
+    required this.onSelect,
+    required this.isArabic,
+  });
 
   final DateTime? selected;
   final ValueChanged<DateTime> onSelect;
@@ -20,21 +25,26 @@ class BookingDateStrip extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final weekdayFormat = DateFormat('EEE', isArabic ? 'ar' : 'en');
+    final height = AppTheme.usesLargeText(context) ? 112.0 : 72.0;
 
     return SizedBox(
-      height: 72,
+      height: height,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: dayCount,
-        separatorBuilder: (context, index) => const SizedBox(width: AppTheme.spaceSm),
+        separatorBuilder: (context, index) =>
+            const SizedBox(width: AppTheme.spaceSm),
         itemBuilder: (context, index) {
           final date = today.add(Duration(days: index));
-          final isActive = selected != null &&
+          final isActive =
+              selected != null &&
               selected!.year == date.year &&
               selected!.month == date.month &&
               selected!.day == date.day;
           return _DatePill(
-            key: ValueKey('booking-date-${date.year}-${date.month}-${date.day}'),
+            key: ValueKey(
+              'booking-date-${date.year}-${date.month}-${date.day}',
+            ),
             weekday: weekdayFormat.format(date),
             day: date.day,
             isActive: isActive,
@@ -47,7 +57,13 @@ class BookingDateStrip extends StatelessWidget {
 }
 
 class _DatePill extends StatelessWidget {
-  const _DatePill({super.key, required this.weekday, required this.day, required this.isActive, required this.onTap});
+  const _DatePill({
+    super.key,
+    required this.weekday,
+    required this.day,
+    required this.isActive,
+    required this.onTap,
+  });
 
   final String weekday;
   final int day;
@@ -61,6 +77,7 @@ class _DatePill extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isActive,
+      label: '$weekday $day',
       child: Material(
         color: isActive ? AppTheme.primary : scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -69,13 +86,26 @@ class _DatePill extends StatelessWidget {
           onTap: onTap,
           child: Container(
             constraints: const BoxConstraints(minWidth: 56, minHeight: 48),
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceSm, vertical: AppTheme.spaceSm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceSm,
+              vertical: AppTheme.spaceSm,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(weekday, style: TextStyle(color: foreground, fontSize: 12)),
+                Text(
+                  weekday,
+                  style: TextStyle(color: foreground, fontSize: 12),
+                ),
                 const SizedBox(height: 2),
-                Text('$day', style: TextStyle(color: foreground, fontWeight: AppTheme.weightExtraBold, fontSize: 16)),
+                Text(
+                  '$day',
+                  style: TextStyle(
+                    color: foreground,
+                    fontWeight: AppTheme.weightExtraBold,
+                    fontSize: 16,
+                  ),
+                ),
               ],
             ),
           ),

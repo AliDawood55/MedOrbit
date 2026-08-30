@@ -98,6 +98,8 @@ void main() {
   });
 
   testWidgets('full flow: browse, pick a doctor, pick a slot, confirm, and see a success number', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final tomorrow = DateTime.now().add(const Duration(days: 1));
     final tomorrowKey = 'booking-date-${tomorrow.year}-${tomorrow.month}-${tomorrow.day}';
     final discoveryApi = _FakeDiscoveryApi()
@@ -122,7 +124,7 @@ void main() {
     await tester.tap(find.byKey(ValueKey(tomorrowKey)));
     await tester.pump();
 
-    const slotKey = ValueKey('booking-slot-540|30|0');
+    const slotKey = ValueKey('booking-slot-540|570|30|0');
     expect(find.byKey(slotKey), findsOneWidget);
     await tester.tap(find.byKey(slotKey));
     await tester.pump();
@@ -168,6 +170,8 @@ void main() {
   });
 
   testWidgets('SLOT_BUSY on submit returns to the slot step with a warning and a refreshed, deselected grid', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final tomorrow = DateTime.now().add(const Duration(days: 1));
     final tomorrowKey = 'booking-date-${tomorrow.year}-${tomorrow.month}-${tomorrow.day}';
     final discoveryApi = _FakeDiscoveryApi()..doctorDetailResults.add(Future.value(const DoctorDetailResponse(doctor: _doctor, clinics: [_soleClinic])));
@@ -182,7 +186,7 @@ void main() {
 
     await tester.tap(find.byKey(ValueKey(tomorrowKey)));
     await tester.pump();
-    await tester.tap(find.byKey(const ValueKey('booking-slot-540|30|0')));
+    await tester.tap(find.byKey(const ValueKey('booking-slot-540|570|30|0')));
     await tester.pump();
     await tester.tap(find.widgetWithText(ElevatedButton, _strings.nextAction));
     await tester.pump();
@@ -202,6 +206,91 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'slot and review steps remain usable at 320px, 2x text, RTL, and with a long doctor name',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      const arabicStrings = AppStrings(true);
+      const longDoctor = Doctor(
+        id: 'doctor-long',
+        firstNameAr: 'Ø³Ø§Ø±Ø© Ø¹Ø¨Ø¯ Ø§Ù„Ø±Ø­Ù…Ù†',
+        lastNameAr: 'Ø§Ù„Ø®Ø·ÙŠØ¨ Ø§Ù„Ø§Ø³ØªØ´Ø§Ø±ÙŠØ©',
+        firstNameEn: 'Sara Abdulrahman',
+        lastNameEn: 'Al-Khatib Consultant',
+        specialtyAr: 'Ø£Ù…Ø±Ø§Ø¶ Ø§Ù„Ù‚Ù„Ø¨ ÙˆØ§Ù„Ø£ÙˆØ¹ÙŠØ© Ø§Ù„Ø¯Ù…ÙˆÙŠØ© Ø§Ù„Ù…ØªÙ‚Ø¯Ù…Ø©',
+        specialtyEn: 'Advanced cardiovascular medicine',
+      );
+      const longClinic = DoctorClinicSummary(
+        id: 'clinic-long',
+        nameAr: 'Ù…Ø±ÙƒØ² Ù†Ø§Ø¨Ù„Ø³ Ø§Ù„ØªØ®ØµØµÙŠ Ù„Ù„Ø±Ø¹Ø§ÙŠØ© Ø§Ù„ØµØ­ÙŠØ© Ø§Ù„Ù…ØªÙƒØ§Ù…Ù„Ø©',
+        nameEn: 'Nablus Specialist Integrated Care Center',
+      );
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final tomorrowKey =
+          'booking-date-${tomorrow.year}-${tomorrow.month}-${tomorrow.day}';
+      final discoveryApi = _FakeDiscoveryApi()
+        ..doctorDetailResults.add(
+          Future.value(
+            const DoctorDetailResponse(
+              doctor: longDoctor,
+              clinics: [longClinic],
+            ),
+          ),
+        );
+      final bookingApi = _FakeBookingApi()
+        ..availableSlotsResults.add(Future.value(const []))
+        ..availableSlotsResults.add(
+          Future.value(const [
+            AvailabilityWindow(startTime: '09:00:00', endTime: '09:30:00'),
+          ]),
+        );
+
+      await tester.pumpWidget(
+        _app(
+          discoveryApi: discoveryApi,
+          bookingApi: bookingApi,
+          doctorId: 'doctor-long',
+          isArabic: true,
+          direction: TextDirection.rtl,
+          textScale: 2,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Ø³Ø§Ø±Ø© Ø¹Ø¨Ø¯ Ø§Ù„Ø±Ø­Ù…Ù† Ø§Ù„Ø®Ø·ÙŠØ¨ Ø§Ù„Ø§Ø³ØªØ´Ø§Ø±ÙŠØ©'), findsOneWidget);
+      expect(find.text(arabicStrings.changeDoctorAction), findsOneWidget);
+      final tomorrowPill = find.byKey(ValueKey(tomorrowKey));
+      await tester.ensureVisible(tomorrowPill);
+      await tester.pumpAndSettle();
+      await tester.tap(tomorrowPill);
+      await tester.pump();
+
+      final slot = find.byKey(const ValueKey('booking-slot-540|570|30|0'));
+      expect(slot, findsOneWidget);
+      await tester.ensureVisible(slot);
+      await tester.pumpAndSettle();
+      await tester.tap(slot);
+      await tester.pump();
+      final next = find.widgetWithText(
+        ElevatedButton,
+        arabicStrings.nextAction,
+      );
+      await tester.ensureVisible(next);
+      await tester.pumpAndSettle();
+      await tester.tap(next);
+      await tester.pump();
+
+      expect(
+        find.widgetWithText(ElevatedButton, arabicStrings.confirmAndBookAction),
+        findsOneWidget,
+      );
+      expect(find.text(arabicStrings.backAction), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Widget _app({

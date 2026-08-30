@@ -25,6 +25,7 @@ class BookingConfirmStep extends StatefulWidget {
     required this.onReasonChanged,
     required this.onNotesChanged,
     required this.onSubmit,
+    required this.onBack,
   });
 
   final AppStrings strings;
@@ -39,6 +40,7 @@ class BookingConfirmStep extends StatefulWidget {
   final ValueChanged<String> onReasonChanged;
   final ValueChanged<String> onNotesChanged;
   final VoidCallback onSubmit;
+  final VoidCallback onBack;
 
   @override
   State<BookingConfirmStep> createState() => _BookingConfirmStepState();
@@ -48,8 +50,12 @@ class _BookingConfirmStepState extends State<BookingConfirmStep> {
   // Owned locally and seeded once: the wizard state updates on every
   // keystroke, and rebuilding these from `widget.reason`/`widget.notes` each
   // time would fight the user's cursor position mid-sentence.
-  late final TextEditingController _reasonController = TextEditingController(text: widget.reason);
-  late final TextEditingController _notesController = TextEditingController(text: widget.notes);
+  late final TextEditingController _reasonController = TextEditingController(
+    text: widget.reason,
+  );
+  late final TextEditingController _notesController = TextEditingController(
+    text: widget.notes,
+  );
 
   @override
   void dispose() {
@@ -65,10 +71,19 @@ class _BookingConfirmStepState extends State<BookingConfirmStep> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.submitError != null) ...[
-          InlineMessage(message: _submitErrorMessage(strings, widget.submitError!.kind), tone: InlineMessageTone.error),
+          InlineMessage(
+            message: _submitErrorMessage(strings, widget.submitError!.kind),
+            tone: InlineMessageTone.error,
+          ),
           const SizedBox(height: AppTheme.spaceMd),
         ],
-        BookingSummaryCard(doctor: widget.doctor, clinic: widget.clinic, date: widget.date, slot: widget.slot, strings: strings),
+        BookingSummaryCard(
+          doctor: widget.doctor,
+          clinic: widget.clinic,
+          date: widget.date,
+          slot: widget.slot,
+          strings: strings,
+        ),
         const SizedBox(height: AppTheme.spaceLg),
         AppTextField(
           label: strings.visitReasonLabel,
@@ -91,6 +106,15 @@ class _BookingConfirmStepState extends State<BookingConfirmStep> {
           isLoading: widget.isSubmitting,
           onPressed: widget.isSubmitting ? null : widget.onSubmit,
         ),
+        const SizedBox(height: AppTheme.spaceSm),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: widget.isSubmitting ? null : widget.onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: Text(strings.backAction),
+          ),
+        ),
       ],
     );
   }
@@ -101,7 +125,8 @@ String _submitErrorMessage(AppStrings strings, BookingSubmitErrorKind kind) {
     BookingSubmitErrorKind.slotBusy => strings.slotBusyMessage,
     BookingSubmitErrorKind.patientNotFound => strings.patientNotFoundMessage,
     BookingSubmitErrorKind.timeout => strings.bookingTimeoutMessage,
-    BookingSubmitErrorKind.serviceUnavailable => strings.bookingServiceUnavailableMessage,
+    BookingSubmitErrorKind.serviceUnavailable =>
+      strings.bookingServiceUnavailableMessage,
     BookingSubmitErrorKind.validation => strings.couldNotCreateAppointment,
     BookingSubmitErrorKind.generic => strings.couldNotCreateAppointment,
   };
