@@ -141,33 +141,38 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen>
       }
     });
 
+    final hasSubtitle = conversation != null;
+    // Grow the toolbar with the user's real text scale instead of clamping it,
+    // so accessibility settings are honoured and the two-line title still fits.
+    // Capped so an extreme setting cannot produce an oversized bar.
+    final toolbarHeight = MediaQuery.textScalerOf(context)
+        .scale(hasSubtitle ? kToolbarHeight + 10 : kToolbarHeight)
+        .clamp(kToolbarHeight, hasSubtitle ? 132.0 : 112.0)
+        .toDouble();
+
     return AppScaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        // Clamp scaling for the two-line title so an extreme text-size setting
-        // cannot push the counterpart name/role out of the fixed toolbar.
-        title: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.3,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        toolbarHeight: toolbarHeight,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              conversation?.otherDisplayName ?? strings.messagesThreadTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (conversation != null)
               Text(
-                conversation?.otherDisplayName ?? strings.messagesThreadTitle,
+                conversation.otherRole == 'doctor'
+                    ? strings.messagesRoleDoctor
+                    : strings.messagesRolePatient,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall,
               ),
-              if (conversation != null)
-                Text(
-                  conversation.otherRole == 'doctor'
-                      ? strings.messagesRoleDoctor
-                      : strings.messagesRolePatient,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-            ],
-          ),
+          ],
         ),
         actions: [
           IconButton(
