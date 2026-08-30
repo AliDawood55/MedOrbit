@@ -13,7 +13,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../models/profile_edit_model.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/change_password_sheet.dart';
@@ -32,10 +32,7 @@ class ProfileScreen extends ConsumerWidget {
     final notifier = ref.read(profileControllerProvider.notifier);
     final avatarOrigin = ref.watch(activeOriginProvider);
     final themeMode = ref.watch(themeControllerProvider);
-    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
-    final canUseCareMessages = role == 'patient' || role == 'doctor';
-    final isDoctor = role == 'doctor';
-    final canAcceptAdminInvitation = role == 'patient' || role == 'doctor';
+    final capabilities = ref.watch(appRoleCapabilitiesProvider);
 
     return AppScaffold(
       appBar: AppBar(title: Text(strings.profileTitle)),
@@ -82,6 +79,8 @@ class ProfileScreen extends ConsumerWidget {
                       icon: Icons.person_outline_rounded,
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
+                    SectionHeader(title: strings.profileGroupAccount),
+                    const SizedBox(height: AppTheme.spaceSm),
                     ProfileAvatarSection(
                       profile: profile,
                       isArabic: isArabic,
@@ -101,20 +100,121 @@ class ProfileScreen extends ConsumerWidget {
                       onSave: (draft) =>
                           _handleSave(context, notifier, draft, strings),
                     ),
-                    if (isDoctor) ...[
-                      const SizedBox(height: AppTheme.spaceLg),
-                      Card(
-                        child: ListTile(
-                          minVerticalPadding: AppTheme.spaceMd,
-                          leading: const Icon(Icons.medical_services_outlined),
-                          title: Text(strings.doctorWorkspace),
-                          subtitle: Text(strings.doctorWorkspaceSubtitle),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => context.push(RoutePaths.doctorWorkspace),
-                        ),
+                    const SizedBox(height: AppTheme.spaceLg),
+                    SectionHeader(title: strings.profileGroupServices),
+                    const SizedBox(height: AppTheme.spaceSm),
+                    FeatureCard(
+                      title: strings.discoverTitle,
+                      subtitle: strings.discoverSubtitle,
+                      icon: Icons.travel_explore_outlined,
+                      color: AppTheme.secondary,
+                      onTap: () => context.go(RoutePaths.discover),
+                    ),
+                    const SizedBox(height: AppTheme.spaceMd),
+                    FeatureCard(
+                      title: strings.navNotifications,
+                      subtitle: strings.quickNotificationsDescription,
+                      icon: Icons.notifications_outlined,
+                      color: AppTheme.accent,
+                      onTap: () => context.push(RoutePaths.notifications),
+                    ),
+                    const SizedBox(height: AppTheme.spaceMd),
+                    FeatureCard(
+                      title: strings.billingTitle,
+                      subtitle: strings.billingProfileDescription,
+                      icon: Icons.workspace_premium_outlined,
+                      color: AppTheme.violet,
+                      trailing: Icon(
+                        AppTheme.directionalForwardIconOf(context),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      onTap: () => context.push(RoutePaths.billing),
+                    ),
+                    if (capabilities.canUseAiChat) ...[
+                      const SizedBox(height: AppTheme.spaceMd),
+                      FeatureCard(
+                        title: strings.quickMedicalChatLabel,
+                        subtitle: strings.quickMedicalChatDescription,
+                        icon: Icons.chat_bubble_outline_rounded,
+                        color: AppTheme.violet,
+                        onTap: () => context.push(RoutePaths.chatbot),
+                      ),
+                    ],
+                    if (capabilities.canUseCareMessages) ...[
+                      const SizedBox(height: AppTheme.spaceMd),
+                      FeatureCard(
+                        title: strings.messagesTitle,
+                        subtitle: strings.messagesSubtitle,
+                        icon: Icons.forum_outlined,
+                        onTap: () => context.push(RoutePaths.messages),
+                        semanticLabel: strings.messagesOpenConversation,
                       ),
                     ],
                     const SizedBox(height: AppTheme.spaceLg),
+                    SectionHeader(title: strings.profileGroupRoleTools),
+                    const SizedBox(height: AppTheme.spaceSm),
+                    if (capabilities.canUsePatientCare) ...[
+                      FeatureCard(
+                        title: strings.myDoctorsTitle,
+                        subtitle: strings.quickMyDoctorsDescription,
+                        icon: Icons.health_and_safety_outlined,
+                        color: AppTheme.primary,
+                        onTap: () => context.push(RoutePaths.myDoctors),
+                      ),
+                      const SizedBox(height: AppTheme.spaceMd),
+                      FeatureCard(
+                        title: strings.doctorApplicationQuickActionLabel,
+                        subtitle:
+                            strings.doctorApplicationQuickActionDescription,
+                        icon: Icons.medical_information_outlined,
+                        color: AppTheme.secondary,
+                        onTap: () => context.push(RoutePaths.doctorApplication),
+                      ),
+                    ],
+                    if (capabilities.canUseDoctorWorkspace) ...[
+                      FeatureCard(
+                        title: strings.doctorWorkspace,
+                        subtitle: strings.doctorWorkspaceSubtitle,
+                        icon: Icons.medical_services_outlined,
+                        color: AppTheme.primary,
+                        onTap: () => context.push(RoutePaths.doctorWorkspace),
+                      ),
+                      const SizedBox(height: AppTheme.spaceMd),
+                      FeatureCard(
+                        title: strings.professionalProfile,
+                        subtitle: strings.doctorProfessionalProfileSubtitle,
+                        icon: Icons.badge_outlined,
+                        color: AppTheme.secondary,
+                        onTap: () =>
+                            context.push(RoutePaths.doctorProfessionalProfile),
+                      ),
+                    ],
+                    if (capabilities.canUseAdminTools)
+                      FeatureCard(
+                        title: strings.adminMobileDashboardTitle,
+                        subtitle: strings.adminMobileDashboardHint,
+                        icon: Icons.admin_panel_settings_outlined,
+                        color: AppTheme.accent,
+                        onTap: () => context.push(RoutePaths.adminDashboard),
+                      ),
+                    if (capabilities.canAcceptAdminInvitation) ...[
+                      const SizedBox(height: AppTheme.spaceMd),
+                      FeatureCard(
+                        key: const ValueKey('profile-admin-invitation-accept'),
+                        title: strings.adminInvitationAcceptTitle,
+                        subtitle: strings.adminInvitationAcceptEntryHint,
+                        icon: Icons.admin_panel_settings_outlined,
+                        color: AppTheme.accent,
+                        semanticLabel:
+                            '${strings.adminInvitationAcceptTitle}. '
+                            '${strings.adminInvitationAcceptEntryHint}',
+                        onTap: () =>
+                            context.push(RoutePaths.adminInvitationAccept),
+                      ),
+                    ],
+                    const SizedBox(height: AppTheme.spaceLg),
+                    SectionHeader(title: strings.profileGroupPreferences),
+                    const SizedBox(height: AppTheme.spaceSm),
                     PreferencesSection(
                       strings: strings,
                       languageCode: isArabic ? 'ar' : 'en',
@@ -127,28 +227,6 @@ class ProfileScreen extends ConsumerWidget {
                           .setThemeMode(mode),
                     ),
                     const SizedBox(height: AppTheme.spaceLg),
-                    FeatureCard(
-                      title: strings.billingTitle,
-                      subtitle: strings.billingProfileDescription,
-                      icon: Icons.workspace_premium_outlined,
-                      color: AppTheme.violet,
-                      trailing: Icon(
-                        AppTheme.directionalForwardIconOf(context),
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      onTap: () => context.push(RoutePaths.billing),
-                    ),
-                    const SizedBox(height: AppTheme.spaceLg),
-                    if (canUseCareMessages) ...[
-                      FeatureCard(
-                        title: strings.messagesTitle,
-                        subtitle: strings.messagesSubtitle,
-                        icon: Icons.forum_outlined,
-                        onTap: () => context.push(RoutePaths.messages),
-                        semanticLabel: strings.messagesOpenConversation,
-                      ),
-                      const SizedBox(height: AppTheme.spaceLg),
-                    ],
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(AppTheme.spaceLg),
@@ -172,27 +250,6 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    // The only in-app way to reach the administrator
-                    // invitation acceptance flow. The backend emails a link to
-                    // the *web* page, and this app has no verified app-link
-                    // domain to claim it, so an invitee needs somewhere to
-                    // paste it. Hidden once the account is already an
-                    // administrator, which is also what the backend answers.
-                    if (canAcceptAdminInvitation) ...[
-                      const SizedBox(height: AppTheme.spaceLg),
-                      FeatureCard(
-                        key: const ValueKey('profile-admin-invitation-accept'),
-                        title: strings.adminInvitationAcceptTitle,
-                        subtitle: strings.adminInvitationAcceptEntryHint,
-                        icon: Icons.admin_panel_settings_outlined,
-                        color: AppTheme.accent,
-                        semanticLabel:
-                            '${strings.adminInvitationAcceptTitle}. '
-                            '${strings.adminInvitationAcceptEntryHint}',
-                        onTap: () =>
-                            context.push(RoutePaths.adminInvitationAccept),
-                      ),
-                    ],
                   ],
                 ),
               ),

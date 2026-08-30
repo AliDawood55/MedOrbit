@@ -2,12 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../data/appointments_api.dart';
 import '../models/enriched_appointment.dart';
 
-final appointmentsApiProvider = Provider<AppointmentsApi>((ref) => AppointmentsApi(ref.watch(dioProvider)));
+final appointmentsApiProvider = Provider<AppointmentsApi>(
+  (ref) => AppointmentsApi(ref.watch(dioProvider)),
+);
 
-class AppointmentsController extends StateNotifier<AsyncValue<List<EnrichedAppointment>>> {
+class AppointmentsController
+    extends StateNotifier<AsyncValue<List<EnrichedAppointment>>> {
   AppointmentsController(this._api) : super(const AsyncValue.loading()) {
     load();
   }
@@ -20,14 +24,21 @@ class AppointmentsController extends StateNotifier<AsyncValue<List<EnrichedAppoi
       final appointments = await _api.list();
 
       final doctorIds = appointments.map((a) => a.doctorId).toSet();
-      final clinicIds = appointments.map((a) => a.clinicId).whereType<String>().toSet();
+      final clinicIds = appointments
+          .map((a) => a.clinicId)
+          .whereType<String>()
+          .toSet();
 
       final doctorNames = <String, (String?, String?)>{};
       final clinicNames = <String, (String?, String?)>{};
 
       await Future.wait([
-        ...doctorIds.map((id) async => doctorNames[id] = await _api.getDoctorName(id)),
-        ...clinicIds.map((id) async => clinicNames[id] = await _api.getClinicName(id)),
+        ...doctorIds.map(
+          (id) async => doctorNames[id] = await _api.getDoctorName(id),
+        ),
+        ...clinicIds.map(
+          (id) async => clinicNames[id] = await _api.getClinicName(id),
+        ),
       ]);
 
       return appointments.map((a) {
@@ -53,7 +64,10 @@ class AppointmentsController extends StateNotifier<AsyncValue<List<EnrichedAppoi
       if (current != null) {
         state = AsyncValue.data([
           for (final entry in current)
-            if (entry.appointment.id == appointmentId) entry.copyWith(appointment: updated) else entry,
+            if (entry.appointment.id == appointmentId)
+              entry.copyWith(appointment: updated)
+            else
+              entry,
         ]);
       }
       return true;
@@ -71,6 +85,10 @@ class AppointmentsController extends StateNotifier<AsyncValue<List<EnrichedAppoi
 }
 
 final appointmentsControllerProvider =
-    StateNotifierProvider.autoDispose<AppointmentsController, AsyncValue<List<EnrichedAppointment>>>(
-      (ref) => AppointmentsController(ref.watch(appointmentsApiProvider)),
-    );
+    StateNotifierProvider.autoDispose<
+      AppointmentsController,
+      AsyncValue<List<EnrichedAppointment>>
+    >((ref) {
+      ref.watch(appAccountSessionKeyProvider);
+      return AppointmentsController(ref.watch(appointmentsApiProvider));
+    });

@@ -8,6 +8,8 @@ class RoutePaths {
   static const String verifyCode = '/verify-code';
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
+  static const String discover = '/discover';
+  static const String services = '/services';
   static const String records = '/records';
   static const String prescriptions = '/prescriptions';
   static const String appointments = '/appointments';
@@ -48,9 +50,11 @@ class RoutePaths {
   static const String doctorWorkspace = '/doctor/workspace';
   static const String doctorProfessionalProfile = '/doctor/profile';
   static const String doctorSchedule = '/doctor/schedule';
+  static const String doctorAppointments = '/doctor/appointments';
   static const String doctorPatients = '/doctor/patients';
   static const String doctorPatient = '/doctor/patients/:id';
   static const String doctorPosts = '/doctor/posts';
+  static const String doctorRecords = '/doctor/records';
 
   // ── Administration (admin / super_admin) ───────────────────────────────
   static const String adminDashboard = '/admin';

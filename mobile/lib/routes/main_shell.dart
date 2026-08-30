@@ -11,7 +11,17 @@ import 'route_paths.dart';
 
 enum _ShellAction { language, logout }
 
-/// Persistent bottom navigation for the five existing patient branches.
+const primaryNavigationRoutes = <String>[
+  RoutePaths.home,
+  RoutePaths.discover,
+  RoutePaths.services,
+  RoutePaths.profile,
+];
+
+/// Persistent global navigation for the shared MedOrbit product.
+///
+/// Role tools live in Home and Services as additive overlays; no role replaces
+/// these shared destinations or loses the shell.
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.navigationShell});
 
@@ -20,8 +30,19 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(appStringsProvider);
-    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
-    final isAdmin = role == 'admin' || role == 'super_admin';
+    ref.listen<String>(
+      authControllerProvider.select(
+        (state) => '${state.user?.id ?? ''}:${state.user?.role ?? ''}',
+      ),
+      (previous, next) {
+        if (previous == null || previous == next) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            navigationShell.goBranch(0, initialLocation: true);
+          }
+        });
+      },
+    );
     final width = MediaQuery.sizeOf(context).width;
     final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
     final compactNavigation =
@@ -57,49 +78,42 @@ class MainShell extends ConsumerWidget {
             ),
         ],
       ),
-      bottomNavigationBar: isAdmin
-          ? null
-          : SafeArea(
-              top: false,
-              child: NavigationBar(
-                height: navigationHeight,
-                selectedIndex: navigationShell.currentIndex,
-                labelBehavior: compactNavigation
-                    ? NavigationDestinationLabelBehavior.onlyShowSelected
-                    : NavigationDestinationLabelBehavior.alwaysShow,
-                onDestinationSelected: (index) => navigationShell.goBranch(
-                  index,
-                  initialLocation: index == navigationShell.currentIndex,
-                ),
-                destinations: [
-                  _destination(
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home_rounded,
-                    label: strings.navHome,
-                  ),
-                  _destination(
-                    icon: Icons.description_outlined,
-                    selectedIcon: Icons.description_rounded,
-                    label: strings.navRecords,
-                  ),
-                  _destination(
-                    icon: Icons.medication_outlined,
-                    selectedIcon: Icons.medication_rounded,
-                    label: strings.navPrescriptions,
-                  ),
-                  _destination(
-                    icon: Icons.event_available_outlined,
-                    selectedIcon: Icons.event_available_rounded,
-                    label: strings.navAppointments,
-                  ),
-                  _destination(
-                    icon: Icons.comment_outlined,
-                    selectedIcon: Icons.comment_rounded,
-                    label: strings.navFeedback,
-                  ),
-                ],
-              ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: NavigationBar(
+          height: navigationHeight,
+          selectedIndex: navigationShell.currentIndex,
+          labelBehavior: compactNavigation
+              ? NavigationDestinationLabelBehavior.onlyShowSelected
+              : NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (index) => navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          ),
+          destinations: [
+            _destination(
+              icon: Icons.home_outlined,
+              selectedIcon: Icons.home_rounded,
+              label: strings.navHome,
             ),
+            _destination(
+              icon: Icons.travel_explore_outlined,
+              selectedIcon: Icons.travel_explore_rounded,
+              label: strings.navDiscover,
+            ),
+            _destination(
+              icon: Icons.apps_outlined,
+              selectedIcon: Icons.apps_rounded,
+              label: strings.navServices,
+            ),
+            _destination(
+              icon: Icons.person_outline_rounded,
+              selectedIcon: Icons.person_rounded,
+              label: strings.navProfile,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

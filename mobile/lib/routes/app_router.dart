@@ -16,6 +16,7 @@ import '../features/admin/users/screens/admin_users_screen.dart';
 import '../features/appointments/screens/appointments_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/auth/providers/app_role_capabilities_provider.dart';
 import '../features/care/screens/my_doctor_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/login_screen.dart';
@@ -30,6 +31,7 @@ import '../features/discovery/screens/clinic_detail_screen.dart';
 import '../features/discovery/screens/clinic_discovery_screen.dart';
 import '../features/discovery/screens/doctor_detail_screen.dart';
 import '../features/discovery/screens/doctor_directory_screen.dart';
+import '../features/discovery/screens/discover_hub_screen.dart';
 import '../features/chatbot/screens/chatbot_screen.dart';
 import '../features/contact/screens/contact_screen.dart';
 import '../features/chatbot/screens/conversations_screen.dart';
@@ -46,6 +48,7 @@ import '../features/doctor_workspace/screens/doctor_schedule_screen.dart';
 import '../features/doctor_workspace/screens/doctor_workspace_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/home/screens/services_hub_screen.dart';
 import '../features/my_reports/screens/my_reports_screen.dart';
 import '../features/messaging/screens/message_thread_screen.dart';
 import '../features/messaging/screens/messaging_inbox_screen.dart';
@@ -84,6 +87,8 @@ const Set<String> superAdminRoutes = {RoutePaths.adminInvitations};
 
 const Set<String> protectedRoutes = {
   RoutePaths.home,
+  RoutePaths.discover,
+  RoutePaths.services,
   RoutePaths.records,
   RoutePaths.prescriptions,
   RoutePaths.appointments,
@@ -114,9 +119,16 @@ const Set<String> protectedRoutes = {
   RoutePaths.doctorWorkspace,
   RoutePaths.doctorProfessionalProfile,
   RoutePaths.doctorSchedule,
+  RoutePaths.doctorAppointments,
   RoutePaths.doctorPatients,
   RoutePaths.doctorPatient,
   RoutePaths.doctorPosts,
+  RoutePaths.doctorRecords,
+  RoutePaths.mapFoundation,
+  RoutePaths.clinics,
+  RoutePaths.clinicDetail,
+  RoutePaths.doctors,
+  RoutePaths.doctorDetail,
   ...adminRoutes,
   // Session-protected but deliberately not administrator-gated: the account
   // accepting an invitation is still a patient or doctor at that point.
@@ -132,9 +144,7 @@ bool isAdministrationLocation(String location) =>
 
 bool _isSuperAdminLocation(String location) =>
     superAdminRoutes.contains(location) ||
-    superAdminRoutes.any(
-      (route) => location.startsWith('$route/'),
-    );
+    superAdminRoutes.any((route) => location.startsWith('$route/'));
 
 bool isProtectedLocation(String location) {
   if (protectedRoutes.contains(location) ||
@@ -144,7 +154,9 @@ bool isProtectedLocation(String location) {
   return location.startsWith('${RoutePaths.conversations}/') ||
       location.startsWith('/billing/sandbox/') ||
       location.startsWith('${RoutePaths.messages}/') ||
-      location.startsWith('${RoutePaths.doctorPatients}/');
+      location.startsWith('${RoutePaths.doctorPatients}/') ||
+      location.startsWith('${RoutePaths.clinics}/') ||
+      location.startsWith('${RoutePaths.doctors}/');
 }
 
 bool isValidUuid(String value) => RegExp(
@@ -155,6 +167,56 @@ String? doctorRoleRedirect(AuthStatus status, String? role, String location) {
   if (status == AuthStatus.authenticated &&
       location.startsWith('/doctor/') &&
       role?.trim().toLowerCase() != 'doctor') {
+    return RoutePaths.home;
+  }
+  return null;
+}
+
+/// Presentation-level role routing. Backend authorization remains the final
+/// authority, but an account is never sent into another role's clinical or
+/// operational UI while that request is in flight.
+String? capabilityRedirect(AuthStatus status, String? role, String location) {
+  if (status != AuthStatus.authenticated) return null;
+  final capabilities = AppRoleCapabilities.fromRole(role);
+
+  final patientOnly =
+      location == RoutePaths.records ||
+      location == RoutePaths.prescriptions ||
+      location == RoutePaths.appointments ||
+      location == RoutePaths.appointmentBooking ||
+      location == RoutePaths.myDoctors ||
+      location.startsWith('${RoutePaths.myDoctors}/') ||
+      location == RoutePaths.savedPlaces ||
+      location == RoutePaths.myDoctor ||
+      location == RoutePaths.doctorApplication;
+  if (patientOnly && !capabilities.canUsePatientCare) return RoutePaths.home;
+
+  final careOnly =
+      location == RoutePaths.messages ||
+      location.startsWith('${RoutePaths.messages}/');
+  if (careOnly && !capabilities.canUseCareMessages) return RoutePaths.home;
+
+  final aiChatOnly =
+      location == RoutePaths.chatbot ||
+      location.startsWith('${RoutePaths.conversations}/');
+  if (aiChatOnly && !capabilities.canUseAiChat) return RoutePaths.home;
+
+  final consumerOnly =
+      location == RoutePaths.virtualDoctor ||
+      location == RoutePaths.symptomChecker ||
+      location == RoutePaths.drugChecker ||
+      location == RoutePaths.reportSummarizer ||
+      location == RoutePaths.myReports;
+  if (consumerOnly && !capabilities.canUseConsumerAi) return RoutePaths.home;
+
+  final supportOnly =
+      location == RoutePaths.contact || location == RoutePaths.feedback;
+  if (supportOnly && !capabilities.canUseContactAndFeedback) {
+    return RoutePaths.home;
+  }
+
+  if (location == RoutePaths.adminInvitationAccept &&
+      !capabilities.canAcceptAdminInvitation) {
     return RoutePaths.home;
   }
   return null;
@@ -241,7 +303,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         fullLocation: state.uri.toString(),
       );
       if (session != null) return session;
-      return doctorRoleRedirect(auth.status, auth.user?.role, state.uri.path) ??
+      return capabilityRedirect(auth.status, auth.user?.role, state.uri.path) ??
+          doctorRoleRedirect(auth.status, auth.user?.role, state.uri.path) ??
           adminRedirect(auth.status, auth.user?.role, state.matchedLocation);
     },
     routes: [
@@ -323,9 +386,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             validMessageConversationId(state.pathParameters['id']) == null
             ? RoutePaths.messages
             : null,
-        builder: (context, state) => MessageThreadScreen(
-          conversationId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) =>
+            MessageThreadScreen(conversationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: RoutePaths.chatbotConversation,
@@ -368,8 +430,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
-        path: RoutePaths.profile,
-        builder: (context, state) => const ProfileScreen(),
+        path: RoutePaths.records,
+        builder: (context, state) => const RecordsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.prescriptions,
+        builder: (context, state) => const PrescriptionsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.appointments,
+        builder: (context, state) => const AppointmentsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.feedback,
+        builder: (context, state) => const FeedbackScreen(),
       ),
       GoRoute(
         path: RoutePaths.symptomChecker,
@@ -429,6 +503,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DoctorScheduleScreen(),
       ),
       GoRoute(
+        path: RoutePaths.doctorAppointments,
+        builder: (context, state) => const DoctorAppointmentsScreen(),
+      ),
+      GoRoute(
         path: RoutePaths.doctorPatients,
         builder: (context, state) => const DoctorPatientsScreen(),
       ),
@@ -444,6 +522,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.doctorPosts,
         builder: (context, state) => const DoctorPostsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorRecords,
+        builder: (context, state) => const DoctorRecordsScreen(),
       ),
       // ── Administration ─────────────────────────────────────────────────
       GoRoute(
@@ -498,64 +580,31 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.home,
-                builder: (context, state) {
-                  final role = ref
-                      .read(authControllerProvider)
-                      .user
-                      ?.role
-                      .toLowerCase();
-                  if (role == 'doctor') {
-                    return const DoctorWorkspaceScreen();
-                  }
-                  if (role == 'admin' || role == 'super_admin') {
-                    return const AdminDashboardScreen();
-                  }
-                  return const HomeScreen();
-                },
+                builder: (context, state) => const HomeScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.records,
-                builder: (context, state) =>
-                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
-                        'doctor'
-                    ? const DoctorRecordsScreen()
-                    : const RecordsScreen(),
+                path: RoutePaths.discover,
+                builder: (context, state) => const DiscoverHubScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.prescriptions,
-                builder: (context, state) =>
-                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
-                        'doctor'
-                    ? const DoctorPatientsScreen()
-                    : const PrescriptionsScreen(),
+                path: RoutePaths.services,
+                builder: (context, state) => const ServicesHubScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.appointments,
-                builder: (context, state) =>
-                    ref.read(authControllerProvider).user?.role.toLowerCase() ==
-                        'doctor'
-                    ? const DoctorAppointmentsScreen()
-                    : const AppointmentsScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RoutePaths.feedback,
-                builder: (context, state) => const FeedbackScreen(),
+                path: RoutePaths.profile,
+                builder: (context, state) => const ProfileScreen(),
               ),
             ],
           ),

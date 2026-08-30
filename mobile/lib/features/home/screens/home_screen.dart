@@ -18,8 +18,8 @@ import '../../appointments/models/enriched_appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../appointments/utils/appointment_filters.dart';
 import '../../appointments/widgets/appointment_card.dart';
-import '../../admin/dashboard/screens/admin_dashboard_screen.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../../notifications/providers/notifications_provider.dart';
 import '../../prescriptions/models/prescription_model.dart';
 import '../../prescriptions/providers/prescriptions_provider.dart';
@@ -64,21 +64,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     }
 
-    // Administrator accounts never reach this refresh: `build` hands them
-    // AdminDashboardScreen, which owns its own pull-to-refresh.
+    final capabilities = ref.read(appRoleCapabilitiesProvider);
     await Future.wait([
       ignoreFailure(() async {
         final _ = await ref.refresh(currentUserProfileProvider.future);
       }),
       ignoreFailure(
-        () => ref.read(appointmentsControllerProvider.notifier).load(),
+        () => ref.read(notificationsControllerProvider.notifier).load(),
       ),
-      ignoreFailure(() async {
-        final _ = await ref.refresh(prescriptionsListProvider.future);
-      }),
-      ignoreFailure(() async {
-        final _ = await ref.refresh(recordsTimelineProvider.future);
-      }),
+      if (capabilities.canUsePatientCare) ...[
+        ignoreFailure(
+          () => ref.read(appointmentsControllerProvider.notifier).load(),
+        ),
+        ignoreFailure(() async {
+          final _ = await ref.refresh(prescriptionsListProvider.future);
+        }),
+        ignoreFailure(() async {
+          final _ = await ref.refresh(recordsTimelineProvider.future);
+        }),
+      ],
     ]);
   }
 
@@ -96,18 +100,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.build(context);
     final strings = ref.watch(appStringsProvider);
     final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
-    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
-    final isAdmin = role == 'admin' || role == 'super_admin';
+    final capabilities = ref.watch(appRoleCapabilitiesProvider);
     final profileAsync = ref.watch(currentUserProfileProvider);
-
-    // Operational accounts get the administration hub instead of the patient
-    // dashboard: none of the sections below belong to an administrator, and
-    // the backend refuses the endpoints behind them.
-    if (isAdmin) return const AdminDashboardScreen();
-
-    final appointmentsAsync = ref.watch(appointmentsControllerProvider);
-    final prescriptionsAsync = ref.watch(prescriptionsListProvider);
-    final recordsAsync = ref.watch(recordsTimelineProvider);
     // `null` while loading/on error — the quick action falls back to a
     // generic description rather than showing a stale or wrong count.
     final notificationsState = ref.watch(notificationsControllerProvider);
@@ -158,95 +152,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
-                      title: strings.dashboardStatisticsTitle,
-                      subtitle: strings.dashboardStatisticsSubtitle,
+                      title: strings.homeSharedTitle,
+                      subtitle: strings.homeSharedSubtitle,
                     ),
-                    _StatisticsGrid(
-                      appointmentsAsync: appointmentsAsync,
-                      prescriptionsAsync: prescriptionsAsync,
-                      recordsAsync: recordsAsync,
+                    const SizedBox(height: AppTheme.spaceSm),
+                    _SharedProductSection(
                       strings: strings,
-                      onRetryAppointments: () => ref
-                          .read(appointmentsControllerProvider.notifier)
-                          .load(),
-                      onRetryPrescriptions: () =>
-                          ref.invalidate(prescriptionsListProvider),
-                      onRetryRecords: () =>
-                          ref.invalidate(recordsTimelineProvider),
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.quickActionsTitle,
-                      subtitle: strings.quickActionsSubtitle,
-                    ),
-                    AppTextField(
-                      label: strings.dashboardSearchLabel,
-                      hintText: strings.dashboardSearchPlaceholder,
-                      controller: _searchController,
-                      textInputAction: TextInputAction.search,
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: _query.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: strings.clearSearch,
-                              onPressed: _clearQuery,
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                      semanticLabel: strings.dashboardSearchLabel,
-                      onChanged: _updateQuery,
-                    ),
-                    const SizedBox(height: AppTheme.spaceMd),
-                    _QuickActions(
-                      strings: strings,
-                      query: _query,
+                      capabilities: capabilities,
                       notificationsUnreadCount: notificationsUnreadCount,
-                      showDoctorApplication:
-                          homeShowsDoctorApplicationAction(role),
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
-                      title: strings.upcomingAppointmentsTitle,
-                      trailing: _ViewAllButton(
-                        label: strings.viewAll,
-                        onPressed: () => context.go(RoutePaths.appointments),
-                      ),
+                      title: strings.homeRoleToolsTitle,
+                      subtitle: strings.homeRoleToolsSubtitle,
                     ),
-                    _UpcomingAppointments(
-                      appointmentsAsync: appointmentsAsync,
+                    const SizedBox(height: AppTheme.spaceSm),
+                    _RoleWorkspaceSection(
                       strings: strings,
-                      isArabic: isArabic,
-                      onRetry: () => ref
-                          .read(appointmentsControllerProvider.notifier)
-                          .load(),
+                      capabilities: capabilities,
                     ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.recentPrescriptionsTitle,
-                      trailing: _ViewAllButton(
-                        label: strings.viewAll,
-                        onPressed: () => context.go(RoutePaths.prescriptions),
+                    if (capabilities.canUsePatientCare)
+                      _PatientHomeSections(
+                        strings: strings,
+                        isArabic: isArabic,
+                        query: _query,
+                        searchController: _searchController,
+                        onQueryChanged: _updateQuery,
+                        onClearQuery: _clearQuery,
                       ),
-                    ),
-                    _PrescriptionPreview(
-                      prescriptionsAsync: prescriptionsAsync,
-                      strings: strings,
-                      isArabic: isArabic,
-                      onRetry: () => ref.invalidate(prescriptionsListProvider),
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.recentMedicalRecordsTitle,
-                      trailing: _ViewAllButton(
-                        label: strings.viewAll,
-                        onPressed: () => context.go(RoutePaths.records),
-                      ),
-                    ),
-                    _MedicalRecordPreview(
-                      recordsAsync: recordsAsync,
-                      strings: strings,
-                      isArabic: isArabic,
-                      onRetry: () => ref.invalidate(recordsTimelineProvider),
-                    ),
                   ],
                 ),
               ),
@@ -254,6 +187,348 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SharedProductSection extends StatelessWidget {
+  const _SharedProductSection({
+    required this.strings,
+    required this.capabilities,
+    required this.notificationsUnreadCount,
+  });
+
+  final AppStrings strings;
+  final AppRoleCapabilities capabilities;
+  final int? notificationsUnreadCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = <_HomeEntry>[
+      _HomeEntry(
+        strings.discoverTitle,
+        strings.discoverSubtitle,
+        Icons.travel_explore_outlined,
+        AppTheme.secondary,
+        RoutePaths.discover,
+        useGo: true,
+      ),
+      _HomeEntry(
+        strings.navNotifications,
+        notificationsUnreadCount == null || notificationsUnreadCount == 0
+            ? strings.quickNotificationsDescription
+            : strings.notificationsUnreadCountDescription(
+                notificationsUnreadCount!,
+              ),
+        Icons.notifications_outlined,
+        AppTheme.accent,
+        RoutePaths.notifications,
+      ),
+      _HomeEntry(
+        strings.billingTitle,
+        strings.billingProfileDescription,
+        Icons.workspace_premium_outlined,
+        AppTheme.violet,
+        RoutePaths.billing,
+      ),
+      if (capabilities.canUseAiChat)
+        _HomeEntry(
+          strings.quickMedicalChatLabel,
+          strings.quickMedicalChatDescription,
+          Icons.chat_bubble_outline_rounded,
+          AppTheme.violet,
+          RoutePaths.chatbot,
+        ),
+      if (capabilities.canUseConsumerAi)
+        _HomeEntry(
+          strings.servicesCommunicationGroup,
+          strings.homeAiDescription,
+          Icons.auto_awesome_outlined,
+          AppTheme.info,
+          RoutePaths.services,
+          useGo: true,
+        ),
+    ];
+    return _HomeEntryList(entries: entries);
+  }
+}
+
+class _RoleWorkspaceSection extends StatelessWidget {
+  const _RoleWorkspaceSection({
+    required this.strings,
+    required this.capabilities,
+  });
+
+  final AppStrings strings;
+  final AppRoleCapabilities capabilities;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = <_HomeEntry>[];
+    if (capabilities.canUsePatientCare) {
+      entries.addAll([
+        _HomeEntry(
+          strings.navAppointments,
+          strings.quickAppointmentsDescription,
+          Icons.event_available_outlined,
+          AppTheme.info,
+          RoutePaths.appointments,
+        ),
+        _HomeEntry(
+          strings.navRecords,
+          strings.quickRecordsDescription,
+          Icons.description_outlined,
+          AppTheme.secondary,
+          RoutePaths.records,
+        ),
+        _HomeEntry(
+          strings.navPrescriptions,
+          strings.quickPrescriptionsDescription,
+          Icons.medication_outlined,
+          AppTheme.accent,
+          RoutePaths.prescriptions,
+        ),
+        _HomeEntry(
+          strings.myDoctorsTitle,
+          strings.quickMyDoctorsDescription,
+          Icons.health_and_safety_outlined,
+          AppTheme.primary,
+          RoutePaths.myDoctors,
+        ),
+      ]);
+    } else if (capabilities.canUseDoctorWorkspace) {
+      entries.addAll([
+        _HomeEntry(
+          strings.doctorWorkspace,
+          strings.doctorWorkspaceSubtitle,
+          Icons.medical_services_outlined,
+          AppTheme.primary,
+          RoutePaths.doctorWorkspace,
+        ),
+        _HomeEntry(
+          strings.schedule,
+          strings.doctorScheduleSubtitle,
+          Icons.calendar_month_outlined,
+          AppTheme.info,
+          RoutePaths.doctorSchedule,
+        ),
+        _HomeEntry(
+          strings.myPatients,
+          strings.doctorPatientsSubtitle,
+          Icons.groups_outlined,
+          AppTheme.violet,
+          RoutePaths.doctorPatients,
+        ),
+        _HomeEntry(
+          strings.doctorAppointments,
+          strings.doctorAppointmentsSubtitle,
+          Icons.event_available_outlined,
+          AppTheme.accent,
+          RoutePaths.doctorAppointments,
+        ),
+        _HomeEntry(
+          strings.doctorPosts,
+          strings.doctorPostsSubtitle,
+          Icons.article_outlined,
+          AppTheme.success,
+          RoutePaths.doctorPosts,
+        ),
+      ]);
+    } else if (capabilities.canUseAdminTools) {
+      entries.addAll([
+        _HomeEntry(
+          strings.adminMobileDashboardTitle,
+          strings.adminMobileDashboardHint,
+          Icons.admin_panel_settings_outlined,
+          AppTheme.accent,
+          RoutePaths.adminDashboard,
+        ),
+        _HomeEntry(
+          strings.adminToolAnalytics,
+          strings.adminToolAnalyticsDescription,
+          Icons.insights_outlined,
+          AppTheme.primary,
+          RoutePaths.adminAnalytics,
+        ),
+        _HomeEntry(
+          strings.adminToolUsers,
+          strings.adminToolUsersDescription,
+          Icons.manage_accounts_outlined,
+          AppTheme.secondary,
+          RoutePaths.adminUsers,
+        ),
+        _HomeEntry(
+          strings.adminToolModeration,
+          strings.adminToolModerationDescription,
+          Icons.shield_outlined,
+          AppTheme.violet,
+          RoutePaths.adminModeration,
+        ),
+        if (capabilities.canUseSuperAdminTools)
+          _HomeEntry(
+            strings.adminToolInvitations,
+            strings.adminToolInvitationsDescription,
+            Icons.person_add_alt_1_outlined,
+            AppTheme.warning,
+            RoutePaths.adminInvitations,
+          ),
+      ]);
+    }
+    return _HomeEntryList(entries: entries);
+  }
+}
+
+class _HomeEntryList extends StatelessWidget {
+  const _HomeEntryList({required this.entries});
+  final List<_HomeEntry> entries;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (final entry in entries) ...[
+        FeatureCard(
+          key: ValueKey('home-${entry.path}'),
+          title: entry.title,
+          subtitle: entry.subtitle,
+          icon: entry.icon,
+          color: entry.color,
+          trailing: Icon(AppTheme.directionalForwardIconOf(context)),
+          onTap: () =>
+              entry.useGo ? context.go(entry.path) : context.push(entry.path),
+        ),
+        const SizedBox(height: AppTheme.spaceMd),
+      ],
+    ],
+  );
+}
+
+class _HomeEntry {
+  const _HomeEntry(
+    this.title,
+    this.subtitle,
+    this.icon,
+    this.color,
+    this.path, {
+    this.useGo = false,
+  });
+  final String title, subtitle, path;
+  final IconData icon;
+  final Color color;
+  final bool useGo;
+}
+
+class _PatientHomeSections extends ConsumerWidget {
+  const _PatientHomeSections({
+    required this.strings,
+    required this.isArabic,
+    required this.query,
+    required this.searchController,
+    required this.onQueryChanged,
+    required this.onClearQuery,
+  });
+
+  final AppStrings strings;
+  final bool isArabic;
+  final String query;
+  final TextEditingController searchController;
+  final ValueChanged<String> onQueryChanged;
+  final VoidCallback onClearQuery;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appointmentsAsync = ref.watch(appointmentsControllerProvider);
+    final prescriptionsAsync = ref.watch(prescriptionsListProvider);
+    final recordsAsync = ref.watch(recordsTimelineProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.dashboardStatisticsTitle,
+          subtitle: strings.dashboardStatisticsSubtitle,
+        ),
+        _StatisticsGrid(
+          appointmentsAsync: appointmentsAsync,
+          prescriptionsAsync: prescriptionsAsync,
+          recordsAsync: recordsAsync,
+          strings: strings,
+          onRetryAppointments: () =>
+              ref.read(appointmentsControllerProvider.notifier).load(),
+          onRetryPrescriptions: () => ref.invalidate(prescriptionsListProvider),
+          onRetryRecords: () => ref.invalidate(recordsTimelineProvider),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.quickActionsTitle,
+          subtitle: strings.quickActionsSubtitle,
+        ),
+        AppTextField(
+          label: strings.dashboardSearchLabel,
+          hintText: strings.dashboardSearchPlaceholder,
+          controller: searchController,
+          textInputAction: TextInputAction.search,
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: query.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: strings.clearSearch,
+                  onPressed: onClearQuery,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+          semanticLabel: strings.dashboardSearchLabel,
+          onChanged: onQueryChanged,
+        ),
+        const SizedBox(height: AppTheme.spaceMd),
+        _QuickActions(
+          strings: strings,
+          query: query,
+          notificationsUnreadCount: null,
+          showDoctorApplication: true,
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.upcomingAppointmentsTitle,
+          trailing: _ViewAllButton(
+            label: strings.viewAll,
+            onPressed: () => context.push(RoutePaths.appointments),
+          ),
+        ),
+        _UpcomingAppointments(
+          appointmentsAsync: appointmentsAsync,
+          strings: strings,
+          isArabic: isArabic,
+          onRetry: () =>
+              ref.read(appointmentsControllerProvider.notifier).load(),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.recentPrescriptionsTitle,
+          trailing: _ViewAllButton(
+            label: strings.viewAll,
+            onPressed: () => context.push(RoutePaths.prescriptions),
+          ),
+        ),
+        _PrescriptionPreview(
+          prescriptionsAsync: prescriptionsAsync,
+          strings: strings,
+          isArabic: isArabic,
+          onRetry: () => ref.invalidate(prescriptionsListProvider),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.recentMedicalRecordsTitle,
+          trailing: _ViewAllButton(
+            label: strings.viewAll,
+            onPressed: () => context.push(RoutePaths.records),
+          ),
+        ),
+        _MedicalRecordPreview(
+          recordsAsync: recordsAsync,
+          strings: strings,
+          isArabic: isArabic,
+          onRetry: () => ref.invalidate(recordsTimelineProvider),
+        ),
+      ],
     );
   }
 }

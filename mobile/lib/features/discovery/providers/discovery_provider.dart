@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../data/discovery_api.dart';
 import '../models/clinic_models.dart';
 import '../models/doctor_models.dart';
 
-final discoveryApiProvider = Provider<DiscoveryApi>((ref) => DiscoveryApi(ref.watch(dioProvider)));
+final discoveryApiProvider = Provider<DiscoveryApi>(
+  (ref) => DiscoveryApi(ref.watch(dioProvider)),
+);
 
 /// Whether the viewer is signed in. Gates the authenticated-only
 /// recommended-doctors strip and the specialty-search telemetry ping,
@@ -17,7 +20,12 @@ final discoveryViewerAuthenticatedProvider = Provider<bool>(
 );
 
 class DiscoveryError {
-  const DiscoveryError({required this.message, required this.code, this.statusCode, this.retryable = true});
+  const DiscoveryError({
+    required this.message,
+    required this.code,
+    this.statusCode,
+    this.retryable = true,
+  });
 
   final String message;
   final String code;
@@ -82,7 +90,8 @@ class ClinicFilters {
   }
 
   @override
-  int get hashCode => Object.hash(region, service, insurance, search, type, page, limit);
+  int get hashCode =>
+      Object.hash(region, service, insurance, search, type, page, limit);
 }
 
 class DoctorFilters {
@@ -148,7 +157,16 @@ class DoctorFilters {
   }
 
   @override
-  int get hashCode => Object.hash(specialty, region, minRating, minFee, maxFee, search, page, limit);
+  int get hashCode => Object.hash(
+    specialty,
+    region,
+    minRating,
+    minFee,
+    maxFee,
+    search,
+    page,
+    limit,
+  );
 }
 
 class DiscoveryState {
@@ -225,7 +243,9 @@ class DiscoveryState {
     final value = clinicPagination;
     if (value == null) return false;
     if (value.hasNext != null) return value.hasNext!;
-    if (value.page != null && value.totalPages != null) return value.page! < value.totalPages!;
+    if (value.page != null && value.totalPages != null) {
+      return value.page! < value.totalPages!;
+    }
     return false;
   }
 
@@ -233,7 +253,9 @@ class DiscoveryState {
     final value = doctorPagination;
     if (value == null) return false;
     if (value.hasNext != null) return value.hasNext!;
-    if (value.page != null && value.totalPages != null) return value.page! < value.totalPages!;
+    if (value.page != null && value.totalPages != null) {
+      return value.page! < value.totalPages!;
+    }
     return false;
   }
 
@@ -283,7 +305,9 @@ class DiscoveryState {
     return DiscoveryState(
       clinicFilters: clinicFilters ?? this.clinicFilters,
       clinics: clinics ?? this.clinics,
-      clinicPagination: clearClinicPagination ? null : (clinicPagination ?? this.clinicPagination),
+      clinicPagination: clearClinicPagination
+          ? null
+          : (clinicPagination ?? this.clinicPagination),
       nearbyClinics: nearbyClinics ?? this.nearbyClinics,
       selectedClinicDetail: clearSelectedClinicDetail
           ? null
@@ -292,29 +316,46 @@ class DiscoveryState {
       doctors: doctors ?? this.doctors,
       specialties: specialties ?? this.specialties,
       recommendedDoctors: recommendedDoctors ?? this.recommendedDoctors,
-      isLoadingRecommendedDoctors: isLoadingRecommendedDoctors ?? this.isLoadingRecommendedDoctors,
+      isLoadingRecommendedDoctors:
+          isLoadingRecommendedDoctors ?? this.isLoadingRecommendedDoctors,
       recommendedDoctorsError: clearRecommendedDoctorsError
           ? null
           : (recommendedDoctorsError ?? this.recommendedDoctorsError),
-      doctorPagination: clearDoctorPagination ? null : (doctorPagination ?? this.doctorPagination),
-      selectedDoctorId: clearSelectedDoctorId ? null : (selectedDoctorId ?? this.selectedDoctorId),
+      doctorPagination: clearDoctorPagination
+          ? null
+          : (doctorPagination ?? this.doctorPagination),
+      selectedDoctorId: clearSelectedDoctorId
+          ? null
+          : (selectedDoctorId ?? this.selectedDoctorId),
       selectedDoctorDetail: clearSelectedDoctorDetail
           ? null
           : (selectedDoctorDetail ?? this.selectedDoctorDetail),
       doctorAvailability: doctorAvailability ?? this.doctorAvailability,
       isLoadingClinics: isLoadingClinics ?? this.isLoadingClinics,
       isLoadingMoreClinics: isLoadingMoreClinics ?? this.isLoadingMoreClinics,
-      isLoadingNearbyClinics: isLoadingNearbyClinics ?? this.isLoadingNearbyClinics,
-      isLoadingClinicDetail: isLoadingClinicDetail ?? this.isLoadingClinicDetail,
+      isLoadingNearbyClinics:
+          isLoadingNearbyClinics ?? this.isLoadingNearbyClinics,
+      isLoadingClinicDetail:
+          isLoadingClinicDetail ?? this.isLoadingClinicDetail,
       isLoadingDoctors: isLoadingDoctors ?? this.isLoadingDoctors,
       isLoadingMoreDoctors: isLoadingMoreDoctors ?? this.isLoadingMoreDoctors,
-      isLoadingDoctorDetail: isLoadingDoctorDetail ?? this.isLoadingDoctorDetail,
-      isLoadingDoctorAvailability: isLoadingDoctorAvailability ?? this.isLoadingDoctorAvailability,
-      clinicListError: clearClinicListError ? null : (clinicListError ?? this.clinicListError),
+      isLoadingDoctorDetail:
+          isLoadingDoctorDetail ?? this.isLoadingDoctorDetail,
+      isLoadingDoctorAvailability:
+          isLoadingDoctorAvailability ?? this.isLoadingDoctorAvailability,
+      clinicListError: clearClinicListError
+          ? null
+          : (clinicListError ?? this.clinicListError),
       nearbyError: clearNearbyError ? null : (nearbyError ?? this.nearbyError),
-      clinicDetailError: clearClinicDetailError ? null : (clinicDetailError ?? this.clinicDetailError),
-      doctorListError: clearDoctorListError ? null : (doctorListError ?? this.doctorListError),
-      doctorDetailError: clearDoctorDetailError ? null : (doctorDetailError ?? this.doctorDetailError),
+      clinicDetailError: clearClinicDetailError
+          ? null
+          : (clinicDetailError ?? this.clinicDetailError),
+      doctorListError: clearDoctorListError
+          ? null
+          : (doctorListError ?? this.doctorListError),
+      doctorDetailError: clearDoctorDetailError
+          ? null
+          : (doctorDetailError ?? this.doctorDetailError),
       doctorAvailabilityError: clearDoctorAvailabilityError
           ? null
           : (doctorAvailabilityError ?? this.doctorAvailabilityError),
@@ -340,8 +381,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   }
 
   Future<bool> loadClinics({ClinicFilters? filters}) async {
-    final nextFilters = (filters ?? state.clinicFilters).copyWith(page: filters?.page ?? state.clinicFilters.page);
-    if (state.isLoadingClinics && nextFilters == _activeClinicRequest) return false;
+    final nextFilters = (filters ?? state.clinicFilters).copyWith(
+      page: filters?.page ?? state.clinicFilters.page,
+    );
+    if (state.isLoadingClinics && nextFilters == _activeClinicRequest) {
+      return false;
+    }
     final requestId = ++_clinicRequestId;
     _activeClinicRequest = nextFilters;
     _set(
@@ -372,18 +417,29 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       return true;
     } catch (error) {
       if (requestId != _clinicRequestId) return false;
-      _set(state.copyWith(isLoadingClinics: false, clinicListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingClinics: false,
+          clinicListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadMoreClinics() async {
-    if (state.isLoadingClinics || state.isLoadingMoreClinics || !state.canLoadMoreClinics) return false;
+    if (state.isLoadingClinics ||
+        state.isLoadingMoreClinics ||
+        !state.canLoadMoreClinics) {
+      return false;
+    }
     final nextFilters = state.clinicFilters.copyWith(
       page: (state.clinicPagination?.page ?? state.clinicFilters.page) + 1,
       limit: state.clinicPagination?.limit ?? state.clinicFilters.limit,
     );
-    _set(state.copyWith(isLoadingMoreClinics: true, clearClinicListError: true));
+    _set(
+      state.copyWith(isLoadingMoreClinics: true, clearClinicListError: true),
+    );
     try {
       final response = await _api.listClinics(
         region: nextFilters.region,
@@ -404,7 +460,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingMoreClinics: false, clinicListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingMoreClinics: false,
+          clinicListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
@@ -418,7 +479,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
     if (state.isLoadingNearbyClinics) return false;
     _set(state.copyWith(isLoadingNearbyClinics: true, clearNearbyError: true));
     try {
-      final response = await _api.nearbyClinics(lat: lat, lng: lng, radius: radius, type: type);
+      final response = await _api.nearbyClinics(
+        lat: lat,
+        lng: lng,
+        radius: radius,
+        type: type,
+      );
       _set(
         state.copyWith(
           nearbyClinics: response.clinics,
@@ -427,14 +493,21 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingNearbyClinics: false, nearbyError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingNearbyClinics: false,
+          nearbyError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadClinicDetail(String id) async {
     if (state.isLoadingClinicDetail) return false;
-    _set(state.copyWith(isLoadingClinicDetail: true, clearClinicDetailError: true));
+    _set(
+      state.copyWith(isLoadingClinicDetail: true, clearClinicDetailError: true),
+    );
     try {
       final detail = await _api.getClinic(id);
       _set(
@@ -445,7 +518,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingClinicDetail: false, clinicDetailError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingClinicDetail: false,
+          clinicDetailError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
@@ -458,7 +536,9 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
     if (state.specialties.isNotEmpty) return;
     try {
       final specialties = await _api.listSpecialties();
-      if (specialties.isNotEmpty) _set(state.copyWith(specialties: specialties));
+      if (specialties.isNotEmpty) {
+        _set(state.copyWith(specialties: specialties));
+      }
     } catch (_) {
       // Ignored on purpose — the screen has a built-in fallback list.
     }
@@ -497,7 +577,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
     );
     try {
       final doctors = await _api.recommendedDoctors(limit: limit);
-      _set(state.copyWith(recommendedDoctors: doctors, isLoadingRecommendedDoctors: false));
+      _set(
+        state.copyWith(
+          recommendedDoctors: doctors,
+          isLoadingRecommendedDoctors: false,
+        ),
+      );
     } catch (error) {
       _set(
         state.copyWith(
@@ -523,8 +608,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   }
 
   Future<bool> loadDoctors({DoctorFilters? filters}) async {
-    final nextFilters = (filters ?? state.doctorFilters).copyWith(page: filters?.page ?? state.doctorFilters.page);
-    if (state.isLoadingDoctors && nextFilters == _activeDoctorRequest) return false;
+    final nextFilters = (filters ?? state.doctorFilters).copyWith(
+      page: filters?.page ?? state.doctorFilters.page,
+    );
+    if (state.isLoadingDoctors && nextFilters == _activeDoctorRequest) {
+      return false;
+    }
     final requestId = ++_doctorRequestId;
     _activeDoctorRequest = nextFilters;
     _set(
@@ -556,18 +645,29 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       return true;
     } catch (error) {
       if (requestId != _doctorRequestId) return false;
-      _set(state.copyWith(isLoadingDoctors: false, doctorListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingDoctors: false,
+          doctorListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadMoreDoctors() async {
-    if (state.isLoadingDoctors || state.isLoadingMoreDoctors || !state.canLoadMoreDoctors) return false;
+    if (state.isLoadingDoctors ||
+        state.isLoadingMoreDoctors ||
+        !state.canLoadMoreDoctors) {
+      return false;
+    }
     final nextFilters = state.doctorFilters.copyWith(
       page: (state.doctorPagination?.page ?? state.doctorFilters.page) + 1,
       limit: state.doctorPagination?.limit ?? state.doctorFilters.limit,
     );
-    _set(state.copyWith(isLoadingMoreDoctors: true, clearDoctorListError: true));
+    _set(
+      state.copyWith(isLoadingMoreDoctors: true, clearDoctorListError: true),
+    );
     try {
       final response = await _api.listDoctors(
         specialty: nextFilters.specialty,
@@ -589,7 +689,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingMoreDoctors: false, doctorListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingMoreDoctors: false,
+          doctorListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
@@ -620,7 +725,9 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   Future<bool> loadDoctorDetail(String id) async {
     prepareDoctorDetail(id);
     final requestId = ++_doctorDetailRequestId;
-    _set(state.copyWith(isLoadingDoctorDetail: true, clearDoctorDetailError: true));
+    _set(
+      state.copyWith(isLoadingDoctorDetail: true, clearDoctorDetailError: true),
+    );
     try {
       final detail = await _api.getDoctor(id);
       if (requestId != _doctorDetailRequestId) return false;
@@ -633,7 +740,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       return true;
     } catch (error) {
       if (requestId != _doctorDetailRequestId) return false;
-      _set(state.copyWith(isLoadingDoctorDetail: false, doctorDetailError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingDoctorDetail: false,
+          doctorDetailError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
@@ -705,6 +817,8 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   }
 }
 
-final discoveryControllerProvider = StateNotifierProvider<DiscoveryController, DiscoveryState>(
-  (ref) => DiscoveryController(ref.watch(discoveryApiProvider)),
-);
+final discoveryControllerProvider =
+    StateNotifierProvider<DiscoveryController, DiscoveryState>((ref) {
+      ref.watch(appAccountSessionKeyProvider);
+      return DiscoveryController(ref.watch(discoveryApiProvider));
+    });

@@ -25,11 +25,15 @@ class DoctorWorkspaceScreen extends ConsumerWidget {
       (
         s.doctorAppointments,
         Icons.event_available_outlined,
-        RoutePaths.appointments,
+        RoutePaths.doctorAppointments,
       ),
       (s.myPatients, Icons.groups_outlined, RoutePaths.doctorPatients),
       (s.doctorPosts, Icons.article_outlined, RoutePaths.doctorPosts),
-      (s.doctorRecords, Icons.medical_information_outlined, RoutePaths.records),
+      (
+        s.doctorRecords,
+        Icons.medical_information_outlined,
+        RoutePaths.doctorRecords,
+      ),
     ];
     return AppScaffold(
       appBar: AppBar(title: Text(s.doctorWorkspace)),

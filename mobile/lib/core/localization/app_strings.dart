@@ -206,7 +206,8 @@ class AppStrings {
   );
   String get sendResetLinkButton =>
       _t('إرسال رابط إعادة التعيين', 'Send Reset Link');
-  String get resetLinkSentTitle => _t('تحقق من بريدك الإلكتروني', 'Check your email');
+  String get resetLinkSentTitle =>
+      _t('تحقق من بريدك الإلكتروني', 'Check your email');
   String get resetLinkSentHint => _t(
     'إذا كان البريد الإلكتروني موجودًا، فقد تم إرسال رابط لإعادة التعيين.',
     'If the email exists, a reset link has been sent.',
@@ -328,18 +329,19 @@ class AppStrings {
   /// INVALID_VERIFICATION_TOKEN (400), VERIFICATION_TOKEN_USED (409),
   /// VERIFICATION_TOKEN_EXPIRED (410), RATE_LIMITED (429). Transport codes
   /// come from [ApiException] (`network/api_exception.dart`).
-  String? verificationError(String? code, {required bool hadError}) => switch (code) {
-    'INVALID_VERIFICATION_TOKEN' => invalidVerificationCode,
-    'VERIFICATION_TOKEN_EXPIRED' => expiredVerificationCode,
-    'VERIFICATION_TOKEN_USED' => usedVerificationCode,
-    'RATE_LIMITED' => verificationRateLimited,
-    'VALIDATION_ERROR' => verificationValidationError,
-    'CONNECT_TIMEOUT' ||
-    'SEND_TIMEOUT' ||
-    'RECEIVE_TIMEOUT' ||
-    'SERVICE_UNAVAILABLE' => authConnectionError,
-    _ => hadError ? errorGeneric : null,
-  };
+  String? verificationError(String? code, {required bool hadError}) =>
+      switch (code) {
+        'INVALID_VERIFICATION_TOKEN' => invalidVerificationCode,
+        'VERIFICATION_TOKEN_EXPIRED' => expiredVerificationCode,
+        'VERIFICATION_TOKEN_USED' => usedVerificationCode,
+        'RATE_LIMITED' => verificationRateLimited,
+        'VALIDATION_ERROR' => verificationValidationError,
+        'CONNECT_TIMEOUT' ||
+        'SEND_TIMEOUT' ||
+        'RECEIVE_TIMEOUT' ||
+        'SERVICE_UNAVAILABLE' => authConnectionError,
+        _ => hadError ? errorGeneric : null,
+      };
 
   // Bottom nav
   String get navHome => _t('الرئيسية', 'Home');
@@ -347,9 +349,47 @@ class AppStrings {
   String get navPrescriptions => _t('الوصفات', 'Prescriptions');
   String get navAppointments => _t('المواعيد', 'Appointments');
   String get navFeedback => _t('آراؤكم', 'Feedback');
+  String get navDiscover => _t('استكشف', 'Discover');
+  String get navServices => _t('الخدمات', 'Services');
+  String get profileGroupAccount => _t('الحساب', 'Account');
+  String get profileGroupServices => _t('خدمات ميدأوربت', 'MedOrbit services');
+  String get profileGroupRoleTools => _t('أدوات الدور', 'Role tools');
+  String get profileGroupPreferences =>
+      _t('التفضيلات والأمان', 'Preferences & security');
+
+  String get discoverTitle => _t('استكشف ميدأوربت', 'Discover MedOrbit');
+  String get discoverSubtitle => _t(
+    'ابحث عن الأطباء والعيادات المعتمدة من مكان واحد.',
+    'Find approved doctors and clinics from one place.',
+  );
+  String get servicesTitle => _t('خدمات ميدأوربت', 'MedOrbit services');
+  String get servicesSubtitle => _t(
+    'خدماتك المشتركة وأدوات دورك منظمة في مكان واحد.',
+    'Your shared services and role tools, organized in one place.',
+  );
+  String get servicesSharedGroup => _t('الخدمات المشتركة', 'Shared services');
+  String get servicesCommunicationGroup =>
+      _t('التواصل والأدوات الذكية', 'Communication & AI tools');
+  String get servicesPatientGroup => _t('رعايتي الصحية', 'My care');
+  String get servicesDoctorGroup => _t('أدوات الطبيب', 'Doctor tools');
+  String get servicesAdminGroup => _t('أدوات الإدارة', 'Administration tools');
 
   // Home
   String get welcomeBack => _t('مرحبًا بعودتك', 'Welcome back');
+  String get homeSharedTitle => _t('ميدأوربت معك', 'Your MedOrbit');
+  String get homeSharedSubtitle => _t(
+    'الخدمات المشتركة تبقى متاحة مهما كان نوع حسابك.',
+    'Shared MedOrbit services stay available for every account.',
+  );
+  String get homeRoleToolsTitle => _t('مساحة دورك', 'Your role workspace');
+  String get homeRoleToolsSubtitle => _t(
+    'أدوات إضافية مخصصة لمسؤوليات هذا الحساب.',
+    'Additional tools tailored to this account’s responsibilities.',
+  );
+  String get homeAiDescription => _t(
+    'افتح المحادثة الطبية والطبيب الصوتي وأدوات التحليل.',
+    'Open medical chat, Voice Doctor, and analysis tools.',
+  );
   String get patientDashboardSubtitle => _t(
     'إليك نظرة سريعة على صحتك ورعايتك.',
     'Here is a quick look at your health and care.',
@@ -1786,10 +1826,8 @@ class AppStrings {
   String get doctorReviewNoComment =>
       _t('لا يوجد تعليق مكتوب', 'No written comment');
   String get doctorReviewAnonymous => _t('مريض', 'Patient');
-  String get doctorInfoSubSpecialty =>
-      _t('تخصص فرعي', 'Sub-specialty');
-  String get doctorInfoExpertise =>
-      _t('مجالات الخبرة', 'Areas of expertise');
+  String get doctorInfoSubSpecialty => _t('تخصص فرعي', 'Sub-specialty');
+  String get doctorInfoExpertise => _t('مجالات الخبرة', 'Areas of expertise');
   String get doctorInfoInterests =>
       _t('الاهتمامات المهنية', 'Professional interests');
   String get doctorInfoLanguages => _t('اللغات', 'Languages');
@@ -2052,7 +2090,8 @@ class AppStrings {
   };
 
   // ─── Doctor Application ────────────────────────────────────────────────
-  String get doctorApplicationTitle => _t('طلب الانضمام كطبيب', 'Doctor application');
+  String get doctorApplicationTitle =>
+      _t('طلب الانضمام كطبيب', 'Doctor application');
   String get doctorApplicationQuickActionLabel =>
       _t('طلب الانضمام كطبيب', 'Apply to become a doctor');
   String get doctorApplicationQuickActionDescription => _t(
@@ -2077,7 +2116,8 @@ class AppStrings {
   );
 
   // Form
-  String get doctorApplicationFormTitle => _t('طلب الانضمام', 'Application details');
+  String get doctorApplicationFormTitle =>
+      _t('طلب الانضمام', 'Application details');
   String get doctorApplicationNewFormTitle =>
       _t('تقديم طلب جديد', 'Submit a new application');
   String get doctorApplicationFormIntro => _t(
@@ -2113,22 +2153,27 @@ class AppStrings {
       _t('الشهادات', 'Certifications');
   String get doctorApplicationOnePerLineHint =>
       _t('أدخل عنصراً واحداً في كل سطر', 'Enter one item per line');
-  String get doctorApplicationBioLabel =>
-      _t('نبذة مهنية', 'Professional bio');
+  String get doctorApplicationBioLabel => _t('نبذة مهنية', 'Professional bio');
   String get doctorApplicationPrivacyNote => _t(
     'لا تضع كلمات مرور أو بيانات مرضى أو مستندات حساسة في هذا النموذج.',
     'Do not put passwords, patient data, or sensitive documents in this form.',
   );
   String get doctorApplicationSubmit => _t('إرسال الطلب', 'Submit application');
-  String get doctorApplicationSubmitting => _t('جارٍ الإرسال...', 'Submitting…');
-  String get doctorApplicationSubmitSuccess =>
-      _t('تم إرسال طلبك للمراجعة.', 'Your application has been submitted for review.');
+  String get doctorApplicationSubmitting =>
+      _t('جارٍ الإرسال...', 'Submitting…');
+  String get doctorApplicationSubmitSuccess => _t(
+    'تم إرسال طلبك للمراجعة.',
+    'Your application has been submitted for review.',
+  );
 
   // Status
-  String get doctorApplicationStatusHeading => _t('حالة الطلب', 'Application status');
-  String get doctorApplicationStatusPending => _t('قيد المراجعة', 'Under review');
+  String get doctorApplicationStatusHeading =>
+      _t('حالة الطلب', 'Application status');
+  String get doctorApplicationStatusPending =>
+      _t('قيد المراجعة', 'Under review');
   String get doctorApplicationStatusApproved => _t('تمت الموافقة', 'Approved');
-  String get doctorApplicationStatusRejected => _t('بحاجة إلى تعديل', 'Needs changes');
+  String get doctorApplicationStatusRejected =>
+      _t('بحاجة إلى تعديل', 'Needs changes');
   String get doctorApplicationStatusWithdrawn => _t('تم السحب', 'Withdrawn');
   String get doctorApplicationStatusUnknown =>
       _t('حالة غير معروفة', 'Status unavailable');
@@ -2152,7 +2197,8 @@ class AppStrings {
     'تعذّر عرض حالة هذا الطلب. حدّث الصفحة أو حاول لاحقاً.',
     'This application status could not be shown. Refresh or try again later.',
   );
-  String get doctorApplicationSubmittedOn => _t('تاريخ التقديم', 'Submitted on');
+  String get doctorApplicationSubmittedOn =>
+      _t('تاريخ التقديم', 'Submitted on');
   String get doctorApplicationReviewedOn => _t('تاريخ المراجعة', 'Reviewed on');
   String get doctorApplicationRejectionReason => _t('سبب التعديل', 'Reason');
   String doctorApplicationYearsValue(int years) =>
@@ -2161,7 +2207,8 @@ class AppStrings {
       _t('تسجيل الدخول من جديد', 'Sign in again');
 
   // Withdraw
-  String get doctorApplicationWithdraw => _t('سحب الطلب', 'Withdraw application');
+  String get doctorApplicationWithdraw =>
+      _t('سحب الطلب', 'Withdraw application');
   String get doctorApplicationWithdrawTitle =>
       _t('سحب الطلب الحالي؟', 'Withdraw this application?');
   String get doctorApplicationWithdrawBody => _t(
@@ -2173,7 +2220,8 @@ class AppStrings {
       _t('تم سحب طلبك.', 'Your application has been withdrawn.');
 
   // History
-  String get doctorApplicationHistoryTitle => _t('سجل الطلبات', 'Application history');
+  String get doctorApplicationHistoryTitle =>
+      _t('سجل الطلبات', 'Application history');
 
   /// Safe localized copy for a Doctor Application backend/transport error
   /// code. Never renders a raw backend message. Verified `/doctor-applications`
@@ -2531,6 +2579,10 @@ class AppStrings {
     'Manage your schedule, patients, and professional content securely.',
   );
   String get professionalProfile => _t('الملف المهني', 'Professional profile');
+  String get doctorProfessionalProfileSubtitle => _t(
+    'حدّث بياناتك المهنية الظاهرة للمرضى.',
+    'Update the professional information patients can see.',
+  );
   String get professionalHeadline =>
       _t('العنوان المهني', 'Professional headline');
   String get professionalBiography =>
@@ -2562,10 +2614,30 @@ class AppStrings {
   String bookingDaysValue(int value) =>
       _t('$value يومًا للحجز', '$value booking days');
   String get schedule => _t('الجدول والتوفر', 'Schedule & availability');
+  String get doctorScheduleSubtitle => _t(
+    'نظّم أوقات التوفر وإعدادات الحجز.',
+    'Manage availability and booking settings.',
+  );
   String get doctorAppointments => _t('مواعيد الطبيب', 'Doctor appointments');
+  String get doctorAppointmentsSubtitle => _t(
+    'راجع المواعيد وأكّدها وأكملها.',
+    'Review, confirm, and complete appointments.',
+  );
   String get myPatients => _t('مرضاي', 'My patients');
+  String get doctorPatientsSubtitle => _t(
+    'افتح ملفات المرضى المرتبطين بك سريريًا.',
+    'Open clinically connected patient files.',
+  );
   String get doctorPosts => _t('منشوراتي', 'My posts');
+  String get doctorPostsSubtitle => _t(
+    'أنشئ المسودات وأدر المنشورات المنشورة.',
+    'Create drafts and manage published posts.',
+  );
   String get doctorRecords => _t('السجلات الطبية', 'Medical records');
+  String get doctorRecordsSubtitle => _t(
+    'أنشئ السجلات السريرية المرتبطة بالمواعيد.',
+    'Create appointment-linked clinical records.',
+  );
   String get doctorEligibilityUnavailable => _t(
     'مساحة عمل الطبيب غير متاحة لهذا الحساب.',
     'The doctor workspace is not available for this account.',
@@ -2874,10 +2946,8 @@ class AppStrings {
   String get adminAnalyticsTriageLevels =>
       _t('مستويات الأولوية', 'Triage levels');
   String get adminAnalyticsClinicTypes => _t('أنواع المنشآت', 'Facility types');
-  String get adminAnalyticsAwaitingData => _t(
-    'لا توجد بيانات كافية بعد.',
-    'Not enough data yet.',
-  );
+  String get adminAnalyticsAwaitingData =>
+      _t('لا توجد بيانات كافية بعد.', 'Not enough data yet.');
   String get adminAnalyticsSectionUnavailable => _t(
     'هذا القسم غير متاح حالياً.',
     'This section is unavailable right now.',
@@ -2937,10 +3007,8 @@ class AppStrings {
   String get adminUsersSubtitle =>
       _t('إدارة حسابات المنصة.', 'Manage platform accounts.');
   String get adminUsersSearchLabel => _t('ابحث عن المستخدمين', 'Search users');
-  String get adminUsersSearchHint => _t(
-    'الاسم أو البريد الإلكتروني',
-    'Name or email address',
-  );
+  String get adminUsersSearchHint =>
+      _t('الاسم أو البريد الإلكتروني', 'Name or email address');
   String get adminUsersRoleFilterLabel => _t('الدور', 'Role');
   String get adminUsersStatusFilterLabel => _t('الحالة', 'Status');
   String get adminUsersStatusActive => _t('نشط', 'Active');
@@ -3022,7 +3090,8 @@ class AppStrings {
   String get adminApplicationBio => _t('نبذة مهنية', 'Professional bio');
   String get adminApplicationSubmittedAt => _t('تاريخ التقديم', 'Submitted');
   String get adminApplicationReviewedAt => _t('تاريخ المراجعة', 'Reviewed');
-  String get adminApplicationRejectionReason => _t('سبب الرفض', 'Rejection reason');
+  String get adminApplicationRejectionReason =>
+      _t('سبب الرفض', 'Rejection reason');
   String get adminApplicationApprove => _t('اعتماد', 'Approve');
   String get adminApplicationReject => _t('رفض', 'Reject');
   String get adminApplicationApproveTitle =>
@@ -3039,10 +3108,8 @@ class AppStrings {
   );
   String get adminApplicationRejectReasonLabel =>
       _t('سبب الرفض', 'Rejection reason');
-  String get adminApplicationRejectReasonHint => _t(
-    'اشرح سبب الرفض للمتقدّم',
-    'Explain the decision to the applicant',
-  );
+  String get adminApplicationRejectReasonHint =>
+      _t('اشرح سبب الرفض للمتقدّم', 'Explain the decision to the applicant');
   String get adminApplicationRejectReasonRequired =>
       _t('سبب الرفض مطلوب.', 'A rejection reason is required.');
   String get adminApplicationApprovedSuccess =>
@@ -3056,8 +3123,7 @@ class AppStrings {
   String adminApplicationYears(int years) => _t('$years سنة', '$years years');
 
   // ── Admin invitations (super_admin) ────────────────────────────────────
-  String get adminInvitationsTitle =>
-      _t('دعوات المشرفين', 'Admin invitations');
+  String get adminInvitationsTitle => _t('دعوات المشرفين', 'Admin invitations');
   String get adminInvitationsSubtitle => _t(
     'ادعُ حسابات موثقة وأدر الدعوات المعلقة.',
     'Invite verified accounts and manage pending invitations.',
@@ -3127,7 +3193,8 @@ class AppStrings {
   );
   String get adminInvitationAcceptTokenRequired =>
       _t('أدخل رابط الدعوة أو الرمز.', 'Enter the invitation link or code.');
-  String get adminInvitationAcceptSubmit => _t('قبول الدعوة', 'Accept invitation');
+  String get adminInvitationAcceptSubmit =>
+      _t('قبول الدعوة', 'Accept invitation');
   String get adminInvitationAcceptSuccessTitle =>
       _t('تم قبول الدعوة', 'Invitation accepted');
   String get adminInvitationAcceptSuccessBody => _t(
@@ -3153,10 +3220,8 @@ class AppStrings {
   String get adminContactStatusRead => _t('مقروءة', 'Read');
   String get adminContactStatusResolved => _t('محلولة', 'Resolved');
   String get adminContactEmptyTitle => _t('لا توجد رسائل', 'No messages');
-  String get adminContactEmptyHint => _t(
-    'لا توجد رسائل بهذه الحالة.',
-    'There are no messages in this state.',
-  );
+  String get adminContactEmptyHint =>
+      _t('لا توجد رسائل بهذه الحالة.', 'There are no messages in this state.');
   String get adminContactSender => _t('المرسل', 'From');
   String get adminContactReceived => _t('وصلت في', 'Received');
   String get adminContactMessageLabel => _t('نص الرسالة', 'Message');
@@ -3169,8 +3234,10 @@ class AppStrings {
     'ستنتقل الرسالة إلى الحالة "محلولة" وتُسجَّل باسمك.',
     'The message moves to the resolved state and is recorded against your account.',
   );
-  String get adminContactResolvedSuccess =>
-      _t('تم وضع علامة على الرسالة كمحلولة.', 'The message was marked resolved.');
+  String get adminContactResolvedSuccess => _t(
+    'تم وضع علامة على الرسالة كمحلولة.',
+    'The message was marked resolved.',
+  );
   String get adminContactAutoReadNote => _t(
     'تُوضع علامة "مقروءة" تلقائياً عند فتح رسالة جديدة.',
     'Opening a new message marks it as read automatically.',
@@ -3215,10 +3282,8 @@ class AppStrings {
       _t('لا توجد منشورات', 'No posts');
   String get adminModerationCommentsEmptyTitle =>
       _t('لا توجد تعليقات', 'No comments');
-  String get adminModerationEmptyHint => _t(
-    'لا يوجد محتوى بهذه الحالة.',
-    'There is no content in this state.',
-  );
+  String get adminModerationEmptyHint =>
+      _t('لا يوجد محتوى بهذه الحالة.', 'There is no content in this state.');
   String get adminModerationUntitled => _t('بدون عنوان', 'Untitled');
   String get adminModerationPublishState => _t('حالة النشر', 'Publish state');
   String get adminModerationLimitNote => _t(
@@ -3343,30 +3408,41 @@ class AppStrings {
   );
   String get messagesNew => _t('رسالة جديدة', 'New message');
   String get messagesMessageDoctor => _t('مراسلة الطبيب', 'Message doctor');
-  String get messagesNewTitle => _t('بدء محادثة نصية', 'Start a text conversation');
+  String get messagesNewTitle =>
+      _t('بدء محادثة نصية', 'Start a text conversation');
   String get messagesThreadTitle => _t('المحادثة', 'Conversation');
   String get messagesRoleDoctor => _t('طبيب', 'Doctor');
   String get messagesRolePatient => _t('مريض', 'Patient');
   String get messagesVerifiedDoctor => _t('طبيب معتمد', 'Approved doctor');
-  String get messagesPatientOpenToRequests => _t('مريض يقبل طلبات المراسلة', 'Patient open to message requests');
+  String get messagesPatientOpenToRequests =>
+      _t('مريض يقبل طلبات المراسلة', 'Patient open to message requests');
   String get messagesUnknownUser => _t('مستخدم MedOrbit', 'MedOrbit user');
   String get messagesYou => _t('أنت', 'You');
   String get messagesCounterpart => _t('الطرف الآخر', 'Other person');
-  String get messagesInboxEmptyTitle => _t('لا توجد محادثات بعد', 'No conversations yet');
+  String get messagesInboxEmptyTitle =>
+      _t('لا توجد محادثات بعد', 'No conversations yet');
   String get messagesInboxEmptyHint => _t(
     'ابدأ من زر رسالة جديدة للعثور على مستلم مؤهل.',
     'Use New message to find an eligible recipient.',
   );
-  String get messagesStartPreview => _t('ابدأ المحادثة', 'Start the conversation');
-  String get messagesRequestPendingPreview => _t('طلب مراسلة بانتظار الرد', 'Message request awaiting response');
-  String get messagesInboxLoadError => _t('تعذر تحميل المحادثات', 'Could not load conversations');
-  String get messagesThreadLoadError => _t('تعذر تحميل الرسائل', 'Could not load messages');
-  String get messagesSearchError => _t('تعذر البحث عن المستلمين', 'Could not search recipients');
+  String get messagesStartPreview =>
+      _t('ابدأ المحادثة', 'Start the conversation');
+  String get messagesRequestPendingPreview =>
+      _t('طلب مراسلة بانتظار الرد', 'Message request awaiting response');
+  String get messagesInboxLoadError =>
+      _t('تعذر تحميل المحادثات', 'Could not load conversations');
+  String get messagesThreadLoadError =>
+      _t('تعذر تحميل الرسائل', 'Could not load messages');
+  String get messagesSearchError =>
+      _t('تعذر البحث عن المستلمين', 'Could not search recipients');
   String get messagesTextOnlyNotice => _t(
     'هذه الخدمة للمراسلة النصية فقط، ولا تمنح بحد ذاتها صلاحية الوصول إلى السجلات الطبية.',
     'This service is for text messaging only. It does not itself grant access to medical records.',
   );
-  String messagesUnreadCount(int count) => _t('$count رسالة غير مقروءة', '$count unread message${count == 1 ? '' : 's'}');
+  String messagesUnreadCount(int count) => _t(
+    '$count رسالة غير مقروءة',
+    '$count unread message${count == 1 ? '' : 's'}',
+  );
   String get messagesPatientRecipientHint => _t(
     'ابحث عن طبيب معتمد بالاسم أو التخصص.',
     'Find an approved doctor by name or specialty.',
@@ -3375,34 +3451,46 @@ class AppStrings {
     'ابحث عن طبيب معتمد أو مريض اختار استقبال طلبات الأطباء.',
     'Find an approved doctor or a patient who opted in to doctor requests.',
   );
-  String get messagesRecipientSearchLabel => _t('بحث عن مستلم', 'Find a recipient');
-  String get messagesRecipientSearchHint => _t('الاسم أو التخصص أو المدينة', 'Name, specialty, or city');
+  String get messagesRecipientSearchLabel =>
+      _t('بحث عن مستلم', 'Find a recipient');
+  String get messagesRecipientSearchHint =>
+      _t('الاسم أو التخصص أو المدينة', 'Name, specialty, or city');
   String get messagesSearch => _t('بحث', 'Search');
   String get messagesSearching => _t('جارٍ البحث...', 'Searching...');
-  String get messagesNoEligibleRecipients => _t('لا توجد نتائج مؤهلة', 'No eligible recipients');
+  String get messagesNoEligibleRecipients =>
+      _t('لا توجد نتائج مؤهلة', 'No eligible recipients');
   String get messagesNoEligibleRecipientsHint => _t(
     'غيّر عبارة البحث أو حاول لاحقًا. تظهر للأطباء فقط ملفات المرضى الذين اختاروا استقبال الطلبات.',
     'Try another search. Doctors only see patients who opted in to requests.',
   );
-  String get messagesStartingConversation => _t('جارٍ فتح المحادثة...', 'Opening conversation...');
-  String get messagesRequestSent => _t('تم إرسال طلب مراسلة آمن.', 'A secure message request was sent.');
-  String get messagesThreadEmptyTitle => _t('لا توجد رسائل بعد', 'No messages yet');
-  String get messagesThreadEmptyHint => _t('ابدأ بتحية واضحة.', 'Start with a clear greeting.');
-  String get messagesPendingEmptyTitle => _t('الطلب بانتظار الرد', 'Request awaiting response');
+  String get messagesStartingConversation =>
+      _t('جارٍ فتح المحادثة...', 'Opening conversation...');
+  String get messagesRequestSent =>
+      _t('تم إرسال طلب مراسلة آمن.', 'A secure message request was sent.');
+  String get messagesThreadEmptyTitle =>
+      _t('لا توجد رسائل بعد', 'No messages yet');
+  String get messagesThreadEmptyHint =>
+      _t('ابدأ بتحية واضحة.', 'Start with a clear greeting.');
+  String get messagesPendingEmptyTitle =>
+      _t('الطلب بانتظار الرد', 'Request awaiting response');
   String get messagesPendingComposerDisabled => _t(
     'تُفتح الرسائل بعد قبول المريض للطلب.',
     'Messaging unlocks after the patient accepts the request.',
   );
   String get messagesHistoryLabel => _t('سجل الرسائل', 'Message history');
   String get messagesLoadOlder => _t('تحميل رسائل أقدم', 'Load older messages');
-  String get messagesJumpToLatest => _t('الانتقال إلى أحدث رسالة', 'Jump to latest message');
-  String get messagesComposerHint => _t('اكتب رسالة نصية...', 'Write a text message...');
+  String get messagesJumpToLatest =>
+      _t('الانتقال إلى أحدث رسالة', 'Jump to latest message');
+  String get messagesComposerHint =>
+      _t('اكتب رسالة نصية...', 'Write a text message...');
   String get messagesSend => _t('إرسال', 'Send');
   String get messagesSending => _t('جارٍ الإرسال...', 'Sending...');
   String get messagesSendFailed => _t('تعذر الإرسال', 'Send failed');
   String get messagesDismiss => _t('إخفاء', 'Dismiss');
-  String get messagesIncomingRequestTitle => _t('طلب مراسلة من طبيب معتمد', 'Message request from an approved doctor');
-  String get messagesOutgoingRequestTitle => _t('طلب المراسلة بانتظار المريض', 'Message request awaiting the patient');
+  String get messagesIncomingRequestTitle =>
+      _t('طلب مراسلة من طبيب معتمد', 'Message request from an approved doctor');
+  String get messagesOutgoingRequestTitle =>
+      _t('طلب المراسلة بانتظار المريض', 'Message request awaiting the patient');
   String get messagesRequestTextOnlyWarning => _t(
     'قبول الطلب يفتح المراسلة النصية فقط ولا يمنح أي صلاحية طبية أو وصول إلى السجلات.',
     'Accepting opens text messaging only. It grants no clinical access or medical-record permission.',
@@ -3413,38 +3501,76 @@ class AppStrings {
   );
   String get messagesAccept => _t('قبول', 'Accept');
   String get messagesDecline => _t('رفض', 'Decline');
-  String get messagesRequestAccepted => _t('تم قبول طلب المراسلة.', 'Message request accepted.');
-  String get messagesDeclineTitle => _t('رفض طلب المراسلة؟', 'Decline this message request?');
+  String get messagesRequestAccepted =>
+      _t('تم قبول طلب المراسلة.', 'Message request accepted.');
+  String get messagesDeclineTitle =>
+      _t('رفض طلب المراسلة؟', 'Decline this message request?');
   String get messagesDeclineBody => _t(
     'سيُغلق الطلب ولن يتمكن الطبيب من إرسال رسائل في هذه المحادثة.',
     'The request will close and the doctor will not be able to send messages in this conversation.',
   );
   String get messagesConnecting => _t('جارٍ الاتصال...', 'Connecting...');
   String get messagesConnected => _t('متصل', 'Connected');
-  String get messagesReconnecting => _t('جارٍ إعادة الاتصال...', 'Reconnecting...');
+  String get messagesReconnecting =>
+      _t('جارٍ إعادة الاتصال...', 'Reconnecting...');
   String get messagesLiveUnavailable => _t(
     'التحديث المباشر غير متاح. سنواصل مزامنة الرسائل بأمان.',
     'Live updates are unavailable. Messages will continue to sync safely.',
   );
   String get messagesNotificationType => _t('رسائل الرعاية', 'Care message');
-  String get messagesOpenConversation => _t('فتح المحادثة', 'Open conversation');
-  String get messagesPrivacyTitle => _t('السماح بطلبات مراسلة الأطباء', 'Allow doctor message requests');
+  String get messagesOpenConversation =>
+      _t('فتح المحادثة', 'Open conversation');
+  String get messagesPrivacyTitle =>
+      _t('السماح بطلبات مراسلة الأطباء', 'Allow doctor message requests');
   String get messagesPrivacyHelp => _t(
     'عند التفعيل، يمكن للأطباء المعتمدين العثور على ملفك وبدء طلب مراسلة جديد. لا تتأثر المحادثات المقبولة الحالية عند الإيقاف.',
     'When enabled, approved doctors can find your profile and start a new message request. Existing accepted conversations are unaffected when disabled.',
   );
 
   String messagingError(String? code) => switch (code) {
-    'UNAUTHORIZED' => _t('انتهت جلستك. سجّل الدخول من جديد ثم حاول مرة أخرى.', 'Your session has expired. Sign in again and retry.'),
-    'FORBIDDEN' || 'MESSAGING_FORBIDDEN' => _t('لا يملك هذا الحساب صلاحية تنفيذ إجراء المراسلة المطلوب.', 'This account cannot perform the requested messaging action.'),
-    'NOT_FOUND' => _t('لم تعد المحادثة أو جهة الاتصال متاحة.', 'This conversation or recipient is no longer available.'),
-    'REQUEST_NOT_PENDING' => _t('تمت معالجة طلب المراسلة بالفعل. حدّث المحادثة لرؤية حالته الحالية.', 'This request was already handled. Refresh to see its current status.'),
-    'MESSAGE_REQUEST_COOLDOWN' => _t('لا يمكن إرسال طلب جديد إلى هذا المريض حاليًا. حاول لاحقًا.', 'A new request cannot be sent to this patient yet. Try again later.'),
-    'MESSAGE_REQUEST_RATE_LIMITED' || 'RATE_LIMITED' => _t('تم إجراء محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.', 'Too many attempts. Wait a little while and try again.'),
-    'VALIDATION_ERROR' || 'INVALID_FORMAT' => _t('تحقق من البيانات المدخلة ثم حاول مرة أخرى.', 'Check the entered information and try again.'),
-    'CONNECT_TIMEOUT' || 'SEND_TIMEOUT' || 'RECEIVE_TIMEOUT' || 'SERVICE_UNAVAILABLE' => _t('تعذر الوصول إلى الخدمة. تحقق من اتصالك ثم حاول مرة أخرى.', 'Could not reach the service. Check your connection and try again.'),
-    'INVALID_RESPONSE' || 'EMPTY_RESPONSE' => _t('وصل رد غير مكتمل من الخدمة. حاول مرة أخرى.', 'The service returned an incomplete response. Please retry.'),
-    _ => _t('تعذر إكمال الإجراء. حاول مرة أخرى.', 'The action could not be completed. Please try again.'),
+    'UNAUTHORIZED' => _t(
+      'انتهت جلستك. سجّل الدخول من جديد ثم حاول مرة أخرى.',
+      'Your session has expired. Sign in again and retry.',
+    ),
+    'FORBIDDEN' || 'MESSAGING_FORBIDDEN' => _t(
+      'لا يملك هذا الحساب صلاحية تنفيذ إجراء المراسلة المطلوب.',
+      'This account cannot perform the requested messaging action.',
+    ),
+    'NOT_FOUND' => _t(
+      'لم تعد المحادثة أو جهة الاتصال متاحة.',
+      'This conversation or recipient is no longer available.',
+    ),
+    'REQUEST_NOT_PENDING' => _t(
+      'تمت معالجة طلب المراسلة بالفعل. حدّث المحادثة لرؤية حالته الحالية.',
+      'This request was already handled. Refresh to see its current status.',
+    ),
+    'MESSAGE_REQUEST_COOLDOWN' => _t(
+      'لا يمكن إرسال طلب جديد إلى هذا المريض حاليًا. حاول لاحقًا.',
+      'A new request cannot be sent to this patient yet. Try again later.',
+    ),
+    'MESSAGE_REQUEST_RATE_LIMITED' || 'RATE_LIMITED' => _t(
+      'تم إجراء محاولات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.',
+      'Too many attempts. Wait a little while and try again.',
+    ),
+    'VALIDATION_ERROR' || 'INVALID_FORMAT' => _t(
+      'تحقق من البيانات المدخلة ثم حاول مرة أخرى.',
+      'Check the entered information and try again.',
+    ),
+    'CONNECT_TIMEOUT' ||
+    'SEND_TIMEOUT' ||
+    'RECEIVE_TIMEOUT' ||
+    'SERVICE_UNAVAILABLE' => _t(
+      'تعذر الوصول إلى الخدمة. تحقق من اتصالك ثم حاول مرة أخرى.',
+      'Could not reach the service. Check your connection and try again.',
+    ),
+    'INVALID_RESPONSE' || 'EMPTY_RESPONSE' => _t(
+      'وصل رد غير مكتمل من الخدمة. حاول مرة أخرى.',
+      'The service returned an incomplete response. Please retry.',
+    ),
+    _ => _t(
+      'تعذر إكمال الإجراء. حاول مرة أخرى.',
+      'The action could not be completed. Please try again.',
+    ),
   };
 }
 
