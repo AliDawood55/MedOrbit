@@ -105,6 +105,12 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                     onModeChanged: (mode) => setState(() => _mode = mode),
                   ),
                   const SizedBox(height: AppTheme.spaceLg),
+                  _FacilityTypeQuickFilter(
+                    strings: strings,
+                    selected: discovery.clinicFilters.type,
+                    onSelected: _onFacilityTypeChanged,
+                  ),
+                  const SizedBox(height: AppTheme.spaceLg),
                   _NearbyCard(
                     strings: strings,
                     locationState: location,
@@ -214,6 +220,21 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
   void _clearSearch() {
     _searchController.clear();
     _onSearchChanged('');
+  }
+
+  void _onFacilityTypeChanged(String? type) {
+    final current = ref.read(discoveryControllerProvider).clinicFilters;
+    final filters = current.copyWith(
+      type: type,
+      clearType: type == null,
+      page: 1,
+    );
+    if (_nearbyMode) {
+      ref.read(discoveryControllerProvider.notifier).updateClinicFilters(filters);
+      _loadNearbyFromState();
+    } else {
+      ref.read(discoveryControllerProvider.notifier).loadClinics(filters: filters);
+    }
   }
 
   Future<void> _showFilters(DiscoveryState discovery) async {
@@ -369,6 +390,65 @@ class _SearchAndViewControls extends StatelessWidget {
               selected: {mode},
               onSelectionChanged: (selection) => onModeChanged(selection.single),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Always-visible compact facility-type filter, mirroring the web filter bar
+/// (All / Clinic / Dental / Pharmacy / Hospital). The advanced bottom sheet
+/// still exposes the full set of facility types; both write the same
+/// [ClinicFilters.type] so they stay in sync.
+class _FacilityTypeQuickFilter extends StatelessWidget {
+  const _FacilityTypeQuickFilter({
+    required this.strings,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final AppStrings strings;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+
+  static const _types = <String, IconData>{
+    'clinic': Icons.local_hospital_outlined,
+    'dental': Icons.medical_services_outlined,
+    'pharmacy': Icons.local_pharmacy_outlined,
+    'hospital': Icons.emergency_outlined,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: strings.clinicFilterFacilityType,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsetsDirectional.only(end: AppTheme.spaceLg),
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: AppTheme.spaceXs),
+              child: ChoiceChip(
+                key: const ValueKey('facility-type-quick-all'),
+                label: Text(strings.clinicFilterAllTypes),
+                selected: selected == null,
+                onSelected: (_) => onSelected(null),
+              ),
+            ),
+            for (final entry in _types.entries)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: AppTheme.spaceXs),
+                child: ChoiceChip(
+                  key: ValueKey('facility-type-quick-${entry.key}'),
+                  avatar: Icon(entry.value, size: AppTheme.iconSm),
+                  label: Text(strings.clinicTypeLabelFor(entry.key)),
+                  selected: selected == entry.key,
+                  onSelected: (_) => onSelected(entry.key),
+                ),
+              ),
           ],
         ),
       ),

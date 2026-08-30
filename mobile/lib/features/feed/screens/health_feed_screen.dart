@@ -36,8 +36,9 @@ class _HealthFeedScreenState extends ConsumerState<HealthFeedScreen> {
           queryParameters: isAdmin ? null : const {'limit': 20},
         );
     final data = response.data?['data'];
-    if (response.data?['success'] != true)
+    if (response.data?['success'] != true) {
       throw DioException(requestOptions: RequestOptions(path: '/feed/posts'));
+    }
     // Public feed returns {items: [...]}; the protected admin moderation
     // endpoint intentionally returns the post list itself.
     final items = data is Map ? data['items'] : data;
@@ -63,22 +64,25 @@ class _HealthFeedScreenState extends ConsumerState<HealthFeedScreen> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _posts,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done)
+          if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
+          }
+          if (snapshot.hasError) {
             return ErrorRetryState(
               title: ar ? 'تعذر تحميل المنشورات' : 'Could not load the feed',
               message: ar ? 'حاول مرة أخرى.' : 'Please try again.',
               retryLabel: ar ? 'إعادة المحاولة' : 'Retry',
               onRetry: _refresh,
             );
+          }
           final posts = snapshot.data ?? const [];
-          if (posts.isEmpty)
+          if (posts.isEmpty) {
             return Center(
               child: Text(
                 ar ? 'لا توجد منشورات صحية بعد.' : 'No health posts yet.',
               ),
             );
+          }
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView.separated(
@@ -147,14 +151,16 @@ class _FeedCardState extends ConsumerState<_FeedCard> {
             );
       final data = response.data?['data'];
       if (!mounted) return;
-      if (data is Map)
+      if (data is Map) {
         setState(() {
           post['liked_by_me'] = data['liked'] == true;
           post['like_count'] = data['like_count'] ?? post['like_count'];
         });
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _message(ar ? 'تعذر تحديث الإعجاب.' : 'Could not update the like.');
+      }
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -174,10 +180,11 @@ class _FeedCardState extends ConsumerState<_FeedCard> {
       if (!mounted) return;
       setState(() => post['following_doctor'] = !following);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _message(
           ar ? 'تعذر تحديث المتابعة.' : 'Could not update the follow status.',
         );
+      }
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -229,8 +236,9 @@ class _FeedCardState extends ConsumerState<_FeedCard> {
             1,
       );
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _message(ar ? 'تعذر إضافة التعليق.' : 'Could not add the comment.');
+      }
     }
     if (mounted) setState(() => _busy = false);
   }
@@ -246,10 +254,11 @@ class _FeedCardState extends ConsumerState<_FeedCard> {
       if (!mounted) return;
       await widget.onModerated();
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _message(
           ar ? 'تعذر تحديث حالة المنشور.' : 'Could not update the post status.',
         );
+      }
     }
     if (mounted) setState(() => _busy = false);
   }

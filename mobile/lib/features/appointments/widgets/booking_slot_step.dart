@@ -62,23 +62,38 @@ class BookingSlotStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (showSlotBusy) ...[SlotBusyState(strings: strings), const SizedBox(height: AppTheme.spaceMd)],
+        if (showSlotBusy) ...[
+          SlotBusyState(strings: strings),
+          const SizedBox(height: AppTheme.spaceMd),
+        ],
         if (clinics.length > 1) ...[
           Text(strings.chooseClinicLabel, style: labelStyle),
           const SizedBox(height: AppTheme.spaceSm),
-          BookingClinicSelector(clinics: clinics, selected: selectedClinic, onSelect: onSelectClinic),
+          BookingClinicSelector(
+            clinics: clinics,
+            selected: selectedClinic,
+            onSelect: onSelectClinic,
+          ),
           const SizedBox(height: AppTheme.spaceLg),
         ],
         Text(strings.chooseDateLabel, style: labelStyle),
         const SizedBox(height: AppTheme.spaceSm),
-        BookingDateStrip(selected: selectedDate, onSelect: onSelectDate, isArabic: isArabic),
+        BookingDateStrip(
+          selected: selectedDate,
+          onSelect: onSelectDate,
+          isArabic: isArabic,
+        ),
         const SizedBox(height: AppTheme.spaceLg),
         Text(strings.availableSlotsLabel, style: labelStyle),
         const SizedBox(height: AppTheme.spaceSm),
         if (isLoadingSlots)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppTheme.spaceXl),
-            child: Center(child: CircularProgressIndicator()),
+          Semantics(
+            liveRegion: true,
+            label: strings.loading,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppTheme.spaceXl),
+              child: Center(child: CircularProgressIndicator()),
+            ),
           )
         else if (slotsFailed)
           ErrorRetryState(
@@ -89,11 +104,24 @@ class BookingSlotStep extends StatelessWidget {
             variant: ErrorRetryVariant.compact,
           )
         else if (slots.isEmpty)
-          EmptyState(icon: Icons.event_busy_outlined, title: strings.noSlotsTitle, hint: strings.noSlotsHint, variant: EmptyStateVariant.compact)
+          EmptyState(
+            icon: Icons.event_busy_outlined,
+            title: strings.noSlotsTitle,
+            hint: strings.noSlotsHint,
+            variant: EmptyStateVariant.compact,
+          )
         else ...[
-          BookingSlotGrid(slots: slots, selected: selectedSlot, strings: strings, onSelect: onSelectSlot),
+          BookingSlotGrid(
+            slots: slots,
+            selected: selectedSlot,
+            strings: strings,
+            onSelect: onSelectSlot,
+          ),
           const SizedBox(height: AppTheme.spaceMd),
-          InlineMessage(message: strings.slotHonestyNote, tone: InlineMessageTone.info),
+          InlineMessage(
+            message: strings.slotHonestyNote,
+            tone: InlineMessageTone.info,
+          ),
         ],
       ],
     );

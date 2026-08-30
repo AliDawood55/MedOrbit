@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../data/notifications_api.dart';
 import '../models/notification_model.dart';
 
@@ -78,7 +79,8 @@ class NotificationsController extends StateNotifier<NotificationsState> {
     if (index == -1 || previous[index].isRead) return true;
 
     final optimistic = [
-      for (final n in previous) if (n.id == id) n.copyWith(isRead: true, readAt: DateTime.now()) else n,
+      for (final n in previous)
+        if (n.id == id) n.copyWith(isRead: true, readAt: DateTime.now()) else n,
     ];
     state = state.copyWith(
       notifications: AsyncValue.data(optimistic),
@@ -90,7 +92,10 @@ class NotificationsController extends StateNotifier<NotificationsState> {
       if (_disposed) return true;
       final latest = state.all;
       state = state.copyWith(
-        notifications: AsyncValue.data([for (final n in latest) if (n.id == id) updated else n]),
+        notifications: AsyncValue.data([
+          for (final n in latest)
+            if (n.id == id) updated else n,
+        ]),
         pendingIds: {...state.pendingIds}..remove(id),
       );
       return true;
@@ -112,8 +117,14 @@ class NotificationsController extends StateNotifier<NotificationsState> {
     if (previous.every((n) => n.isRead)) return true;
 
     final now = DateTime.now();
-    final optimistic = [for (final n in previous) n.isRead ? n : n.copyWith(isRead: true, readAt: now)];
-    state = state.copyWith(notifications: AsyncValue.data(optimistic), isMarkingAllRead: true);
+    final optimistic = [
+      for (final n in previous)
+        n.isRead ? n : n.copyWith(isRead: true, readAt: now),
+    ];
+    state = state.copyWith(
+      notifications: AsyncValue.data(optimistic),
+      isMarkingAllRead: true,
+    );
 
     try {
       await _api.markAllRead();
@@ -122,7 +133,10 @@ class NotificationsController extends StateNotifier<NotificationsState> {
       return true;
     } catch (_) {
       if (_disposed) return false;
-      state = state.copyWith(notifications: AsyncValue.data(previous), isMarkingAllRead: false);
+      state = state.copyWith(
+        notifications: AsyncValue.data(previous),
+        isMarkingAllRead: false,
+      );
       return false;
     }
   }
@@ -134,7 +148,10 @@ class NotificationsController extends StateNotifier<NotificationsState> {
     final previous = state.all;
     if (!previous.any((n) => n.id == id)) return false;
 
-    final optimistic = [for (final n in previous) if (n.id != id) n];
+    final optimistic = [
+      for (final n in previous)
+        if (n.id != id) n,
+    ];
     state = state.copyWith(
       notifications: AsyncValue.data(optimistic),
       pendingIds: {...state.pendingIds, id},
@@ -163,6 +180,10 @@ class NotificationsController extends StateNotifier<NotificationsState> {
 }
 
 final notificationsControllerProvider =
-    StateNotifierProvider.autoDispose<NotificationsController, NotificationsState>(
-      (ref) => NotificationsController(ref.watch(notificationsApiProvider)),
-    );
+    StateNotifierProvider.autoDispose<
+      NotificationsController,
+      NotificationsState
+    >((ref) {
+      ref.watch(appAccountSessionKeyProvider);
+      return NotificationsController(ref.watch(notificationsApiProvider));
+    });

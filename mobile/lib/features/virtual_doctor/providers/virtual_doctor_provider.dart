@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/network/ai_health_client.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../billing/providers/billing_provider.dart';
 import '../data/tts_player.dart';
 import '../data/virtual_doctor_api.dart';
 import '../data/voice_recorder.dart';
@@ -54,6 +56,7 @@ class VirtualDoctorState {
     this.recordingRemainingSeconds,
     this.recoveredSession = false,
     this.entitlementRetryAt,
+    this.isEnding = false,
   });
 
   final ConsultState state;
@@ -85,10 +88,15 @@ class VirtualDoctorState {
   /// `VOICE_COOLDOWN` `details.next_free_at`. Null whenever the backend did
   /// not supply one; the UI must never invent a time in that case.
   final DateTime? entitlementRetryAt;
+  final bool isEnding;
 
-  bool get isActive => state != ConsultState.idle && state != ConsultState.error;
-  bool get canRecord => state == ConsultState.listening || state == ConsultState.recording;
-  bool get isEmergency => urgencyLevel == 'emergency' || urgencyLevel == 'urgent';
+  bool get isActive =>
+      state != ConsultState.idle && state != ConsultState.error;
+  bool get canRecord =>
+      !isEnding &&
+      (state == ConsultState.listening || state == ConsultState.recording);
+  bool get isEmergency =>
+      urgencyLevel == 'emergency' || urgencyLevel == 'urgent';
 
   VirtualDoctorState copyWith({
     ConsultState? state,
@@ -119,6 +127,7 @@ class VirtualDoctorState {
     bool? recoveredSession,
     DateTime? entitlementRetryAt,
     bool clearEntitlementRetryAt = false,
+    bool? isEnding,
   }) {
     return VirtualDoctorState(
       state: state ?? this.state,
@@ -140,11 +149,17 @@ class VirtualDoctorState {
       isGeneratingReport: isGeneratingReport ?? this.isGeneratingReport,
       reportUnavailable: reportUnavailable ?? this.reportUnavailable,
       ttsUnavailable: ttsUnavailable ?? this.ttsUnavailable,
-      recommendedSpecialtyId: recommendedSpecialtyId ?? this.recommendedSpecialtyId,
+      recommendedSpecialtyId:
+          recommendedSpecialtyId ?? this.recommendedSpecialtyId,
       differential: differential ?? this.differential,
-      recordingRemainingSeconds: clearRecordingRemainingSeconds ? null : (recordingRemainingSeconds ?? this.recordingRemainingSeconds),
+      recordingRemainingSeconds: clearRecordingRemainingSeconds
+          ? null
+          : (recordingRemainingSeconds ?? this.recordingRemainingSeconds),
       recoveredSession: recoveredSession ?? this.recoveredSession,
-      entitlementRetryAt: clearEntitlementRetryAt ? null : (entitlementRetryAt ?? this.entitlementRetryAt),
+      entitlementRetryAt: clearEntitlementRetryAt
+          ? null
+          : (entitlementRetryAt ?? this.entitlementRetryAt),
+      isEnding: isEnding ?? this.isEnding,
     );
   }
 }
@@ -154,16 +169,24 @@ class VirtualDoctorState {
 /// The Virtual Doctor endpoints now live behind the MedOrbit backend, which
 /// authenticates the user, checks entitlement, and only then talks to the AI
 /// service over an internal credential. The app has no direct-AI client.
-final virtualDoctorApiProvider = Provider<VirtualDoctorApi>((ref) => VirtualDoctorApi(ref.watch(dioProvider)));
+final virtualDoctorApiProvider = Provider<VirtualDoctorApi>(
+  (ref) => VirtualDoctorApi(ref.watch(dioProvider)),
+);
 
 class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
-  VirtualDoctorController(this._api, this._recorder, this._tts, this._health)
-      : super(const VirtualDoctorState());
+  VirtualDoctorController(
+    this._api,
+    this._recorder,
+    this._tts,
+    this._health, {
+    this._onEntitlementChanged,
+  }) : super(const VirtualDoctorState());
 
   final VirtualDoctorApi _api;
   final VoiceRecorder _recorder;
   final TtsPlayer _tts;
   final AiHealthClient _health;
+  final Future<void> Function()? _onEntitlementChanged;
 
   String? _sessionId;
   Timer? _recordingCapTimer;
@@ -174,6 +197,7 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
   /// taps used to issue two `/virtual-doctor/start` calls, the second silently
   /// overwriting `_sessionId` and orphaning the first server-side session.
   bool _startInFlight = false;
+  bool _endInFlight = false;
 
   void _set(VirtualDoctorState next) {
     if (_disposed) return;
@@ -181,11 +205,25 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
   }
 
   void _appendDoctor(String text) {
-    _set(state.copyWith(transcript: [...state.transcript, TranscriptEntry(text: text, isDoctor: true)]));
+    _set(
+      state.copyWith(
+        transcript: [
+          ...state.transcript,
+          TranscriptEntry(text: text, isDoctor: true),
+        ],
+      ),
+    );
   }
 
   void _appendPatient(String text) {
-    _set(state.copyWith(transcript: [...state.transcript, TranscriptEntry(text: text, isDoctor: false)]));
+    _set(
+      state.copyWith(
+        transcript: [
+          ...state.transcript,
+          TranscriptEntry(text: text, isDoctor: false),
+        ],
+      ),
+    );
   }
 
   /// Begins a consultation: reachability -> permission -> /start -> greeting
@@ -205,7 +243,12 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     // backend gateway may be unavailable, and a fast health check avoids a
     // needless microphone prompt before `/virtual-doctor/start` can begin.
     if (await _health.check() != AiHealthStatus.available) {
-      _set(state.copyWith(state: ConsultState.error, errorMessage: 'ai_unavailable'));
+      _set(
+        state.copyWith(
+          state: ConsultState.error,
+          errorMessage: 'ai_unavailable',
+        ),
+      );
       return;
     }
 
@@ -217,7 +260,12 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     } catch (_) {
       // The raw exception is dropped: it reaches the screen as text and can
       // carry plugin internals or a device path.
-      _set(state.copyWith(state: ConsultState.error, errorMessage: 'microphone unavailable'));
+      _set(
+        state.copyWith(
+          state: ConsultState.error,
+          errorMessage: 'microphone unavailable',
+        ),
+      );
       return;
     }
 
@@ -226,7 +274,8 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
         state.copyWith(
           state: ConsultState.error,
           errorMessage: 'mic_denied',
-          micPermanentlyDenied: permission == MicPermissionResult.permanentlyDenied,
+          micPermanentlyDenied:
+              permission == MicPermissionResult.permanentlyDenied,
         ),
       );
       return;
@@ -242,25 +291,50 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     );
     try {
       final result = await _api.start(language: language);
+      if (_disposed) return;
       _sessionId = result.sessionId;
       // The service echoes the session language; pin STT to it rather than
       // letting Whisper auto-detect, which is unreliable on short answers.
       _set(
-        state.copyWith(language: result.language, phase: result.phase),
+        state.copyWith(
+          language: result.language,
+          phase: result.phase,
+          transcript: result.messages.isEmpty
+              ? state.transcript
+              : result.messages,
+          recoveredSession: result.resumed,
+        ),
       );
+      unawaited(_onEntitlementChanged?.call());
 
       // Preload Whisper + Piper behind the greeting so turn one isn't slow.
       unawaited(_api.warmup(result.language));
 
-      _appendDoctor(result.reply);
-      await _speak(result.reply);
+      if (result.reply.isNotEmpty) {
+        final alreadyPresent =
+            state.transcript.isNotEmpty &&
+            state.transcript.last.isDoctor &&
+            state.transcript.last.text == result.reply;
+        if (!alreadyPresent) _appendDoctor(result.reply);
+        await _speak(result.reply);
+      }
       if (_disposed) return;
-      _set(state.copyWith(state: ConsultState.listening, clearSubtitle: true));
+      _set(
+        state.copyWith(
+          state: result.phase == 'complete'
+              ? ConsultState.complete
+              : ConsultState.listening,
+          clearSubtitle: true,
+        ),
+      );
     } catch (e) {
       // Health passed but the call still failed, so the cached pass is stale —
       // drop it so a retry re-probes instead of trusting it.
       _health.invalidate();
       final api = ApiException.from(e);
+      if (_isEntitlementFailure(api)) {
+        unawaited(_onEntitlementChanged?.call());
+      }
       final retryAt = _retryAtFrom(api);
       _set(
         state.copyWith(
@@ -288,13 +362,31 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
   /// backend will repeat on the very next attempt is actively misleading.
   static String _failureCode(ApiException api) {
     if (api.code == ApiException.codeVoiceCooldown) return 'voice_cooldown';
-    if (api.code == ApiException.codeVoiceSessionActive) return 'voice_session_active';
-    if (api.code == ApiException.codeFreeQuotaExhausted) return 'free_quota_exhausted';
-    if (api.code == ApiException.codeSubscriptionRequired) return 'subscription_required';
-    if (api.code == ApiException.codeSubscriptionInactive) return 'subscription_inactive';
-    if (api.code == ApiException.codeEntitlementUnavailable) return 'entitlement_unavailable';
+    if (api.code == ApiException.codeVoiceSessionActive) {
+      return 'voice_session_active';
+    }
+    if (api.code == ApiException.codeFreeQuotaExhausted) {
+      return 'free_quota_exhausted';
+    }
+    if (api.code == ApiException.codeSubscriptionRequired) {
+      return 'subscription_required';
+    }
+    if (api.code == ApiException.codeSubscriptionInactive) {
+      return 'subscription_inactive';
+    }
+    if (api.code == ApiException.codeEntitlementUnavailable) {
+      return 'entitlement_unavailable';
+    }
+    if (api.code == ApiException.codeRateLimited) return 'rate_limited';
+    if (api.code == ApiException.codeSessionStarting) return 'session_starting';
+    if (api.code == ApiException.codeSessionUnavailable) {
+      return 'session_unavailable';
+    }
+    if (api.code == ApiException.codeNotFound) return 'session_expired';
     if (api.isTimeout) return 'ai_timeout';
-    if (api.code == ApiException.codeServiceUnavailable) return 'ai_unreachable';
+    if (api.code == ApiException.codeServiceUnavailable) {
+      return 'ai_unreachable';
+    }
     // The AI service answers 404 once a session has been evicted.
     if (api.statusCode == 404) return 'session_expired';
     return 'ai_failed';
@@ -314,21 +406,51 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     return null;
   }
 
+  static bool _isEntitlementFailure(ApiException api) {
+    return api.code == ApiException.codeVoiceCooldown ||
+        api.code == ApiException.codeVoiceSessionActive ||
+        api.code == ApiException.codeSubscriptionRequired ||
+        api.code == ApiException.codeSubscriptionInactive ||
+        api.code == ApiException.codeEntitlementUnavailable;
+  }
+
   Future<void> startRecording() async {
-    if ((!state.canRecord && state.state != ConsultState.speaking) || state.state == ConsultState.recording) return;
+    if ((!state.canRecord && state.state != ConsultState.speaking) ||
+        state.state == ConsultState.recording) {
+      return;
+    }
     try {
       if (state.state == ConsultState.speaking) await _tts.stop();
       await _recorder.start();
-      _set(state.copyWith(state: ConsultState.recording, recordingRemainingSeconds: 30, clearError: true));
+      _set(
+        state.copyWith(
+          state: ConsultState.recording,
+          recordingRemainingSeconds: 30,
+          clearError: true,
+        ),
+      );
       _recordingCapTimer?.cancel();
       _recordingCapTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         final remaining = 30 - timer.tick;
-        if (_disposed || state.state != ConsultState.recording) { timer.cancel(); return; }
-        if (remaining <= 0) { timer.cancel(); _set(state.copyWith(recordingRemainingSeconds: 0)); unawaited(stopRecordingAndSubmit()); return; }
+        if (_disposed || state.state != ConsultState.recording) {
+          timer.cancel();
+          return;
+        }
+        if (remaining <= 0) {
+          timer.cancel();
+          _set(state.copyWith(recordingRemainingSeconds: 0));
+          unawaited(stopRecordingAndSubmit());
+          return;
+        }
         _set(state.copyWith(recordingRemainingSeconds: remaining));
       });
     } catch (_) {
-      _set(state.copyWith(state: ConsultState.listening, errorMessage: 'record_failed'));
+      _set(
+        state.copyWith(
+          state: ConsultState.listening,
+          errorMessage: 'record_failed',
+        ),
+      );
     }
   }
 
@@ -337,7 +459,12 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     if (state.state != ConsultState.recording) return;
 
     _recordingCapTimer?.cancel();
-    _set(state.copyWith(state: ConsultState.transcribing, clearRecordingRemainingSeconds: true));
+    _set(
+      state.copyWith(
+        state: ConsultState.transcribing,
+        clearRecordingRemainingSeconds: true,
+      ),
+    );
     String? path;
     try {
       path = await _recorder.stop();
@@ -346,7 +473,12 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     }
 
     if (path == null) {
-      _set(state.copyWith(state: ConsultState.listening, errorMessage: 'no_speech'));
+      _set(
+        state.copyWith(
+          state: ConsultState.listening,
+          errorMessage: 'no_speech',
+        ),
+      );
       return;
     }
 
@@ -373,6 +505,9 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     } catch (e) {
       unawaited(File(path).delete().catchError((_) => File(path!)));
       final api = ApiException.from(e);
+      if (_isEntitlementFailure(api)) {
+        unawaited(_onEntitlementChanged?.call());
+      }
       final retryAt = _retryAtFrom(api);
       _set(
         state.copyWith(
@@ -389,7 +524,12 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     _recordingCapTimer?.cancel();
     await _recorder.cancel();
     if (state.state == ConsultState.recording) {
-      _set(state.copyWith(state: ConsultState.listening, clearRecordingRemainingSeconds: true));
+      _set(
+        state.copyWith(
+          state: ConsultState.listening,
+          clearRecordingRemainingSeconds: true,
+        ),
+      );
     }
   }
 
@@ -399,7 +539,10 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
 
     _set(state.copyWith(state: ConsultState.thinking, clearError: true));
     try {
-      final result = await _api.sendMessage(sessionId: sessionId, message: text);
+      final result = await _api.sendMessage(
+        sessionId: sessionId,
+        message: text,
+      );
       _appendDoctor(result.reply);
       _set(
         state.copyWith(
@@ -422,13 +565,19 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
 
       _set(
         state.copyWith(
-          state: result.isComplete ? ConsultState.complete : ConsultState.listening,
+          state: result.isComplete
+              ? ConsultState.complete
+              : ConsultState.listening,
           completedAt: result.isComplete ? DateTime.now() : null,
           clearSubtitle: true,
         ),
       );
+      if (result.isComplete) unawaited(_onEntitlementChanged?.call());
     } catch (e) {
       final api = ApiException.from(e);
+      if (_isEntitlementFailure(api)) {
+        unawaited(_onEntitlementChanged?.call());
+      }
       final retryAt = _retryAtFrom(api);
       _set(
         state.copyWith(
@@ -467,12 +616,37 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     _set(state.copyWith(state: ConsultState.connecting, clearError: true));
     try {
       final result = await _api.getSession(sessionId);
-      if (result.sessionId.isEmpty) throw const ApiException(message: 'Session unavailable.', code: 'SESSION_UNAVAILABLE');
+      if (result.sessionId.isEmpty) {
+        throw const ApiException(
+          message: 'Session unavailable.',
+          code: 'SESSION_UNAVAILABLE',
+        );
+      }
       _sessionId = result.sessionId;
-      _set(state.copyWith(state: ConsultState.listening, language: result.language ?? state.language, phase: result.phase, chiefComplaint: result.chiefComplaint, profileSnapshot: result.profileSnapshot, urgencyLevel: result.urgencyLevel, recommendedSpecialtyId: result.recommendedSpecialtyId, specialtyEn: result.specialtyEn, specialtyAr: result.specialtyAr, differential: result.differential, transcript: result.messages, recoveredSession: true));
+      _set(
+        state.copyWith(
+          state: ConsultState.listening,
+          language: result.language ?? state.language,
+          phase: result.phase,
+          chiefComplaint: result.chiefComplaint,
+          profileSnapshot: result.profileSnapshot,
+          urgencyLevel: result.urgencyLevel,
+          recommendedSpecialtyId: result.recommendedSpecialtyId,
+          specialtyEn: result.specialtyEn,
+          specialtyAr: result.specialtyAr,
+          differential: result.differential,
+          transcript: result.messages,
+          recoveredSession: true,
+        ),
+      );
       return true;
     } catch (error) {
-      _set(state.copyWith(state: ConsultState.error, errorMessage: 'session_unavailable'));
+      _set(
+        state.copyWith(
+          state: ConsultState.error,
+          errorMessage: 'session_unavailable',
+        ),
+      );
       return false;
     }
   }
@@ -491,7 +665,13 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     final existing = state.reportPath;
     if (existing != null) return existing;
 
-    _set(state.copyWith(isGeneratingReport: true, reportUnavailable: false, clearError: true));
+    _set(
+      state.copyWith(
+        isGeneratingReport: true,
+        reportUnavailable: false,
+        clearError: true,
+      ),
+    );
     try {
       final report = await _api.createReport(sessionId);
       final bytes = await _api.downloadReport(report.downloadUrl);
@@ -501,6 +681,7 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
       await file.writeAsBytes(bytes, flush: true);
 
       _set(state.copyWith(isGeneratingReport: false, reportPath: file.path));
+      unawaited(_onEntitlementChanged?.call());
       return file.path;
     } catch (e) {
       final api = ApiException.from(e);
@@ -516,14 +697,35 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
     }
   }
 
-  void clearError() => _set(state.copyWith(clearError: true, clearEntitlementRetryAt: true));
+  void clearError() =>
+      _set(state.copyWith(clearError: true, clearEntitlementRetryAt: true));
 
-  Future<void> endConsultation() async {
+  Future<bool> endConsultation() async {
+    if (_endInFlight) return false;
+    final sessionId = _sessionId;
+    if (sessionId == null) {
+      _set(const VirtualDoctorState());
+      return true;
+    }
+    _endInFlight = true;
     _recordingCapTimer?.cancel();
-    await _tts.stop();
-    await _recorder.cancel();
-    _sessionId = null;
-    _set(const VirtualDoctorState());
+    try {
+      await _tts.stop();
+      await _recorder.cancel();
+      if (state.state != ConsultState.complete) {
+        _set(state.copyWith(isEnding: true, clearError: true));
+        await _api.endSession(sessionId);
+      }
+      _sessionId = null;
+      _set(const VirtualDoctorState());
+      unawaited(_onEntitlementChanged?.call());
+      return true;
+    } catch (_) {
+      _set(state.copyWith(isEnding: false, errorMessage: 'end_failed'));
+      return false;
+    } finally {
+      _endInFlight = false;
+    }
   }
 
   @override
@@ -537,12 +739,24 @@ class VirtualDoctorController extends StateNotifier<VirtualDoctorState> {
 }
 
 final virtualDoctorControllerProvider =
-    StateNotifierProvider.autoDispose<VirtualDoctorController, VirtualDoctorState>((ref) {
+    StateNotifierProvider.autoDispose<
+      VirtualDoctorController,
+      VirtualDoctorState
+    >((ref) {
+      ref.watch(
+        authControllerProvider.select(
+          (state) =>
+              state.status == AuthStatus.authenticated ? state.user?.id : null,
+        ),
+      );
       final api = ref.watch(virtualDoctorApiProvider);
       return VirtualDoctorController(
         api,
         VoiceRecorder(),
         TtsPlayer(api),
         ref.watch(aiHealthClientProvider),
+        onEntitlementChanged: ref
+            .read(billingControllerProvider.notifier)
+            .refreshEntitlements,
       );
     });

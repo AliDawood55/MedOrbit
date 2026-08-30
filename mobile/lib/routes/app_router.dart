@@ -2,34 +2,57 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/admin/analytics/screens/admin_analytics_screen.dart';
+import '../features/admin/audit/screens/admin_audit_log_screen.dart';
+import '../features/admin/common/providers/admin_access_provider.dart';
+import '../features/admin/contact/screens/admin_contact_inbox_screen.dart';
+import '../features/admin/dashboard/screens/admin_dashboard_screen.dart';
+import '../features/admin/doctor_applications/screens/admin_application_review_screen.dart';
+import '../features/admin/doctor_applications/screens/admin_doctor_applications_screen.dart';
+import '../features/admin/invitations/screens/admin_invitation_accept_screen.dart';
+import '../features/admin/invitations/screens/admin_invitations_screen.dart';
+import '../features/admin/moderation/screens/admin_moderation_screen.dart';
+import '../features/admin/users/screens/admin_users_screen.dart';
 import '../features/appointments/screens/appointments_screen.dart';
-import '../features/admin/management/screens/admin_management_screen.dart';
-import '../features/doctor_workspace/screens/doctor_patients_screen.dart';
-import '../features/doctor_workspace/screens/doctor_patient_detail_screen.dart';
-import '../features/doctor_workspace/screens/doctor_portal_screen.dart';
-import '../features/doctor_workspace/screens/doctor_messages_screen.dart';
-import '../features/doctor_workspace/screens/doctor_schedule_screen.dart';
 import '../features/appointments/screens/book_appointment_screen.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/auth/providers/app_role_capabilities_provider.dart';
 import '../features/care/screens/my_doctor_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/verify_code_screen.dart';
+import '../features/billing/screens/billing_history_screen.dart';
+import '../features/billing/screens/billing_screen.dart';
+import '../features/billing/screens/sandbox_checkout_screen.dart';
+import '../features/billing/screens/subscription_screen.dart';
 import '../features/discovery/screens/clinic_detail_screen.dart';
 import '../features/discovery/screens/clinic_discovery_screen.dart';
 import '../features/discovery/screens/doctor_detail_screen.dart';
 import '../features/discovery/screens/doctor_directory_screen.dart';
+import '../features/discovery/screens/discover_hub_screen.dart';
 import '../features/chatbot/screens/chatbot_screen.dart';
 import '../features/contact/screens/contact_screen.dart';
 import '../features/chatbot/screens/conversations_screen.dart';
 import '../features/discovery/screens/map_foundation_screen.dart';
+import '../features/doctor_application/screens/doctor_application_screen.dart';
 import '../features/drug_checker/screens/drug_checker_screen.dart';
+import '../features/doctor_workspace/screens/doctor_appointments_screen.dart';
+import '../features/doctor_workspace/screens/doctor_patient_detail_screen.dart';
+import '../features/doctor_workspace/screens/doctor_patients_screen.dart';
+import '../features/doctor_workspace/screens/doctor_posts_screen.dart';
+import '../features/doctor_workspace/screens/doctor_profile_screen.dart';
+import '../features/doctor_workspace/screens/doctor_records_screen.dart';
+import '../features/doctor_workspace/screens/doctor_schedule_screen.dart';
+import '../features/doctor_workspace/screens/doctor_workspace_screen.dart';
 import '../features/feedback/screens/feedback_screen.dart';
-import '../features/feed/screens/health_feed_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/home/screens/services_hub_screen.dart';
 import '../features/my_reports/screens/my_reports_screen.dart';
+import '../features/messaging/screens/message_thread_screen.dart';
+import '../features/messaging/screens/messaging_inbox_screen.dart';
+import '../features/messaging/screens/new_message_screen.dart';
 import '../features/my_doctors/models/patient_doctor_models.dart';
 import '../features/my_doctors/screens/my_doctors_screen.dart';
 import '../features/my_doctors/screens/shared_doctor_notes_screen.dart';
@@ -40,14 +63,34 @@ import '../features/records/screens/records_screen.dart';
 import '../features/report_summarizer/screens/report_summarizer_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../features/saved_places/screens/saved_places_screen.dart';
+import '../features/social/screens/social_feed_screen.dart';
 import '../features/symptom_checker/screens/symptom_checker_screen.dart';
 import '../features/virtual_doctor/screens/virtual_doctor_screen.dart';
 import 'main_shell.dart';
 import 'route_paths.dart';
 
+/// Administration destinations that require an `admin` or `super_admin`
+/// session, mirroring the backend's `authorizeAdmin` guard.
+const Set<String> adminRoutes = {
+  RoutePaths.adminDashboard,
+  RoutePaths.adminAnalytics,
+  RoutePaths.adminUsers,
+  RoutePaths.adminDoctorApplications,
+  RoutePaths.adminContactMessages,
+  RoutePaths.adminModeration,
+  RoutePaths.adminAuditLogs,
+  RoutePaths.adminInvitations,
+};
+
+/// The subset the backend protects with `authorizeSuperAdmin`. A plain `admin`
+/// is turned away from these, not merely from seeing their navigation entry.
+const Set<String> superAdminRoutes = {RoutePaths.adminInvitations};
+
 const Set<String> protectedRoutes = {
   RoutePaths.home,
-  RoutePaths.feed,
+  RoutePaths.socialFeed,
+  RoutePaths.discover,
+  RoutePaths.services,
   RoutePaths.records,
   RoutePaths.prescriptions,
   RoutePaths.appointments,
@@ -62,20 +105,192 @@ const Set<String> protectedRoutes = {
   RoutePaths.myDoctors,
   RoutePaths.savedPlaces,
   RoutePaths.contact,
-
   RoutePaths.myDoctor,
-
+  RoutePaths.doctorApplication,
+  RoutePaths.billing,
+  RoutePaths.subscription,
+  RoutePaths.billingHistory,
+  RoutePaths.billingSandbox,
+  RoutePaths.chatbot,
+  RoutePaths.conversations,
+  RoutePaths.chatbotConversation,
+  RoutePaths.virtualDoctor,
+  RoutePaths.messages,
+  RoutePaths.messagesNew,
+  RoutePaths.messageThread,
+  RoutePaths.doctorWorkspace,
+  RoutePaths.doctorProfessionalProfile,
+  RoutePaths.doctorSchedule,
+  RoutePaths.doctorAppointments,
+  RoutePaths.doctorPatients,
+  RoutePaths.doctorPatient,
+  RoutePaths.doctorPosts,
+  RoutePaths.doctorRecords,
+  RoutePaths.mapFoundation,
+  RoutePaths.clinics,
+  RoutePaths.clinicDetail,
+  RoutePaths.doctors,
+  RoutePaths.doctorDetail,
+  ...adminRoutes,
+  // Session-protected but deliberately not administrator-gated: the account
+  // accepting an invitation is still a patient or doctor at that point.
+  RoutePaths.adminInvitationAccept,
 };
 
-String? sessionRedirect(AuthStatus status, String location) {
+/// True for every location inside the administration area, including
+/// parameterized detail routes such as `/admin/doctor-applications/<id>`
+/// which cannot be listed as literal members of [adminRoutes].
+bool isAdministrationLocation(String location) =>
+    location == RoutePaths.adminDashboard ||
+    location.startsWith('${RoutePaths.adminDashboard}/');
+
+bool _isSuperAdminLocation(String location) =>
+    superAdminRoutes.contains(location) ||
+    superAdminRoutes.any((route) => location.startsWith('$route/'));
+
+bool isProtectedLocation(String location) {
+  if (protectedRoutes.contains(location) ||
+      isAdministrationLocation(location)) {
+    return true;
+  }
+  return location.startsWith('${RoutePaths.conversations}/') ||
+      location.startsWith('/billing/sandbox/') ||
+      location.startsWith('${RoutePaths.messages}/') ||
+      location.startsWith('${RoutePaths.doctorPatients}/') ||
+      location.startsWith('${RoutePaths.clinics}/') ||
+      location.startsWith('${RoutePaths.doctors}/');
+}
+
+bool isValidUuid(String value) => RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+).hasMatch(value);
+
+/// The Feed is shared, while author management remains a doctor-only tool.
+/// This is a presentation decision only; the backend remains authoritative.
+String? socialMyPostsRouteFor(AppRoleCapabilities capabilities) =>
+    capabilities.canCreateDoctorPosts ? RoutePaths.doctorPosts : null;
+
+String? doctorRoleRedirect(AuthStatus status, String? role, String location) {
+  if (status == AuthStatus.authenticated &&
+      location.startsWith('/doctor/') &&
+      role?.trim().toLowerCase() != 'doctor') {
+    return RoutePaths.home;
+  }
+  return null;
+}
+
+/// Presentation-level role routing. Backend authorization remains the final
+/// authority, but an account is never sent into another role's clinical or
+/// operational UI while that request is in flight.
+String? capabilityRedirect(AuthStatus status, String? role, String location) {
+  if (status != AuthStatus.authenticated) return null;
+  final capabilities = AppRoleCapabilities.fromRole(role);
+
+  final patientOnly =
+      location == RoutePaths.records ||
+      location == RoutePaths.prescriptions ||
+      location == RoutePaths.appointments ||
+      location == RoutePaths.appointmentBooking ||
+      location == RoutePaths.myDoctors ||
+      location.startsWith('${RoutePaths.myDoctors}/') ||
+      location == RoutePaths.savedPlaces ||
+      location == RoutePaths.myDoctor ||
+      location == RoutePaths.doctorApplication;
+  if (patientOnly && !capabilities.canUsePatientCare) return RoutePaths.home;
+
+  final careOnly =
+      location == RoutePaths.messages ||
+      location.startsWith('${RoutePaths.messages}/');
+  if (careOnly && !capabilities.canUseCareMessages) return RoutePaths.home;
+
+  final aiChatOnly =
+      location == RoutePaths.chatbot ||
+      location.startsWith('${RoutePaths.conversations}/');
+  if (aiChatOnly && !capabilities.canUseAiChat) return RoutePaths.home;
+
+  final consumerOnly =
+      location == RoutePaths.virtualDoctor ||
+      location == RoutePaths.symptomChecker ||
+      location == RoutePaths.drugChecker ||
+      location == RoutePaths.reportSummarizer ||
+      location == RoutePaths.myReports;
+  if (consumerOnly && !capabilities.canUseConsumerAi) return RoutePaths.home;
+
+  final supportOnly =
+      location == RoutePaths.contact || location == RoutePaths.feedback;
+  if (supportOnly && !capabilities.canUseContactAndFeedback) {
+    return RoutePaths.home;
+  }
+
+  if (location == RoutePaths.adminInvitationAccept &&
+      !capabilities.canAcceptAdminInvitation) {
+    return RoutePaths.home;
+  }
+  return null;
+}
+
+String? sessionRedirect(
+  AuthStatus status,
+  String location, {
+  String? fullLocation,
+}) {
   if (status != AuthStatus.unauthenticated) return null;
-  return protectedRoutes.contains(location) ? RoutePaths.login : null;
+  if (!isProtectedLocation(location)) return null;
+  if (fullLocation == null) return RoutePaths.login;
+  return Uri(
+    path: RoutePaths.login,
+    queryParameters: {'redirect': fullLocation},
+  ).toString();
+}
+
+/// Role gate for the administration area, applied by the router **before** an
+/// admin screen is built — so an unauthorized account never renders a frame of
+/// administration data on its way to being redirected.
+///
+/// Returns `null` (allow) while the session status is still `unknown`: that is
+/// the splash bootstrap window, where redirecting would bounce a signed-in
+/// administrator on every cold start. The screen's own [AdminGate] holds the
+/// line during that window by rendering a neutral placeholder rather than
+/// data, and the backend refuses every request regardless.
+///
+/// Authorization is derived from the canonical auth state on each call; it is
+/// never cached or stored separately.
+String? adminRedirect(AuthStatus status, String? role, String location) {
+  if (!isAdministrationLocation(location)) return null;
+  if (location == RoutePaths.adminInvitationAccept) return null;
+  // `unauthenticated` is [sessionRedirect]'s to answer, `unknown` is nobody's.
+  if (status != AuthStatus.authenticated) return null;
+
+  final access = adminAccessFor(status: status, role: role);
+  final allowed = _isSuperAdminLocation(location)
+      ? access.canUseSuperAdminTools
+      : access.canUseAdminTools;
+  return allowed ? null : RoutePaths.home;
+}
+
+/// Accepts only an in-app protected route captured by [sessionRedirect].
+/// This prevents the Login screen from becoming an open redirect.
+String? intendedDestinationFromLoginUri(Uri uri) {
+  final raw = uri.queryParameters['redirect'];
+  if (raw == null || raw.isEmpty) return null;
+  final destination = Uri.tryParse(raw);
+  if (destination == null ||
+      destination.hasScheme ||
+      destination.hasAuthority ||
+      !isProtectedLocation(destination.path)) {
+    return null;
+  }
+  return destination.toString();
 }
 
 class AuthRouterRefresh extends ChangeNotifier {
   AuthRouterRefresh(Ref ref) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      if (previous?.status != next.status) notifyListeners();
+      if (previous?.status != next.status ||
+          previous?.user?.id != next.user?.id ||
+          previous?.user?.role != next.user?.role) {
+        notifyListeners();
+      }
     });
   }
 }
@@ -87,10 +302,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: RoutePaths.splash,
     refreshListenable: refresh,
-    redirect: (context, state) => sessionRedirect(
-      ref.read(authControllerProvider).status,
-      state.matchedLocation,
-    ),
+    redirect: (context, state) {
+      final auth = ref.read(authControllerProvider);
+      final session = sessionRedirect(
+        auth.status,
+        state.matchedLocation,
+        fullLocation: state.uri.toString(),
+      );
+      if (session != null) return session;
+      return capabilityRedirect(auth.status, auth.user?.role, state.uri.path) ??
+          doctorRoleRedirect(auth.status, auth.user?.role, state.uri.path) ??
+          adminRedirect(auth.status, auth.user?.role, state.matchedLocation);
+    },
     routes: [
       GoRoute(
         path: RoutePaths.splash,
@@ -98,7 +321,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.login,
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => LoginScreen(
+          intendedDestination: intendedDestinationFromLoginUri(state.uri),
+        ),
       ),
       GoRoute(
         path: RoutePaths.register,
@@ -122,12 +347,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
-        path: RoutePaths.feed,
-        builder: (context, state) => const HealthFeedScreen(),
-      ),
-      GoRoute(
         path: RoutePaths.virtualDoctor,
         builder: (context, state) => const VirtualDoctorScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.billing,
+        builder: (context, state) => const BillingScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.subscription,
+        builder: (context, state) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.billingHistory,
+        builder: (context, state) => const BillingHistoryScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.billingSandbox,
+        builder: (context, state) =>
+            SandboxCheckoutScreen(token: state.pathParameters['token'] ?? ''),
       ),
       GoRoute(
         path: RoutePaths.chatbot,
@@ -136,6 +374,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.conversations,
         builder: (context, state) => const ConversationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.messages,
+        builder: (context, state) => const MessagingInboxScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.messagesNew,
+        builder: (context, state) => NewMessageScreen(
+          initialCounterpartId: validMessageConversationId(
+            state.uri.queryParameters['counterpart'],
+          ),
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.messageThread,
+        redirect: (context, state) =>
+            validMessageConversationId(state.pathParameters['id']) == null
+            ? RoutePaths.messages
+            : null,
+        builder: (context, state) =>
+            MessageThreadScreen(conversationId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: RoutePaths.chatbotConversation,
@@ -152,7 +411,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.doctors,
-        builder: (context, state) => const DoctorDirectoryScreen(),
+        builder: (context, state) => DoctorDirectoryScreen(
+          initialSearch: state.uri.queryParameters['search'],
+          initialSpecialty: state.uri.queryParameters['specialty'],
+        ),
       ),
       GoRoute(
         path: RoutePaths.clinicDetail,
@@ -175,8 +437,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
-        path: RoutePaths.profile,
-        builder: (context, state) => const ProfileScreen(),
+        path: RoutePaths.records,
+        builder: (context, state) => const RecordsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.prescriptions,
+        builder: (context, state) => const PrescriptionsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.appointments,
+        builder: (context, state) => const AppointmentsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.feedback,
+        builder: (context, state) => const FeedbackScreen(),
       ),
       GoRoute(
         path: RoutePaths.symptomChecker,
@@ -203,27 +477,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SavedPlacesScreen(),
       ),
       GoRoute(
-        path: RoutePaths.doctorPatients,
-        builder: (context, state) => const DoctorPatientsScreen(),
-      ),
-      GoRoute(path: RoutePaths.doctorPatientDetail, builder: (context, state) => DoctorPatientDetailScreen(patientId: state.pathParameters['id'] ?? '')),
-      GoRoute(path: RoutePaths.doctorProfessional, builder: (context, state) => const DoctorPortalScreen(initialSection: 'professional')),
-      GoRoute(path: RoutePaths.doctorPosts, builder: (context, state) => const DoctorPortalScreen(initialSection: 'posts')),
-      GoRoute(path: RoutePaths.doctorBilling, builder: (context, state) => const DoctorPortalScreen(initialSection: 'billing')),
-      GoRoute(path: RoutePaths.doctorMessages, builder: (context, state) => const DoctorMessagesScreen()),
-      GoRoute(
-        path: RoutePaths.doctorSchedule,
-        builder: (context, state) => const DoctorScheduleScreen(),
-      ),
-      GoRoute(
-        path: RoutePaths.adminManagement,
-        builder: (context, state) => AdminManagementScreen(
-          initialTab: state.uri.queryParameters['tab'],
-          initialRole: state.uri.queryParameters['role'],
-          initialMetric: state.uri.queryParameters['metric'],
-        ),
-      ),
-      GoRoute(
         path: RoutePaths.contact,
         builder: (context, state) => const ContactScreen(),
       ),
@@ -240,6 +493,92 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.myDoctor,
         builder: (context, state) => const MyDoctorScreen(),
       ),
+      GoRoute(
+        path: RoutePaths.doctorApplication,
+        builder: (context, state) => const DoctorApplicationScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorWorkspace,
+        builder: (context, state) => const DoctorWorkspaceScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorProfessionalProfile,
+        builder: (context, state) => const DoctorProfileScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorSchedule,
+        builder: (context, state) => const DoctorScheduleScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorAppointments,
+        builder: (context, state) => const DoctorAppointmentsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorPatients,
+        builder: (context, state) => const DoctorPatientsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorPatient,
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return isValidUuid(id)
+              ? DoctorPatientDetailScreen(patientId: id)
+              : const DoctorPatientsScreen();
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.doctorPosts,
+        builder: (context, state) => const DoctorPostsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.doctorRecords,
+        builder: (context, state) => const DoctorRecordsScreen(),
+      ),
+      // ── Administration ─────────────────────────────────────────────────
+      GoRoute(
+        path: RoutePaths.adminDashboard,
+        builder: (context, state) => const AdminDashboardScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminAnalytics,
+        builder: (context, state) => const AdminAnalyticsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminUsers,
+        builder: (context, state) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminDoctorApplications,
+        builder: (context, state) => const AdminDoctorApplicationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminDoctorApplicationDetail,
+        builder: (context, state) => AdminApplicationReviewScreen(
+          applicationId: state.pathParameters['id'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: RoutePaths.adminContactMessages,
+        builder: (context, state) => const AdminContactInboxScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminModeration,
+        builder: (context, state) => const AdminModerationScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminAuditLogs,
+        builder: (context, state) => const AdminAuditLogScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminInvitations,
+        builder: (context, state) => const AdminInvitationsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.adminInvitationAccept,
+        builder: (context, state) => AdminInvitationAcceptScreen(
+          initialToken: state.uri.queryParameters['token'],
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),
@@ -255,32 +594,43 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.records,
-                builder: (context, state) => const RecordsScreen(),
+                path: RoutePaths.socialFeed,
+                builder: (context, state) {
+                  final myPostsRoute = socialMyPostsRouteFor(
+                    ref.read(appRoleCapabilitiesProvider),
+                  );
+                  return SocialFeedScreen(
+                    onOpenMyPosts: myPostsRoute == null
+                        ? null
+                        : () {
+                            context.push(myPostsRoute);
+                          },
+                  );
+                },
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.prescriptions,
-                builder: (context, state) => const PrescriptionsScreen(),
+                path: RoutePaths.discover,
+                builder: (context, state) => const DiscoverHubScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.appointments,
-                builder: (context, state) => const AppointmentsScreen(),
+                path: RoutePaths.services,
+                builder: (context, state) => const ServicesHubScreen(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.feedback,
-                builder: (context, state) => const FeedbackScreen(),
+                path: RoutePaths.profile,
+                builder: (context, state) => const ProfileScreen(),
               ),
             ],
           ),
@@ -289,3 +639,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+String? validMessageConversationId(String? value) {
+  final candidate = value?.trim() ?? '';
+  return RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+      ).hasMatch(candidate)
+      ? candidate
+      : null;
+}

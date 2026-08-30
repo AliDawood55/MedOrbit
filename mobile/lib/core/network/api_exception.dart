@@ -41,6 +41,20 @@ class ApiException implements Exception {
   static const String codeSubscriptionRequired = 'SUBSCRIPTION_REQUIRED';
   static const String codeSubscriptionInactive = 'SUBSCRIPTION_INACTIVE';
   static const String codeEntitlementUnavailable = 'ENTITLEMENT_UNAVAILABLE';
+  static const String codeRateLimited = 'RATE_LIMITED';
+  static const String codeValidationError = 'VALIDATION_ERROR';
+  static const String codeUnauthorized = 'UNAUTHORIZED';
+  static const String codeForbidden = 'FORBIDDEN';
+  static const String codeCheckoutNotFound = 'CHECKOUT_NOT_FOUND';
+  static const String codeCheckoutNotOpen = 'CHECKOUT_NOT_OPEN';
+  static const String codeSubscriptionNotFound = 'SUBSCRIPTION_NOT_FOUND';
+  static const String codeSubscriptionAlreadyLive = 'SUBSCRIPTION_ALREADY_LIVE';
+  static const String codePlanChangeInvalid = 'PLAN_CHANGE_INVALID';
+  static const String codeSandboxDisabled = 'SANDBOX_DISABLED';
+  static const String codeInvalidResponse = 'INVALID_RESPONSE';
+  static const String codeNotFound = 'NOT_FOUND';
+  static const String codeSessionStarting = 'SESSION_STARTING';
+  static const String codeSessionUnavailable = 'SESSION_UNAVAILABLE';
 
   /// True for any of the three timeout categories.
   ///

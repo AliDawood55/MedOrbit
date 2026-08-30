@@ -1,11 +1,19 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../billing/models/billing_models.dart';
+import '../../billing/providers/billing_provider.dart';
 import '../data/chatbot_api.dart';
 import '../models/chatbot_models.dart';
 
-final chatbotApiProvider = Provider<ChatbotApi>((ref) => ChatbotApi(ref.watch(dioProvider)));
+final chatbotApiProvider = Provider<ChatbotApi>(
+  (ref) => ChatbotApi(ref.watch(dioProvider)),
+);
 
 /// Why a chat turn failed, at the granularity the patient needs.
 ///
@@ -53,6 +61,9 @@ enum ChatFailureKind {
   /// [subscriptionRequired].
   subscriptionInactive,
 
+  /// Per-minute fair-use protection, including for Pro accounts.
+  rateLimited,
+
   /// Anything not otherwise classified.
   unknown,
 }
@@ -89,7 +100,8 @@ class ChatbotError {
   /// True only for a genuine timeout, so "took longer than expected" copy
   /// cannot leak onto an unreachable-service failure.
   bool get isTimeout =>
-      kind == ChatFailureKind.connectTimeout || kind == ChatFailureKind.receiveTimeout;
+      kind == ChatFailureKind.connectTimeout ||
+      kind == ChatFailureKind.receiveTimeout;
 }
 
 class ChatbotState {
@@ -107,6 +119,7 @@ class ChatbotState {
     this.error,
     this.lastIntent,
     this.lastConfidence,
+    this.quota,
   });
 
   final String? currentConversationId;
@@ -122,6 +135,7 @@ class ChatbotState {
   final ChatbotError? error;
   final String? lastIntent;
   final double? lastConfidence;
+  final ChatEntitlement? quota;
 
   bool get hasMessages => messages.isNotEmpty;
 
@@ -144,6 +158,7 @@ class ChatbotState {
     bool clearLastIntent = false,
     double? lastConfidence,
     bool clearLastConfidence = false,
+    ChatEntitlement? quota,
   }) {
     return ChatbotState(
       currentConversationId: clearCurrentConversationId
@@ -157,21 +172,34 @@ class ChatbotState {
       route: clearRoute ? null : (route ?? this.route),
       isSending: isSending ?? this.isSending,
       isInitialLoading: isInitialLoading ?? this.isInitialLoading,
-      isLocationAttachedToNextRequest: isLocationAttachedToNextRequest ?? this.isLocationAttachedToNextRequest,
+      isLocationAttachedToNextRequest:
+          isLocationAttachedToNextRequest ??
+          this.isLocationAttachedToNextRequest,
       error: clearError ? null : (error ?? this.error),
       lastIntent: clearLastIntent ? null : (lastIntent ?? this.lastIntent),
-      lastConfidence: clearLastConfidence ? null : (lastConfidence ?? this.lastConfidence),
+      lastConfidence: clearLastConfidence
+          ? null
+          : (lastConfidence ?? this.lastConfidence),
+      quota: quota ?? this.quota,
     );
   }
 }
 
 class ChatbotController extends StateNotifier<ChatbotState> {
-  ChatbotController(this._api) : super(const ChatbotState());
+  ChatbotController(
+    this._api, {
+    String Function()? requestIdFactory,
+    this._onQuota,
+  }) : _requestIdFactory = requestIdFactory ?? _defaultRequestId,
+       super(const ChatbotState());
 
   final ChatbotApi _api;
+  final String Function() _requestIdFactory;
+  final void Function(ChatEntitlement quota)? _onQuota;
 
   String? _lastRetryMessage;
   String? _lastRetryConversationId;
+  String? _lastRetryRequestId;
   int _localId = 0;
   bool _disposed = false;
 
@@ -187,6 +215,7 @@ class ChatbotController extends StateNotifier<ChatbotState> {
       latitude: latitude,
       longitude: longitude,
       insertUserMessage: true,
+      requestId: _requestIdFactory(),
     );
   }
 
@@ -197,6 +226,7 @@ class ChatbotController extends StateNotifier<ChatbotState> {
       message,
       conversationId: _lastRetryConversationId ?? state.currentConversationId,
       insertUserMessage: false,
+      requestId: _lastRetryRequestId ?? _requestIdFactory(),
     );
   }
 
@@ -206,6 +236,7 @@ class ChatbotController extends StateNotifier<ChatbotState> {
     double? latitude,
     double? longitude,
     required bool insertUserMessage,
+    required String requestId,
   }) async {
     final trimmed = message.trim();
     if (trimmed.isEmpty || state.isSending) return false;
@@ -213,8 +244,11 @@ class ChatbotController extends StateNotifier<ChatbotState> {
     final targetConversationId = conversationId ?? state.currentConversationId;
     _lastRetryMessage = trimmed;
     _lastRetryConversationId = targetConversationId;
+    _lastRetryRequestId = requestId;
 
-    final nextMessages = insertUserMessage ? [...state.messages, _localMessage(trimmed, 'user')] : state.messages;
+    final nextMessages = insertUserMessage
+        ? [...state.messages, _localMessage(trimmed, 'user')]
+        : state.messages;
     _set(
       state.copyWith(
         messages: nextMessages,
@@ -231,13 +265,18 @@ class ChatbotController extends StateNotifier<ChatbotState> {
           conversationId: targetConversationId,
           latitude: latitude,
           longitude: longitude,
+          clientMessageId: requestId,
         ),
       );
       _lastRetryMessage = null;
       _lastRetryConversationId = null;
+      _lastRetryRequestId = null;
+      if (response.quota != null) _onQuota?.call(response.quota!);
       _set(
         state.copyWith(
-          currentConversationId: response.conversationId.isEmpty ? targetConversationId : response.conversationId,
+          currentConversationId: response.conversationId.isEmpty
+              ? targetConversationId
+              : response.conversationId,
           messages: [...state.messages, _botMessage(response)],
           suggestions: response.suggestions,
           places: response.places,
@@ -251,28 +290,47 @@ class ChatbotController extends StateNotifier<ChatbotState> {
           clearLastIntent: response.intent == null,
           lastConfidence: response.confidence,
           clearLastConfidence: response.confidence == null,
+          quota: response.quota,
         ),
       );
       return true;
     } catch (error) {
+      final api = ApiException.from(error);
+      final deniedQuota =
+          api.code == ApiException.codeFreeQuotaExhausted && api.details is Map
+          ? ChatEntitlement.fromQuotaJson(
+              Map<String, dynamic>.from(api.details as Map),
+            )
+          : null;
+      if (deniedQuota != null) _onQuota?.call(deniedQuota);
       _set(
         state.copyWith(
           isSending: false,
           isLocationAttachedToNextRequest: false,
-          error: _safeError(error),
+          error: _safeError(api),
+          quota: deniedQuota,
         ),
       );
       return false;
     }
   }
 
-  Future<bool> loadConversation(String id, {int limit = 50, int offset = 0}) async {
+  Future<bool> loadConversation(
+    String id, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
     if (state.isInitialLoading) return false;
     _set(state.copyWith(isInitialLoading: true, clearError: true));
     try {
-      final detail = await _api.getConversation(id, limit: limit, offset: offset);
+      final detail = await _api.getConversation(
+        id,
+        limit: limit,
+        offset: offset,
+      );
       _lastRetryMessage = null;
       _lastRetryConversationId = null;
+      _lastRetryRequestId = null;
       _set(
         state.copyWith(
           currentConversationId: detail.conversation?.id ?? id,
@@ -297,6 +355,7 @@ class ChatbotController extends StateNotifier<ChatbotState> {
   void startNewConversation() {
     _lastRetryMessage = null;
     _lastRetryConversationId = null;
+    _lastRetryRequestId = null;
     _set(const ChatbotState());
   }
 
@@ -346,19 +405,28 @@ class ChatbotController extends StateNotifier<ChatbotState> {
       // bucket below and lose their semantic meaning.
       ApiException.codeFreeQuotaExhausted => ChatFailureKind.freeQuotaExhausted,
       ApiException.codeDuplicateInFlight => ChatFailureKind.duplicateInFlight,
-      ApiException.codeEntitlementUnavailable => ChatFailureKind.entitlementUnavailable,
-      ApiException.codeSubscriptionRequired => ChatFailureKind.subscriptionRequired,
-      ApiException.codeSubscriptionInactive => ChatFailureKind.subscriptionInactive,
+      ApiException.codeEntitlementUnavailable =>
+        ChatFailureKind.entitlementUnavailable,
+      ApiException.codeSubscriptionRequired =>
+        ChatFailureKind.subscriptionRequired,
+      ApiException.codeSubscriptionInactive =>
+        ChatFailureKind.subscriptionInactive,
+      ApiException.codeRateLimited => ChatFailureKind.rateLimited,
       ApiException.codeConnectTimeout => ChatFailureKind.connectTimeout,
-      ApiException.codeReceiveTimeout || ApiException.codeSendTimeout => ChatFailureKind.receiveTimeout,
+      ApiException.codeReceiveTimeout ||
+      ApiException.codeSendTimeout => ChatFailureKind.receiveTimeout,
       ApiException.codeServiceUnavailable => ChatFailureKind.unavailable,
       // Raised by `ChatbotApi._envelopeData` when the body is missing or the
       // wrong shape — the request succeeded, so this is not a network fault.
       'EMPTY_RESPONSE' || 'INVALID_RESPONSE' => ChatFailureKind.invalidResponse,
-      'BACKEND_FAILURE' || ApiException.codeHttpError => ChatFailureKind.backend,
+      'BACKEND_FAILURE' ||
+      ApiException.codeHttpError => ChatFailureKind.backend,
       // Anything else with an HTTP status came from the server; a
       // server-supplied error code lands here too.
-      _ => api.statusCode != null ? ChatFailureKind.backend : ChatFailureKind.unknown,
+      _ =>
+        api.statusCode != null
+            ? ChatFailureKind.backend
+            : ChatFailureKind.unknown,
     };
   }
 
@@ -373,6 +441,28 @@ class ChatbotController extends StateNotifier<ChatbotState> {
   }
 }
 
-final chatbotControllerProvider = StateNotifierProvider<ChatbotController, ChatbotState>(
-  (ref) => ChatbotController(ref.watch(chatbotApiProvider)),
-);
+String _defaultRequestId() {
+  final random = Random.secure();
+  final time = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+  final first = random.nextInt(0x7fffffff).toRadixString(36);
+  final second = random.nextInt(0x7fffffff).toRadixString(36);
+  return 'mo_${time}_${first}_$second';
+}
+
+final chatbotControllerProvider =
+    StateNotifierProvider<ChatbotController, ChatbotState>((ref) {
+      ref.watch(
+        authControllerProvider.select(
+          (state) =>
+              state.status == AuthStatus.authenticated ? state.user?.id : null,
+        ),
+      );
+      return ChatbotController(
+        ref.watch(chatbotApiProvider),
+        onQuota: (quota) {
+          final billing = ref.read(billingControllerProvider.notifier);
+          billing.applyChatQuota(quota);
+          unawaited(billing.refreshEntitlements());
+        },
+      );
+    });

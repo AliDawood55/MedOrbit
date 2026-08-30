@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/locale/locale_controller.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../providers/notifications_provider.dart';
+import '../models/notification_model.dart';
 import '../widgets/notification_filter_bar.dart';
 import '../widgets/notification_tile.dart';
 
@@ -102,6 +105,9 @@ class NotificationsScreen extends ConsumerWidget {
                               ? null
                               : () => _markRead(context, notifier, notification.id, strings),
                           onDelete: () => _confirmDelete(context, notifier, notification.id, strings),
+                          onOpen: notification.opensCareConversation
+                              ? () => _openCareConversation(context, notifier, notification)
+                              : null,
                         ),
                         const SizedBox(height: AppTheme.spaceSm),
                       ],
@@ -114,6 +120,17 @@ class NotificationsScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _openCareConversation(
+  BuildContext context,
+  NotificationsController notifier,
+  NotificationModel notification,
+) async {
+  final conversationId = notification.referenceId;
+  if (conversationId == null) return;
+  if (!notification.isRead) await notifier.markRead(notification.id);
+  if (context.mounted) context.push(RoutePaths.messageThreadPath(conversationId));
 }
 
 Future<void> _markRead(

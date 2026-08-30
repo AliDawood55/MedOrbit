@@ -11,12 +11,19 @@ import '../data/google_auth_service.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 
-final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) => GoogleAuthService());
+final googleAuthServiceProvider = Provider<GoogleAuthService>(
+  (ref) => GoogleAuthService(),
+);
 
-final authApiProvider = Provider<AuthApi>((ref) => AuthApi(ref.watch(dioProvider)));
+final authApiProvider = Provider<AuthApi>(
+  (ref) => AuthApi(ref.watch(dioProvider)),
+);
 
 final authRepositoryProvider = Provider<AuthRepository>(
-  (ref) => AuthRepository(ref.watch(authApiProvider), ref.watch(secureStorageProvider)),
+  (ref) => AuthRepository(
+    ref.watch(authApiProvider),
+    ref.watch(secureStorageProvider),
+  ),
 );
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
@@ -55,7 +62,8 @@ class AuthState {
 }
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._repository, this._googleAuthService, this._storage) : super(const AuthState()) {
+  AuthController(this._repository, this._googleAuthService, this._storage)
+    : super(const AuthState()) {
     _sessionClearedSub = _storage.onSessionCleared.listen((_) {
       state = const AuthState(status: AuthStatus.unauthenticated);
     });
@@ -86,13 +94,29 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<bool> login({required String email, required String password}) async {
+    if (state.isSubmitting) return false;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final result = await _repository.login(email: email, password: password);
-      state = state.copyWith(status: AuthStatus.authenticated, user: result.user, isSubmitting: false);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: result.user,
+        isSubmitting: false,
+      );
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
       return false;
     }
   }
@@ -123,19 +147,35 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message, errorCode: e.code);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
       return false;
     }
   }
 
   Future<bool> forgotPassword(String email) async {
+    if (state.isSubmitting) return false;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       await _repository.forgotPassword(email);
       state = state.copyWith(isSubmitting: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
       return false;
     }
   }
@@ -148,7 +188,18 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message, errorCode: e.code);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
       return false;
     }
   }
@@ -161,7 +212,18 @@ class AuthController extends StateNotifier<AuthState> {
       state = state.copyWith(isSubmitting: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message, errorCode: e.code);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
       return false;
     }
   }
@@ -170,14 +232,29 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(clearError: true);
   }
 
-  Future<bool> resetPassword({required String token, required String newPassword}) async {
+  Future<bool> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    if (state.isSubmitting) return false;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       await _repository.resetPassword(token: token, newPassword: newPassword);
       state = state.copyWith(isSubmitting: false);
       return true;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Unexpected error occurred. Please try again.',
+        errorCode: ApiException.codeUnknown,
+      );
       return false;
     }
   }
@@ -186,6 +263,7 @@ class AuthController extends StateNotifier<AuthState> {
   /// account picker (no error shown) or if sign-in/login failed (error
   /// message set on state).
   Future<bool> loginWithGoogle() async {
+    if (state.isSubmitting) return false;
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final idToken = await _googleAuthService.signInAndGetIdToken();
@@ -194,13 +272,32 @@ class AuthController extends StateNotifier<AuthState> {
         return false;
       }
       final result = await _repository.loginWithGoogle(idToken);
-      state = state.copyWith(status: AuthStatus.authenticated, user: result.user, isSubmitting: false);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: result.user,
+        isSubmitting: false,
+      );
       return true;
     } on GoogleSignInException catch (_) {
-      state = state.copyWith(isSubmitting: false, errorMessage: 'Google sign-in failed. Please try again.');
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Google sign-in failed. Please try again.',
+        errorCode: 'GOOGLE_SIGN_IN_FAILED',
+      );
       return false;
     } on ApiException catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: e.message,
+        errorCode: e.code,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Google sign-in failed. Please try again.',
+        errorCode: 'GOOGLE_SIGN_IN_FAILED',
+      );
       return false;
     }
   }
@@ -218,5 +315,9 @@ class AuthController extends StateNotifier<AuthState> {
 }
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
-  (ref) => AuthController(ref.watch(authRepositoryProvider), ref.watch(googleAuthServiceProvider), ref.watch(secureStorageProvider)),
+  (ref) => AuthController(
+    ref.watch(authRepositoryProvider),
+    ref.watch(googleAuthServiceProvider),
+    ref.watch(secureStorageProvider),
+  ),
 );

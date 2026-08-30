@@ -2,9 +2,36 @@
 # repo (ai-service, backend, backend test, frontend), all of which use the
 # repository root as their build context.
 #
+# WHY ONE FILE AND NOT PER-DOCKERFILE IGNORE FILES
+# ------------------------------------------------
+# BuildKit supports <dockerfile>.dockerignore (e.g. backend/Dockerfile.dockerignore),
+# but such a file REPLACES this one for that build rather than merging with it.
+# Four near-duplicate copies would drift the first time a rule is added here and
+# forgotten there. They would only be worth that cost if one image needed a path
+# another image must exclude, and after auditing all four builds none does — the
+# exclusions below are safe for every one of them. So: one file, and the
+# per-build requirements are documented inline where they are non-obvious.
+#
+# TWO KINDS OF RULE LIVE HERE, and it is worth knowing which is which.
+# BuildKit works out what a build actually needs from its COPY instructions, so
+# a rule only shrinks a real transfer when the excluded path sits under a
+# directory some Dockerfile copies. Every Dockerfile here copies a subtree
+# (backend/, frontend/, ai-service/) plus the two root manifests — none copies
+# the repository root — so:
+#   * Rules under ai-service/, backend/ and frontend/ are load-bearing today.
+#     Measured: excluding the Piper voices and friends took the ai-service
+#     context from 134.59MB to 824kB.
+#   * Rules for root-level directories (mobile/, backups/, .venv, .git ...) do
+#     not shrink today's transfers, because nothing copies the root. They are
+#     kept deliberately anyway: they bound the tree BuildKit has to scan, and
+#     they mean a future `COPY . .` — or a fifth Dockerfile — cannot silently
+#     pull 2.4GB of Flutter build output into an image. Cheap insurance, not a
+#     measured saving; do not delete them believing they are dead weight.
+#
 # NOTE: Docker anchors a bare pattern to the build context root; it does not
 # match at every depth. Rules meant to apply inside subdirectories must use a
-# "**/" prefix.
+# "**/" prefix, and rules meant to apply at the root need the bare spelling —
+# which is why several entries below are listed both ways.
 
 .git
 .github
@@ -14,7 +41,16 @@ node_modules
 **/node_modules
 **/__pycache__
 **/*.pyc
+# Both spellings, per the anchoring note above. There is a root-level
+# .pytest_cache in this working tree whose ACL is unreadable even to the owner
+# (`Get-Acl` fails on it), which makes any build that copies the repository
+# root die with "error from sender: open .pytest_cache: Access is denied".
+# No current Dockerfile copies the root, so no build hits it today — but it is
+# exactly the kind of thing the root-level rules above exist to fence off.
+.pytest_cache
+**/.pytest_cache
 **/npm-debug.log
+**/*.log
 
 # Dockerfiles are read directly by the build engine, not via COPY/ADD, so
 # they never need to be present inside the built image.
@@ -24,16 +60,63 @@ Dockerfile.*
 **/Dockerfile.*
 .dockerignore
 
+# The Flutter app — by far the largest thing in the working tree (~2.4GB, most
+# of it mobile/build and mobile/android). No Dockerfile builds or serves it:
+# backend, backend-test, frontend and ai-service between them copy only
+# backend/, frontend/ and ai-service/, and nothing under those trees references
+# mobile/. One rule, deliberately: the nested build/.dart_tool/platform
+# directories are all below this and need no separate entries.
+mobile/
+
 # Not needed inside any image, and can be large or sensitive.
 db
 database
 docs
+# Local database dumps and consolidation snapshots (~114MB). The *.dump and
+# *.backup rules below already covered the dump files themselves, but not the
+# .sql/.json siblings sitting beside them.
+backups
+
+# IDE / agent metadata.
+.claude
+**/.idea
+**/*.iml
+
+# --- Below here the rules sit under a copied subtree, and so are the ones that
+# --- actually shrink what gets sent.
 
 # Data-collection/training tooling is not required in runtime images.
 ai-service/data
 ai-service/tests
+# Benchmark harness and its generated result artifacts — dev tooling, never
+# imported by chatbot.main or virtual_doctor at runtime.
+ai-service/benchmarks
+
+# Piper TTS voices (~121MB for the ar_JO + en_US pair) — the single biggest
+# win in this file. These are DOWNLOADED artifacts, not source: they are
+# gitignored, and virtual_doctor/voice/tts.py fetches them into this directory
+# on first use if absent. Baking them in made image contents depend on whether
+# the developer had ever run TTS locally — present on their machine, absent on
+# CI and on a clean checkout. docker-compose bind-mounts this directory
+# instead, so the download persists across rebuilds the same way
+# medorbit_hf_cache persists the Whisper weights.
+ai-service/virtual_doctor/assets/tts_voices
+# Runtime output: generated PDF reports and the synthesized-speech wav cache
+# (~7MB locally). report_generator.py and tts.py both create it on first use.
+ai-service/virtual_doctor/generated
+
+# Frontend unit tests. Verified needed by neither image: the nginx image serves
+# a static root, and the only backend contract tests that read frontend source
+# (backend/tests/profile-communication-ux.test.js, scripts/signal-coverage-report.js)
+# reach into frontend/src and frontend/public only. They run on the host — CI's
+# frontend-auth-contract job and the `npm run test:*-ui` scripts invoke node
+# directly, not through a container. Excluding them also stops nginx serving
+# test files at /tests/* on port 8080. NOTE: backend/tests is deliberately NOT
+# excluded — backend/Dockerfile.test needs it.
+frontend/tests
 
 **/uploads
+**/coverage
 **/*.backup
 **/*.dump
 **/*.sql.bak

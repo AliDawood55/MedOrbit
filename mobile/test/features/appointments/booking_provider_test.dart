@@ -200,7 +200,7 @@ void main() {
         doctor: _doctor,
         clinic: _soleClinic,
         date: DateTime(2026, 8, 10),
-        slot: const GeneratedSlot(id: '540|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
+        slot: const GeneratedSlot(id: '540|570|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
       );
 
     final ok = await notifier.submit();
@@ -224,7 +224,7 @@ void main() {
         doctor: _doctor,
         clinic: _soleClinic,
         date: DateTime(2026, 8, 10),
-        slot: const GeneratedSlot(id: '540|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
+        slot: const GeneratedSlot(id: '540|570|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
       );
 
     final first = notifier.submit();
@@ -247,7 +247,7 @@ void main() {
         doctor: _doctor,
         clinic: _soleClinic,
         date: DateTime(2026, 8, 10),
-        slot: const GeneratedSlot(id: '540|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
+        slot: const GeneratedSlot(id: '540|570|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
       );
     notifier.goToConfirm();
 
@@ -309,7 +309,7 @@ void main() {
         doctor: _doctor,
         clinic: _soleClinic,
         date: DateTime(2026, 8, 10),
-        slot: const GeneratedSlot(id: '540|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
+        slot: const GeneratedSlot(id: '540|570|30|0', startMinutes: 540, startTime: '09:00:00', endTime: '09:30:00', startDisplay: '09:00', endDisplay: '09:30', durationMinutes: 30, isTelemedicine: false),
       );
     notifier.setReason('Persistent private symptom detail');
     notifier.setNotes('Private additional note');

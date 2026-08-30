@@ -2,14 +2,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../data/discovery_api.dart';
 import '../models/clinic_models.dart';
 import '../models/doctor_models.dart';
 
-final discoveryApiProvider = Provider<DiscoveryApi>((ref) => DiscoveryApi(ref.watch(dioProvider)));
+final discoveryApiProvider = Provider<DiscoveryApi>(
+  (ref) => DiscoveryApi(ref.watch(dioProvider)),
+);
+
+/// Whether the viewer is signed in. Gates the authenticated-only
+/// recommended-doctors strip and the specialty-search telemetry ping,
+/// mirroring the web Find Doctors page's `API.isAuthenticated()` checks.
+final discoveryViewerAuthenticatedProvider = Provider<bool>(
+  (ref) => ref.watch(authControllerProvider).status == AuthStatus.authenticated,
+);
 
 class DiscoveryError {
-  const DiscoveryError({required this.message, required this.code, this.statusCode, this.retryable = true});
+  const DiscoveryError({
+    required this.message,
+    required this.code,
+    this.statusCode,
+    this.retryable = true,
+  });
 
   final String message;
   final String code;
@@ -74,7 +90,8 @@ class ClinicFilters {
   }
 
   @override
-  int get hashCode => Object.hash(region, service, insurance, search, type, page, limit);
+  int get hashCode =>
+      Object.hash(region, service, insurance, search, type, page, limit);
 }
 
 class DoctorFilters {
@@ -140,7 +157,16 @@ class DoctorFilters {
   }
 
   @override
-  int get hashCode => Object.hash(specialty, region, minRating, minFee, maxFee, search, page, limit);
+  int get hashCode => Object.hash(
+    specialty,
+    region,
+    minRating,
+    minFee,
+    maxFee,
+    search,
+    page,
+    limit,
+  );
 }
 
 class DiscoveryState {
@@ -152,7 +178,12 @@ class DiscoveryState {
     this.selectedClinicDetail,
     this.doctorFilters = const DoctorFilters(),
     this.doctors = const [],
+    this.specialties = const [],
+    this.recommendedDoctors = const [],
+    this.isLoadingRecommendedDoctors = false,
+    this.recommendedDoctorsError,
     this.doctorPagination,
+    this.selectedDoctorId,
     this.selectedDoctorDetail,
     this.doctorAvailability = const [],
     this.isLoadingClinics = false,
@@ -178,7 +209,17 @@ class DiscoveryState {
   final ClinicDetailResponse? selectedClinicDetail;
   final DoctorFilters doctorFilters;
   final List<Doctor> doctors;
+  final List<Specialty> specialties;
+  final List<Doctor> recommendedDoctors;
+  final bool isLoadingRecommendedDoctors;
+  final DiscoveryError? recommendedDoctorsError;
   final DoctorPagination? doctorPagination;
+
+  /// The doctor id the detail/availability slices currently belong to. Set
+  /// synchronously when a detail screen mounts, so a stale [selectedDoctorDetail]
+  /// or [doctorDetailError] from a previously viewed doctor is never rendered
+  /// as the current one (Doctor A → back → Doctor B, or B → back → A).
+  final String? selectedDoctorId;
   final DoctorDetailResponse? selectedDoctorDetail;
   final List<DoctorAvailabilitySlot> doctorAvailability;
   final bool isLoadingClinics;
@@ -202,7 +243,9 @@ class DiscoveryState {
     final value = clinicPagination;
     if (value == null) return false;
     if (value.hasNext != null) return value.hasNext!;
-    if (value.page != null && value.totalPages != null) return value.page! < value.totalPages!;
+    if (value.page != null && value.totalPages != null) {
+      return value.page! < value.totalPages!;
+    }
     return false;
   }
 
@@ -210,7 +253,9 @@ class DiscoveryState {
     final value = doctorPagination;
     if (value == null) return false;
     if (value.hasNext != null) return value.hasNext!;
-    if (value.page != null && value.totalPages != null) return value.page! < value.totalPages!;
+    if (value.page != null && value.totalPages != null) {
+      return value.page! < value.totalPages!;
+    }
     return false;
   }
 
@@ -224,8 +269,15 @@ class DiscoveryState {
     bool clearSelectedClinicDetail = false,
     DoctorFilters? doctorFilters,
     List<Doctor>? doctors,
+    List<Specialty>? specialties,
+    List<Doctor>? recommendedDoctors,
+    bool? isLoadingRecommendedDoctors,
+    DiscoveryError? recommendedDoctorsError,
+    bool clearRecommendedDoctorsError = false,
     DoctorPagination? doctorPagination,
     bool clearDoctorPagination = false,
+    String? selectedDoctorId,
+    bool clearSelectedDoctorId = false,
     DoctorDetailResponse? selectedDoctorDetail,
     bool clearSelectedDoctorDetail = false,
     List<DoctorAvailabilitySlot>? doctorAvailability,
@@ -253,31 +305,57 @@ class DiscoveryState {
     return DiscoveryState(
       clinicFilters: clinicFilters ?? this.clinicFilters,
       clinics: clinics ?? this.clinics,
-      clinicPagination: clearClinicPagination ? null : (clinicPagination ?? this.clinicPagination),
+      clinicPagination: clearClinicPagination
+          ? null
+          : (clinicPagination ?? this.clinicPagination),
       nearbyClinics: nearbyClinics ?? this.nearbyClinics,
       selectedClinicDetail: clearSelectedClinicDetail
           ? null
           : (selectedClinicDetail ?? this.selectedClinicDetail),
       doctorFilters: doctorFilters ?? this.doctorFilters,
       doctors: doctors ?? this.doctors,
-      doctorPagination: clearDoctorPagination ? null : (doctorPagination ?? this.doctorPagination),
+      specialties: specialties ?? this.specialties,
+      recommendedDoctors: recommendedDoctors ?? this.recommendedDoctors,
+      isLoadingRecommendedDoctors:
+          isLoadingRecommendedDoctors ?? this.isLoadingRecommendedDoctors,
+      recommendedDoctorsError: clearRecommendedDoctorsError
+          ? null
+          : (recommendedDoctorsError ?? this.recommendedDoctorsError),
+      doctorPagination: clearDoctorPagination
+          ? null
+          : (doctorPagination ?? this.doctorPagination),
+      selectedDoctorId: clearSelectedDoctorId
+          ? null
+          : (selectedDoctorId ?? this.selectedDoctorId),
       selectedDoctorDetail: clearSelectedDoctorDetail
           ? null
           : (selectedDoctorDetail ?? this.selectedDoctorDetail),
       doctorAvailability: doctorAvailability ?? this.doctorAvailability,
       isLoadingClinics: isLoadingClinics ?? this.isLoadingClinics,
       isLoadingMoreClinics: isLoadingMoreClinics ?? this.isLoadingMoreClinics,
-      isLoadingNearbyClinics: isLoadingNearbyClinics ?? this.isLoadingNearbyClinics,
-      isLoadingClinicDetail: isLoadingClinicDetail ?? this.isLoadingClinicDetail,
+      isLoadingNearbyClinics:
+          isLoadingNearbyClinics ?? this.isLoadingNearbyClinics,
+      isLoadingClinicDetail:
+          isLoadingClinicDetail ?? this.isLoadingClinicDetail,
       isLoadingDoctors: isLoadingDoctors ?? this.isLoadingDoctors,
       isLoadingMoreDoctors: isLoadingMoreDoctors ?? this.isLoadingMoreDoctors,
-      isLoadingDoctorDetail: isLoadingDoctorDetail ?? this.isLoadingDoctorDetail,
-      isLoadingDoctorAvailability: isLoadingDoctorAvailability ?? this.isLoadingDoctorAvailability,
-      clinicListError: clearClinicListError ? null : (clinicListError ?? this.clinicListError),
+      isLoadingDoctorDetail:
+          isLoadingDoctorDetail ?? this.isLoadingDoctorDetail,
+      isLoadingDoctorAvailability:
+          isLoadingDoctorAvailability ?? this.isLoadingDoctorAvailability,
+      clinicListError: clearClinicListError
+          ? null
+          : (clinicListError ?? this.clinicListError),
       nearbyError: clearNearbyError ? null : (nearbyError ?? this.nearbyError),
-      clinicDetailError: clearClinicDetailError ? null : (clinicDetailError ?? this.clinicDetailError),
-      doctorListError: clearDoctorListError ? null : (doctorListError ?? this.doctorListError),
-      doctorDetailError: clearDoctorDetailError ? null : (doctorDetailError ?? this.doctorDetailError),
+      clinicDetailError: clearClinicDetailError
+          ? null
+          : (clinicDetailError ?? this.clinicDetailError),
+      doctorListError: clearDoctorListError
+          ? null
+          : (doctorListError ?? this.doctorListError),
+      doctorDetailError: clearDoctorDetailError
+          ? null
+          : (doctorDetailError ?? this.doctorDetailError),
       doctorAvailabilityError: clearDoctorAvailabilityError
           ? null
           : (doctorAvailabilityError ?? this.doctorAvailabilityError),
@@ -292,6 +370,8 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
 
   int _clinicRequestId = 0;
   int _doctorRequestId = 0;
+  int _doctorDetailRequestId = 0;
+  int _doctorAvailabilityRequestId = 0;
   ClinicFilters? _activeClinicRequest;
   DoctorFilters? _activeDoctorRequest;
   bool _disposed = false;
@@ -301,8 +381,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   }
 
   Future<bool> loadClinics({ClinicFilters? filters}) async {
-    final nextFilters = (filters ?? state.clinicFilters).copyWith(page: filters?.page ?? state.clinicFilters.page);
-    if (state.isLoadingClinics && nextFilters == _activeClinicRequest) return false;
+    final nextFilters = (filters ?? state.clinicFilters).copyWith(
+      page: filters?.page ?? state.clinicFilters.page,
+    );
+    if (state.isLoadingClinics && nextFilters == _activeClinicRequest) {
+      return false;
+    }
     final requestId = ++_clinicRequestId;
     _activeClinicRequest = nextFilters;
     _set(
@@ -333,18 +417,29 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       return true;
     } catch (error) {
       if (requestId != _clinicRequestId) return false;
-      _set(state.copyWith(isLoadingClinics: false, clinicListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingClinics: false,
+          clinicListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadMoreClinics() async {
-    if (state.isLoadingClinics || state.isLoadingMoreClinics || !state.canLoadMoreClinics) return false;
+    if (state.isLoadingClinics ||
+        state.isLoadingMoreClinics ||
+        !state.canLoadMoreClinics) {
+      return false;
+    }
     final nextFilters = state.clinicFilters.copyWith(
       page: (state.clinicPagination?.page ?? state.clinicFilters.page) + 1,
       limit: state.clinicPagination?.limit ?? state.clinicFilters.limit,
     );
-    _set(state.copyWith(isLoadingMoreClinics: true, clearClinicListError: true));
+    _set(
+      state.copyWith(isLoadingMoreClinics: true, clearClinicListError: true),
+    );
     try {
       final response = await _api.listClinics(
         region: nextFilters.region,
@@ -365,7 +460,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingMoreClinics: false, clinicListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingMoreClinics: false,
+          clinicListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
@@ -379,7 +479,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
     if (state.isLoadingNearbyClinics) return false;
     _set(state.copyWith(isLoadingNearbyClinics: true, clearNearbyError: true));
     try {
-      final response = await _api.nearbyClinics(lat: lat, lng: lng, radius: radius, type: type);
+      final response = await _api.nearbyClinics(
+        lat: lat,
+        lng: lng,
+        radius: radius,
+        type: type,
+      );
       _set(
         state.copyWith(
           nearbyClinics: response.clinics,
@@ -388,14 +493,21 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingNearbyClinics: false, nearbyError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingNearbyClinics: false,
+          nearbyError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadClinicDetail(String id) async {
     if (state.isLoadingClinicDetail) return false;
-    _set(state.copyWith(isLoadingClinicDetail: true, clearClinicDetailError: true));
+    _set(
+      state.copyWith(isLoadingClinicDetail: true, clearClinicDetailError: true),
+    );
     try {
       final detail = await _api.getClinic(id);
       _set(
@@ -406,8 +518,88 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingClinicDetail: false, clinicDetailError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingClinicDetail: false,
+          clinicDetailError: _safeError(error),
+        ),
+      );
       return false;
+    }
+  }
+
+  /// Best-effort load of the canonical specialty list for the doctor
+  /// filter. Never surfaces an error: the directory screen falls back to
+  /// [kDoctorSpecialtyFallback] when this leaves [DiscoveryState.specialties]
+  /// empty.
+  Future<void> loadSpecialties() async {
+    if (state.specialties.isNotEmpty) return;
+    try {
+      final specialties = await _api.listSpecialties();
+      if (specialties.isNotEmpty) {
+        _set(state.copyWith(specialties: specialties));
+      }
+    } catch (_) {
+      // Ignored on purpose — the screen has a built-in fallback list.
+    }
+  }
+
+  /// Drops the personalized recommended-doctor list and its loading/error
+  /// flags. Called when the directory screen mounts and whenever the viewer
+  /// signs out, so one viewer's recommendations are never shown to the next.
+  void clearRecommendedDoctors() {
+    if (state.recommendedDoctors.isEmpty &&
+        !state.isLoadingRecommendedDoctors &&
+        state.recommendedDoctorsError == null) {
+      return;
+    }
+    _set(
+      state.copyWith(
+        recommendedDoctors: const [],
+        isLoadingRecommendedDoctors: false,
+        clearRecommendedDoctorsError: true,
+      ),
+    );
+  }
+
+  /// Loads the authenticated "Recommended doctors" strip. Fully isolated
+  /// from the main list: an error only sets [DiscoveryState.recommendedDoctorsError]
+  /// and never touches [DiscoveryState.doctors]. Clears any previous list up
+  /// front so a prior viewer's recommendations aren't shown while loading.
+  Future<void> loadRecommendedDoctors({int limit = 6}) async {
+    if (state.isLoadingRecommendedDoctors) return;
+    _set(
+      state.copyWith(
+        recommendedDoctors: const [],
+        isLoadingRecommendedDoctors: true,
+        clearRecommendedDoctorsError: true,
+      ),
+    );
+    try {
+      final doctors = await _api.recommendedDoctors(limit: limit);
+      _set(
+        state.copyWith(
+          recommendedDoctors: doctors,
+          isLoadingRecommendedDoctors: false,
+        ),
+      );
+    } catch (error) {
+      _set(
+        state.copyWith(
+          isLoadingRecommendedDoctors: false,
+          recommendedDoctorsError: _safeError(error),
+        ),
+      );
+    }
+  }
+
+  /// Best-effort specialty-search telemetry ping. Never throws, never
+  /// blocks filtering, and swallows failures silently.
+  Future<void> recordSpecialtySearch(String specialtyId) async {
+    try {
+      await _api.recordSpecialtySearch(specialtyId);
+    } catch (_) {
+      // Telemetry only — a failure must never reach the user.
     }
   }
 
@@ -416,8 +608,12 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   }
 
   Future<bool> loadDoctors({DoctorFilters? filters}) async {
-    final nextFilters = (filters ?? state.doctorFilters).copyWith(page: filters?.page ?? state.doctorFilters.page);
-    if (state.isLoadingDoctors && nextFilters == _activeDoctorRequest) return false;
+    final nextFilters = (filters ?? state.doctorFilters).copyWith(
+      page: filters?.page ?? state.doctorFilters.page,
+    );
+    if (state.isLoadingDoctors && nextFilters == _activeDoctorRequest) {
+      return false;
+    }
     final requestId = ++_doctorRequestId;
     _activeDoctorRequest = nextFilters;
     _set(
@@ -449,18 +645,29 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       return true;
     } catch (error) {
       if (requestId != _doctorRequestId) return false;
-      _set(state.copyWith(isLoadingDoctors: false, doctorListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingDoctors: false,
+          doctorListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadMoreDoctors() async {
-    if (state.isLoadingDoctors || state.isLoadingMoreDoctors || !state.canLoadMoreDoctors) return false;
+    if (state.isLoadingDoctors ||
+        state.isLoadingMoreDoctors ||
+        !state.canLoadMoreDoctors) {
+      return false;
+    }
     final nextFilters = state.doctorFilters.copyWith(
       page: (state.doctorPagination?.page ?? state.doctorFilters.page) + 1,
       limit: state.doctorPagination?.limit ?? state.doctorFilters.limit,
     );
-    _set(state.copyWith(isLoadingMoreDoctors: true, clearDoctorListError: true));
+    _set(
+      state.copyWith(isLoadingMoreDoctors: true, clearDoctorListError: true),
+    );
     try {
       final response = await _api.listDoctors(
         specialty: nextFilters.specialty,
@@ -482,16 +689,48 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingMoreDoctors: false, doctorListError: _safeError(error)));
+      _set(
+        state.copyWith(
+          isLoadingMoreDoctors: false,
+          doctorListError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
+  /// Called synchronously when a detail screen mounts (or re-surfaces for a
+  /// different doctor). Rebinds the shared detail/availability slices to [id]
+  /// and drops everything that belonged to the previously viewed doctor, so
+  /// Doctor A's data can never render for Doctor B. A no-op when [id] is
+  /// already the active doctor (a refresh of the same screen keeps its data
+  /// visible while reloading).
+  void prepareDoctorDetail(String id) {
+    if (state.selectedDoctorId == id) return;
+    _doctorDetailRequestId++;
+    _doctorAvailabilityRequestId++;
+    _set(
+      state.copyWith(
+        selectedDoctorId: id,
+        clearSelectedDoctorDetail: true,
+        doctorAvailability: const [],
+        isLoadingDoctorDetail: false,
+        isLoadingDoctorAvailability: false,
+        clearDoctorDetailError: true,
+        clearDoctorAvailabilityError: true,
+      ),
+    );
+  }
+
   Future<bool> loadDoctorDetail(String id) async {
-    if (state.isLoadingDoctorDetail) return false;
-    _set(state.copyWith(isLoadingDoctorDetail: true, clearDoctorDetailError: true));
+    prepareDoctorDetail(id);
+    final requestId = ++_doctorDetailRequestId;
+    _set(
+      state.copyWith(isLoadingDoctorDetail: true, clearDoctorDetailError: true),
+    );
     try {
       final detail = await _api.getDoctor(id);
+      if (requestId != _doctorDetailRequestId) return false;
       _set(
         state.copyWith(
           selectedDoctorDetail: detail,
@@ -500,16 +739,31 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
-      _set(state.copyWith(isLoadingDoctorDetail: false, doctorDetailError: _safeError(error)));
+      if (requestId != _doctorDetailRequestId) return false;
+      _set(
+        state.copyWith(
+          isLoadingDoctorDetail: false,
+          doctorDetailError: _safeError(error),
+        ),
+      );
       return false;
     }
   }
 
   Future<bool> loadDoctorAvailability(String id, {String? date}) async {
-    if (state.isLoadingDoctorAvailability) return false;
-    _set(state.copyWith(isLoadingDoctorAvailability: true, clearDoctorAvailabilityError: true));
+    // Availability always belongs to whichever doctor's detail screen is open.
+    prepareDoctorDetail(id);
+    final requestId = ++_doctorAvailabilityRequestId;
+    _set(
+      state.copyWith(
+        isLoadingDoctorAvailability: true,
+        doctorAvailability: const [],
+        clearDoctorAvailabilityError: true,
+      ),
+    );
     try {
       final response = await _api.getDoctorAvailability(id, date: date);
+      if (requestId != _doctorAvailabilityRequestId) return false;
       _set(
         state.copyWith(
           doctorAvailability: response.slots,
@@ -518,6 +772,7 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
       );
       return true;
     } catch (error) {
+      if (requestId != _doctorAvailabilityRequestId) return false;
       _set(
         state.copyWith(
           isLoadingDoctorAvailability: false,
@@ -562,6 +817,8 @@ class DiscoveryController extends StateNotifier<DiscoveryState> {
   }
 }
 
-final discoveryControllerProvider = StateNotifierProvider<DiscoveryController, DiscoveryState>(
-  (ref) => DiscoveryController(ref.watch(discoveryApiProvider)),
-);
+final discoveryControllerProvider =
+    StateNotifierProvider<DiscoveryController, DiscoveryState>((ref) {
+      ref.watch(appAccountSessionKeyProvider);
+      return DiscoveryController(ref.watch(discoveryApiProvider));
+    });

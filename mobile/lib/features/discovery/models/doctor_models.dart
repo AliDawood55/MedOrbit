@@ -92,6 +92,12 @@ class Doctor {
     this.isAcceptingPatients,
     this.education = const [],
     this.certifications = const [],
+    this.areasOfExpertise = const [],
+    this.professionalInterests = const [],
+    this.languagesSpoken = const [],
+    this.professionalHeadline,
+    this.subSpecialty,
+    this.profileImageUrl,
     this.professionalBio,
     this.professionalBioAr,
     this.professionalBioEn,
@@ -123,6 +129,12 @@ class Doctor {
   final bool? isAcceptingPatients;
   final List<String> education;
   final List<String> certifications;
+  final List<String> areasOfExpertise;
+  final List<String> professionalInterests;
+  final List<String> languagesSpoken;
+  final String? professionalHeadline;
+  final String? subSpecialty;
+  final String? profileImageUrl;
   final String? professionalBio;
   final String? professionalBioAr;
   final String? professionalBioEn;
@@ -165,6 +177,22 @@ class Doctor {
       ),
       education: _stringList(json['education']),
       certifications: _stringList(json['certifications']),
+      areasOfExpertise: _stringList(
+        _read(json, 'areas_of_expertise', 'areasOfExpertise'),
+      ),
+      professionalInterests: _stringList(
+        _read(json, 'professional_interests', 'professionalInterests'),
+      ),
+      languagesSpoken: _stringList(
+        _read(json, 'languages_spoken', 'languagesSpoken'),
+      ),
+      professionalHeadline: _asString(
+        _read(json, 'professional_headline', 'professionalHeadline'),
+      ),
+      subSpecialty: _asString(_read(json, 'sub_specialty', 'subSpecialty')),
+      profileImageUrl: _asString(
+        _read(json, 'profile_image_url', 'profileImageUrl'),
+      ),
       professionalBio: _asString(
         _read(json, 'professional_bio', 'professionalBio'),
       ),
@@ -216,6 +244,18 @@ class Doctor {
         'isAcceptingPatients',
         'education',
         'certifications',
+        'areas_of_expertise',
+        'areasOfExpertise',
+        'professional_interests',
+        'professionalInterests',
+        'languages_spoken',
+        'languagesSpoken',
+        'professional_headline',
+        'professionalHeadline',
+        'sub_specialty',
+        'subSpecialty',
+        'profile_image_url',
+        'profileImageUrl',
         'professional_bio',
         'professionalBio',
         'professional_bio_ar',
@@ -266,6 +306,16 @@ class Doctor {
       'is_accepting_patients': isAcceptingPatients,
     'education': List<String>.from(education),
     'certifications': List<String>.from(certifications),
+    if (areasOfExpertise.isNotEmpty)
+      'areas_of_expertise': List<String>.from(areasOfExpertise),
+    if (professionalInterests.isNotEmpty)
+      'professional_interests': List<String>.from(professionalInterests),
+    if (languagesSpoken.isNotEmpty)
+      'languages_spoken': List<String>.from(languagesSpoken),
+    if (professionalHeadline != null)
+      'professional_headline': professionalHeadline,
+    if (subSpecialty != null) 'sub_specialty': subSpecialty,
+    if (profileImageUrl != null) 'profile_image_url': profileImageUrl,
     if (professionalBio != null) 'professional_bio': professionalBio,
     if (professionalBioAr != null) 'professional_bio_ar': professionalBioAr,
     if (professionalBioEn != null) 'professional_bio_en': professionalBioEn,
@@ -435,8 +485,13 @@ class DoctorReview {
     required this.id,
     this.patientId,
     this.patientName,
+    this.patientFirstNameAr,
+    this.patientFirstNameEn,
     this.rating,
     this.comment,
+    this.reviewText,
+    this.reviewTextAr,
+    this.reviewTextEn,
     this.createdAt,
     this.extra = const {},
   });
@@ -444,18 +499,64 @@ class DoctorReview {
   final String id;
   final String? patientId;
   final String? patientName;
+  final String? patientFirstNameAr;
+  final String? patientFirstNameEn;
   final double? rating;
+
+  /// Legacy generic comment field. The backend doctor-detail endpoint sends
+  /// the review body as `review_text` (canonical) plus `review_text_ar` /
+  /// `review_text_en`; [localizedText] resolves across all of these.
   final String? comment;
+  final String? reviewText;
+  final String? reviewTextAr;
+  final String? reviewTextEn;
   final DateTime? createdAt;
   final Map<String, dynamic> extra;
+
+  /// Locale-appropriate review body, mirroring the web doctor profile's
+  /// `review.review_text || localized(review, 'review_text_ar', 'review_text_en')`.
+  String? localizedText({required bool isArabic}) {
+    final ordered = isArabic
+        ? [reviewText, reviewTextAr, reviewTextEn, comment]
+        : [reviewText, reviewTextEn, reviewTextAr, comment];
+    for (final value in ordered) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
+  }
+
+  /// Locale-appropriate reviewer display name, mirroring the web profile's
+  /// `localized(review, 'patient_first_name_ar', 'patient_first_name_en')`.
+  /// Returns null when the backend sent no reviewer name (caller supplies a
+  /// localized "Patient" fallback).
+  String? reviewerName({required bool isArabic}) {
+    final ordered = isArabic
+        ? [patientFirstNameAr, patientFirstNameEn, patientName]
+        : [patientFirstNameEn, patientFirstNameAr, patientName];
+    for (final value in ordered) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
+  }
 
   factory DoctorReview.fromJson(Map<String, dynamic> json) {
     return DoctorReview(
       id: requireExactString(json, 'id'),
       patientId: _asString(_read(json, 'patient_id', 'patientId')),
       patientName: _asString(_read(json, 'patient_name', 'patientName')),
+      patientFirstNameAr: _asString(
+        _read(json, 'patient_first_name_ar', 'patientFirstNameAr'),
+      ),
+      patientFirstNameEn: _asString(
+        _read(json, 'patient_first_name_en', 'patientFirstNameEn'),
+      ),
       rating: _asDouble(json['rating']),
       comment: _asString(json['comment']),
+      reviewText: _asString(_read(json, 'review_text', 'reviewText')),
+      reviewTextAr: _asString(_read(json, 'review_text_ar', 'reviewTextAr')),
+      reviewTextEn: _asString(_read(json, 'review_text_en', 'reviewTextEn')),
       createdAt: _asDate(_read(json, 'created_at', 'createdAt')),
       extra: _extra(json, const {
         'id',
@@ -463,8 +564,18 @@ class DoctorReview {
         'patientId',
         'patient_name',
         'patientName',
+        'patient_first_name_ar',
+        'patientFirstNameAr',
+        'patient_first_name_en',
+        'patientFirstNameEn',
         'rating',
         'comment',
+        'review_text',
+        'reviewText',
+        'review_text_ar',
+        'reviewTextAr',
+        'review_text_en',
+        'reviewTextEn',
         'created_at',
         'createdAt',
       }),
@@ -476,11 +587,97 @@ class DoctorReview {
     'id': id,
     if (patientId != null) 'patient_id': patientId,
     if (patientName != null) 'patient_name': patientName,
+    if (patientFirstNameAr != null)
+      'patient_first_name_ar': patientFirstNameAr,
+    if (patientFirstNameEn != null)
+      'patient_first_name_en': patientFirstNameEn,
     if (rating != null) 'rating': rating,
     if (comment != null) 'comment': comment,
+    if (reviewText != null) 'review_text': reviewText,
+    if (reviewTextAr != null) 'review_text_ar': reviewTextAr,
+    if (reviewTextEn != null) 'review_text_en': reviewTextEn,
     if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
   };
 }
+
+/// A medical specialty from `GET /specialties`. [nameEn] is the value sent
+/// back to the `/doctors` specialty filter (the backend matches either the
+/// English or Arabic name); [label] picks the locale-appropriate text.
+class Specialty {
+  const Specialty({required this.nameEn, required this.nameAr, this.id});
+
+  final String? id;
+  final String nameEn;
+  final String nameAr;
+
+  String label(bool isArabic) =>
+      isArabic ? (nameAr.isEmpty ? nameEn : nameAr) : nameEn;
+
+  factory Specialty.fromJson(Map<String, dynamic> json) {
+    final en = _asString(_read(json, 'name_en', 'nameEn'))?.trim() ?? '';
+    final ar = _asString(_read(json, 'name_ar', 'nameAr'))?.trim() ?? '';
+    return Specialty(
+      id: _asString(json['id']),
+      nameEn: en,
+      nameAr: ar.isEmpty ? en : ar,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Specialty &&
+      other.id == id &&
+      other.nameEn == nameEn &&
+      other.nameAr == nameAr;
+
+  @override
+  int get hashCode => Object.hash(id, nameEn, nameAr);
+}
+
+/// Parses the `GET /specialties` array envelope (`{ success, data: [...] }`).
+/// Returns an empty list on any unexpected shape so callers can fall back
+/// to [kDoctorSpecialtyFallback] instead of failing the screen.
+List<Specialty> parseSpecialtyList(Map<String, dynamic>? envelope) {
+  if (envelope == null) return const [];
+  final data = envelope['data'] ?? envelope['specialties'];
+  if (data is! List) return const [];
+  return data
+      .whereType<Map>()
+      .map((row) => Specialty.fromJson(Map<String, dynamic>.from(row)))
+      .where((specialty) => specialty.nameEn.isNotEmpty)
+      .toList();
+}
+
+/// Offline fallback specialty list, mirroring the hard-coded list the web
+/// Find Doctors page ships (`frontend/src/js/find-doctors.js`) for when
+/// `GET /specialties` is unavailable.
+const List<Specialty> kDoctorSpecialtyFallback = [
+  Specialty(nameEn: 'Anesthesiology', nameAr: 'التخدير'),
+  Specialty(nameEn: 'Cardiology', nameAr: 'طب القلب'),
+  Specialty(nameEn: 'Dentistry', nameAr: 'طب الأسنان'),
+  Specialty(nameEn: 'Dermatology', nameAr: 'طب الجلدية'),
+  Specialty(nameEn: 'Emergency Medicine', nameAr: 'طب الطوارئ'),
+  Specialty(nameEn: 'Endocrinology', nameAr: 'طب الغدد الصماء'),
+  Specialty(nameEn: 'ENT', nameAr: 'طب الأنف والأذن والحنجرة'),
+  Specialty(nameEn: 'Gastroenterology', nameAr: 'طب الجهاز الهضمي'),
+  Specialty(nameEn: 'General Practice', nameAr: 'طب عام'),
+  Specialty(nameEn: 'General Surgery', nameAr: 'جراحة عامة'),
+  Specialty(nameEn: 'Geriatrics', nameAr: 'طب الشيخوخة'),
+  Specialty(nameEn: 'Hematology', nameAr: 'طب الدم'),
+  Specialty(nameEn: 'Nephrology', nameAr: 'طب الكلى'),
+  Specialty(nameEn: 'Neurology', nameAr: 'طب الأعصاب'),
+  Specialty(nameEn: 'Obstetrics & Gynecology', nameAr: 'طب النساء والتوليد'),
+  Specialty(nameEn: 'Oncology', nameAr: 'طب الأورام'),
+  Specialty(nameEn: 'Ophthalmology', nameAr: 'طب العيون'),
+  Specialty(nameEn: 'Orthopedics', nameAr: 'جراحة العظام'),
+  Specialty(nameEn: 'Pediatrics', nameAr: 'طب الأطفال'),
+  Specialty(nameEn: 'Physiotherapy', nameAr: 'طب إعادة التأهيل'),
+  Specialty(nameEn: 'Psychiatry', nameAr: 'طب نفسي'),
+  Specialty(nameEn: 'Pulmonology', nameAr: 'طب الرئة'),
+  Specialty(nameEn: 'Radiology', nameAr: 'الأشعة'),
+  Specialty(nameEn: 'Rheumatology', nameAr: 'طب الروماتيزم'),
+  Specialty(nameEn: 'Urology', nameAr: 'جراحة المسالك البولية'),
+];
 
 class DoctorPagination {
   const DoctorPagination({

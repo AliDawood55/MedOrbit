@@ -13,24 +13,31 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
-import '../../../shared/widgets/role_header_actions.dart';
-import '../../../shared/widgets/role_general_navigation.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../appointments/models/enriched_appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
 import '../../appointments/utils/appointment_filters.dart';
 import '../../appointments/widgets/appointment_card.dart';
-import '../../admin/dashboard/models/admin_dashboard_stats.dart';
-import '../../admin/dashboard/providers/admin_dashboard_provider.dart';
-import '../../doctor_workspace/screens/doctor_home_screen.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../../notifications/providers/notifications_provider.dart';
 import '../../prescriptions/models/prescription_model.dart';
 import '../../prescriptions/providers/prescriptions_provider.dart';
 import '../../records/models/record_entry_model.dart';
 import '../../records/providers/records_provider.dart';
+import '../../social/localization/social_strings.dart';
 import '../models/user_profile_model.dart';
 import '../providers/user_provider.dart';
+
+/// Whether the patient Home shows the "Apply to become a doctor" quick action.
+/// Patient accounts only — doctors, admins, and any other role never see it,
+/// matching the patient-only Doctor Application route and backend guard.
+bool homeShowsDoctorApplicationAction(String? role) =>
+    role?.trim().toLowerCase() == 'patient';
+
+/// Feed is a shared product action for every authenticated account.
+bool homeShowsSocialFeedAction(AppRoleCapabilities capabilities) =>
+    capabilities.canUseSocialFeed;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -62,32 +69,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     }
 
-    final role = ref.read(authControllerProvider).user?.role.toLowerCase();
-    if (role == 'admin' || role == 'super_admin') {
-      await Future.wait([
-        ignoreFailure(() async {
-          final _ = await ref.refresh(currentUserProfileProvider.future);
-        }),
-        ignoreFailure(() async {
-          final _ = await ref.refresh(adminDashboardStatsProvider.future);
-        }),
-      ]);
-      return;
-    }
-
+    final capabilities = ref.read(appRoleCapabilitiesProvider);
     await Future.wait([
       ignoreFailure(() async {
         final _ = await ref.refresh(currentUserProfileProvider.future);
       }),
       ignoreFailure(
-        () => ref.read(appointmentsControllerProvider.notifier).load(),
+        () => ref.read(notificationsControllerProvider.notifier).load(),
       ),
-      ignoreFailure(() async {
-        final _ = await ref.refresh(prescriptionsListProvider.future);
-      }),
-      ignoreFailure(() async {
-        final _ = await ref.refresh(recordsTimelineProvider.future);
-      }),
+      if (capabilities.canUsePatientCare) ...[
+        ignoreFailure(
+          () => ref.read(appointmentsControllerProvider.notifier).load(),
+        ),
+        ignoreFailure(() async {
+          final _ = await ref.refresh(prescriptionsListProvider.future);
+        }),
+        ignoreFailure(() async {
+          final _ = await ref.refresh(recordsTimelineProvider.future);
+        }),
+      ],
     ]);
   }
 
@@ -104,31 +104,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final strings = ref.watch(appStringsProvider);
+    final socialStrings = ref.watch(socialStringsProvider);
     final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
-    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
-    final isAdmin = role == 'admin' || role == 'super_admin';
-    final isDoctor = role == 'doctor';
+    final capabilities = ref.watch(appRoleCapabilitiesProvider);
     final profileAsync = ref.watch(currentUserProfileProvider);
-
-    if (isAdmin) {
-      final statsAsync = ref.watch(adminDashboardStatsProvider);
-      return _AdminHomeScreen(
-        profileAsync: profileAsync,
-        statsAsync: statsAsync,
-        isSuperAdmin: role == 'super_admin',
-        isArabic: isArabic,
-        strings: strings,
-        origin: ref.watch(activeOriginProvider),
-        onRefresh: _refreshDashboard,
-        onRetry: () => ref.invalidate(currentUserProfileProvider),
-        onRetryStats: () => ref.invalidate(adminDashboardStatsProvider),
-      );
-    }
-    if (isDoctor) return const DoctorHomeScreen();
-
-    final appointmentsAsync = ref.watch(appointmentsControllerProvider);
-    final prescriptionsAsync = ref.watch(prescriptionsListProvider);
-    final recordsAsync = ref.watch(recordsTimelineProvider);
     // `null` while loading/on error — the quick action falls back to a
     // generic description rather than showing a stale or wrong count.
     final notificationsState = ref.watch(notificationsControllerProvider);
@@ -139,7 +118,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return AppScaffold(
       appBar: AppBar(
         title: Text(strings.appName),
-        actions: const [RoleHeaderActions()],
+        actions: [
+          IconButton(
+            tooltip: strings.languageToggleTooltip,
+            icon: const Icon(Icons.translate_rounded),
+            onPressed: () =>
+                ref.read(localeControllerProvider.notifier).toggle(),
+          ),
+          IconButton(
+            tooltip: strings.logoutTooltip,
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: () async {
+              await ref.read(authControllerProvider.notifier).logout();
+              if (context.mounted) context.go(RoutePaths.login);
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         top: false,
@@ -163,96 +157,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       onRetry: () => ref.invalidate(currentUserProfileProvider),
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
-                    const RoleGeneralNavigation(role: 'patient'),
-                    const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
-                      title: strings.dashboardStatisticsTitle,
-                      subtitle: strings.dashboardStatisticsSubtitle,
+                      title: strings.homeSharedTitle,
+                      subtitle: strings.homeSharedSubtitle,
                     ),
-                    _StatisticsGrid(
-                      appointmentsAsync: appointmentsAsync,
-                      prescriptionsAsync: prescriptionsAsync,
-                      recordsAsync: recordsAsync,
+                    const SizedBox(height: AppTheme.spaceSm),
+                    _SharedProductSection(
                       strings: strings,
-                      onRetryAppointments: () => ref
-                          .read(appointmentsControllerProvider.notifier)
-                          .load(),
-                      onRetryPrescriptions: () =>
-                          ref.invalidate(prescriptionsListProvider),
-                      onRetryRecords: () =>
-                          ref.invalidate(recordsTimelineProvider),
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.quickActionsTitle,
-                      subtitle: strings.quickActionsSubtitle,
-                    ),
-                    AppTextField(
-                      label: strings.dashboardSearchLabel,
-                      hintText: strings.dashboardSearchPlaceholder,
-                      controller: _searchController,
-                      textInputAction: TextInputAction.search,
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      suffixIcon: _query.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: strings.clearSearch,
-                              onPressed: _clearQuery,
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                      semanticLabel: strings.dashboardSearchLabel,
-                      onChanged: _updateQuery,
-                    ),
-                    const SizedBox(height: AppTheme.spaceMd),
-                    _QuickActions(
-                      strings: strings,
-                      query: _query,
+                      socialStrings: socialStrings,
+                      capabilities: capabilities,
                       notificationsUnreadCount: notificationsUnreadCount,
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
-                      title: strings.upcomingAppointmentsTitle,
-                      trailing: _ViewAllButton(
-                        label: strings.viewAll,
-                        onPressed: () => context.go(RoutePaths.appointments),
-                      ),
+                      title: strings.homeRoleToolsTitle,
+                      subtitle: strings.homeRoleToolsSubtitle,
                     ),
-                    _UpcomingAppointments(
-                      appointmentsAsync: appointmentsAsync,
+                    const SizedBox(height: AppTheme.spaceSm),
+                    _RoleWorkspaceSection(
                       strings: strings,
-                      isArabic: isArabic,
-                      onRetry: () => ref
-                          .read(appointmentsControllerProvider.notifier)
-                          .load(),
+                      capabilities: capabilities,
                     ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.recentPrescriptionsTitle,
-                      trailing: _ViewAllButton(
-                        label: strings.viewAll,
-                        onPressed: () => context.go(RoutePaths.prescriptions),
+                    if (capabilities.canUsePatientCare)
+                      _PatientHomeSections(
+                        strings: strings,
+                        isArabic: isArabic,
+                        query: _query,
+                        searchController: _searchController,
+                        onQueryChanged: _updateQuery,
+                        onClearQuery: _clearQuery,
                       ),
-                    ),
-                    _PrescriptionPreview(
-                      prescriptionsAsync: prescriptionsAsync,
-                      strings: strings,
-                      isArabic: isArabic,
-                      onRetry: () => ref.invalidate(prescriptionsListProvider),
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.recentMedicalRecordsTitle,
-                      trailing: _ViewAllButton(
-                        label: strings.viewAll,
-                        onPressed: () => context.go(RoutePaths.records),
-                      ),
-                    ),
-                    _MedicalRecordPreview(
-                      recordsAsync: recordsAsync,
-                      strings: strings,
-                      isArabic: isArabic,
-                      onRetry: () => ref.invalidate(recordsTimelineProvider),
-                    ),
                   ],
                 ),
               ),
@@ -264,278 +198,357 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 }
 
-/// Operational accounts must not be shown patient records, prescriptions,
-/// care data, AI tools, or contact submission actions. Admin management is
-/// currently web-first; this deliberately provides a clear, safe mobile home
-/// rather than pretending patient-only routes belong to an administrator.
-class _AdminHomeScreen extends ConsumerWidget {
-  const _AdminHomeScreen({
-    required this.profileAsync,
-    required this.statsAsync,
-    required this.isSuperAdmin,
-    required this.isArabic,
+class _SharedProductSection extends StatelessWidget {
+  const _SharedProductSection({
     required this.strings,
-    required this.origin,
-    required this.onRefresh,
-    required this.onRetry,
-    required this.onRetryStats,
+    required this.socialStrings,
+    required this.capabilities,
+    required this.notificationsUnreadCount,
   });
 
-  final AsyncValue<UserProfileModel> profileAsync;
-  final AsyncValue<AdminDashboardStats> statsAsync;
-  final bool isSuperAdmin;
-  final bool isArabic;
   final AppStrings strings;
-  final String origin;
-  final Future<void> Function() onRefresh;
-  final VoidCallback onRetry;
-  final VoidCallback onRetryStats;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AppScaffold(
-      appBar: AppBar(
-        title: Text(strings.appName),
-        actions: const [RoleHeaderActions()],
-      ),
-      body: SafeArea(
-        top: false,
-        child: RefreshIndicator(
-          onRefresh: onRefresh,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceLg),
-            children: [
-              ResponsiveContent(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _ProfileSection(
-                      profileAsync: profileAsync,
-                      isArabic: isArabic,
-                      strings: strings,
-                      origin: origin,
-                      onRetry: onRetry,
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    RoleGeneralNavigation(
-                      role: isSuperAdmin ? 'super_admin' : 'admin',
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: strings.adminMobileDashboardTitle,
-                      subtitle: strings.adminDashboardSubtitle,
-                    ),
-                    const SizedBox(height: AppTheme.spaceMd),
-                    _AdminStatisticsGrid(
-                      statsAsync: statsAsync,
-                      strings: strings,
-                      onRetry: onRetryStats,
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-                    SectionHeader(
-                      title: isSuperAdmin
-                          ? (isArabic ? 'مساحة عمل المشرف العام' : 'Super administrator workspace')
-                          : (isArabic ? 'مساحة عمل المشرف' : 'Administrator workspace'),
-                      subtitle: isArabic
-                          ? 'إدارة المنصة مع الحفاظ على حدود صلاحيات حسابك.'
-                          : 'Manage the platform while preserving your account permission boundaries.',
-                    ),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppTheme.spaceXl),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              Icons.admin_panel_settings_outlined,
-                              color: AppTheme.accent,
-                              size: AppTheme.iconXl,
-                            ),
-                            const SizedBox(height: AppTheme.spaceMd),
-                            Text(
-                              strings.adminMobileDashboardHint,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: AppTheme.spaceLg),
-                            Wrap(
-                              spacing: AppTheme.spaceSm,
-                              runSpacing: AppTheme.spaceSm,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () =>
-                                      context.push(RoutePaths.adminManagement),
-                                  icon: const Icon(
-                                    Icons.admin_panel_settings_outlined,
-                                  ),
-                                  label: Text(strings.adminManagementTitle),
-                                ),
-                                if (isSuperAdmin)
-                                  OutlinedButton.icon(
-                                    onPressed: () => context.push(
-                                      RoutePaths.adminManagementPath(
-                                        tab: 'admins',
-                                      ),
-                                    ),
-                                    icon: const Icon(Icons.groups_2_outlined),
-                                    label: Text(strings.adminAdministrators),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminStatisticsGrid extends StatelessWidget {
-  const _AdminStatisticsGrid({
-    required this.statsAsync,
-    required this.strings,
-    required this.onRetry,
-  });
-
-  final AsyncValue<AdminDashboardStats> statsAsync;
-  final AppStrings strings;
-  final VoidCallback onRetry;
+  final SocialStrings socialStrings;
+  final AppRoleCapabilities capabilities;
+  final int? notificationsUnreadCount;
 
   @override
   Widget build(BuildContext context) {
-    return statsAsync.when(
-      loading: () => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppTheme.spaceLg),
-          child: CircularProgressIndicator(),
+    final entries = <_HomeEntry>[
+      if (homeShowsSocialFeedAction(capabilities))
+        _HomeEntry(
+          socialStrings.feedTitle,
+          socialStrings.emptyHint,
+          Icons.newspaper_outlined,
+          AppTheme.primary,
+          RoutePaths.socialFeed,
+          useGo: true,
         ),
+      _HomeEntry(
+        strings.discoverTitle,
+        strings.discoverSubtitle,
+        Icons.travel_explore_outlined,
+        AppTheme.secondary,
+        RoutePaths.discover,
+        useGo: true,
       ),
-      error: (error, stackTrace) => FeatureCard(
-        title: strings.adminMobileDashboardTitle,
-        subtitle: strings.statLoadError,
-        icon: Icons.refresh_rounded,
-        color: Theme.of(context).colorScheme.error,
-        onTap: onRetry,
-        semanticLabel: '${strings.retry}: ${strings.adminMobileDashboardTitle}',
-      ),
-      data: (stats) {
-        final tiles = <_AdminStatData>[
-          _AdminStatData(
-            stats.usersTotal,
-            strings.adminStatsUsers,
-            Icons.groups_outlined,
-            AppTheme.primary,
-            RoutePaths.adminManagementPath(tab: 'users'),
-          ),
-          _AdminStatData(
-            stats.patients,
-            strings.adminStatsPatients,
-            Icons.person_outline_rounded,
-            AppTheme.secondary,
-            RoutePaths.adminManagementPath(tab: 'users', role: 'patient'),
-          ),
-          _AdminStatData(
-            stats.doctors,
-            strings.adminStatsDoctors,
-            Icons.medical_services_outlined,
-            AppTheme.accent,
-            RoutePaths.adminManagementPath(tab: 'users', role: 'doctor'),
-          ),
-          _AdminStatData(
-            stats.appointmentsTotal,
-            strings.adminStatsAppointments,
-            Icons.event_available_outlined,
-            AppTheme.violet,
-            RoutePaths.adminManagementPath(
-              tab: 'activity',
-              metric: 'appointments',
-            ),
-          ),
-          _AdminStatData(
-            stats.recordsTotal,
-            strings.adminStatsRecords,
-            Icons.description_outlined,
-            AppTheme.primary,
-            RoutePaths.adminManagementPath(tab: 'activity', metric: 'records'),
-          ),
-          _AdminStatData(
-            stats.prescriptionsTotal,
-            strings.adminStatsPrescriptions,
-            Icons.medication_outlined,
-            AppTheme.secondary,
-            RoutePaths.adminManagementPath(
-              tab: 'activity',
-              metric: 'prescriptions',
-            ),
-          ),
-          if (stats.averageRating != null)
-            _AdminStatData(
-              stats.averageRating!.toStringAsFixed(1),
-              strings.adminStatsRating,
-              Icons.star_outline_rounded,
-              AppTheme.accent,
-              RoutePaths.adminManagementPath(
-                tab: 'activity',
-                metric: 'reviews',
+      _HomeEntry(
+        strings.navNotifications,
+        notificationsUnreadCount == null || notificationsUnreadCount == 0
+            ? strings.quickNotificationsDescription
+            : strings.notificationsUnreadCountDescription(
+                notificationsUnreadCount!,
               ),
-            ),
-        ];
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth >= AppTheme.compactBreakpoint
-                ? 2
-                : 1;
-            final gap = AppTheme.spaceMd;
-            final width =
-                (constraints.maxWidth - gap * (columns - 1)) / columns;
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final tile in tiles)
-                  SizedBox(
-                    width: width,
-                    child: StatTile(
-                      value: '\u2066${tile.value}\u2069',
-                      label: tile.label,
-                      icon: tile.icon,
-                      color: tile.color,
-                      onTap: tile.route == null
-                          ? null
-                          : () => context.push(tile.route!),
-                    ),
-                  ),
-              ],
-            );
-          },
-        );
-      },
-    );
+        Icons.notifications_outlined,
+        AppTheme.accent,
+        RoutePaths.notifications,
+      ),
+      _HomeEntry(
+        strings.billingTitle,
+        strings.billingProfileDescription,
+        Icons.workspace_premium_outlined,
+        AppTheme.violet,
+        RoutePaths.billing,
+      ),
+      if (capabilities.canUseAiChat)
+        _HomeEntry(
+          strings.quickMedicalChatLabel,
+          strings.quickMedicalChatDescription,
+          Icons.chat_bubble_outline_rounded,
+          AppTheme.violet,
+          RoutePaths.chatbot,
+        ),
+      if (capabilities.canUseConsumerAi)
+        _HomeEntry(
+          strings.servicesCommunicationGroup,
+          strings.homeAiDescription,
+          Icons.auto_awesome_outlined,
+          AppTheme.info,
+          RoutePaths.services,
+          useGo: true,
+        ),
+    ];
+    return _HomeEntryList(entries: entries);
   }
 }
 
-class _AdminStatData {
-  const _AdminStatData(
-    this.value,
-    this.label,
-    this.icon,
-    this.color, [
-    this.route,
-  ]);
+class _RoleWorkspaceSection extends StatelessWidget {
+  const _RoleWorkspaceSection({
+    required this.strings,
+    required this.capabilities,
+  });
 
-  final Object value;
-  final String label;
+  final AppStrings strings;
+  final AppRoleCapabilities capabilities;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = <_HomeEntry>[];
+    if (capabilities.canUsePatientCare) {
+      entries.addAll([
+        _HomeEntry(
+          strings.navAppointments,
+          strings.quickAppointmentsDescription,
+          Icons.event_available_outlined,
+          AppTheme.info,
+          RoutePaths.appointments,
+        ),
+        _HomeEntry(
+          strings.navRecords,
+          strings.quickRecordsDescription,
+          Icons.description_outlined,
+          AppTheme.secondary,
+          RoutePaths.records,
+        ),
+        _HomeEntry(
+          strings.navPrescriptions,
+          strings.quickPrescriptionsDescription,
+          Icons.medication_outlined,
+          AppTheme.accent,
+          RoutePaths.prescriptions,
+        ),
+        _HomeEntry(
+          strings.myDoctorsTitle,
+          strings.quickMyDoctorsDescription,
+          Icons.health_and_safety_outlined,
+          AppTheme.primary,
+          RoutePaths.myDoctors,
+        ),
+      ]);
+    } else if (capabilities.canUseDoctorWorkspace) {
+      entries.addAll([
+        _HomeEntry(
+          strings.doctorWorkspace,
+          strings.doctorWorkspaceSubtitle,
+          Icons.medical_services_outlined,
+          AppTheme.primary,
+          RoutePaths.doctorWorkspace,
+        ),
+        _HomeEntry(
+          strings.schedule,
+          strings.doctorScheduleSubtitle,
+          Icons.calendar_month_outlined,
+          AppTheme.info,
+          RoutePaths.doctorSchedule,
+        ),
+        _HomeEntry(
+          strings.myPatients,
+          strings.doctorPatientsSubtitle,
+          Icons.groups_outlined,
+          AppTheme.violet,
+          RoutePaths.doctorPatients,
+        ),
+        _HomeEntry(
+          strings.doctorAppointments,
+          strings.doctorAppointmentsSubtitle,
+          Icons.event_available_outlined,
+          AppTheme.accent,
+          RoutePaths.doctorAppointments,
+        ),
+        _HomeEntry(
+          strings.doctorPosts,
+          strings.doctorPostsSubtitle,
+          Icons.article_outlined,
+          AppTheme.success,
+          RoutePaths.doctorPosts,
+        ),
+      ]);
+    } else if (capabilities.canUseAdminTools) {
+      entries.addAll([
+        _HomeEntry(
+          strings.adminMobileDashboardTitle,
+          strings.adminMobileDashboardHint,
+          Icons.admin_panel_settings_outlined,
+          AppTheme.accent,
+          RoutePaths.adminDashboard,
+        ),
+        _HomeEntry(
+          strings.adminToolAnalytics,
+          strings.adminToolAnalyticsDescription,
+          Icons.insights_outlined,
+          AppTheme.primary,
+          RoutePaths.adminAnalytics,
+        ),
+        _HomeEntry(
+          strings.adminToolUsers,
+          strings.adminToolUsersDescription,
+          Icons.manage_accounts_outlined,
+          AppTheme.secondary,
+          RoutePaths.adminUsers,
+        ),
+        _HomeEntry(
+          strings.adminToolModeration,
+          strings.adminToolModerationDescription,
+          Icons.shield_outlined,
+          AppTheme.violet,
+          RoutePaths.adminModeration,
+        ),
+        if (capabilities.canUseSuperAdminTools)
+          _HomeEntry(
+            strings.adminToolInvitations,
+            strings.adminToolInvitationsDescription,
+            Icons.person_add_alt_1_outlined,
+            AppTheme.warning,
+            RoutePaths.adminInvitations,
+          ),
+      ]);
+    }
+    return _HomeEntryList(entries: entries);
+  }
+}
+
+class _HomeEntryList extends StatelessWidget {
+  const _HomeEntryList({required this.entries});
+  final List<_HomeEntry> entries;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      for (final entry in entries) ...[
+        FeatureCard(
+          key: ValueKey('home-${entry.path}'),
+          title: entry.title,
+          subtitle: entry.subtitle,
+          icon: entry.icon,
+          color: entry.color,
+          trailing: Icon(AppTheme.directionalForwardIconOf(context)),
+          onTap: () =>
+              entry.useGo ? context.go(entry.path) : context.push(entry.path),
+        ),
+        const SizedBox(height: AppTheme.spaceMd),
+      ],
+    ],
+  );
+}
+
+class _HomeEntry {
+  const _HomeEntry(
+    this.title,
+    this.subtitle,
+    this.icon,
+    this.color,
+    this.path, {
+    this.useGo = false,
+  });
+  final String title, subtitle, path;
   final IconData icon;
   final Color color;
-  final String? route;
+  final bool useGo;
+}
+
+class _PatientHomeSections extends ConsumerWidget {
+  const _PatientHomeSections({
+    required this.strings,
+    required this.isArabic,
+    required this.query,
+    required this.searchController,
+    required this.onQueryChanged,
+    required this.onClearQuery,
+  });
+
+  final AppStrings strings;
+  final bool isArabic;
+  final String query;
+  final TextEditingController searchController;
+  final ValueChanged<String> onQueryChanged;
+  final VoidCallback onClearQuery;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appointmentsAsync = ref.watch(appointmentsControllerProvider);
+    final prescriptionsAsync = ref.watch(prescriptionsListProvider);
+    final recordsAsync = ref.watch(recordsTimelineProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.dashboardStatisticsTitle,
+          subtitle: strings.dashboardStatisticsSubtitle,
+        ),
+        _StatisticsGrid(
+          appointmentsAsync: appointmentsAsync,
+          prescriptionsAsync: prescriptionsAsync,
+          recordsAsync: recordsAsync,
+          strings: strings,
+          onRetryAppointments: () =>
+              ref.read(appointmentsControllerProvider.notifier).load(),
+          onRetryPrescriptions: () => ref.invalidate(prescriptionsListProvider),
+          onRetryRecords: () => ref.invalidate(recordsTimelineProvider),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.quickActionsTitle,
+          subtitle: strings.quickActionsSubtitle,
+        ),
+        AppTextField(
+          label: strings.dashboardSearchLabel,
+          hintText: strings.dashboardSearchPlaceholder,
+          controller: searchController,
+          textInputAction: TextInputAction.search,
+          prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: query.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: strings.clearSearch,
+                  onPressed: onClearQuery,
+                  icon: const Icon(Icons.close_rounded),
+                ),
+          semanticLabel: strings.dashboardSearchLabel,
+          onChanged: onQueryChanged,
+        ),
+        const SizedBox(height: AppTheme.spaceMd),
+        _QuickActions(
+          strings: strings,
+          query: query,
+          notificationsUnreadCount: null,
+          showDoctorApplication: true,
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.upcomingAppointmentsTitle,
+          trailing: _ViewAllButton(
+            label: strings.viewAll,
+            onPressed: () => context.push(RoutePaths.appointments),
+          ),
+        ),
+        _UpcomingAppointments(
+          appointmentsAsync: appointmentsAsync,
+          strings: strings,
+          isArabic: isArabic,
+          onRetry: () =>
+              ref.read(appointmentsControllerProvider.notifier).load(),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.recentPrescriptionsTitle,
+          trailing: _ViewAllButton(
+            label: strings.viewAll,
+            onPressed: () => context.push(RoutePaths.prescriptions),
+          ),
+        ),
+        _PrescriptionPreview(
+          prescriptionsAsync: prescriptionsAsync,
+          strings: strings,
+          isArabic: isArabic,
+          onRetry: () => ref.invalidate(prescriptionsListProvider),
+        ),
+        const SizedBox(height: AppTheme.spaceXl),
+        SectionHeader(
+          title: strings.recentMedicalRecordsTitle,
+          trailing: _ViewAllButton(
+            label: strings.viewAll,
+            onPressed: () => context.push(RoutePaths.records),
+          ),
+        ),
+        _MedicalRecordPreview(
+          recordsAsync: recordsAsync,
+          strings: strings,
+          isArabic: isArabic,
+          onRetry: () => ref.invalidate(recordsTimelineProvider),
+        ),
+      ],
+    );
+  }
 }
 
 List<EnrichedAppointment> _upcomingAppointments(
@@ -893,6 +906,7 @@ class _QuickActions extends StatelessWidget {
     required this.strings,
     required this.query,
     required this.notificationsUnreadCount,
+    required this.showDoctorApplication,
   });
 
   final AppStrings strings;
@@ -900,6 +914,9 @@ class _QuickActions extends StatelessWidget {
 
   /// Null while the notifications provider is loading or errored.
   final int? notificationsUnreadCount;
+
+  /// Patient-only "Apply to become a doctor" entry.
+  final bool showDoctorApplication;
 
   @override
   Widget build(BuildContext context) {
@@ -1051,6 +1068,15 @@ class _QuickActions extends StatelessWidget {
         title: strings.quickGroupSupport,
         icon: Icons.support_agent_outlined,
         actions: [
+          if (showDoctorApplication)
+            _QuickAction(
+              label: strings.doctorApplicationQuickActionLabel,
+              description: strings.doctorApplicationQuickActionDescription,
+              icon: Icons.medical_information_outlined,
+              color: AppTheme.primary,
+              path: RoutePaths.doctorApplication,
+              push: true,
+            ),
           _QuickAction(
             label: strings.navFeedback,
             description: strings.quickFeedbackDescription,

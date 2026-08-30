@@ -29,7 +29,8 @@ class BookAppointmentScreen extends ConsumerStatefulWidget {
   final String? doctorId;
 
   @override
-  ConsumerState<BookAppointmentScreen> createState() => _BookAppointmentScreenState();
+  ConsumerState<BookAppointmentScreen> createState() =>
+      _BookAppointmentScreenState();
 }
 
 class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
@@ -37,7 +38,9 @@ class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(bookingControllerProvider.notifier).init(doctorId: widget.doctorId);
+      ref
+          .read(bookingControllerProvider.notifier)
+          .init(doctorId: widget.doctorId);
     });
   }
 
@@ -63,7 +66,8 @@ class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
                   child: BookingSuccessSheet(
                     strings: strings,
                     appointment: result,
-                    onViewAppointments: () => context.go(RoutePaths.appointments),
+                    onViewAppointments: () =>
+                        context.go(RoutePaths.appointments),
                     onBookAnother: notifier.startOver,
                   ),
                 ),
@@ -81,11 +85,21 @@ class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(AppTheme.spaceLg),
-                          child: _StepContent(state: state, strings: strings, isArabic: isArabic, notifier: notifier),
+                          child: _StepContent(
+                            state: state,
+                            strings: strings,
+                            isArabic: isArabic,
+                            notifier: notifier,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppTheme.spaceLg),
-                      if (state.step != BookingWizardStep.confirm) _WizardActions(state: state, strings: strings, notifier: notifier),
+                      if (state.step != BookingWizardStep.confirm)
+                        _WizardActions(
+                          state: state,
+                          strings: strings,
+                          notifier: notifier,
+                        ),
                     ],
                   ),
                 ),
@@ -96,7 +110,12 @@ class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
 }
 
 class _StepContent extends StatelessWidget {
-  const _StepContent({required this.state, required this.strings, required this.isArabic, required this.notifier});
+  const _StepContent({
+    required this.state,
+    required this.strings,
+    required this.isArabic,
+    required this.notifier,
+  });
 
   final BookingState state;
   final AppStrings strings;
@@ -107,32 +126,53 @@ class _StepContent extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (state.step) {
       case BookingWizardStep.doctor:
-        return _DoctorStepContent(state: state, strings: strings, notifier: notifier);
+        return _DoctorStepContent(
+          state: state,
+          strings: strings,
+          notifier: notifier,
+        );
       case BookingWizardStep.slot:
         final doctor = state.draft.doctor;
         if (doctor == null) return const SizedBox.shrink();
-        return BookingSlotStep(
-          strings: strings,
-          isArabic: isArabic,
-          clinics: state.draft.clinics,
-          selectedClinic: state.draft.clinic,
-          selectedDate: state.draft.date,
-          slots: state.slots,
-          selectedSlot: state.draft.slot,
-          isLoadingSlots: state.isLoadingSlots,
-          slotsFailed: state.slotsFailed,
-          showSlotBusy: state.submitError?.kind == BookingSubmitErrorKind.slotBusy,
-          onSelectClinic: notifier.selectClinic,
-          onSelectDate: notifier.selectDate,
-          onSelectSlot: notifier.selectSlot,
-          onRetry: notifier.loadSlots,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _SelectedDoctorCard(
+              doctor: doctor,
+              isLoading: false,
+              strings: strings,
+              onChange: notifier.changeDoctor,
+            ),
+            const SizedBox(height: AppTheme.spaceLg),
+            const Divider(height: 1),
+            const SizedBox(height: AppTheme.spaceLg),
+            BookingSlotStep(
+              strings: strings,
+              isArabic: isArabic,
+              clinics: state.draft.clinics,
+              selectedClinic: state.draft.clinic,
+              selectedDate: state.draft.date,
+              slots: state.slots,
+              selectedSlot: state.draft.slot,
+              isLoadingSlots: state.isLoadingSlots,
+              slotsFailed: state.slotsFailed,
+              showSlotBusy:
+                  state.submitError?.kind == BookingSubmitErrorKind.slotBusy,
+              onSelectClinic: notifier.selectClinic,
+              onSelectDate: notifier.selectDate,
+              onSelectSlot: notifier.selectSlot,
+              onRetry: notifier.loadSlots,
+            ),
+          ],
         );
       case BookingWizardStep.confirm:
         final doctor = state.draft.doctor;
         final clinic = state.draft.clinic;
         final date = state.draft.date;
         final slot = state.draft.slot;
-        if (doctor == null || clinic == null || date == null || slot == null) return const SizedBox.shrink();
+        if (doctor == null || clinic == null || date == null || slot == null) {
+          return const SizedBox.shrink();
+        }
         return BookingConfirmStep(
           strings: strings,
           doctor: doctor,
@@ -146,13 +186,18 @@ class _StepContent extends StatelessWidget {
           onReasonChanged: notifier.setReason,
           onNotesChanged: notifier.setNotes,
           onSubmit: notifier.submit,
+          onBack: notifier.backToSlotStep,
         );
     }
   }
 }
 
 class _DoctorStepContent extends StatelessWidget {
-  const _DoctorStepContent({required this.state, required this.strings, required this.notifier});
+  const _DoctorStepContent({
+    required this.state,
+    required this.strings,
+    required this.notifier,
+  });
 
   final BookingState state;
   final AppStrings strings;
@@ -174,7 +219,11 @@ class _DoctorStepContent extends StatelessWidget {
       children: [
         if (state.preselectFailure != null) ...[
           state.preselectFailure == PreselectDoctorFailure.notFound
-              ? EmptyState(icon: Icons.person_off_outlined, title: strings.doctorNotFoundMessage, variant: EmptyStateVariant.compact)
+              ? EmptyState(
+                  icon: Icons.person_off_outlined,
+                  title: strings.doctorNotFoundMessage,
+                  variant: EmptyStateVariant.compact,
+                )
               : ErrorRetryState(
                   title: strings.doctorLoadErrorMessage,
                   message: strings.errorGeneric,
@@ -208,7 +257,12 @@ class _DoctorStepContent extends StatelessWidget {
 }
 
 class _SelectedDoctorCard extends StatelessWidget {
-  const _SelectedDoctorCard({required this.doctor, required this.isLoading, required this.strings, required this.onChange});
+  const _SelectedDoctorCard({
+    required this.doctor,
+    required this.isLoading,
+    required this.strings,
+    required this.onChange,
+  });
 
   final Doctor doctor;
   final bool isLoading;
@@ -220,38 +274,103 @@ class _SelectedDoctorCard extends StatelessWidget {
     final direction = Directionality.of(context);
     final name = doctorDisplayName(doctor, direction);
     final specialty = doctorDisplaySpecialty(doctor, direction);
+    final avatarUrl = doctor.extra['profile_image_url'];
 
-    return Row(
+    final identity = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         CircleAvatar(
           radius: 26,
           backgroundColor: AppTheme.primaryTint,
-          backgroundImage: doctor.extra['profile_image_url'] is String ? NetworkImage(doctor.extra['profile_image_url'] as String) : null,
-          child: doctor.extra['profile_image_url'] is String
+          backgroundImage: avatarUrl is String && avatarUrl.isNotEmpty
+              ? NetworkImage(avatarUrl)
+              : null,
+          child: avatarUrl is String && avatarUrl.isNotEmpty
               ? null
-              : Text(name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(), style: const TextStyle(color: AppTheme.primary, fontWeight: AppTheme.weightExtraBold)),
+              : Text(
+                  name.isEmpty ? '?' : name.substring(0, 1).toUpperCase(),
+                  style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontWeight: AppTheme.weightExtraBold,
+                  ),
+                ),
         ),
         const SizedBox(width: AppTheme.spaceMd),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: AppTheme.weightExtraBold)),
-              if (specialty != null) Text(specialty, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                name,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: AppTheme.weightExtraBold,
+                ),
+              ),
+              if (specialty != null)
+                Text(specialty, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ),
-        if (isLoading)
-          const SizedBox.square(dimension: AppTheme.iconLg, child: CircularProgressIndicator(strokeWidth: 2))
-        else
-          TextButton(onPressed: onChange, child: Text(strings.changeDoctorAction)),
       ],
+    );
+
+    return Semantics(
+      container: true,
+      label: [name, ?specialty].join('. '),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < AppTheme.compactBreakpoint ||
+              AppTheme.usesLargeText(context);
+          final action = isLoading
+              ? const SizedBox.square(
+                  dimension: AppTheme.iconLg,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : compact
+              ? SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onChange,
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    label: Text(strings.changeDoctorAction),
+                  ),
+                )
+              : TextButton(
+                  onPressed: onChange,
+                  child: Text(strings.changeDoctorAction),
+                );
+
+          if (compact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                identity,
+                const SizedBox(height: AppTheme.spaceMd),
+                action,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: identity),
+              const SizedBox(width: AppTheme.spaceSm),
+              action,
+            ],
+          );
+        },
+      ),
     );
   }
 }
 
 class _WizardActions extends StatelessWidget {
-  const _WizardActions({required this.state, required this.strings, required this.notifier});
+  const _WizardActions({
+    required this.state,
+    required this.strings,
+    required this.notifier,
+  });
 
   final BookingState state;
   final AppStrings strings;
@@ -260,8 +379,10 @@ class _WizardActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canGoNext = switch (state.step) {
-      BookingWizardStep.doctor => state.draft.doctor != null && !state.isLoadingDoctorDetail,
-      BookingWizardStep.slot => state.draft.clinic != null && state.draft.slot != null,
+      BookingWizardStep.doctor =>
+        state.draft.doctor != null && !state.isLoadingDoctorDetail,
+      BookingWizardStep.slot =>
+        state.draft.clinic != null && state.draft.slot != null,
       BookingWizardStep.confirm => false,
     };
 
@@ -276,18 +397,39 @@ class _WizardActions extends StatelessWidget {
       }
     }
 
-    return Row(
-      children: [
-        if (state.step != BookingWizardStep.doctor)
-          OutlinedButton(
-            onPressed: state.step == BookingWizardStep.slot ? notifier.backToDoctorStep : notifier.backToSlotStep,
-            child: Text(strings.backAction),
-          )
-        else
-          const SizedBox.shrink(),
-        const Spacer(),
-        PrimaryButton(label: strings.nextAction, onPressed: canGoNext ? onNext : null),
-      ],
+    final backButton = state.step == BookingWizardStep.doctor
+        ? null
+        : OutlinedButton.icon(
+            onPressed: state.step == BookingWizardStep.slot
+                ? notifier.backToDoctorStep
+                : notifier.backToSlotStep,
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: Text(strings.backAction),
+          );
+    final nextButton = PrimaryButton(
+      label: strings.nextAction,
+      onPressed: canGoNext ? onNext : null,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.maxWidth < AppTheme.compactBreakpoint ||
+            AppTheme.usesLargeText(context);
+        if (compact) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(width: double.infinity, child: nextButton),
+              if (backButton != null) ...[
+                const SizedBox(height: AppTheme.spaceSm),
+                SizedBox(width: double.infinity, child: backButton),
+              ],
+            ],
+          );
+        }
+        return Row(children: [?backButton, const Spacer(), nextButton]);
+      },
     );
   }
 }
@@ -307,26 +449,58 @@ class _StepIndicator extends StatelessWidget {
     ];
     final activeIndex = steps.indexWhere((entry) => entry.$1 == step);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var i = 0; i < steps.length; i++) ...[
-          if (i > 0)
-            Container(
-              width: 28,
-              height: 2,
-              margin: const EdgeInsets.symmetric(horizontal: AppTheme.spaceXs),
-              color: i <= activeIndex ? AppTheme.success : Theme.of(context).colorScheme.outlineVariant,
+    final activeLabel = steps[activeIndex].$2;
+    return Semantics(
+      container: true,
+      label: '${activeIndex + 1}/${steps.length}. $activeLabel',
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < steps.length; i++) ...[
+                if (i > 0)
+                  Expanded(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 56),
+                      height: 2,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spaceXs,
+                      ),
+                      color: i <= activeIndex
+                          ? AppTheme.success
+                          : Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                _StepCircle(
+                  index: i + 1,
+                  isActive: i == activeIndex,
+                  isDone: i < activeIndex,
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppTheme.spaceSm),
+          Text(
+            activeLabel,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: AppTheme.primary,
+              fontWeight: AppTheme.weightBold,
             ),
-          _StepCircle(index: i + 1, isActive: i == activeIndex, isDone: i < activeIndex),
+          ),
         ],
-      ],
+      ),
     );
   }
 }
 
 class _StepCircle extends StatelessWidget {
-  const _StepCircle({required this.index, required this.isActive, required this.isDone});
+  const _StepCircle({
+    required this.index,
+    required this.isActive,
+    required this.isDone,
+  });
 
   final int index;
   final bool isActive;
@@ -335,14 +509,24 @@ class _StepCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final color = isDone ? AppTheme.success : (isActive ? AppTheme.primary : scheme.surfaceContainerHighest);
-    final foreground = isDone || isActive ? Colors.white : scheme.onSurfaceVariant;
+    final color = isDone
+        ? AppTheme.success
+        : (isActive ? AppTheme.primary : scheme.surfaceContainerHighest);
+    final foreground = isDone || isActive
+        ? Colors.white
+        : scheme.onSurfaceVariant;
     return Container(
       width: 32,
       height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: Text('$index', style: TextStyle(color: foreground, fontWeight: AppTheme.weightExtraBold)),
+      child: Text(
+        '$index',
+        style: TextStyle(
+          color: foreground,
+          fontWeight: AppTheme.weightExtraBold,
+        ),
+      ),
     );
   }
 }

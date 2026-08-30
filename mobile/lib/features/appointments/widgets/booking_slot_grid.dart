@@ -8,7 +8,13 @@ import '../models/availability_slot_model.dart';
 /// telemedicine — required so the patient always knows what they're booking
 /// before `appointment_type` is derived from their pick.
 class BookingSlotGrid extends StatelessWidget {
-  const BookingSlotGrid({super.key, required this.slots, required this.selected, required this.strings, required this.onSelect});
+  const BookingSlotGrid({
+    super.key,
+    required this.slots,
+    required this.selected,
+    required this.strings,
+    required this.onSelect,
+  });
 
   final List<GeneratedSlot> slots;
   final GeneratedSlot? selected;
@@ -18,20 +24,37 @@ class BookingSlotGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Wrap(
-      spacing: AppTheme.spaceSm,
-      runSpacing: AppTheme.spaceSm,
-      children: [
-        for (final slot in slots)
-          _SlotButton(
-            key: ValueKey('booking-slot-${slot.id}'),
-            slot: slot,
-            isSelected: selected?.id == slot.id,
-            typeLabel: slot.isTelemedicine ? strings.appointmentTypeTelemedicine : strings.appointmentTypeInPerson,
-            scheme: scheme,
-            onTap: () => onSelect(slot),
-          ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeText = AppTheme.usesLargeText(context);
+        final columns = largeText || constraints.maxWidth < 360
+            ? 1
+            : constraints.maxWidth >= 600
+            ? 3
+            : 2;
+        final width =
+            (constraints.maxWidth - AppTheme.spaceSm * (columns - 1)) / columns;
+        return Wrap(
+          spacing: AppTheme.spaceSm,
+          runSpacing: AppTheme.spaceSm,
+          children: [
+            for (final slot in slots)
+              SizedBox(
+                width: width,
+                child: _SlotButton(
+                  key: ValueKey('booking-slot-${slot.id}'),
+                  slot: slot,
+                  isSelected: selected?.id == slot.id,
+                  typeLabel: slot.isTelemedicine
+                      ? strings.appointmentTypeTelemedicine
+                      : strings.appointmentTypeInPerson,
+                  scheme: scheme,
+                  onTap: () => onSelect(slot),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -58,7 +81,8 @@ class _SlotButton extends StatelessWidget {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: '${slot.startDisplay} $typeLabel',
+      excludeSemantics: true,
+      label: '${slot.startDisplay} – ${slot.endDisplay}. $typeLabel',
       child: Material(
         color: isSelected ? AppTheme.primary : scheme.surface,
         borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -66,30 +90,60 @@ class _SlotButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minWidth: 100, minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceMd, vertical: AppTheme.spaceSm),
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceMd,
+              vertical: AppTheme.spaceSm,
+            ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
-              border: Border.all(color: isSelected ? AppTheme.primary : scheme.outlineVariant, width: 1.5),
+              border: Border.all(
+                color: isSelected ? AppTheme.primary : scheme.outlineVariant,
+                width: 1.5,
+              ),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Directionality(
                   textDirection: TextDirection.ltr,
-                  child: Text(slot.startDisplay, style: TextStyle(color: foreground, fontWeight: AppTheme.weightExtraBold, fontSize: 14)),
+                  child: Text(
+                    slot.startDisplay,
+                    style: TextStyle(
+                      color: foreground,
+                      fontWeight: AppTheme.weightExtraBold,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    if (isSelected) ...[
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: AppTheme.iconSm,
+                        color: foreground,
+                      ),
+                      const SizedBox(width: 4),
+                    ],
                     Icon(
-                      slot.isTelemedicine ? Icons.chat_bubble_outline : Icons.local_hospital_outlined,
+                      slot.isTelemedicine
+                          ? Icons.chat_bubble_outline
+                          : Icons.local_hospital_outlined,
                       size: AppTheme.iconSm,
                       color: foreground,
                     ),
                     const SizedBox(width: 4),
-                    Text(typeLabel, style: TextStyle(color: foreground, fontSize: 10.5)),
+                    Flexible(
+                      child: Text(
+                        typeLabel,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: foreground, fontSize: 10.5),
+                      ),
+                    ),
                   ],
                 ),
               ],

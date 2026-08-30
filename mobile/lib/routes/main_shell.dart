@@ -6,12 +6,24 @@ import '../core/locale/locale_controller.dart';
 import '../core/localization/app_strings.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/social/localization/social_strings.dart';
 import '../shared/widgets/app_scaffold.dart';
 import 'route_paths.dart';
 
-enum _ShellAction { home, notifications, profile, language, logout }
+enum _ShellAction { language, logout }
 
-/// Persistent bottom navigation for the five existing patient branches.
+const primaryNavigationRoutes = <String>[
+  RoutePaths.home,
+  RoutePaths.socialFeed,
+  RoutePaths.discover,
+  RoutePaths.services,
+  RoutePaths.profile,
+];
+
+/// Persistent global navigation for the shared MedOrbit product.
+///
+/// Role tools live in Home and Services as additive overlays; no role replaces
+/// these shared destinations or loses the shell.
 class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.navigationShell});
 
@@ -20,28 +32,22 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(appStringsProvider);
-    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
-    final isAdmin = role == 'admin' || role == 'super_admin';
-    final isDoctor = role == 'doctor';
-    final width = MediaQuery.sizeOf(context).width;
-    final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
-    final compactNavigation =
-        width < AppTheme.compactBreakpoint || scaledLabel > 15;
-    final navigationHeight = (58 + (scaledLabel * 1.5))
-        .clamp(72.0, 104.0)
-        .toDouble();
-
+    final socialStrings = ref.watch(socialStringsProvider);
+    ref.listen<String>(
+      authControllerProvider.select(
+        (state) => '${state.user?.id ?? ''}:${state.user?.role ?? ''}',
+      ),
+      (previous, next) {
+        if (previous == null || previous == next) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            navigationShell.goBranch(0, initialLocation: true);
+          }
+        });
+      },
+    );
     Future<void> handleAction(_ShellAction action) async {
       switch (action) {
-        case _ShellAction.home:
-          context.go(RoutePaths.home);
-          return;
-        case _ShellAction.notifications:
-          context.push(RoutePaths.notifications);
-          return;
-        case _ShellAction.profile:
-          context.push(RoutePaths.profile);
-          return;
         case _ShellAction.language:
           await ref.read(localeControllerProvider.notifier).toggle();
           return;
@@ -67,49 +73,82 @@ class MainShell extends ConsumerWidget {
             ),
         ],
       ),
-      bottomNavigationBar: isAdmin || isDoctor
-          ? null
-          : SafeArea(
-              top: false,
-              child: NavigationBar(
-                height: navigationHeight,
-                selectedIndex: navigationShell.currentIndex,
-                labelBehavior: compactNavigation
-                    ? NavigationDestinationLabelBehavior.onlyShowSelected
-                    : NavigationDestinationLabelBehavior.alwaysShow,
-                onDestinationSelected: (index) => navigationShell.goBranch(
-                  index,
-                  initialLocation: index == navigationShell.currentIndex,
-                ),
-                destinations: [
-                  _destination(
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home_rounded,
-                    label: strings.navHome,
-                  ),
-                  _destination(
-                    icon: Icons.description_outlined,
-                    selectedIcon: Icons.description_rounded,
-                    label: strings.navRecords,
-                  ),
-                  _destination(
-                    icon: Icons.medication_outlined,
-                    selectedIcon: Icons.medication_rounded,
-                    label: strings.navPrescriptions,
-                  ),
-                  _destination(
-                    icon: Icons.event_available_outlined,
-                    selectedIcon: Icons.event_available_rounded,
-                    label: strings.navAppointments,
-                  ),
-                  _destination(
-                    icon: Icons.comment_outlined,
-                    selectedIcon: Icons.comment_rounded,
-                    label: strings.navFeedback,
-                  ),
-                ],
-              ),
-            ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: MedOrbitNavigationBar(
+          strings: strings,
+          socialStrings: socialStrings,
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (index) => navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The shared five-destination navigation surface, split out so its narrow
+/// and large-text behavior can be exercised without constructing a router.
+class MedOrbitNavigationBar extends StatelessWidget {
+  const MedOrbitNavigationBar({
+    super.key,
+    required this.strings,
+    required this.socialStrings,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final AppStrings strings;
+  final SocialStrings socialStrings;
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
+    final compactNavigation =
+        width < AppTheme.compactBreakpoint || scaledLabel > 15;
+    final navigationHeight = (58 + (scaledLabel * 1.5))
+        .clamp(72.0, 104.0)
+        .toDouble();
+
+    return NavigationBar(
+      height: navigationHeight,
+      selectedIndex: selectedIndex,
+      labelBehavior: compactNavigation
+          ? NavigationDestinationLabelBehavior.onlyShowSelected
+          : NavigationDestinationLabelBehavior.alwaysShow,
+      onDestinationSelected: onDestinationSelected,
+      destinations: [
+        _destination(
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home_rounded,
+          label: strings.navHome,
+        ),
+        _destination(
+          icon: Icons.newspaper_outlined,
+          selectedIcon: Icons.newspaper_rounded,
+          label: socialStrings.feedTitle,
+        ),
+        _destination(
+          icon: Icons.travel_explore_outlined,
+          selectedIcon: Icons.travel_explore_rounded,
+          label: strings.navDiscover,
+        ),
+        _destination(
+          icon: Icons.apps_outlined,
+          selectedIcon: Icons.apps_rounded,
+          label: strings.navServices,
+        ),
+        _destination(
+          icon: Icons.person_outline_rounded,
+          selectedIcon: Icons.person_rounded,
+          label: strings.navProfile,
+        ),
+      ],
     );
   }
 
@@ -152,39 +191,6 @@ class _ShellActionsButton extends StatelessWidget {
         onSelected: onSelected,
         icon: const Icon(Icons.more_vert_rounded),
         itemBuilder: (context) => [
-          PopupMenuItem(
-            value: _ShellAction.home,
-            child: Row(
-              children: [
-                const Icon(Icons.home_outlined, size: AppTheme.iconMd),
-                const SizedBox(width: AppTheme.spaceMd),
-                Flexible(child: Text(strings.navHome)),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: _ShellAction.notifications,
-            child: Row(
-              children: [
-                const Icon(Icons.notifications_outlined, size: AppTheme.iconMd),
-                const SizedBox(width: AppTheme.spaceMd),
-                Flexible(child: Text(strings.navNotifications)),
-              ],
-            ),
-          ),
-          PopupMenuItem(
-            value: _ShellAction.profile,
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.account_circle_outlined,
-                  size: AppTheme.iconMd,
-                ),
-                const SizedBox(width: AppTheme.spaceMd),
-                Flexible(child: Text(strings.navProfile)),
-              ],
-            ),
-          ),
           PopupMenuItem(
             value: _ShellAction.language,
             child: Row(

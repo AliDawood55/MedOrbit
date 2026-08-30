@@ -291,6 +291,7 @@ class BookingController extends StateNotifier<BookingState> {
     state = state.copyWith(
       draft: state.draft.copyWith(clinic: clinic, clearSlot: true),
       slots: const [],
+      clearSubmitError: true,
     );
     loadSlots();
   }
@@ -300,6 +301,7 @@ class BookingController extends StateNotifier<BookingState> {
     state = state.copyWith(
       draft: state.draft.copyWith(date: normalized, clearSlot: true),
       slots: const [],
+      clearSubmitError: true,
     );
     loadSlots();
   }
@@ -330,7 +332,10 @@ class BookingController extends StateNotifier<BookingState> {
   }
 
   void selectSlot(GeneratedSlot slot) {
-    state = state.copyWith(draft: state.draft.copyWith(slot: slot));
+    state = state.copyWith(
+      draft: state.draft.copyWith(slot: slot),
+      clearSubmitError: true,
+    );
   }
 
   void setReason(String value) =>

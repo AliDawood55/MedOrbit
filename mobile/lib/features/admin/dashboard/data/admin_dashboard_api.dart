@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
 
-import '../../../../core/network/api_exception.dart';
+import '../../common/data/admin_response.dart';
 import '../models/admin_dashboard_stats.dart';
 
-/// Authenticated client for the existing administrator dashboard endpoint.
+/// Authenticated client for the administrator dashboard/analytics endpoint.
+///
+/// One request serves both surfaces: `GET /dashboard/stats` returns the
+/// headline totals **and** the six analytics sections in a single envelope
+/// (`backend/src/services/report.service.js:161-286`), which is exactly what
+/// the web `analytics.js` page consumes.
 class AdminDashboardApi {
   AdminDashboardApi(this._dio);
 
@@ -11,21 +16,6 @@ class AdminDashboardApi {
 
   Future<AdminDashboardStats> getStats() async {
     final response = await _dio.get<Map<String, dynamic>>('/dashboard/stats');
-    final envelope = response.data;
-    if (envelope == null || envelope['success'] != true) {
-      throw const ApiException(
-        message: 'The dashboard statistics could not be loaded.',
-        code: 'INVALID_RESPONSE',
-      );
-    }
-
-    final data = envelope['data'];
-    if (data is! Map) {
-      throw const ApiException(
-        message: 'The dashboard statistics response was incomplete.',
-        code: 'INVALID_RESPONSE',
-      );
-    }
-    return AdminDashboardStats.fromJson(Map<String, dynamic>.from(data));
+    return AdminDashboardStats.fromJson(adminEnvelopeObject(response.data));
   }
 }

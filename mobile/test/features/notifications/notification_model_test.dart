@@ -132,6 +132,58 @@ void main() {
       final model = NotificationModel.fromJson({'id': 12345});
       expect(model.id, '12345');
     });
+
+    test('direct-message references open only the allow-listed conversation events', () {
+      for (final type in const [
+        'NEW_DIRECT_MESSAGE',
+        'NEW_MESSAGE_REQUEST',
+        'MESSAGE_REQUEST_ACCEPTED',
+      ]) {
+        final model = NotificationModel.fromJson({
+          'notification_type': type,
+          'reference_id': '123e4567-e89b-42d3-a456-426614174000',
+          'reference_type': 'DIRECT_CONVERSATION',
+        });
+
+        expect(model.opensCareConversation, isTrue, reason: type);
+        expect(model.referenceId, '123e4567-e89b-42d3-a456-426614174000');
+        expect(model.referenceType, 'DIRECT_CONVERSATION');
+      }
+    });
+
+    test('decline, unrelated reference types, and missing ids stay non-navigable', () {
+      NotificationModel parse(String type, String? referenceType, String? id) {
+        return NotificationModel.fromJson({
+          'notification_type': type,
+          'reference_id': id,
+          'reference_type': referenceType,
+        });
+      }
+
+      expect(
+        parse(
+          'MESSAGE_REQUEST_DECLINED',
+          'DIRECT_CONVERSATION',
+          '123e4567-e89b-42d3-a456-426614174000',
+        ).opensCareConversation,
+        isFalse,
+      );
+      expect(
+        parse('NEW_DIRECT_MESSAGE', 'APPOINTMENT', 'appointment-1')
+            .opensCareConversation,
+        isFalse,
+      );
+      expect(
+        parse('NEW_DIRECT_MESSAGE', 'DIRECT_CONVERSATION', '  ')
+            .opensCareConversation,
+        isFalse,
+      );
+      expect(
+        parse('NEW_DIRECT_MESSAGE', 'DIRECT_CONVERSATION', '../records')
+            .opensCareConversation,
+        isFalse,
+      );
+    });
   });
 
   group('NotificationModel.copyWith', () {
@@ -156,6 +208,26 @@ void main() {
       expect(updated.id, original.id);
       expect(updated.titleEn, original.titleEn);
       expect(updated.createdAt, createdAt);
+    });
+
+    test('copyWith preserves direct-conversation routing references', () {
+      final original = NotificationModel(
+        id: 'notif-message',
+        notificationType: 'NEW_DIRECT_MESSAGE',
+        titleAr: 'رسالة',
+        titleEn: 'Message',
+        messageAr: 'نص',
+        messageEn: 'Body',
+        isRead: false,
+        createdAt: DateTime.utc(2026, 8, 29),
+        referenceId: '123e4567-e89b-42d3-a456-426614174000',
+        referenceType: 'DIRECT_CONVERSATION',
+      );
+
+      final updated = original.copyWith(isRead: true);
+      expect(updated.opensCareConversation, isTrue);
+      expect(updated.referenceId, original.referenceId);
+      expect(updated.referenceType, original.referenceType);
     });
   });
 }

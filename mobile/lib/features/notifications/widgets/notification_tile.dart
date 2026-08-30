@@ -16,6 +16,7 @@ class NotificationTile extends StatelessWidget {
     required this.isBusy,
     required this.onMarkRead,
     required this.onDelete,
+    this.onOpen,
   });
 
   final NotificationModel notification;
@@ -26,6 +27,7 @@ class NotificationTile extends StatelessWidget {
   /// Null when the notification is already read — hides the mark-read action.
   final VoidCallback? onMarkRead;
   final VoidCallback onDelete;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -37,11 +39,13 @@ class NotificationTile extends StatelessWidget {
 
     return Card(
       key: ValueKey('notification-${notification.id}'),
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.spaceMd),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.spaceMd),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: SizedBox(
@@ -104,7 +108,8 @@ class NotificationTile extends StatelessWidget {
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -116,6 +121,8 @@ class NotificationTile extends StatelessWidget {
     'appointment' => (strings.notificationTypeAppointment, AppTheme.info),
     'reminder' => (strings.notificationTypeReminder, AppTheme.warning),
     'system' => (strings.notificationTypeSystem, AppTheme.violet),
+    'NEW_DIRECT_MESSAGE' || 'NEW_MESSAGE_REQUEST' || 'MESSAGE_REQUEST_ACCEPTED' || 'MESSAGE_REQUEST_DECLINED' =>
+      (strings.messagesNotificationType, AppTheme.primary),
     _ => (strings.notificationTypeGeneric, AppTheme.secondary),
   };
 }

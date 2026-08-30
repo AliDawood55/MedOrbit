@@ -1,17 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/locale/locale_controller.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../routes/route_paths.dart';
-import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/error_retry_state.dart';
-import '../../../../shared/widgets/page_sections.dart';
-import '../../../../shared/widgets/role_header_actions.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../providers/doctor_patients_provider.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../routes/route_paths.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/error_retry_state.dart';
+import '../../../shared/widgets/page_sections.dart';
+import '../models/doctor_models.dart';
+import '../providers/doctor_workspace_providers.dart';
+import '../widgets/doctor_workspace_gate.dart';
 
 class DoctorPatientsScreen extends ConsumerStatefulWidget {
   const DoctorPatientsScreen({super.key});
@@ -21,115 +23,120 @@ class DoctorPatientsScreen extends ConsumerStatefulWidget {
 }
 
 class _DoctorPatientsScreenState extends ConsumerState<DoctorPatientsScreen> {
-  String _query = '';
+  final _search = TextEditingController();
+  Timer? _debounce;
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _changed(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 350),
+      () => ref.read(doctorPatientsProvider.notifier).load(query: value),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
-    final isDoctor = ref.watch(authControllerProvider).user?.role == 'doctor';
-    if (!isDoctor) {
-      return AppScaffold(
-        appBar: AppBar(),
-        body: const Center(
-          child: EmptyState(
-            icon: Icons.lock_outline,
-            title: 'Doctor access required',
-            hint:
-                'This workspace is available to approved doctor accounts only.',
-          ),
-        ),
-      );
-    }
-    final state = ref.watch(doctorPatientsProvider);
+    final s = ref.watch(appStringsProvider);
+    final async = ref.watch(doctorPatientsProvider);
     return AppScaffold(
-      appBar: AppBar(
-        title: Text(isArabic ? 'مرضاي' : 'My patients'),
-        leading: IconButton(
-          tooltip: isArabic ? 'الرئيسية' : 'Home',
-          icon: const Icon(Icons.home_outlined),
-          onPressed: () => context.go(RoutePaths.home),
-        ),
-        actions: const [RoleHeaderActions(compact: true)],
-      ),
-      body: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => ErrorRetryState(
-          title: isArabic ? 'تعذر تحميل المرضى' : 'Could not load patients',
-          message: isArabic ? 'حاول مرة أخرى.' : 'Please try again.',
-          retryLabel: isArabic ? 'إعادة المحاولة' : 'Retry',
-          onRetry: () => ref.invalidate(doctorPatientsProvider),
-        ),
-        data: (patients) {
-          final list = patients
-              .where(
-                (p) => '${p.name(isArabic)} ${p.email}'.toLowerCase().contains(
-                  _query.toLowerCase(),
-                ),
-              )
-              .toList();
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(doctorPatientsProvider),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(AppTheme.spaceLg),
-              children: [
-                PageIntro(
-                  title: isArabic ? 'مرضاي' : 'My patients',
-                  subtitle: isArabic
-                      ? 'مرضى مرتبطون برعايتك.'
-                      : 'Patients linked to your care.',
-                  icon: Icons.groups_outlined,
-                  color: AppTheme.primary,
-                ),
-                const SizedBox(height: AppTheme.spaceLg),
-                TextField(
-                  onChanged: (value) => setState(() => _query = value.trim()),
-                  decoration: InputDecoration(
-                    labelText: isArabic ? 'ابحث عن مريض' : 'Search patients',
-                    prefixIcon: const Icon(Icons.search),
-                  ),
-                ),
-                const SizedBox(height: AppTheme.spaceLg),
-                if (list.isEmpty)
-                  EmptyState(
-                    icon: Icons.people_outline,
-                    title: isArabic ? 'لا يوجد مرضى بعد' : 'No patients yet',
-                    hint: isArabic
-                        ? 'سيظهر المرضى بعد وجود موعد أو علاقة رعاية.'
-                        : 'Patients appear after an appointment or care relationship.',
-                  )
-                else
-                  for (final patient in list)
-                    Card(
-                      child: ListTile(
-                        onTap: () => context.push(RoutePaths.doctorPatientDetailPath(patient.id)),
-                        leading: CircleAvatar(
-                          child: Text(
-                            (patient.name(isArabic).isEmpty
-                                    ? patient.email
-                                    : patient.name(isArabic))
-                                .substring(0, 1)
-                                .toUpperCase(),
-                          ),
-                        ),
-                        title: Text(
-                          patient.name(isArabic).isEmpty
-                              ? patient.email
-                              : patient.name(isArabic),
-                        ),
-                        subtitle: Text(
-                          patient.hasUpcoming
-                              ? (isArabic
-                                    ? 'لديه موعد قادم'
-                                    : 'Has an upcoming appointment')
-                              : patient.email,
-                        ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+      appBar: AppBar(title: Text(s.myPatients)),
+      body: DoctorWorkspaceGate(
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(doctorPatientsProvider.notifier).load(),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.symmetric(vertical: AppTheme.spaceLg),
+            children: [
+              ResponsiveContent(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _search,
+                      onChanged: _changed,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        labelText: s.searchPatients,
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _search.text.isEmpty
+                            ? null
+                            : IconButton(
+                                onPressed: () {
+                                  _search.clear();
+                                  _changed('');
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.clear),
+                              ),
                       ),
                     ),
-              ],
-            ),
-          );
-        },
+                    const SizedBox(height: AppTheme.spaceLg),
+                    async.when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (e, _) => ErrorRetryState(
+                        title: s.myPatients,
+                        message: doctorErrorMessage(s, e),
+                        retryLabel: s.retry,
+                        onRetry: () =>
+                            ref.read(doctorPatientsProvider.notifier).load(),
+                      ),
+                      data: (patients) => patients.isEmpty
+                          ? EmptyState(
+                              icon: Icons.group_off_outlined,
+                              title: s.noPatients,
+                            )
+                          : Column(
+                              children: patients
+                                  .map((p) => _card(context, s, p))
+                                  .toList(),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _card(BuildContext context, AppStrings s, DoctorPatient p) {
+    final name =
+        (s.isArabic
+                ? [p.firstNameAr, p.lastNameAr]
+                : [p.firstNameEn, p.lastNameEn])
+            .whereType<String>()
+            .join(' ')
+            .trim();
+    return Card(
+      child: ListTile(
+        minVerticalPadding: 12,
+        leading: CircleAvatar(
+          child: Text(name.isEmpty ? '?' : name.characters.first),
+        ),
+        title: Text(name.isEmpty ? p.email : name),
+        subtitle: Text(
+          [
+            p.email,
+            p.phone,
+            p.nextAppointmentDate,
+          ].whereType<String>().join(' · '),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push(RoutePaths.doctorPatientPath(p.id)),
       ),
     );
   }

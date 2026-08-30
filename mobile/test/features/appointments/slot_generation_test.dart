@@ -25,6 +25,7 @@ void main() {
       expect(slots.single.startTime, '09:00:00');
       expect(slots.single.endTime, '09:30:00');
       expect(slots.single.durationMinutes, 30);
+      expect(slots.single.id, '540|570|30|0');
     });
 
     test(

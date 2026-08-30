@@ -120,6 +120,104 @@ void main() {
     expect(clinic?.isActive, isTrue);
   });
 
+  test('specialties load into state once and a failure leaves them empty', () async {
+    final failing = _FakeDiscoveryApi()
+      ..specialtyError = const ApiException(message: 'nope', code: 'NOPE');
+    final failContainer = _container(failing);
+    addTearDown(failContainer.dispose);
+    await failContainer.read(discoveryControllerProvider.notifier).loadSpecialties();
+    expect(failContainer.read(discoveryControllerProvider).specialties, isEmpty);
+
+    final ok = _FakeDiscoveryApi()
+      ..specialtyResult = const [Specialty(nameEn: 'Cardiology', nameAr: 'طب القلب')];
+    final okContainer = _container(ok);
+    addTearDown(okContainer.dispose);
+    await okContainer.read(discoveryControllerProvider.notifier).loadSpecialties();
+    await okContainer.read(discoveryControllerProvider.notifier).loadSpecialties();
+    expect(
+      okContainer.read(discoveryControllerProvider).specialties.single.nameEn,
+      'Cardiology',
+    );
+    expect(ok.specialtyCalls, 1);
+  });
+
+  test('recommended doctors load independently and a failure never touches the main list', () async {
+    final fake = _FakeDiscoveryApi()
+      ..doctorListResults.add(Future.value(const DoctorListResponse(doctors: [Doctor(id: 'd1', firstNameEn: 'Main')])))
+      ..recommendedError = const ApiException(message: 'raw backend detail', code: 'X');
+    final container = _container(fake);
+    addTearDown(container.dispose);
+
+    await container.read(discoveryControllerProvider.notifier).loadDoctors();
+    await container.read(discoveryControllerProvider.notifier).loadRecommendedDoctors();
+
+    final failed = container.read(discoveryControllerProvider);
+    expect(failed.doctors.single.id, 'd1');
+    expect(failed.recommendedDoctors, isEmpty);
+    expect(failed.recommendedDoctorsError, isNotNull);
+    expect(failed.doctorListError, isNull);
+
+    fake.recommendedError = null;
+    fake.recommendedResult = const [Doctor(id: 'rec-1', firstNameEn: 'Rec')];
+    await container.read(discoveryControllerProvider.notifier).loadRecommendedDoctors();
+    final ok = container.read(discoveryControllerProvider);
+    expect(ok.recommendedDoctors.single.id, 'rec-1');
+    expect(ok.recommendedDoctorsError, isNull);
+  });
+
+  test('clearRecommendedDoctors wipes a populated list and its loading/error flags', () async {
+    final fake = _FakeDiscoveryApi()
+      ..doctorListResults.add(Future.value(const DoctorListResponse(doctors: [Doctor(id: 'd1', firstNameEn: 'Main')])))
+      ..recommendedResult = const [Doctor(id: 'rec-old', firstNameEn: 'Old')];
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    await notifier.loadDoctors();
+    await notifier.loadRecommendedDoctors();
+    expect(container.read(discoveryControllerProvider).recommendedDoctors, isNotEmpty);
+
+    notifier.clearRecommendedDoctors();
+    final cleared = container.read(discoveryControllerProvider);
+    expect(cleared.recommendedDoctors, isEmpty);
+    expect(cleared.isLoadingRecommendedDoctors, isFalse);
+    expect(cleared.recommendedDoctorsError, isNull);
+    // Main list is untouched by the clear.
+    expect(cleared.doctors.single.id, 'd1');
+  });
+
+  test('loadRecommendedDoctors drops the previous list before the new one arrives', () async {
+    final fake = _FakeDiscoveryApi()
+      ..recommendedResult = const [Doctor(id: 'rec-old', firstNameEn: 'Old')];
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    // Seed a stale list, then start a fresh load that hasn't resolved yet.
+    await notifier.loadRecommendedDoctors();
+    expect(container.read(discoveryControllerProvider).recommendedDoctors.single.id, 'rec-old');
+
+    final pending = Completer<List<Doctor>>();
+    fake.recommendedFuture = pending.future;
+    final inFlight = notifier.loadRecommendedDoctors();
+    final loading = container.read(discoveryControllerProvider);
+    expect(loading.isLoadingRecommendedDoctors, isTrue);
+    expect(loading.recommendedDoctors, isEmpty); // stale 'rec-old' not visible while loading
+
+    pending.complete(const [Doctor(id: 'rec-new', firstNameEn: 'New')]);
+    await inFlight;
+    expect(container.read(discoveryControllerProvider).recommendedDoctors.single.id, 'rec-new');
+  });
+
+  test('recordSpecialtySearch swallows telemetry failures', () async {
+    final fake = _FakeDiscoveryApi()..specialtySearchError = const ApiException(message: 'nope', code: 'N');
+    final container = _container(fake);
+    addTearDown(container.dispose);
+
+    await container.read(discoveryControllerProvider.notifier).recordSpecialtySearch('spec-1');
+    expect(fake.specialtySearchCalls, ['spec-1']);
+  });
+
   test('doctor filters pagination detail and availability update separate state', () async {
     final fake = _FakeDiscoveryApi()
       ..doctorListResults.add(
@@ -163,6 +261,88 @@ void main() {
     expect(state.selectedDoctorDetail?.doctor?.id, 'doctor-1');
     expect(fake.availabilityCalls.single.date, '2026-08-05');
     expect(state.doctorAvailability.single.id, 'slot-1');
+  });
+
+  test('switching doctors drops the previous doctor detail, availability and error', () async {
+    final fake = _FakeDiscoveryApi()
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'a', firstNameEn: 'A'),
+        reviews: [DoctorReview(id: 'r', reviewTextEn: 'old')],
+      )))
+      ..availabilityResults.add(Future.value(
+        const DoctorAvailabilityResponse(slots: [DoctorAvailabilitySlot(id: 's1')]),
+      ))
+      // A later refresh of doctor 'a' that fails — seeds a genuine stale
+      // detail error while the previously loaded 'a' detail + slots stay put.
+      ..doctorDetailResults.add(Future.error(
+        const ApiException(message: 'transient', code: 'X', statusCode: 503),
+      ))
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'b', firstNameEn: 'B'),
+      )));
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    await notifier.loadDoctorDetail('a');
+    await notifier.loadDoctorAvailability('a', date: '2026-08-05');
+    await notifier.loadDoctorDetail('a'); // fails → error is set for doctor 'a'
+
+    final stale = container.read(discoveryControllerProvider);
+    expect(stale.doctorDetailError, isNotNull);
+    expect(stale.selectedDoctorDetail?.doctor?.id, 'a');
+    expect(stale.doctorAvailability, isNotEmpty);
+
+    await notifier.loadDoctorDetail('b');
+    final state = container.read(discoveryControllerProvider);
+    expect(state.selectedDoctorId, 'b');
+    expect(state.selectedDoctorDetail?.doctor?.id, 'b');
+    expect(state.doctorAvailability, isEmpty);
+    expect(state.doctorDetailError, isNull);
+  });
+
+  test('a slow detail response for a previously viewed doctor never overwrites the current one', () async {
+    final slowA = Completer<DoctorDetailResponse>();
+    final fake = _FakeDiscoveryApi()
+      ..doctorDetailResults.add(slowA.future)
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'b', firstNameEn: 'B'),
+      )));
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    final stale = notifier.loadDoctorDetail('a');
+    await notifier.loadDoctorDetail('b');
+    slowA.complete(const DoctorDetailResponse(doctor: Doctor(id: 'a', firstNameEn: 'A')));
+
+    expect(await stale, isFalse);
+    final state = container.read(discoveryControllerProvider);
+    expect(state.selectedDoctorId, 'b');
+    expect(state.selectedDoctorDetail?.doctor?.id, 'b');
+  });
+
+  test('a stale availability response for an earlier date is ignored', () async {
+    final slow = Completer<DoctorAvailabilityResponse>();
+    final fake = _FakeDiscoveryApi()
+      ..doctorDetailResults.add(Future.value(const DoctorDetailResponse(
+        doctor: Doctor(id: 'a', firstNameEn: 'A'),
+      )))
+      ..availabilityResults.add(slow.future)
+      ..availabilityResults.add(Future.value(
+        const DoctorAvailabilityResponse(slots: [DoctorAvailabilitySlot(id: 'new')]),
+      ));
+    final container = _container(fake);
+    addTearDown(container.dispose);
+    final notifier = container.read(discoveryControllerProvider.notifier);
+
+    await notifier.loadDoctorDetail('a');
+    final stale = notifier.loadDoctorAvailability('a', date: '2026-08-01');
+    await notifier.loadDoctorAvailability('a', date: '2026-08-02');
+    slow.complete(const DoctorAvailabilityResponse(slots: [DoctorAvailabilitySlot(id: 'old')]));
+
+    expect(await stale, isFalse);
+    expect(container.read(discoveryControllerProvider).doctorAvailability.single.id, 'new');
   });
 
   test('duplicate clinic requests are prevented', () async {
@@ -290,6 +470,36 @@ class _FakeDiscoveryApi extends DiscoveryApi {
       ),
     );
     return doctorListResults.removeAt(0);
+  }
+
+  List<Specialty> specialtyResult = const [];
+  Object? specialtyError;
+  int specialtyCalls = 0;
+  List<Doctor> recommendedResult = const [];
+  Future<List<Doctor>>? recommendedFuture;
+  Object? recommendedError;
+  final specialtySearchCalls = <String>[];
+  Object? specialtySearchError;
+
+  @override
+  Future<List<Specialty>> listSpecialties() async {
+    specialtyCalls++;
+    if (specialtyError != null) throw specialtyError!;
+    return specialtyResult;
+  }
+
+  @override
+  Future<List<Doctor>> recommendedDoctors({int limit = 6}) {
+    if (recommendedError != null) return Future.error(recommendedError!);
+    final staged = recommendedFuture;
+    recommendedFuture = null;
+    return staged ?? Future.value(recommendedResult);
+  }
+
+  @override
+  Future<void> recordSpecialtySearch(String specialtyId) async {
+    specialtySearchCalls.add(specialtyId);
+    if (specialtySearchError != null) throw specialtySearchError!;
   }
 
   @override

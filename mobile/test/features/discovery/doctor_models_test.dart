@@ -182,6 +182,47 @@ void main() {
     },
   );
 
+  test('doctor detail parses professional chip fields and localized review bodies', () {
+    final detail = DoctorDetailResponse.fromJson({
+      'data': {
+        'doctor': {
+          'id': 'doctor-7',
+          'first_name_en': 'Nadia',
+          'sub_specialty': 'Interventional',
+          'professional_headline': 'Heart failure clinic lead',
+          'profile_image_url': '/uploads/nadia.png',
+          'areas_of_expertise': ['Echocardiography', 'Hypertension'],
+          'professional_interests': ['Prevention'],
+          'languages_spoken': ['Arabic', 'English'],
+        },
+        'reviews': [
+          {
+            'id': 'review-7',
+            'rating': 5,
+            'review_text': 'ممتاز / Excellent',
+            'review_text_ar': 'ممتاز',
+            'review_text_en': 'Excellent',
+            'patient_first_name_ar': 'هدى',
+            'patient_first_name_en': 'Huda',
+          },
+        ],
+      },
+    });
+
+    final doctor = detail.doctor!;
+    expect(doctor.subSpecialty, 'Interventional');
+    expect(doctor.professionalHeadline, 'Heart failure clinic lead');
+    expect(doctor.profileImageUrl, '/uploads/nadia.png');
+    expect(doctor.areasOfExpertise, ['Echocardiography', 'Hypertension']);
+    expect(doctor.professionalInterests, ['Prevention']);
+    expect(doctor.languagesSpoken, ['Arabic', 'English']);
+
+    final review = detail.reviews.single;
+    expect(review.localizedText(isArabic: true), 'ممتاز / Excellent');
+    expect(review.reviewerName(isArabic: false), 'Huda');
+    expect(review.reviewerName(isArabic: true), 'هدى');
+  });
+
   test(
     'a doctor with a missing or blank id throws instead of silently becoming empty',
     () {

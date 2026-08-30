@@ -9,6 +9,9 @@ import 'package:mobile/routes/route_paths.dart';
 void main() {
   const protected = [
     RoutePaths.home,
+    RoutePaths.socialFeed,
+    RoutePaths.discover,
+    RoutePaths.services,
     RoutePaths.records,
     RoutePaths.prescriptions,
     RoutePaths.appointments,
@@ -24,6 +27,42 @@ void main() {
     RoutePaths.savedPlaces,
     RoutePaths.contact,
     RoutePaths.myDoctor,
+    RoutePaths.doctorApplication,
+    RoutePaths.billing,
+    RoutePaths.subscription,
+    RoutePaths.billingHistory,
+    RoutePaths.billingSandbox,
+    RoutePaths.chatbot,
+    RoutePaths.conversations,
+    RoutePaths.chatbotConversation,
+    RoutePaths.virtualDoctor,
+    RoutePaths.messages,
+    RoutePaths.messagesNew,
+    RoutePaths.messageThread,
+    RoutePaths.doctorWorkspace,
+    RoutePaths.doctorProfessionalProfile,
+    RoutePaths.doctorSchedule,
+    RoutePaths.doctorAppointments,
+    RoutePaths.doctorPatients,
+    RoutePaths.doctorPatient,
+    RoutePaths.doctorPosts,
+    RoutePaths.doctorRecords,
+    RoutePaths.mapFoundation,
+    RoutePaths.clinics,
+    RoutePaths.clinicDetail,
+    RoutePaths.doctors,
+    RoutePaths.doctorDetail,
+    // Administration surfaces are session-protected too; the role gate on top
+    // of that lives in `adminRedirect` and is covered by its own suite.
+    RoutePaths.adminDashboard,
+    RoutePaths.adminAnalytics,
+    RoutePaths.adminUsers,
+    RoutePaths.adminDoctorApplications,
+    RoutePaths.adminContactMessages,
+    RoutePaths.adminModeration,
+    RoutePaths.adminAuditLogs,
+    RoutePaths.adminInvitations,
+    RoutePaths.adminInvitationAccept,
   ];
 
   const public = [
@@ -33,12 +72,6 @@ void main() {
     RoutePaths.forgotPassword,
     RoutePaths.verifyCode,
     RoutePaths.resetPassword,
-    RoutePaths.clinics,
-    RoutePaths.doctors,
-    RoutePaths.chatbot,
-    RoutePaths.conversations,
-    RoutePaths.virtualDoctor,
-    RoutePaths.mapFoundation,
   ];
 
   group('unauthenticated', () {
@@ -62,21 +95,43 @@ void main() {
       }
     });
 
-    test('discovery detail routes stay public', () {
+    test('discovery and conversation detail routes require authentication', () {
       expect(
         sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'),
-        isNull,
+        RoutePaths.login,
       );
       expect(
         sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'),
-        isNull,
+        RoutePaths.login,
       );
       expect(
         sessionRedirect(
           AuthStatus.unauthenticated,
           '/chatbot/conversations/abc',
         ),
-        isNull,
+        RoutePaths.login,
+      );
+    });
+
+    test('dynamic sandbox checkout path is protected', () {
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          RoutePaths.billingSandboxPath('checkout-token'),
+        ),
+        RoutePaths.login,
+      );
+    });
+
+    test('dynamic direct-message routes never expose private data', () {
+      const thread = '/messages/123e4567-e89b-42d3-a456-426614174000';
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          thread,
+          fullLocation: '$thread?from=notification',
+        ),
+        '/login?redirect=%2Fmessages%2F123e4567-e89b-42d3-a456-426614174000%3Ffrom%3Dnotification',
       );
     });
   });
@@ -125,6 +180,41 @@ void main() {
       },
     );
 
+    test('preserves a protected intended destination and its query', () {
+      const destination = '${RoutePaths.appointmentBooking}?doctorId=doctor-1';
+      final loginLocation = sessionRedirect(
+        AuthStatus.unauthenticated,
+        RoutePaths.appointmentBooking,
+        fullLocation: destination,
+      );
+
+      expect(loginLocation, isNotNull);
+      expect(
+        intendedDestinationFromLoginUri(Uri.parse(loginLocation!)),
+        destination,
+      );
+    });
+
+    test(
+      'rejects external targets and accepts protected discovery targets',
+      () {
+        expect(
+          intendedDestinationFromLoginUri(
+            Uri.parse('/login?redirect=https%3A%2F%2Fexample.com'),
+          ),
+          isNull,
+        );
+        expect(
+          intendedDestinationFromLoginUri(
+            Uri.parse(
+              '/login?redirect=${Uri.encodeQueryComponent(RoutePaths.doctors)}',
+            ),
+          ),
+          RoutePaths.doctors,
+        );
+      },
+    );
+
     test(
       'the login target is never itself protected, so redirects cannot loop',
       () {
@@ -137,9 +227,74 @@ void main() {
     );
   });
 
+  group('social feed route', () {
+    test('unauthenticated Feed redirects to Login', () {
+      expect(
+        sessionRedirect(AuthStatus.unauthenticated, RoutePaths.socialFeed),
+        RoutePaths.login,
+      );
+      expect(protectedRoutes, contains(RoutePaths.socialFeed));
+    });
+
+    test('Feed survives the safe intended-destination round trip', () {
+      final loginLocation = sessionRedirect(
+        AuthStatus.unauthenticated,
+        RoutePaths.socialFeed,
+        fullLocation: RoutePaths.socialFeed,
+      );
+
+      expect(loginLocation, '/login?redirect=%2Ffeed');
+      expect(
+        intendedDestinationFromLoginUri(Uri.parse(loginLocation!)),
+        RoutePaths.socialFeed,
+      );
+      expect(
+        sessionRedirect(AuthStatus.authenticated, RoutePaths.socialFeed),
+        isNull,
+      );
+    });
+  });
+
+  group('doctor application route', () {
+    test('is protected: unauthenticated access redirects to login', () {
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          RoutePaths.doctorApplication,
+        ),
+        RoutePaths.login,
+      );
+      expect(protectedRoutes.contains(RoutePaths.doctorApplication), isTrue);
+    });
+
+    test('redirect preserves the intended doctor-application destination', () {
+      final loginLocation = sessionRedirect(
+        AuthStatus.unauthenticated,
+        RoutePaths.doctorApplication,
+        fullLocation: RoutePaths.doctorApplication,
+      );
+      expect(loginLocation, isNotNull);
+      expect(
+        intendedDestinationFromLoginUri(Uri.parse(loginLocation!)),
+        RoutePaths.doctorApplication,
+      );
+    });
+
+    test('authenticated access is not redirected away', () {
+      expect(
+        sessionRedirect(AuthStatus.authenticated, RoutePaths.doctorApplication),
+        isNull,
+      );
+      expect(
+        sessionRedirect(AuthStatus.unknown, RoutePaths.doctorApplication),
+        isNull,
+      );
+    });
+  });
+
   group('protected set', () {
     test(
-      'covers exactly the patient-data routes: the five shell branches plus booking, notifications, profile, symptom checker, drug checker, report summarizer, my reports, my doctors, saved places, contact, and my doctor',
+      'covers patient data, billing, AI, messaging, Doctor Workspace, and administration routes',
       () {
         expect(protectedRoutes, protected.toSet());
       },
@@ -149,6 +304,65 @@ void main() {
       for (final route in public) {
         expect(protectedRoutes.contains(route), isFalse, reason: route);
       }
+    });
+  });
+
+  group('direct messaging route parsing', () {
+    test('accepts UUID conversation identifiers and rejects unsafe values', () {
+      const id = '123e4567-e89b-42d3-a456-426614174000';
+      expect(validMessageConversationId(id), id);
+      expect(validMessageConversationId('../records'), isNull);
+      expect(validMessageConversationId('not-a-uuid'), isNull);
+    });
+  });
+
+  group('doctor workspace routing', () {
+    test('dynamic patient files are protected and preserve destination', () {
+      const destination =
+          '/doctor/patients/11111111-1111-4111-8111-111111111111';
+      final login = sessionRedirect(
+        AuthStatus.unauthenticated,
+        destination,
+        fullLocation: destination,
+      );
+      expect(login, isNotNull);
+      expect(intendedDestinationFromLoginUri(Uri.parse(login!)), destination);
+    });
+
+    test('non-doctor authenticated roles are redirected away', () {
+      expect(
+        doctorRoleRedirect(
+          AuthStatus.authenticated,
+          'patient',
+          RoutePaths.doctorWorkspace,
+        ),
+        RoutePaths.home,
+      );
+      expect(
+        doctorRoleRedirect(
+          AuthStatus.authenticated,
+          'admin',
+          RoutePaths.doctorPatients,
+        ),
+        RoutePaths.home,
+      );
+    });
+
+    test('doctor role remains on doctor routes', () {
+      expect(
+        doctorRoleRedirect(
+          AuthStatus.authenticated,
+          'doctor',
+          RoutePaths.doctorSchedule,
+        ),
+        isNull,
+      );
+    });
+
+    test('UUID validation rejects malformed patient ids', () {
+      expect(isValidUuid('11111111-1111-4111-8111-111111111111'), isTrue);
+      expect(isValidUuid('../patient-1'), isFalse);
+      expect(isValidUuid(''), isFalse);
     });
   });
 }

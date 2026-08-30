@@ -1,201 +1,440 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
-import '../../../../core/locale/locale_controller.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../routes/route_paths.dart';
-import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/error_retry_state.dart';
-import '../../../../shared/widgets/page_sections.dart';
-import '../../../../shared/widgets/role_header_actions.dart';
-import '../../../../shared/widgets/status_badge.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../models/doctor_schedule_models.dart';
-import '../providers/doctor_schedule_provider.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/error_retry_state.dart';
+import '../../../shared/widgets/page_sections.dart';
+import '../models/doctor_models.dart';
+import '../providers/doctor_workspace_providers.dart';
+import '../widgets/doctor_workspace_gate.dart';
 
-class DoctorScheduleScreen extends ConsumerStatefulWidget {
+class DoctorScheduleScreen extends ConsumerWidget {
   const DoctorScheduleScreen({super.key});
-
   @override
-  ConsumerState<DoctorScheduleScreen> createState() => _DoctorScheduleScreenState();
-}
-
-class _DoctorScheduleScreenState extends ConsumerState<DoctorScheduleScreen> {
-  String _filter = 'upcoming';
-  String? _busyId;
-
-  @override
-  Widget build(BuildContext context) {
-    final ar = ref.watch(localeControllerProvider).languageCode == 'ar';
-    final isDoctor = ref.watch(authControllerProvider).user?.role == 'doctor';
-    if (!isDoctor) {
-      return AppScaffold(
-        appBar: AppBar(),
-        body: const Center(child: EmptyState(icon: Icons.lock_outline, title: 'Doctor access required', hint: 'This workspace is available to approved doctor accounts only.')),
-      );
-    }
-    final schedule = ref.watch(doctorScheduleProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(appStringsProvider),
+        async = ref.watch(doctorScheduleProvider);
     return AppScaffold(
-      appBar: AppBar(
-        title: Text(ar ? 'جدولي المهني' : 'My schedule'),
-        leading: IconButton(
-          tooltip: ar ? 'الرئيسية' : 'Home',
-          icon: const Icon(Icons.home_outlined),
-          onPressed: () => context.go(RoutePaths.home),
-        ),
-        actions: const [RoleHeaderActions(compact: true)],
+      appBar: AppBar(title: Text(s.schedule)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openAvailability(context, ref, null),
+        icon: const Icon(Icons.add),
+        label: Text(s.addAvailability),
       ),
-      body: schedule.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => ErrorRetryState(
-          title: ar ? 'تعذر تحميل الجدول' : 'Could not load schedule',
-          message: ar ? 'تحقق من الاتصال ثم حاول مرة أخرى.' : 'Check your connection and try again.',
-          retryLabel: ar ? 'إعادة المحاولة' : 'Retry',
-          onRetry: () => ref.invalidate(doctorScheduleProvider),
-        ),
-        data: (data) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(doctorScheduleProvider),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(AppTheme.spaceLg),
-            children: [
-              PageIntro(
-                title: ar ? 'جدولي المهني' : 'My schedule',
-                subtitle: data.isAcceptingPatients
-                    ? (ar ? 'حسابك يستقبل حجوزات جديدة.' : 'Your account is accepting new bookings.')
-                    : (ar ? 'حسابك لا يستقبل حجوزات جديدة حالياً.' : 'Your account is not accepting new bookings right now.'),
-                icon: Icons.calendar_month_outlined,
-                color: data.isAcceptingPatients ? AppTheme.success : AppTheme.warning,
-              ),
-              const SizedBox(height: AppTheme.spaceLg),
-              _AvailabilitySummary(data: data, ar: ar),
-              const SizedBox(height: AppTheme.spaceXl),
-              Text(ar ? 'المواعيد' : 'Appointments', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: AppTheme.spaceSm),
-              SegmentedButton<String>(
-                segments: [
-                  ButtonSegment(value: 'today', label: Text(ar ? 'اليوم' : 'Today'), icon: const Icon(Icons.today_outlined)),
-                  ButtonSegment(value: 'upcoming', label: Text(ar ? 'القادمة' : 'Upcoming'), icon: const Icon(Icons.event_available_outlined)),
-                  ButtonSegment(value: 'past', label: Text(ar ? 'السابقة' : 'Past'), icon: const Icon(Icons.history_outlined)),
-                ],
-                selected: {_filter},
-                onSelectionChanged: (value) => setState(() => _filter = value.first),
-              ),
-              const SizedBox(height: AppTheme.spaceMd),
-              if (_filtered(data.appointments).isEmpty)
-                EmptyState(
-                  icon: Icons.event_busy_outlined,
-                  title: ar ? 'لا توجد مواعيد هنا' : 'No appointments here',
-                  hint: ar ? 'ستظهر المواعيد المرتبطة بحسابك في هذا القسم.' : 'Appointments linked to your account will appear here.',
-                )
-              else
-                for (final appointment in _filtered(data.appointments))
-                  _AppointmentCard(
-                    appointment: appointment,
-                    ar: ar,
-                    busy: _busyId == appointment.id,
-                    onConfirm: appointment.status == 'scheduled' ? () => _update(appointment, 'confirm', ar) : null,
-                    onComplete: {'confirmed', 'in_progress'}.contains(appointment.status) ? () => _update(appointment, 'complete', ar) : null,
+      body: DoctorWorkspaceGate(
+        child: async.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorRetryState(
+            title: s.schedule,
+            message: doctorErrorMessage(s, e),
+            retryLabel: s.retry,
+            onRetry: () => ref.read(doctorScheduleProvider.notifier).load(),
+          ),
+          data: (schedule) => RefreshIndicator(
+            onRefresh: () => ref.read(doctorScheduleProvider.notifier).load(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(top: AppTheme.spaceLg, bottom: 96),
+              children: [
+                ResponsiveContent(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PageIntro(
+                        title: s.schedule,
+                        subtitle: s.bookingDaysValue(
+                          schedule.bookingHorizonDays,
+                        ),
+                        icon: Icons.calendar_month_outlined,
+                      ),
+                      const SizedBox(height: AppTheme.spaceLg),
+                      SectionHeader(title: s.weeklyAvailability),
+                      if (schedule.weekly.isEmpty)
+                        EmptyState(
+                          icon: Icons.event_busy_outlined,
+                          title: s.noAvailability,
+                        )
+                      else
+                        ...schedule.weekly.map(
+                          (r) => _ruleCard(context, ref, s, schedule, r),
+                        ),
+                      const SizedBox(height: AppTheme.spaceXl),
+                      SectionHeader(title: s.dateOverrides),
+                      if (schedule.overrides.isEmpty)
+                        EmptyState(
+                          icon: Icons.event_note_outlined,
+                          title: s.noAvailability,
+                        )
+                      else
+                        ...schedule.overrides.map(
+                          (r) => _ruleCard(context, ref, s, schedule, r),
+                        ),
+                    ],
                   ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  List<DoctorScheduleAppointment> _filtered(List<DoctorScheduleAppointment> appointments) {
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    return appointments.where((appointment) {
-      final finished = {'completed', 'cancelled', 'no_show'}.contains(appointment.status);
-      if (_filter == 'today') return appointment.scheduledDate == today && !finished;
-      if (_filter == 'past') return appointment.scheduledDate.compareTo(today) < 0 || finished;
-      return appointment.scheduledDate.compareTo(today) > 0 || (appointment.scheduledDate == today && !finished);
-    }).toList();
-  }
-
-  Future<void> _update(DoctorScheduleAppointment appointment, String action, bool ar) async {
-    setState(() => _busyId = appointment.id);
-    try {
-      final api = ref.read(doctorScheduleApiProvider);
-      if (action == 'confirm') {
-        await api.confirm(appointment.id);
-      } else {
-        await api.complete(appointment.id);
+  Widget _ruleCard(
+    BuildContext context,
+    WidgetRef ref,
+    AppStrings s,
+    DoctorSchedule schedule,
+    DoctorAvailability rule,
+  ) {
+    final days = s.isArabic
+        ? const [
+            'الأحد',
+            'الاثنين',
+            'الثلاثاء',
+            'الأربعاء',
+            'الخميس',
+            'الجمعة',
+            'السبت',
+          ]
+        : const [
+            'Sunday',
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+          ];
+    DoctorClinic? clinic;
+    for (final candidate in schedule.clinics) {
+      if (candidate.id == rule.clinicId) {
+        clinic = candidate;
+        break;
       }
-      ref.invalidate(doctorScheduleProvider);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(action == 'confirm' ? (ar ? 'تم تأكيد الموعد' : 'Appointment confirmed') : (ar ? 'تم إكمال الموعد' : 'Appointment completed'))));
-    } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ar ? 'تعذر تحديث الموعد. حاول مرة أخرى.' : 'Could not update the appointment. Please try again.')));
-    } finally {
-      if (mounted) setState(() => _busyId = null);
     }
-  }
-}
-
-class _AvailabilitySummary extends StatelessWidget {
-  const _AvailabilitySummary({required this.data, required this.ar});
-  final DoctorSchedule data;
-  final bool ar;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spaceMd),
-          child: Row(
-            children: [
-              Icon(data.isAcceptingPatients ? Icons.check_circle_outline : Icons.pause_circle_outline, color: data.isAcceptingPatients ? AppTheme.success : AppTheme.warning),
-              const SizedBox(width: AppTheme.spaceMd),
-              Expanded(child: Text(ar ? 'التوفر الأسبوعي: ${data.weeklyAvailability.where((slot) => slot.isActive).length} فترة' : 'Weekly availability: ${data.weeklyAvailability.where((slot) => slot.isActive).length} slots')),
-              StatusBadge(label: data.isAcceptingPatients ? (ar ? 'متاح للحجز' : 'Open for booking') : (ar ? 'الحجز متوقف' : 'Bookings paused'), color: data.isAcceptingPatients ? AppTheme.success : AppTheme.warning),
-            ],
-          ),
-        ),
-      );
-}
-
-class _AppointmentCard extends StatelessWidget {
-  const _AppointmentCard({required this.appointment, required this.ar, required this.busy, this.onConfirm, this.onComplete});
-  final DoctorScheduleAppointment appointment;
-  final bool ar;
-  final bool busy;
-  final VoidCallback? onConfirm;
-  final VoidCallback? onComplete;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = appointment.patientName(ar).isEmpty ? (ar ? 'مريض' : 'Patient') : appointment.patientName(ar);
+    final title =
+        rule.specificDate ??
+        (rule.dayOfWeek != null && rule.dayOfWeek! >= 0 && rule.dayOfWeek! < 7
+            ? days[rule.dayOfWeek!]
+            : '—');
+    final detail = rule.type == 'day_off'
+        ? s.dayOff
+        : '${rule.startTime.substring(0, 5)} – ${rule.endTime.substring(0, 5)} · ${rule.isTelemedicine ? s.telemedicine : (s.isArabic ? clinic?.nameAr : clinic?.nameEn) ?? s.inPerson}';
     return Card(
-      margin: const EdgeInsets.only(bottom: AppTheme.spaceSm),
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spaceMd),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const CircleAvatar(child: Icon(Icons.person_outline)),
-            const SizedBox(width: AppTheme.spaceMd),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: Theme.of(context).textTheme.titleMedium), Text('${appointment.scheduledDate} · ${_time(appointment.startTime)}–${_time(appointment.endTime)}')])) ,
-            StatusBadge(label: _status(ar, appointment.status), color: _statusColor(appointment.status)),
-          ]),
-          const SizedBox(height: AppTheme.spaceSm),
-          Text('${appointment.type == 'telemedicine' ? (ar ? 'استشارة عن بُعد' : 'Telemedicine') : (ar ? 'زيارة للعيادة' : 'In-person')} · ${appointment.number}'),
-          if (onConfirm != null || onComplete != null) ...[
-            const SizedBox(height: AppTheme.spaceMd),
-            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              if (busy) const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2)) else ...[
-                if (onConfirm != null) OutlinedButton.icon(onPressed: onConfirm, icon: const Icon(Icons.check_circle_outline), label: Text(ar ? 'تأكيد' : 'Confirm')),
-                if (onComplete != null) FilledButton.icon(onPressed: onComplete, icon: const Icon(Icons.task_alt_outlined), label: Text(ar ? 'إكمال' : 'Complete')),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(detail),
+                  Text(
+                    rule.isActive
+                        ? (rule.type == 'blocked' ? s.blocked : s.available)
+                        : s.doctorStatus('hidden'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              tooltip: s.moreActionsTooltip,
+              onSelected: (value) async {
+                if (value == 'edit') {
+                  await _openAvailability(
+                    context,
+                    ref,
+                    rule,
+                    schedule: schedule,
+                  );
+                } else {
+                  final confirmed = await confirmDoctorAction(
+                    context,
+                    title: s.delete,
+                    body: s.deleteConfirmation,
+                    strings: s,
+                  );
+                  if (!confirmed || !context.mounted) return;
+                  final result = await ref
+                      .read(doctorScheduleProvider.notifier)
+                      .deleteAvailability(rule.id);
+                  if (context.mounted && result.error != null) {
+                    showDoctorError(context, s, result.error);
+                  }
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'edit', child: Text(s.edit)),
+                PopupMenuItem(value: 'delete', child: Text(s.delete)),
               ],
-            ]),
+            ),
           ],
-        ]),
+        ),
       ),
     );
   }
 
-  static String _time(String value) => value.length >= 5 ? value.substring(0, 5) : value;
-  static String _status(bool ar, String value) => switch (value) { 'scheduled' => ar ? 'مجدول' : 'Scheduled', 'confirmed' => ar ? 'مؤكد' : 'Confirmed', 'in_progress' => ar ? 'قيد التنفيذ' : 'In progress', 'completed' => ar ? 'مكتمل' : 'Completed', 'cancelled' => ar ? 'ملغى' : 'Cancelled', _ => value };
-  static Color _statusColor(String value) => switch (value) { 'completed' => AppTheme.success, 'cancelled' => AppTheme.danger, 'confirmed' => AppTheme.primary, 'in_progress' => AppTheme.violet, _ => AppTheme.warning };
+  Future<void> _openAvailability(
+    BuildContext context,
+    WidgetRef ref,
+    DoctorAvailability? existing, {
+    DoctorSchedule? schedule,
+  }) async {
+    final s = ref.read(appStringsProvider);
+    final snapshot = schedule ?? ref.read(doctorScheduleProvider).valueOrNull;
+    if (snapshot == null) return;
+    var type = existing?.type ?? 'available',
+        day = existing?.dayOfWeek ?? 0,
+        dateSpecific =
+            existing?.specificDate != null || existing?.type != 'available',
+        telemedicine = existing?.isTelemedicine ?? snapshot.clinics.isEmpty,
+        duration = existing?.slotDuration ?? 30,
+        active = existing?.isActive ?? true,
+        clinicId =
+            existing?.clinicId ??
+            (snapshot.clinics.isEmpty ? null : snapshot.clinics.first.id);
+    DateTime date =
+        DateTime.tryParse(existing?.specificDate ?? '') ?? DateTime.now();
+    TimeOfDay start =
+            _time(existing?.startTime) ?? const TimeOfDay(hour: 9, minute: 0),
+        end = _time(existing?.endTime) ?? const TimeOfDay(hour: 13, minute: 0);
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocal) {
+          Future<void> pickDate() async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: date,
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(
+                Duration(days: snapshot.bookingHorizonDays),
+              ),
+            );
+            if (picked != null) setLocal(() => date = picked);
+          }
+
+          Future<void> pickTime(bool isStart) async {
+            final picked = await showTimePicker(
+              context: context,
+              initialTime: isStart ? start : end,
+            );
+            if (picked != null) {
+              setLocal(() => isStart ? start = picked : end = picked);
+            }
+          }
+
+          final requiresDate = type != 'available' || dateSpecific;
+          return AlertDialog(
+            scrollable: true,
+            title: Text(existing == null ? s.addAvailability : s.edit),
+            content: SizedBox(
+              width: 480,
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: type,
+                    decoration: InputDecoration(labelText: s.availabilityType),
+                    items:
+                        [
+                              ('available', s.available),
+                              ('blocked', s.blocked),
+                              ('day_off', s.dayOff),
+                            ]
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e.$1,
+                                child: Text(e.$2),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (v) => setLocal(() => type = v ?? 'available'),
+                  ),
+                  if (type == 'available')
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(s.specificDate),
+                      value: dateSpecific,
+                      onChanged: (v) => setLocal(() => dateSpecific = v),
+                    ),
+                  if (requiresDate)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(s.specificDate),
+                      subtitle: Text(
+                        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
+                      ),
+                      trailing: const Icon(Icons.calendar_today_outlined),
+                      onTap: pickDate,
+                    )
+                  else
+                    DropdownButtonFormField<int>(
+                      initialValue: day,
+                      decoration: InputDecoration(labelText: s.weekday),
+                      items: List.generate(
+                        7,
+                        (i) => DropdownMenuItem(
+                          value: i,
+                          child: Text(
+                            (s.isArabic
+                                ? const [
+                                    'الأحد',
+                                    'الاثنين',
+                                    'الثلاثاء',
+                                    'الأربعاء',
+                                    'الخميس',
+                                    'الجمعة',
+                                    'السبت',
+                                  ]
+                                : const [
+                                    'Sunday',
+                                    'Monday',
+                                    'Tuesday',
+                                    'Wednesday',
+                                    'Thursday',
+                                    'Friday',
+                                    'Saturday',
+                                  ])[i],
+                          ),
+                        ),
+                      ),
+                      onChanged: (v) => setLocal(() => day = v ?? 0),
+                    ),
+                  if (type != 'day_off')
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(s.startTime),
+                            subtitle: Text(start.format(context)),
+                            onTap: () => pickTime(true),
+                          ),
+                        ),
+                        Expanded(
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(s.endTime),
+                            subtitle: Text(end.format(context)),
+                            onTap: () => pickTime(false),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (type == 'available') ...[
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(s.telemedicine),
+                      value: telemedicine,
+                      onChanged: (v) => setLocal(() => telemedicine = v),
+                    ),
+                    if (!telemedicine)
+                      DropdownButtonFormField<String>(
+                        initialValue: clinicId,
+                        decoration: InputDecoration(labelText: s.clinic),
+                        items: snapshot.clinics
+                            .map(
+                              (c) => DropdownMenuItem(
+                                value: c.id,
+                                child: Text(
+                                  (s.isArabic ? c.nameAr : c.nameEn) ?? '—',
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) => setLocal(() => clinicId = v),
+                      ),
+                    DropdownButtonFormField<int>(
+                      initialValue: duration,
+                      decoration: InputDecoration(labelText: s.slotDuration),
+                      items: const [15, 20, 30, 45, 60]
+                          .map(
+                            (v) =>
+                                DropdownMenuItem(value: v, child: Text('$v')),
+                          )
+                          .toList(),
+                      onChanged: (v) => setLocal(() => duration = v ?? 30),
+                    ),
+                  ],
+                  if (existing != null)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(s.available),
+                      value: active,
+                      onChanged: (v) => setLocal(() => active = v),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(s.cancel),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (type == 'available' &&
+                      !telemedicine &&
+                      clinicId == null) {
+                    showDoctorError(
+                      context,
+                      s,
+                      const ApiException(message: '', code: 'CLINIC_REQUIRED'),
+                    );
+                    return;
+                  }
+                  final payload = <String, dynamic>{
+                    'availability_type': type,
+                    if (requiresDate)
+                      'specific_date':
+                          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}'
+                    else
+                      'day_of_week': day,
+                    if (type != 'day_off')
+                      'start_time':
+                          '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}',
+                    if (type != 'day_off')
+                      'end_time':
+                          '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}',
+                    if (type == 'available')
+                      'clinic_id': telemedicine ? null : clinicId,
+                    if (type == 'available') 'slot_duration': duration,
+                    if (type == 'available') 'is_telemedicine': telemedicine,
+                    if (existing != null) 'is_active': active,
+                  };
+                  Navigator.pop(context, payload);
+                },
+                child: Text(s.save),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (result == null || !context.mounted) return;
+    final saved = await ref
+        .read(doctorScheduleProvider.notifier)
+        .saveAvailability(id: existing?.id, payload: result);
+    if (context.mounted && saved.error != null) {
+      showDoctorError(context, s, saved.error);
+    }
+  }
+
+  TimeOfDay? _time(String? value) {
+    if (value == null) return null;
+    final p = value.split(':');
+    if (p.length < 2) return null;
+    final h = int.tryParse(p[0]), m = int.tryParse(p[1]);
+    return h == null || m == null ? null : TimeOfDay(hour: h, minute: m);
+  }
 }

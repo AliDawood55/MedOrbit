@@ -2,8 +2,8 @@
 /// backend actually returns from `GET /notifications` and the ones mutation
 /// endpoints echo back. There is no `data`/`metadata` JSON column on this
 /// table — only `reference_id`/`reference_type` exist server-side, and this
-/// app has no use for them (no click-through/deep-link on a notification),
-/// so they're deliberately not parsed here.
+/// direct-care message notifications now use those references for a tightly
+/// allow-listed internal conversation route.
 class NotificationModel {
   const NotificationModel({
     required this.id,
@@ -15,6 +15,8 @@ class NotificationModel {
     required this.isRead,
     required this.createdAt,
     this.readAt,
+    this.referenceId,
+    this.referenceType,
   });
 
   final String id;
@@ -30,6 +32,14 @@ class NotificationModel {
   final bool isRead;
   final DateTime createdAt;
   final DateTime? readAt;
+  final String? referenceId;
+  final String? referenceType;
+
+  bool get opensCareConversation =>
+      referenceType == 'DIRECT_CONVERSATION' &&
+      referenceId != null &&
+      _directConversationId.hasMatch(referenceId!) &&
+      const {'NEW_DIRECT_MESSAGE', 'NEW_MESSAGE_REQUEST', 'MESSAGE_REQUEST_ACCEPTED'}.contains(notificationType);
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
@@ -42,6 +52,8 @@ class NotificationModel {
       isRead: json['is_read'] == true,
       createdAt: _parseDate(json['created_at']) ?? DateTime.fromMillisecondsSinceEpoch(0),
       readAt: _parseDate(json['read_at']),
+      referenceId: _optionalString(json['reference_id']),
+      referenceType: _optionalString(json['reference_type']),
     );
   }
 
@@ -56,8 +68,15 @@ class NotificationModel {
       isRead: isRead ?? this.isRead,
       createdAt: createdAt,
       readAt: readAt ?? this.readAt,
+      referenceId: referenceId,
+      referenceType: referenceType,
     );
   }
 }
 
 DateTime? _parseDate(Object? value) => value is String ? DateTime.tryParse(value) : null;
+final RegExp _directConversationId = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+);
+String? _optionalString(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value.trim() : null;

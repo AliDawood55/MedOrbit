@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/locale/locale_controller.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../home/models/user_profile_model.dart';
 import '../../home/providers/user_provider.dart';
@@ -271,7 +272,8 @@ class ProfileController extends StateNotifier<ProfileState> {
     final api = ApiException.from(error);
     return switch (api) {
       _ when api.isTimeout => ProfileErrorKind.timeout,
-      _ when api.code == ApiException.codeServiceUnavailable => ProfileErrorKind.serviceUnavailable,
+      _ when api.code == ApiException.codeServiceUnavailable =>
+        ProfileErrorKind.serviceUnavailable,
       _ => ProfileErrorKind.generic,
     };
   }
@@ -279,10 +281,13 @@ class ProfileController extends StateNotifier<ProfileState> {
   PasswordChangeErrorKind _categorizePassword(Object error) {
     final api = ApiException.from(error);
     return switch (api) {
-      _ when api.code == 'INVALID_CREDENTIALS' => PasswordChangeErrorKind.wrongCurrentPassword,
-      _ when api.code == 'VALIDATION_ERROR' => PasswordChangeErrorKind.weakPassword,
+      _ when api.code == 'INVALID_CREDENTIALS' =>
+        PasswordChangeErrorKind.wrongCurrentPassword,
+      _ when api.code == 'VALIDATION_ERROR' =>
+        PasswordChangeErrorKind.weakPassword,
       _ when api.isTimeout => PasswordChangeErrorKind.timeout,
-      _ when api.code == ApiException.codeServiceUnavailable => PasswordChangeErrorKind.serviceUnavailable,
+      _ when api.code == ApiException.codeServiceUnavailable =>
+        PasswordChangeErrorKind.serviceUnavailable,
       _ => PasswordChangeErrorKind.generic,
     };
   }
@@ -291,7 +296,8 @@ class ProfileController extends StateNotifier<ProfileState> {
     final api = ApiException.from(error);
     return switch (api) {
       _ when api.isTimeout => AvatarErrorKind.timeout,
-      _ when api.code == ApiException.codeServiceUnavailable => AvatarErrorKind.serviceUnavailable,
+      _ when api.code == ApiException.codeServiceUnavailable =>
+        AvatarErrorKind.serviceUnavailable,
       _ => AvatarErrorKind.generic,
     };
   }
@@ -304,6 +310,7 @@ class ProfileController extends StateNotifier<ProfileState> {
 }
 
 final profileControllerProvider =
-    StateNotifierProvider.autoDispose<ProfileController, ProfileState>(
-      (ref) => ProfileController(ref),
-    );
+    StateNotifierProvider.autoDispose<ProfileController, ProfileState>((ref) {
+      ref.watch(appAccountSessionKeyProvider);
+      return ProfileController(ref);
+    });

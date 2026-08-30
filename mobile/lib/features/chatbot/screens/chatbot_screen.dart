@@ -10,8 +10,11 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
-import '../../discovery/models/location_models.dart';
+import '../../billing/models/billing_models.dart';
+import '../../billing/providers/billing_provider.dart';
+import '../../billing/widgets/server_countdown.dart';
 import '../../discovery/providers/location_provider.dart';
+import '../../discovery/models/location_models.dart';
 import '../../discovery/widgets/discovery_map.dart';
 import '../../discovery/widgets/location_picker_sheet.dart';
 import '../providers/chatbot_provider.dart';
@@ -34,7 +37,6 @@ class ChatbotScreen extends ConsumerStatefulWidget {
 }
 
 class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
-
   final _input = TextEditingController();
   final _scroll = ScrollController();
   bool _attachLocation = false;
@@ -44,17 +46,20 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.conversationId?.isNotEmpty == true)
-        _load(widget.conversationId!);
+      final id = widget.conversationId;
+      if (id?.isNotEmpty == true) {
+        _load(id!);
+      }
     });
   }
 
   @override
-  void didUpdateWidget(covariant ChatbotScreen old) {
-    super.didUpdateWidget(old);
-    if (widget.conversationId != old.conversationId &&
-        widget.conversationId?.isNotEmpty == true)
+  void didUpdateWidget(covariant ChatbotScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.conversationId != oldWidget.conversationId &&
+        widget.conversationId?.isNotEmpty == true) {
       _load(widget.conversationId!);
+    }
   }
 
   @override
@@ -67,11 +72,12 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
   Future<void> _load(String id) async {
     ref.read(conversationsControllerProvider.notifier).selectConversation(id);
     await ref.read(chatbotControllerProvider.notifier).loadConversation(id);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _selectedResultId = null;
         _resultLocation = null;
       });
+    }
   }
 
   void _newConversation() {
@@ -97,8 +103,7 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
           latitude: location?.latitude,
           longitude: location?.longitude,
         );
-    if (!mounted) return;
-    if (ok) {
+    if (mounted && ok) {
       ref.read(locationControllerProvider.notifier).clearLocation();
       setState(() {
         _attachLocation = false;
@@ -106,12 +111,17 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
         _selectedResultId = null;
       });
     }
-    if (_scroll.hasClients)
+    if (mounted) _scrollToEnd();
+  }
+
+  void _scrollToEnd() {
+    if (_scroll.hasClients) {
       _scroll.animateTo(
         _scroll.position.maxScrollExtent,
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
       );
+    }
   }
 
   Future<void> _chooseLocation() async {
@@ -119,23 +129,26 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheet) => LocationPickerSheet(
+      builder: (context) => LocationPickerSheet(
         permissionState: state.permissionState,
         errorMessage: state.errorMessage,
-        isBusy: state.status != LocationControllerStatus.idle,
+        isBusy:
+            state.status == LocationControllerStatus.checking ||
+            state.status == LocationControllerStatus.requestingPermission ||
+            state.status == LocationControllerStatus.locating,
         onUseCurrentLocation: () async {
-          Navigator.pop(sheet);
+          Navigator.pop(context);
           final ok = await ref
               .read(locationControllerProvider.notifier)
               .resolveCurrentLocation();
           if (mounted && ok) setState(() => _attachLocation = true);
         },
         onSelectMapPoint: () {
-          Navigator.pop(sheet);
-          _mapPoint();
+          Navigator.pop(context);
+          _selectMapPoint();
         },
         onSelectDistrict: (district) {
-          Navigator.pop(sheet);
+          Navigator.pop(context);
           ref
               .read(locationControllerProvider.notifier)
               .selectManualDistrict(district);
@@ -147,20 +160,20 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
             .read(locationControllerProvider.notifier)
             .openLocationSettings(),
         onClear: () {
-          Navigator.pop(sheet);
+          Navigator.pop(context);
           ref.read(locationControllerProvider.notifier).clearLocation();
           setState(() => _attachLocation = false);
         },
-        onCancel: () => Navigator.pop(sheet),
+        onCancel: () => Navigator.pop(context),
       ),
     );
   }
 
-  Future<void> _mapPoint() async {
+  Future<void> _selectMapPoint() async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (sheet) => SafeArea(
+      builder: (context) => SafeArea(
         child: SizedBox(
           height: MediaQuery.sizeOf(context).height * .72,
           child: DiscoveryMap(
@@ -168,7 +181,7 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
               ref
                   .read(locationControllerProvider.notifier)
                   .selectManualMapPoint(point.latitude, point.longitude);
-              Navigator.pop(sheet);
+              Navigator.pop(context);
               if (mounted) setState(() => _attachLocation = true);
             },
           ),
@@ -177,33 +190,106 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
     );
   }
 
-  String _error(AppStrings s, ChatbotError e) => switch (e.kind) {
-    ChatFailureKind.connectTimeout ||
-    ChatFailureKind.receiveTimeout => s.chatErrTimeout,
-    ChatFailureKind.unavailable => s.chatErrUnavailable,
-    ChatFailureKind.invalidResponse => s.chatErrInvalidResponse,
-    ChatFailureKind.backend => s.chatErrServer,
-    ChatFailureKind.unknown => s.errorGeneric,
-  };
+  /// Picks the message from the failure category rather than echoing the
+  /// transport-layer text, so "took longer than expected" can only ever appear
+  /// for a real timeout and never for an unreachable service.
+  String _errorMessage(AppStrings strings, ChatbotError error) {
+    return switch (error.kind) {
+      ChatFailureKind.connectTimeout ||
+      ChatFailureKind.receiveTimeout => strings.chatErrTimeout,
+      ChatFailureKind.unavailable => strings.chatErrUnavailable,
+      ChatFailureKind.invalidResponse => strings.chatErrInvalidResponse,
+      ChatFailureKind.backend => strings.chatErrServer,
+      ChatFailureKind.freeQuotaExhausted => strings.chatErrQuotaMessage,
+      ChatFailureKind.duplicateInFlight => strings.chatErrDuplicateMessage,
+      ChatFailureKind.entitlementUnavailable =>
+        strings.chatErrEntitlementUnavailable,
+      ChatFailureKind.subscriptionRequired =>
+        strings.chatErrSubscriptionRequired,
+      ChatFailureKind.subscriptionInactive =>
+        strings.chatErrSubscriptionInactive,
+      ChatFailureKind.rateLimited => strings.chatRateLimited,
+      ChatFailureKind.unknown => strings.errorGeneric,
+    };
+  }
+
+  /// Title to pair with [_errorMessage]. Entitlement failures get a title
+  /// naming the actual limitation instead of the generic "could not send" —
+  /// the patient did not fail to send a message, they hit a real quota or
+  /// subscription rule.
+  String _errorTitle(AppStrings strings, ChatbotError error) {
+    return switch (error.kind) {
+      ChatFailureKind.freeQuotaExhausted => strings.chatErrQuotaTitle,
+      ChatFailureKind.duplicateInFlight => strings.chatErrDuplicateTitle,
+      ChatFailureKind.subscriptionRequired =>
+        strings.chatErrSubscriptionRequiredTitle,
+      ChatFailureKind.subscriptionInactive =>
+        strings.chatErrSubscriptionInactiveTitle,
+      _ => strings.chatErrTitle,
+    };
+  }
+
+  /// Non-retryable entitlement failures get a quiet inline notice instead of
+  /// [ErrorRetryState]: the backend enforces the same denial server-side, so
+  /// a prominent "Retry" action would just spend another round trip on a
+  /// request that cannot succeed yet.
+  Widget _errorWidget(AppStrings strings, ChatbotError error) {
+    if (!error.retryable) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InlineMessage(
+            message:
+                '${_errorTitle(strings, error)}. ${_errorMessage(strings, error)}',
+            tone: InlineMessageTone.warning,
+          ),
+          const SizedBox(height: AppTheme.spaceSm),
+          OutlinedButton.icon(
+            onPressed: () => context.push(RoutePaths.billing),
+            icon: const Icon(Icons.workspace_premium_outlined),
+            label: Text(strings.entitlementUpgradeAction),
+          ),
+        ],
+      );
+    }
+
+    return ErrorRetryState(
+      title: _errorTitle(strings, error),
+      message: _errorMessage(strings, error),
+      retryLabel: strings.retry,
+      onRetry: () =>
+          ref.read(chatbotControllerProvider.notifier).retryLastMessage(),
+      variant: ErrorRetryVariant.compact,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(chatbotControllerProvider);
-    final s = ref.watch(appStringsProvider);
-    final ar = ref.watch(localeControllerProvider).languageCode == 'ar';
+    final strings = ref.watch(appStringsProvider);
+    final isArabic =
+        ref.watch(localeControllerProvider).languageCode == 'ar';
+    final billing = ref.watch(billingControllerProvider);
+    final quota = billing.entitlements?.chatbot ?? chat.quota;
+    final quotaExhausted =
+        quota != null &&
+        !quota.unlimited &&
+        !quota.allowed &&
+        quota.remaining == 0;
     final location = _attachLocation
         ? ref.watch(locationControllerProvider).currentLocation
         : null;
     return AppScaffold(
       appBar: AppBar(
-        title: Text(ar ? 'المحادثة الطبية' : 'Medical chat'),
+        title: Text(isArabic ? 'المحادثة الطبية' : 'Medical chat'),
         actions: [
           IconButton(
-            tooltip: ar ? 'سجل المحادثات' : 'Conversation history',
+            tooltip: isArabic ? 'سجل المحادثات' : 'Conversation history',
             onPressed: () => context.push(RoutePaths.conversations),
             icon: const Icon(Icons.history_rounded),
           ),
           IconButton(
-            tooltip: ar ? 'محادثة جديدة' : 'New conversation',
+            tooltip: isArabic ? 'محادثة جديدة' : 'New conversation',
             onPressed: _newConversation,
             icon: const Icon(Icons.add_comment_outlined),
           ),
@@ -219,13 +305,25 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
               padding: const EdgeInsets.all(AppTheme.spaceMd),
               children: [
                 PageIntro(
-                  title: ar ? 'إرشاد طبي' : 'Medical guidance',
-                  subtitle: ar
+                  title: isArabic ? 'إرشاد طبي' : 'Medical guidance',
+                  subtitle: isArabic
                       ? 'هذه الخدمة تقدم إرشاداً عاماً ولا تغني عن الرعاية الطبية المتخصصة.'
                       : 'This service provides general guidance and does not replace professional medical care.',
                   icon: Icons.chat_bubble_outline_rounded,
                 ),
                 const SizedBox(height: AppTheme.spaceMd),
+                if (quota != null && !quota.unlimited) ...[
+                  _ChatQuotaCard(
+                    quota: quota,
+                    strings: strings,
+                    serverTime: billing.entitlements?.serverTime,
+                    onRefresh: ref
+                        .read(billingControllerProvider.notifier)
+                        .refreshEntitlements,
+                    onUpgrade: () => context.push(RoutePaths.billing),
+                  ),
+                  const SizedBox(height: AppTheme.spaceMd),
+                ],
                 ChatLocationBanner(
                   location: location,
                   onAttach: _chooseLocation,
@@ -242,8 +340,8 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                 else if (!chat.hasMessages)
                   EmptyState(
                     icon: Icons.chat_outlined,
-                    title: ar ? 'ابدأ محادثة' : 'Start a conversation',
-                    hint: ar
+                    title: isArabic ? 'ابدأ محادثة' : 'Start a conversation',
+                    hint: isArabic
                         ? 'اكتب أعراضك أو اسأل عن رعاية قريبة.'
                         : 'Describe your symptoms or ask about nearby care.',
                     variant: EmptyStateVariant.compact,
@@ -253,59 +351,57 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                     ChatMessageBubble(message: message),
                 ],
                 if (chat.isSending) const ChatTypingIndicator(),
-                if (chat.error != null)
-                  ErrorRetryState(
-                    title: s.chatErrTitle,
-                    message: _error(s, chat.error!),
-                    retryLabel: s.retry,
-                    onRetry: () => ref
-                        .read(chatbotControllerProvider.notifier)
-                        .retryLastMessage(),
-                    variant: ErrorRetryVariant.compact,
-                  ),
+                if (chat.error != null) _errorWidget(strings, chat.error!),
                 if (chat.places.isNotEmpty) ...[
                   const SizedBox(height: AppTheme.spaceMd),
-                  SectionHeader(title: ar ? 'أماكن' : 'Places'),
-                  for (final item in chat.places)
+                  SectionHeader(title: isArabic ? 'أماكن' : 'Places'),
+                  for (final place in chat.places)
                     PlaceResultCard(
-                      place: item,
-                      selected: _selectedResultId == 'place-${item.id}',
+                      place: place,
+                      selected: _selectedResultId == 'place-${place.id}',
                       onSelect: () => setState(
-                        () => _selectedResultId = 'place-${item.id}',
+                        () => _selectedResultId = 'place-${place.id}',
                       ),
                     ),
                 ],
                 if (chat.clinics.isNotEmpty) ...[
                   const SizedBox(height: AppTheme.spaceMd),
-                  SectionHeader(title: ar ? 'عيادات' : 'Clinics'),
-                  for (final item in chat.clinics)
+                  SectionHeader(title: isArabic ? 'عيادات' : 'Clinics'),
+                  for (final clinic in chat.clinics)
                     PlaceResultCard(
-                      place: item,
+                      place: clinic,
                       isClinic: true,
-                      selected: _selectedResultId == 'clinic-${item.id}',
+                      selected: _selectedResultId == 'clinic-${clinic.id}',
                       onSelect: () => setState(
-                        () => _selectedResultId = 'clinic-${item.id}',
+                        () => _selectedResultId = 'clinic-${clinic.id}',
                       ),
                     ),
                 ],
                 if (chat.doctors.isNotEmpty) ...[
                   const SizedBox(height: AppTheme.spaceMd),
-                  SectionHeader(title: ar ? 'أطباء' : 'Doctors'),
-                  for (final item in chat.doctors)
+                  SectionHeader(title: isArabic ? 'أطباء' : 'Doctors'),
+                  for (final doctor in chat.doctors)
                     ChatDoctorResultCard(
-                      doctor: item,
-                      selected: _selectedResultId == 'doctor-${item.id}',
+                      doctor: doctor,
+                      selected: _selectedResultId == 'doctor-${doctor.id}',
                       onSelect: () => setState(
-                        () => _selectedResultId = 'doctor-${item.id}',
+                        () => _selectedResultId = 'doctor-${doctor.id}',
                       ),
                     ),
                 ],
                 if (chat.places.isNotEmpty ||
                     chat.clinics.isNotEmpty ||
-                    chat.doctors.isNotEmpty)
+                    chat.doctors.isNotEmpty) ...[
+                  const SizedBox(height: AppTheme.spaceMd),
                   Card(
                     child: ExpansionTile(
-                      title: Text(ar ? 'خريطة النتائج' : 'Results map'),
+                      key: ValueKey(
+                        'chat-results-map-${_selectedResultId ?? 'closed'}',
+                      ),
+                      initiallyExpanded: _selectedResultId != null,
+                      title: Text(
+                        isArabic ? 'خريطة النتائج' : 'Results map',
+                      ),
                       children: [
                         Padding(
                           padding: const EdgeInsets.all(AppTheme.spaceMd),
@@ -322,8 +418,10 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                       ],
                     ),
                   ),
+                ],
                 if (chat.route != null) ChatRouteCard(route: chat.route!),
-                if (chat.suggestions.isNotEmpty)
+                if (chat.suggestions.isNotEmpty) ...[
+                  const SizedBox(height: AppTheme.spaceMd),
                   SuggestionChips(
                     suggestions: chat.suggestions,
                     onSelected: (text) {
@@ -331,15 +429,82 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                       setState(() {});
                     },
                   ),
+                ],
               ],
             ),
           ),
           ChatInput(
             controller: _input,
-            enabled: !chat.isSending,
+            enabled: !chat.isSending && !quotaExhausted,
             onSend: _send,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ChatQuotaCard extends StatelessWidget {
+  const _ChatQuotaCard({
+    required this.quota,
+    required this.strings,
+    required this.serverTime,
+    required this.onRefresh,
+    required this.onUpgrade,
+  });
+
+  final ChatEntitlement quota;
+  final AppStrings strings;
+  final DateTime? serverTime;
+  final VoidCallback onRefresh;
+  final VoidCallback onUpgrade;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = quota.remaining;
+    final limit = quota.limit;
+    final exhausted = !quota.allowed && remaining == 0;
+    final label = remaining != null && limit != null
+        ? strings.billingChatRemaining(remaining, limit)
+        : strings.chatQuotaTitle;
+    if (!exhausted) {
+      return FeatureCard(
+        title: label,
+        icon: Icons.data_usage_rounded,
+        color: AppTheme.info,
+      );
+    }
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SectionHeader(
+              title: strings.chatErrQuotaTitle,
+              subtitle: strings.chatQuotaExhaustedBody,
+            ),
+            if (quota.resetsAt != null && serverTime != null) ...[
+              Row(
+                children: [
+                  Expanded(child: Text(strings.billingResetsAt)),
+                  ServerCountdown(
+                    target: quota.resetsAt!,
+                    serverTime: serverTime!,
+                    isArabic: strings.isArabic,
+                    onElapsed: onRefresh,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spaceMd),
+            ],
+            FilledButton.icon(
+              onPressed: onUpgrade,
+              icon: const Icon(Icons.workspace_premium_outlined),
+              label: Text(strings.entitlementUpgradeAction),
+            ),
+          ],
+        ),
       ),
     );
   }

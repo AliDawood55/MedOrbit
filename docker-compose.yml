@@ -25,6 +25,50 @@
 # host.docker.internal DNS name (Windows/Mac); extra_hosts below adds the
 # same mapping on Linux, where it isn't automatic.
 
+# SHARED BACKEND IMAGE — backend, outbox-worker, event-consumer and
+# recommendation-consumer are the same Node application started with different
+# entrypoints, so they are one image, not four. Without an explicit `image:`
+# Compose derives a per-service name (medorbit-backend, medorbit-outbox-worker,
+# ...) and leaves four identical copies tagged in the local image store. Naming
+# it once here builds and tags it once, and pins the name regardless of the
+# project name Compose infers from the directory (or a `-p` override).
+#
+# Every one of the four keeps its own `build:` block, so `docker compose up -d
+# --build`, or bringing up a single worker on its own, still builds the image
+# when it is missing — no service depends on another having been built first.
+x-backend-image: &backend-image medorbit-backend
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: backend/Dockerfile
+
+# Same reasoning for the test image, which backend-test, ai-service-test and
+# db-migrate all share. backend-test and ai-service-test already named it
+# explicitly — a good existing pattern, kept. db-migrate did not, and was
+# quietly building and tagging a second identical copy as medorbit-db-migrate.
+x-backend-test-image: &backend-test-image medorbit-backend-test
+
+x-backend-test-build: &backend-test-build
+  context: .
+  dockerfile: backend/Dockerfile.test
+
+# Settings shared by the three Kafka workers. Deliberately only the values that
+# are genuinely identical: each worker's command, health port and healthcheck
+# stay written out in full below, because those are the parts you actually need
+# to read per service.
+x-worker-env: &worker-env
+  DB_HOST: postgres
+  DB_PORT: 5432
+  NODE_ENV: production
+  KAFKA_ENABLED: "true"
+  KAFKA_BROKERS: kafka:9092
+
+x-worker-depends: &worker-depends
+  postgres:
+    condition: service_healthy
+  kafka:
+    condition: service_healthy
+
 services:
   postgres:
     # PG18, not 16 — the medorbit_backup.backup file was made with pg_dump
@@ -83,11 +127,20 @@ services:
       start_period: 30s
 
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-backend
     restart: unless-stopped
+    # server.js registers no SIGTERM handler, and a Node process running as
+    # PID 1 does not get the kernel's default "terminate on SIGTERM" behaviour
+    # — it ignores the signal, so every `docker compose down`/`restart` sat
+    # through the full 10s grace period and then took a SIGKILL. `init: true`
+    # puts tini at PID 1 and runs node as its child, where the default
+    # disposition applies again and the container stops immediately and
+    # cleanly. The three workers below do register handlers, so they do not
+    # need this. (A real graceful drain still wants a handler in server.js —
+    # that is an application change, not a Docker one.)
+    init: true
     env_file:
       - .env
     environment:
@@ -129,26 +182,17 @@ services:
       start_period: 15s
 
   outbox-worker:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-outbox-worker
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      NODE_ENV: production
-      KAFKA_ENABLED: "true"
-      KAFKA_BROKERS: kafka:9092
+      <<: *worker-env
       WORKER_HEALTH_PORT: 3002
     command: ["node", "scripts/outbox-worker.js"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *worker-depends
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 10s
@@ -157,26 +201,18 @@ services:
       start_period: 30s
 
   event-consumer:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-event-consumer
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      NODE_ENV: production
-      KAFKA_ENABLED: "true"
-      KAFKA_BROKERS: kafka:9092
+      <<: *worker-env
       WORKER_HEALTH_PORT: 3003
     command: ["node", "scripts/event-consumer.js"]
     depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      <<: *worker-depends
       outbox-worker:
         condition: service_healthy
     healthcheck:
@@ -187,27 +223,19 @@ services:
       start_period: 30s
 
   recommendation-consumer:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-recommendation-consumer
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      NODE_ENV: production
-      KAFKA_ENABLED: "true"
-      KAFKA_BROKERS: kafka:9092
+      <<: *worker-env
       KAFKA_RECOMMENDATION_CONSUMER_GROUP: recommendation-profile-v1
       WORKER_HEALTH_PORT: 3004
     command: ["node", "scripts/recommendation-consumer.js"]
     depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      <<: *worker-depends
       outbox-worker:
         condition: service_healthy
     healthcheck:
@@ -236,10 +264,8 @@ services:
     entrypoint: ["bash", "/usr/local/bin/init-test-database.sh"]
 
   backend-test:
-    image: medorbit-backend-test
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.test
+    image: *backend-test-image
+    build: *backend-test-build
     profiles: ["test"]
     container_name: medorbit-backend-test
     restart: "no"
@@ -292,9 +318,8 @@ services:
       start_period: 10s
 
   db-migrate:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.test
+    image: *backend-test-image
+    build: *backend-test-build
     profiles: ["tools"]
     restart: "no"
     env_file:
@@ -331,6 +356,10 @@ services:
     entrypoint: ["bash", "/usr/local/bin/bootstrap-database.sh"]
 
   ai-service:
+    # Named explicitly for the same reason as the backend image above: it is
+    # the name Compose would infer anyway for this project, pinned so it does
+    # not move if the project name does.
+    image: medorbit-ai-service
     build:
       # Root context: requirements.txt lives at the project root, not inside
       # ai-service/ (see DOCKER.md).
@@ -375,16 +404,26 @@ services:
       # 3.8s once resident. Persisting it also means the ar/en models survive
       # switching between the CPU and GPU overlays.
       - medorbit_hf_cache:/root/.cache/huggingface
+      # Piper TTS voices — the same problem, solved the same way. The two
+      # voices are ~60MB each and are downloaded, not tracked (they are
+      # gitignored; virtual_doctor/voice/tts.py fetches them into this
+      # directory on first use). They used to reach the image through the
+      # build context, which made the image contents depend on whether the
+      # developer had ever run TTS locally, and cost ~121MB on the machines
+      # where they had. .dockerignore now excludes them; this bind mount is
+      # what keeps them out of the disposable container layer. A bind mount
+      # rather than a named volume on purpose: it is the very directory the
+      # code already treats as its voice cache, so an existing local download
+      # is reused as-is and a host-run ai-service shares it.
+      - ./ai-service/virtual_doctor/assets/tts_voices:/app/virtual_doctor/assets/tts_voices
 
   ai-service-test:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile.test
     # This is intentionally the Node test image.  `ai-test-server.js` is a
     # deterministic internal AI double used by backend integration tests to
     # exercise warning, malformed-response, and outage paths.  The real
     # FastAPI service is verified by the separate ai-tests CI job.
-    image: medorbit-backend-test
+    image: *backend-test-image
+    build: *backend-test-build
     profiles: ["test"]
     restart: "no"
     env_file:
@@ -415,6 +454,7 @@ services:
     command: ["node", "tests/helpers/ai-test-server.js"]
 
   frontend:
+    image: medorbit-frontend
     build:
       context: .
       dockerfile: frontend/Dockerfile
