@@ -63,6 +63,7 @@ import '../features/records/screens/records_screen.dart';
 import '../features/report_summarizer/screens/report_summarizer_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../features/saved_places/screens/saved_places_screen.dart';
+import '../features/social/screens/social_feed_screen.dart';
 import '../features/symptom_checker/screens/symptom_checker_screen.dart';
 import '../features/virtual_doctor/screens/virtual_doctor_screen.dart';
 import 'main_shell.dart';
@@ -87,6 +88,7 @@ const Set<String> superAdminRoutes = {RoutePaths.adminInvitations};
 
 const Set<String> protectedRoutes = {
   RoutePaths.home,
+  RoutePaths.socialFeed,
   RoutePaths.discover,
   RoutePaths.services,
   RoutePaths.records,
@@ -162,6 +164,11 @@ bool isProtectedLocation(String location) {
 bool isValidUuid(String value) => RegExp(
   r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
 ).hasMatch(value);
+
+/// The Feed is shared, while author management remains a doctor-only tool.
+/// This is a presentation decision only; the backend remains authoritative.
+String? socialMyPostsRouteFor(AppRoleCapabilities capabilities) =>
+    capabilities.canCreateDoctorPosts ? RoutePaths.doctorPosts : null;
 
 String? doctorRoleRedirect(AuthStatus status, String? role, String location) {
   if (status == AuthStatus.authenticated &&
@@ -581,6 +588,25 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.home,
                 builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.socialFeed,
+                builder: (context, state) {
+                  final myPostsRoute = socialMyPostsRouteFor(
+                    ref.read(appRoleCapabilitiesProvider),
+                  );
+                  return SocialFeedScreen(
+                    onOpenMyPosts: myPostsRoute == null
+                        ? null
+                        : () {
+                            context.push(myPostsRoute);
+                          },
+                  );
+                },
               ),
             ],
           ),

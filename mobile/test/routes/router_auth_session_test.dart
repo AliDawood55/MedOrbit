@@ -9,6 +9,7 @@ import 'package:mobile/routes/route_paths.dart';
 void main() {
   const protected = [
     RoutePaths.home,
+    RoutePaths.socialFeed,
     RoutePaths.discover,
     RoutePaths.services,
     RoutePaths.records,
@@ -224,6 +225,34 @@ void main() {
         );
       },
     );
+  });
+
+  group('social feed route', () {
+    test('unauthenticated Feed redirects to Login', () {
+      expect(
+        sessionRedirect(AuthStatus.unauthenticated, RoutePaths.socialFeed),
+        RoutePaths.login,
+      );
+      expect(protectedRoutes, contains(RoutePaths.socialFeed));
+    });
+
+    test('Feed survives the safe intended-destination round trip', () {
+      final loginLocation = sessionRedirect(
+        AuthStatus.unauthenticated,
+        RoutePaths.socialFeed,
+        fullLocation: RoutePaths.socialFeed,
+      );
+
+      expect(loginLocation, '/login?redirect=%2Ffeed');
+      expect(
+        intendedDestinationFromLoginUri(Uri.parse(loginLocation!)),
+        RoutePaths.socialFeed,
+      );
+      expect(
+        sessionRedirect(AuthStatus.authenticated, RoutePaths.socialFeed),
+        isNull,
+      );
+    });
   });
 
   group('doctor application route', () {

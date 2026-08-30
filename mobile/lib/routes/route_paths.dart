@@ -8,6 +8,7 @@ class RoutePaths {
   static const String verifyCode = '/verify-code';
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
+  static const String socialFeed = '/feed';
   static const String discover = '/discover';
   static const String services = '/services';
   static const String records = '/records';

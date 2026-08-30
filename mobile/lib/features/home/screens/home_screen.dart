@@ -25,6 +25,7 @@ import '../../prescriptions/models/prescription_model.dart';
 import '../../prescriptions/providers/prescriptions_provider.dart';
 import '../../records/models/record_entry_model.dart';
 import '../../records/providers/records_provider.dart';
+import '../../social/localization/social_strings.dart';
 import '../models/user_profile_model.dart';
 import '../providers/user_provider.dart';
 
@@ -33,6 +34,10 @@ import '../providers/user_provider.dart';
 /// matching the patient-only Doctor Application route and backend guard.
 bool homeShowsDoctorApplicationAction(String? role) =>
     role?.trim().toLowerCase() == 'patient';
+
+/// Feed is a shared product action for every authenticated account.
+bool homeShowsSocialFeedAction(AppRoleCapabilities capabilities) =>
+    capabilities.canUseSocialFeed;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -99,6 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final strings = ref.watch(appStringsProvider);
+    final socialStrings = ref.watch(socialStringsProvider);
     final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
     final capabilities = ref.watch(appRoleCapabilitiesProvider);
     final profileAsync = ref.watch(currentUserProfileProvider);
@@ -158,6 +164,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(height: AppTheme.spaceSm),
                     _SharedProductSection(
                       strings: strings,
+                      socialStrings: socialStrings,
                       capabilities: capabilities,
                       notificationsUnreadCount: notificationsUnreadCount,
                     ),
@@ -194,17 +201,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 class _SharedProductSection extends StatelessWidget {
   const _SharedProductSection({
     required this.strings,
+    required this.socialStrings,
     required this.capabilities,
     required this.notificationsUnreadCount,
   });
 
   final AppStrings strings;
+  final SocialStrings socialStrings;
   final AppRoleCapabilities capabilities;
   final int? notificationsUnreadCount;
 
   @override
   Widget build(BuildContext context) {
     final entries = <_HomeEntry>[
+      if (homeShowsSocialFeedAction(capabilities))
+        _HomeEntry(
+          socialStrings.feedTitle,
+          socialStrings.emptyHint,
+          Icons.newspaper_outlined,
+          AppTheme.primary,
+          RoutePaths.socialFeed,
+          useGo: true,
+        ),
       _HomeEntry(
         strings.discoverTitle,
         strings.discoverSubtitle,

@@ -6,6 +6,7 @@ import '../core/locale/locale_controller.dart';
 import '../core/localization/app_strings.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../features/social/localization/social_strings.dart';
 import '../shared/widgets/app_scaffold.dart';
 import 'route_paths.dart';
 
@@ -13,6 +14,7 @@ enum _ShellAction { language, logout }
 
 const primaryNavigationRoutes = <String>[
   RoutePaths.home,
+  RoutePaths.socialFeed,
   RoutePaths.discover,
   RoutePaths.services,
   RoutePaths.profile,
@@ -30,6 +32,7 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = ref.watch(appStringsProvider);
+    final socialStrings = ref.watch(socialStringsProvider);
     ref.listen<String>(
       authControllerProvider.select(
         (state) => '${state.user?.id ?? ''}:${state.user?.role ?? ''}',
@@ -43,14 +46,6 @@ class MainShell extends ConsumerWidget {
         });
       },
     );
-    final width = MediaQuery.sizeOf(context).width;
-    final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
-    final compactNavigation =
-        width < AppTheme.compactBreakpoint || scaledLabel > 15;
-    final navigationHeight = (58 + (scaledLabel * 1.5))
-        .clamp(72.0, 104.0)
-        .toDouble();
-
     Future<void> handleAction(_ShellAction action) async {
       switch (action) {
         case _ShellAction.language:
@@ -80,40 +75,80 @@ class MainShell extends ConsumerWidget {
       ),
       bottomNavigationBar: SafeArea(
         top: false,
-        child: NavigationBar(
-          height: navigationHeight,
+        child: MedOrbitNavigationBar(
+          strings: strings,
+          socialStrings: socialStrings,
           selectedIndex: navigationShell.currentIndex,
-          labelBehavior: compactNavigation
-              ? NavigationDestinationLabelBehavior.onlyShowSelected
-              : NavigationDestinationLabelBehavior.alwaysShow,
           onDestinationSelected: (index) => navigationShell.goBranch(
             index,
             initialLocation: index == navigationShell.currentIndex,
           ),
-          destinations: [
-            _destination(
-              icon: Icons.home_outlined,
-              selectedIcon: Icons.home_rounded,
-              label: strings.navHome,
-            ),
-            _destination(
-              icon: Icons.travel_explore_outlined,
-              selectedIcon: Icons.travel_explore_rounded,
-              label: strings.navDiscover,
-            ),
-            _destination(
-              icon: Icons.apps_outlined,
-              selectedIcon: Icons.apps_rounded,
-              label: strings.navServices,
-            ),
-            _destination(
-              icon: Icons.person_outline_rounded,
-              selectedIcon: Icons.person_rounded,
-              label: strings.navProfile,
-            ),
-          ],
         ),
       ),
+    );
+  }
+}
+
+/// The shared five-destination navigation surface, split out so its narrow
+/// and large-text behavior can be exercised without constructing a router.
+class MedOrbitNavigationBar extends StatelessWidget {
+  const MedOrbitNavigationBar({
+    super.key,
+    required this.strings,
+    required this.socialStrings,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  final AppStrings strings;
+  final SocialStrings socialStrings;
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final scaledLabel = MediaQuery.textScalerOf(context).scale(AppTheme.fontXs);
+    final compactNavigation =
+        width < AppTheme.compactBreakpoint || scaledLabel > 15;
+    final navigationHeight = (58 + (scaledLabel * 1.5))
+        .clamp(72.0, 104.0)
+        .toDouble();
+
+    return NavigationBar(
+      height: navigationHeight,
+      selectedIndex: selectedIndex,
+      labelBehavior: compactNavigation
+          ? NavigationDestinationLabelBehavior.onlyShowSelected
+          : NavigationDestinationLabelBehavior.alwaysShow,
+      onDestinationSelected: onDestinationSelected,
+      destinations: [
+        _destination(
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home_rounded,
+          label: strings.navHome,
+        ),
+        _destination(
+          icon: Icons.newspaper_outlined,
+          selectedIcon: Icons.newspaper_rounded,
+          label: socialStrings.feedTitle,
+        ),
+        _destination(
+          icon: Icons.travel_explore_outlined,
+          selectedIcon: Icons.travel_explore_rounded,
+          label: strings.navDiscover,
+        ),
+        _destination(
+          icon: Icons.apps_outlined,
+          selectedIcon: Icons.apps_rounded,
+          label: strings.navServices,
+        ),
+        _destination(
+          icon: Icons.person_outline_rounded,
+          selectedIcon: Icons.person_rounded,
+          label: strings.navProfile,
+        ),
+      ],
     );
   }
 
