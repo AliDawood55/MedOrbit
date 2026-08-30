@@ -144,23 +144,30 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen>
     return AppScaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              conversation?.otherDisplayName ?? strings.messagesThreadTitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (conversation != null)
+        // Clamp scaling for the two-line title so an extreme text-size setting
+        // cannot push the counterpart name/role out of the fixed toolbar.
+        title: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.3,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Text(
-                conversation.otherRole == 'doctor'
-                    ? strings.messagesRoleDoctor
-                    : strings.messagesRolePatient,
-                style: Theme.of(context).textTheme.labelSmall,
+                conversation?.otherDisplayName ?? strings.messagesThreadTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-          ],
+              if (conversation != null)
+                Text(
+                  conversation.otherRole == 'doctor'
+                      ? strings.messagesRoleDoctor
+                      : strings.messagesRolePatient,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -252,7 +259,8 @@ class _MessageThreadScreenState extends ConsumerState<MessageThreadScreen>
                   _Composer(
                     controller: _messageController,
                     strings: strings,
-                    enabled: state.canSend && !state.isSending,
+                    canType: state.canSend,
+                    canSend: state.canSend && !state.isSending,
                     isSending: state.isSending,
                     onSend: _send,
                   ),
@@ -388,14 +396,21 @@ class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
     required this.strings,
-    required this.enabled,
+    required this.canType,
+    required this.canSend,
     required this.isSending,
     required this.onSend,
   });
 
   final TextEditingController controller;
   final AppStrings strings;
-  final bool enabled;
+
+  /// The counterpart accepts messages: the field stays editable even while a
+  /// previous message is still in flight so a fast typer is never locked out.
+  final bool canType;
+
+  /// A new send may start right now (accepted conversation, nothing sending).
+  final bool canSend;
   final bool isSending;
   final VoidCallback onSend;
 
@@ -415,14 +430,14 @@ class _Composer extends StatelessWidget {
                 child: TextField(
                   key: const ValueKey('message-composer'),
                   controller: controller,
-                  enabled: enabled,
+                  enabled: canType,
                   minLines: 1,
                   maxLines: 5,
                   maxLength: 4000,
                   textCapitalization: TextCapitalization.sentences,
                   textInputAction: TextInputAction.newline,
                   decoration: InputDecoration(
-                    hintText: enabled
+                    hintText: canType
                         ? strings.messagesComposerHint
                         : strings.messagesPendingComposerDisabled,
                     counterText: '',
@@ -432,11 +447,11 @@ class _Composer extends StatelessWidget {
               const SizedBox(width: AppTheme.spaceSm),
               Semantics(
                 button: true,
-                enabled: enabled,
+                enabled: canSend,
                 label: strings.messagesSend,
                 child: IconButton.filled(
                   tooltip: strings.messagesSend,
-                  onPressed: enabled ? onSend : null,
+                  onPressed: canSend ? onSend : null,
                   icon: isSending
                       ? const SizedBox.square(
                           dimension: AppTheme.iconMd,

@@ -28,14 +28,14 @@ class ConversationTile extends StatelessWidget {
     final preview = conversation.isPending
         ? strings.messagesRequestPendingPreview
         : (conversation.lastMessagePreview ?? strings.messagesStartPreview);
-    final role = conversation.otherRole == 'doctor'
+    final isDoctor = conversation.otherRole == 'doctor';
+    final role = isDoctor
         ? strings.messagesRoleDoctor
         : strings.messagesRolePatient;
+    final roleColor = isDoctor ? AppTheme.primary : AppTheme.secondary;
     final timestamp =
         conversation.lastMessageCreatedAt ?? conversation.createdAt;
-    final time = DateFormat.MMMd(
-      isArabic ? 'ar' : 'en',
-    ).add_jm().format(timestamp.toLocal());
+    final time = _formatConversationTime(timestamp.toLocal(), isArabic);
     final semantics = unread > 0
         ? '${conversation.otherDisplayName}, $role, '
               '${strings.messagesUnreadCount(unread)}, $preview, $time'
@@ -82,7 +82,7 @@ class ConversationTile extends StatelessWidget {
                                         : AppTheme.weightBold,
                                   ),
                             ),
-                            StatusBadge(label: role, color: AppTheme.primary),
+                            StatusBadge(label: role, color: roleColor),
                           ],
                         ),
                         const SizedBox(height: AppTheme.spaceXs),
@@ -169,6 +169,29 @@ class _Avatar extends StatelessWidget {
       child: Text(fallback.toUpperCase()),
     );
   }
+}
+
+/// Contextual, locale-aware timestamp for an inbox row: the clock time for
+/// conversations touched today, a short weekday within the last week, then the
+/// calendar date (with the year once it differs). Keeps the inbox scannable the
+/// way a native messaging list reads, without introducing new copy.
+String _formatConversationTime(DateTime timestamp, bool isArabic) {
+  final locale = isArabic ? 'ar' : 'en';
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final that = DateTime(timestamp.year, timestamp.month, timestamp.day);
+  final daysApart = today.difference(that).inDays;
+
+  if (daysApart <= 0) {
+    return DateFormat.jm(locale).format(timestamp);
+  }
+  if (daysApart < 7) {
+    return DateFormat.E(locale).format(timestamp);
+  }
+  if (timestamp.year == now.year) {
+    return DateFormat.MMMd(locale).format(timestamp);
+  }
+  return DateFormat.yMd(locale).format(timestamp);
 }
 
 String? _assetUrl(String origin, String? value) {

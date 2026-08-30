@@ -22,8 +22,10 @@ import 'package:mobile/features/messaging/providers/messaging_providers.dart';
 import 'package:mobile/features/messaging/screens/message_thread_screen.dart';
 import 'package:mobile/features/messaging/screens/messaging_inbox_screen.dart';
 import 'package:mobile/features/messaging/screens/new_message_screen.dart';
+import 'package:mobile/features/messaging/widgets/conversation_tile.dart';
 import 'package:mobile/features/messaging/widgets/message_bubble.dart';
 import 'package:mobile/routes/route_paths.dart';
+import 'package:mobile/shared/widgets/status_badge.dart';
 
 void main() {
   testWidgets('inbox has a useful empty state and new-message action', (
@@ -314,6 +316,176 @@ void main() {
     expect(retried, isTrue);
     expect(dismissed, isTrue);
   });
+
+  testWidgets('inbox shows a loading indicator before conversations resolve', (
+    tester,
+  ) async {
+    final gate = Completer<List<CareConversation>>();
+    await tester.pumpWidget(
+      _app(_DeferredListApi(gate.future), const MessagingInboxScreen()),
+    );
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('No conversations yet'), findsNothing);
+
+    gate.complete(const []);
+    await _settleLoad(tester);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('No conversations yet'), findsOneWidget);
+  });
+
+  testWidgets('inbox distinguishes doctor and patient role badges by colour', (
+    tester,
+  ) async {
+    final api = _ScreenApi(
+      conversations: [
+        _conversation(id: _conversationId, name: 'Dr Lina'),
+        _conversation(
+          id: _pendingConversationId,
+          name: 'Mr Adam',
+          otherRole: 'patient',
+        ),
+      ],
+    );
+    await tester.pumpWidget(_app(api, const MessagingInboxScreen()));
+    await _settleLoad(tester);
+
+    final badges = tester
+        .widgetList<StatusBadge>(find.byType(StatusBadge))
+        .toList();
+    final doctorBadge = badges.firstWhere((badge) => badge.label == 'Doctor');
+    final patientBadge = badges.firstWhere((badge) => badge.label == 'Patient');
+    expect(doctorBadge.color, isNot(equals(patientBadge.color)));
+  });
+
+  testWidgets('inbox stays overflow-free in Arabic RTL at 320px with 2x text', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _ScreenApi(
+      conversations: [
+        _conversation(
+          name: 'الدكتورة ليلى عبد الرحمن الطويلة جدًا للاختبار',
+          preview:
+              'رسالة معاينة طويلة جدًا تتضمن تفاصيل المتابعة والنتائج المخبرية '
+              'بالإضافة إلى ملاحظات إضافية',
+          unread: 128,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      _app(api, const MessagingInboxScreen(), isArabic: true, textScale: 2),
+    );
+    await _settleLoad(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(ConversationTile), findsOneWidget);
+  });
+
+  testWidgets('thread keeps the composer reachable under a long history', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final api = _ScreenApi(
+      conversations: [_conversation()],
+      messages: _manyMessages(60),
+    );
+    await tester.pumpWidget(
+      _app(api, const MessageThreadScreen(conversationId: _conversationId)),
+    );
+    await _settleLoad(tester);
+
+    expect(tester.takeException(), isNull);
+    final composer = find.byKey(const ValueKey('message-composer'));
+    expect(composer, findsOneWidget);
+    expect(tester.getRect(composer).bottom, lessThanOrEqualTo(640));
+    expect(find.byTooltip('Send'), findsOneWidget);
+  });
+
+  testWidgets('thread composer stays editable while a send is in flight', (
+    tester,
+  ) async {
+    final pending = Completer<CareMessage>();
+    final api = _ScreenApi(
+      conversations: [_conversation()],
+      messages: [_message('Hello', senderId: _otherUserId)],
+      sendResult: pending.future,
+    );
+    await tester.pumpWidget(
+      _app(api, const MessageThreadScreen(conversationId: _conversationId)),
+    );
+    await _settleLoad(tester);
+
+    final composer = find.byKey(const ValueKey('message-composer'));
+    await tester.enterText(composer, 'First');
+    await tester.tap(find.byTooltip('Send'));
+    await tester.pump();
+
+    expect(tester.widget<TextField>(composer).enabled, isTrue);
+    await tester.enterText(composer, 'Second while first sends');
+    expect(tester.takeException(), isNull);
+
+    pending.complete(
+      _message(
+        'First',
+        clientId: api.lastClientMessageId!,
+        senderId: _currentUserId,
+      ),
+    );
+    await tester.pump();
+  });
+
+  testWidgets('message bubble wraps an unbroken long token at narrow width', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final message = CareMessage(
+      id: '923e4567-e89b-42d3-a456-426614174000',
+      conversationId: _conversationId,
+      senderUserId: _currentUserId,
+      clientMessageId: '923e4567-e89b-42d3-a456-426614174001',
+      body: 'https://example.test/${'x' * 400} مرحبا-${'ن' * 200}',
+      createdAt: DateTime.utc(2026, 8, 29, 12),
+    );
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: MessageBubble(
+              message: message,
+              isMine: true,
+              isArabic: false,
+              strings: const AppStrings(false),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(MessageBubble), findsOneWidget);
+    expect(tester.getSize(find.byType(MessageBubble)).width, lessThanOrEqualTo(320));
+  });
+}
+
+List<CareMessage> _manyMessages(int count) {
+  return List<CareMessage>.generate(count, (index) {
+    final n = index.toString().padLeft(2, '0');
+    return CareMessage(
+      id: '723e4567-e89b-42d3-a456-4266141740$n',
+      conversationId: _conversationId,
+      senderUserId: index.isEven ? _currentUserId : _otherUserId,
+      clientMessageId: '823e4567-e89b-42d3-a456-4266141740$n',
+      body: 'History message number $index with enough text to take a line',
+      createdAt: DateTime.utc(2026, 8, 29, 8).add(Duration(minutes: index)),
+    );
+  });
 }
 
 Widget _inboxRouterApp(MessagingApi api) {
@@ -403,6 +575,7 @@ CareConversation _conversation({
   bool canRespond = false,
   String? preview,
   int unread = 0,
+  String otherRole = 'doctor',
 }) {
   return CareConversation(
     id: id,
@@ -411,7 +584,7 @@ CareConversation _conversation({
     requestStatus: requestStatus,
     initiatedByUserId: _otherUserId,
     createdAt: DateTime.utc(2026, 8, 29, 10),
-    otherRole: 'doctor',
+    otherRole: otherRole,
     otherDisplayName: name,
     lastMessagePreview: preview,
     lastMessageCreatedAt: DateTime.utc(2026, 8, 29, 11),
@@ -558,6 +731,21 @@ class _ScreenApi extends MessagingApi {
     return PatientMessagingPreference(
       allowDoctorMessages: updatedAllowDoctorMessages ?? allowDoctorMessages,
     );
+  }
+}
+
+class _DeferredListApi extends _ScreenApi {
+  _DeferredListApi(this._pending);
+
+  final Future<List<CareConversation>> _pending;
+
+  @override
+  Future<ConversationPage> listConversations({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final items = await _pending;
+    return ConversationPage(items: items, limit: limit, offset: offset);
   }
 }
 

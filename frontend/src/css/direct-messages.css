@@ -1,5 +1,8 @@
 .messages-page {
+    width: 100%;
     max-width: 1180px;
+    margin-inline: auto;
+    padding: 0 20px 40px;
     position: relative;
 }
 
@@ -75,9 +78,10 @@
 }
 
 .messages-shell {
-    height: min(72vh, 720px);
+    height: clamp(420px, 72vh, 720px);
     display: grid;
     grid-template-columns: minmax(270px, 34%) 1fr;
+    grid-template-rows: minmax(0, 1fr);
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--r-xl, 22px);
@@ -88,6 +92,7 @@
 .conversation-pane {
     border-inline-end: 1px solid var(--border);
     overflow: auto;
+    min-height: 0;
 }
 
 .pane-title,
@@ -229,12 +234,22 @@
 
 .thread-pane {
     min-width: 0;
+    min-height: 0;
     position: relative;
-    display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.thread-pane > .thread-header,
+.thread-pane > .message-request-banner,
+.thread-pane > .load-older,
+.thread-pane > .message-composer {
+    flex: none;
 }
 
 .message-history {
+    flex: 1;
+    min-height: 0;
     overflow: auto;
     padding: 20px;
     display: flex;
@@ -524,8 +539,8 @@
 
     .messages-shell {
         display: block;
-        height: calc(100dvh - 190px);
-        min-height: 560px;
+        height: calc(100svh - 190px);
+        min-height: 360px;
         position: relative;
     }
 
@@ -543,7 +558,6 @@
 
     .thread-pane {
         display: none;
-        grid-template-rows: auto auto auto minmax(0, 1fr) auto;
     }
 
     .messages-thread-open .conversation-pane {
@@ -551,7 +565,7 @@
     }
 
     .messages-thread-open .thread-pane {
-        display: grid;
+        display: flex;
     }
 
     .thread-back {
