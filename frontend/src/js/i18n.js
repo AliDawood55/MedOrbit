@@ -1717,17 +1717,22 @@ document.querySelectorAll('[data-i18n-html]').forEach(el => {
         if (langLabel) langLabel.textContent = current === 'ar' ? 'EN' : 'AR';
 
         Store.setLang(current);
+    }
+
+    function emitLanguageChanged() {
         window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: current } }));
     }
 
     function toggle() {
         current = current === 'ar' ? 'en' : 'ar';
         apply();
+        emitLanguageChanged();
     }
 
     function setLang(lang) {
         current = lang === 'en' ? 'en' : 'ar';
         apply();
+        emitLanguageChanged();
     }
 
     function getLang() {
