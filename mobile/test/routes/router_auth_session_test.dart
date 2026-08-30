@@ -9,6 +9,8 @@ import 'package:mobile/routes/route_paths.dart';
 void main() {
   const protected = [
     RoutePaths.home,
+    RoutePaths.discover,
+    RoutePaths.services,
     RoutePaths.records,
     RoutePaths.prescriptions,
     RoutePaths.appointments,
@@ -39,9 +41,16 @@ void main() {
     RoutePaths.doctorWorkspace,
     RoutePaths.doctorProfessionalProfile,
     RoutePaths.doctorSchedule,
+    RoutePaths.doctorAppointments,
     RoutePaths.doctorPatients,
     RoutePaths.doctorPatient,
     RoutePaths.doctorPosts,
+    RoutePaths.doctorRecords,
+    RoutePaths.mapFoundation,
+    RoutePaths.clinics,
+    RoutePaths.clinicDetail,
+    RoutePaths.doctors,
+    RoutePaths.doctorDetail,
     // Administration surfaces are session-protected too; the role gate on top
     // of that lives in `adminRedirect` and is covered by its own suite.
     RoutePaths.adminDashboard,
@@ -62,9 +71,6 @@ void main() {
     RoutePaths.forgotPassword,
     RoutePaths.verifyCode,
     RoutePaths.resetPassword,
-    RoutePaths.clinics,
-    RoutePaths.doctors,
-    RoutePaths.mapFoundation,
   ];
 
   group('unauthenticated', () {
@@ -88,26 +94,23 @@ void main() {
       }
     });
 
-    test(
-      'discovery detail routes stay public while conversation details are protected',
-      () {
-        expect(
-          sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'),
-          isNull,
-        );
-        expect(
-          sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'),
-          isNull,
-        );
-        expect(
-          sessionRedirect(
-            AuthStatus.unauthenticated,
-            '/chatbot/conversations/abc',
-          ),
-          RoutePaths.login,
-        );
-      },
-    );
+    test('discovery and conversation detail routes require authentication', () {
+      expect(
+        sessionRedirect(AuthStatus.unauthenticated, '/clinics/abc'),
+        RoutePaths.login,
+      );
+      expect(
+        sessionRedirect(AuthStatus.unauthenticated, '/doctors/abc'),
+        RoutePaths.login,
+      );
+      expect(
+        sessionRedirect(
+          AuthStatus.unauthenticated,
+          '/chatbot/conversations/abc',
+        ),
+        RoutePaths.login,
+      );
+    });
 
     test('dynamic sandbox checkout path is protected', () {
       expect(
@@ -191,22 +194,25 @@ void main() {
       );
     });
 
-    test('rejects external and public post-login destinations', () {
-      expect(
-        intendedDestinationFromLoginUri(
-          Uri.parse('/login?redirect=https%3A%2F%2Fexample.com'),
-        ),
-        isNull,
-      );
-      expect(
-        intendedDestinationFromLoginUri(
-          Uri.parse(
-            '/login?redirect=${Uri.encodeQueryComponent(RoutePaths.doctors)}',
+    test(
+      'rejects external targets and accepts protected discovery targets',
+      () {
+        expect(
+          intendedDestinationFromLoginUri(
+            Uri.parse('/login?redirect=https%3A%2F%2Fexample.com'),
           ),
-        ),
-        isNull,
-      );
-    });
+          isNull,
+        );
+        expect(
+          intendedDestinationFromLoginUri(
+            Uri.parse(
+              '/login?redirect=${Uri.encodeQueryComponent(RoutePaths.doctors)}',
+            ),
+          ),
+          RoutePaths.doctors,
+        );
+      },
+    );
 
     test(
       'the login target is never itself protected, so redirects cannot loop',

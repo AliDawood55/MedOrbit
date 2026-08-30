@@ -269,7 +269,13 @@ void main() {
           );
 
       expect(ok, isTrue);
-      expect(container.read(profileControllerProvider).passwordChanged, isTrue);
+      // Logout changes the canonical session key. Profile state must be a new,
+      // empty account-scoped instance rather than retaining the prior user's
+      // transient success flag.
+      expect(
+        container.read(profileControllerProvider).passwordChanged,
+        isFalse,
+      );
       expect(storage.cleared, isTrue);
       expect(
         container.read(authControllerProvider).status,
