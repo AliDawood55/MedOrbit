@@ -64,6 +64,24 @@ function authFlowUrl(page) {
         return query ? page + '?' + query : page;
     }
 
+function verificationUrl(email) {
+    const target = authFlowUrl('verify-email.html');
+    return target + (target.includes('?') ? '&' : '?') +
+        'email=' + encodeURIComponent(email || '');
+}
+
+function showVerificationAction(email) {
+    const action = document.getElementById('verificationAction');
+    const link = document.getElementById('verificationActionLink');
+
+    if (link) {
+        link.href = verificationUrl(email);
+    }
+
+    action?.classList.remove('hidden');
+}
+
+// ================= LOGIN =================
 async function handleLogin(e) {
         e.preventDefault();
         clearAlert();
@@ -91,7 +109,12 @@ async function handleLogin(e) {
                 window.location.href = redirect || landing;
             }, 500);
         } catch (err) {
-            alertForError(err);
+            if (err?.code === 'EMAIL_NOT_VERIFIED') {
+                showAlert(authErrorMessage(err));
+                showVerificationAction(email);
+            } else {
+                alertForError(err);
+            }
         } finally {
             setLoading('loginBtn', false);
         }
@@ -133,7 +156,11 @@ async function handleRegister(e) {
                 ? 'تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني ثم تسجيل الدخول.'
                 : 'Account created! Please check your email to verify it, then log in.', 'success');
 
-setTimeout(() => { window.location.href = authFlowUrl('login.html'); }, 2500);
+        // Keep the person in the verification flow instead of returning them
+        // to login before their email has been activated.
+        setTimeout(() => {
+            window.location.href = verificationUrl(email);
+        }, 900);
         } catch (err) {
             alertForError(err);
         } finally {
@@ -214,7 +241,8 @@ function setVerifyState(state, text) {
             const iconByState = {
                 loading: 'fa-circle-notch fa-spin',
                 success: 'fa-circle-check',
-                error: 'fa-circle-xmark'
+                error: 'fa-circle-xmark',
+                info: 'fa-envelope-circle-check'
             };
             iconEl.className = 'auth-status-icon ' + state + ' fas ' + (iconByState[state] || 'fa-circle-info');
         }
@@ -223,8 +251,18 @@ function setVerifyState(state, text) {
     async function runVerify() {
         const resendSection = document.getElementById('resendSection');
         const token = new URLSearchParams(window.location.search).get('token');
+        const email = new URLSearchParams(window.location.search).get('email')?.trim() || '';
+        const resendEmail = document.getElementById('resendEmail');
+        if (resendEmail && email) resendEmail.value = email;
 
         if (!token) {
+            if (email) {
+                setVerifyState('info', isAr()
+                    ? 'تم إنشاء حسابك. تحقق من بريدك الإلكتروني ثم افتح رابط التفعيل.'
+                    : 'Your account was created. Check your email and open the verification link.');
+                resendSection?.classList.remove('hidden');
+                return;
+            }
             setVerifyState('error', isAr() ? 'لم يتم العثور على رمز التحقق' : 'No verification token found');
             resendSection?.classList.remove('hidden');
             return;

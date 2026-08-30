@@ -8,6 +8,7 @@ class RoutePaths {
   static const String verifyCode = '/verify-code';
   static const String resetPassword = '/reset-password';
   static const String home = '/home';
+  static const String feed = '/feed';
   static const String records = '/records';
   static const String prescriptions = '/prescriptions';
   static const String appointments = '/appointments';
@@ -23,7 +24,18 @@ class RoutePaths {
   static const String sharedDoctorNotes = '/my-doctors/:id/notes';
   static const String savedPlaces = '/saved-places';
   static const String contact = '/contact';
+
+  static const String adminManagement = '/admin/management';
+  static const String doctorPatients = '/doctor/patients';
+  static const String doctorSchedule = '/doctor/schedule';
+  static const String doctorPatientDetail = '/doctor/patients/:id';
+  static const String doctorProfessional = '/doctor/professional';
+  static const String doctorPosts = '/doctor/posts';
+  static const String doctorBilling = '/doctor/billing';
+  static const String doctorMessages = '/doctor/messages';
+
   static const String myDoctor = '/my-doctor';
+
   static const String virtualDoctor = '/virtual-doctor';
   static const String mapFoundation = '/map-foundation';
   static const String clinics = '/clinics';
@@ -42,6 +54,24 @@ class RoutePaths {
       '/chatbot/conversations/${Uri.encodeComponent(id)}';
   static String sharedDoctorNotesPath(String id) =>
       '/my-doctors/${Uri.encodeComponent(id)}/notes';
+  static String doctorPatientDetailPath(String id) =>
+      '/doctor/patients/${Uri.encodeComponent(id)}';
+
+  /// Opens a focused section of the operational console. The base path remains
+  /// one protected route; this query parameter only chooses its initial tab.
+  static String adminManagementPath({
+    String? tab,
+    String? role,
+    String? metric,
+  }) {
+    final query = <String, String>{
+      if (tab != null && tab.isNotEmpty) 'tab': tab,
+      if (role != null && role.isNotEmpty) 'role': role,
+      if (metric != null && metric.isNotEmpty) 'metric': metric,
+    };
+    if (query.isEmpty) return adminManagement;
+    return '$adminManagement?${Uri(queryParameters: query).query}';
+  }
 
   static String appointmentBookingPath({String? doctorId}) {
     if (doctorId == null || doctorId.isEmpty) return appointmentBooking;

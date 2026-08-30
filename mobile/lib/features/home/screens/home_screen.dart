@@ -13,6 +13,8 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
+import '../../../shared/widgets/role_header_actions.dart';
+import '../../../shared/widgets/role_general_navigation.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../../appointments/models/enriched_appointment.dart';
 import '../../appointments/providers/appointments_provider.dart';
@@ -20,6 +22,7 @@ import '../../appointments/utils/appointment_filters.dart';
 import '../../appointments/widgets/appointment_card.dart';
 import '../../admin/dashboard/models/admin_dashboard_stats.dart';
 import '../../admin/dashboard/providers/admin_dashboard_provider.dart';
+import '../../doctor_workspace/screens/doctor_home_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../notifications/providers/notifications_provider.dart';
 import '../../prescriptions/models/prescription_model.dart';
@@ -104,6 +107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final isArabic = ref.watch(localeControllerProvider).languageCode == 'ar';
     final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
     final isAdmin = role == 'admin' || role == 'super_admin';
+    final isDoctor = role == 'doctor';
     final profileAsync = ref.watch(currentUserProfileProvider);
 
     if (isAdmin) {
@@ -111,6 +115,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       return _AdminHomeScreen(
         profileAsync: profileAsync,
         statsAsync: statsAsync,
+        isSuperAdmin: role == 'super_admin',
         isArabic: isArabic,
         strings: strings,
         origin: ref.watch(activeOriginProvider),
@@ -119,6 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         onRetryStats: () => ref.invalidate(adminDashboardStatsProvider),
       );
     }
+    if (isDoctor) return const DoctorHomeScreen();
 
     final appointmentsAsync = ref.watch(appointmentsControllerProvider);
     final prescriptionsAsync = ref.watch(prescriptionsListProvider);
@@ -133,22 +139,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return AppScaffold(
       appBar: AppBar(
         title: Text(strings.appName),
-        actions: [
-          IconButton(
-            tooltip: strings.languageToggleTooltip,
-            icon: const Icon(Icons.translate_rounded),
-            onPressed: () =>
-                ref.read(localeControllerProvider.notifier).toggle(),
-          ),
-          IconButton(
-            tooltip: strings.logoutTooltip,
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go(RoutePaths.login);
-            },
-          ),
-        ],
+        actions: const [RoleHeaderActions()],
       ),
       body: SafeArea(
         top: false,
@@ -171,6 +162,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       origin: ref.watch(activeOriginProvider),
                       onRetry: () => ref.invalidate(currentUserProfileProvider),
                     ),
+                    const SizedBox(height: AppTheme.spaceXl),
+                    const RoleGeneralNavigation(role: 'patient'),
                     const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
                       title: strings.dashboardStatisticsTitle,
@@ -279,6 +272,7 @@ class _AdminHomeScreen extends ConsumerWidget {
   const _AdminHomeScreen({
     required this.profileAsync,
     required this.statsAsync,
+    required this.isSuperAdmin,
     required this.isArabic,
     required this.strings,
     required this.origin,
@@ -289,6 +283,7 @@ class _AdminHomeScreen extends ConsumerWidget {
 
   final AsyncValue<UserProfileModel> profileAsync;
   final AsyncValue<AdminDashboardStats> statsAsync;
+  final bool isSuperAdmin;
   final bool isArabic;
   final AppStrings strings;
   final String origin;
@@ -301,22 +296,7 @@ class _AdminHomeScreen extends ConsumerWidget {
     return AppScaffold(
       appBar: AppBar(
         title: Text(strings.appName),
-        actions: [
-          IconButton(
-            tooltip: strings.languageToggleTooltip,
-            icon: const Icon(Icons.translate_rounded),
-            onPressed: () =>
-                ref.read(localeControllerProvider.notifier).toggle(),
-          ),
-          IconButton(
-            tooltip: strings.logoutTooltip,
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go(RoutePaths.login);
-            },
-          ),
-        ],
+        actions: const [RoleHeaderActions()],
       ),
       body: SafeArea(
         top: false,
@@ -338,6 +318,10 @@ class _AdminHomeScreen extends ConsumerWidget {
                       onRetry: onRetry,
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
+                    RoleGeneralNavigation(
+                      role: isSuperAdmin ? 'super_admin' : 'admin',
+                    ),
+                    const SizedBox(height: AppTheme.spaceXl),
                     SectionHeader(
                       title: strings.adminMobileDashboardTitle,
                       subtitle: strings.adminDashboardSubtitle,
@@ -349,6 +333,14 @@ class _AdminHomeScreen extends ConsumerWidget {
                       onRetry: onRetryStats,
                     ),
                     const SizedBox(height: AppTheme.spaceXl),
+                    SectionHeader(
+                      title: isSuperAdmin
+                          ? (isArabic ? 'مساحة عمل المشرف العام' : 'Super administrator workspace')
+                          : (isArabic ? 'مساحة عمل المشرف' : 'Administrator workspace'),
+                      subtitle: isArabic
+                          ? 'إدارة المنصة مع الحفاظ على حدود صلاحيات حسابك.'
+                          : 'Manage the platform while preserving your account permission boundaries.',
+                    ),
                     Card(
                       child: Padding(
                         padding: const EdgeInsets.all(AppTheme.spaceXl),
@@ -372,20 +364,22 @@ class _AdminHomeScreen extends ConsumerWidget {
                               children: [
                                 OutlinedButton.icon(
                                   onPressed: () =>
-                                      context.push(RoutePaths.notifications),
+                                      context.push(RoutePaths.adminManagement),
                                   icon: const Icon(
-                                    Icons.notifications_outlined,
+                                    Icons.admin_panel_settings_outlined,
                                   ),
-                                  label: Text(strings.navNotifications),
+                                  label: Text(strings.adminManagementTitle),
                                 ),
-                                OutlinedButton.icon(
-                                  onPressed: () =>
-                                      context.push(RoutePaths.profile),
-                                  icon: const Icon(
-                                    Icons.person_outline_rounded,
+                                if (isSuperAdmin)
+                                  OutlinedButton.icon(
+                                    onPressed: () => context.push(
+                                      RoutePaths.adminManagementPath(
+                                        tab: 'admins',
+                                      ),
+                                    ),
+                                    icon: const Icon(Icons.groups_2_outlined),
+                                    label: Text(strings.adminAdministrators),
                                   ),
-                                  label: Text(strings.navProfile),
-                                ),
                               ],
                             ),
                           ],
@@ -417,10 +411,12 @@ class _AdminStatisticsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return statsAsync.when(
-      loading: () => const Center(child: Padding(
-        padding: EdgeInsets.all(AppTheme.spaceLg),
-        child: CircularProgressIndicator(),
-      )),
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppTheme.spaceLg),
+          child: CircularProgressIndicator(),
+        ),
+      ),
       error: (error, stackTrace) => FeatureCard(
         title: strings.adminMobileDashboardTitle,
         subtitle: strings.statLoadError,
@@ -431,21 +427,75 @@ class _AdminStatisticsGrid extends StatelessWidget {
       ),
       data: (stats) {
         final tiles = <_AdminStatData>[
-          _AdminStatData(stats.usersTotal, strings.adminStatsUsers, Icons.groups_outlined, AppTheme.primary),
-          _AdminStatData(stats.patients, strings.adminStatsPatients, Icons.person_outline_rounded, AppTheme.secondary),
-          _AdminStatData(stats.doctors, strings.adminStatsDoctors, Icons.medical_services_outlined, AppTheme.accent),
-          _AdminStatData(stats.appointmentsTotal, strings.adminStatsAppointments, Icons.event_available_outlined, AppTheme.violet),
-          _AdminStatData(stats.recordsTotal, strings.adminStatsRecords, Icons.description_outlined, AppTheme.primary),
-          _AdminStatData(stats.prescriptionsTotal, strings.adminStatsPrescriptions, Icons.medication_outlined, AppTheme.secondary),
+          _AdminStatData(
+            stats.usersTotal,
+            strings.adminStatsUsers,
+            Icons.groups_outlined,
+            AppTheme.primary,
+            RoutePaths.adminManagementPath(tab: 'users'),
+          ),
+          _AdminStatData(
+            stats.patients,
+            strings.adminStatsPatients,
+            Icons.person_outline_rounded,
+            AppTheme.secondary,
+            RoutePaths.adminManagementPath(tab: 'users', role: 'patient'),
+          ),
+          _AdminStatData(
+            stats.doctors,
+            strings.adminStatsDoctors,
+            Icons.medical_services_outlined,
+            AppTheme.accent,
+            RoutePaths.adminManagementPath(tab: 'users', role: 'doctor'),
+          ),
+          _AdminStatData(
+            stats.appointmentsTotal,
+            strings.adminStatsAppointments,
+            Icons.event_available_outlined,
+            AppTheme.violet,
+            RoutePaths.adminManagementPath(
+              tab: 'activity',
+              metric: 'appointments',
+            ),
+          ),
+          _AdminStatData(
+            stats.recordsTotal,
+            strings.adminStatsRecords,
+            Icons.description_outlined,
+            AppTheme.primary,
+            RoutePaths.adminManagementPath(tab: 'activity', metric: 'records'),
+          ),
+          _AdminStatData(
+            stats.prescriptionsTotal,
+            strings.adminStatsPrescriptions,
+            Icons.medication_outlined,
+            AppTheme.secondary,
+            RoutePaths.adminManagementPath(
+              tab: 'activity',
+              metric: 'prescriptions',
+            ),
+          ),
           if (stats.averageRating != null)
-            _AdminStatData(stats.averageRating!.toStringAsFixed(1), strings.adminStatsRating, Icons.star_outline_rounded, AppTheme.accent),
+            _AdminStatData(
+              stats.averageRating!.toStringAsFixed(1),
+              strings.adminStatsRating,
+              Icons.star_outline_rounded,
+              AppTheme.accent,
+              RoutePaths.adminManagementPath(
+                tab: 'activity',
+                metric: 'reviews',
+              ),
+            ),
         ];
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= AppTheme.compactBreakpoint ? 2 : 1;
+            final columns = constraints.maxWidth >= AppTheme.compactBreakpoint
+                ? 2
+                : 1;
             final gap = AppTheme.spaceMd;
-            final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
             return Wrap(
               spacing: gap,
               runSpacing: gap,
@@ -458,6 +508,9 @@ class _AdminStatisticsGrid extends StatelessWidget {
                       label: tile.label,
                       icon: tile.icon,
                       color: tile.color,
+                      onTap: tile.route == null
+                          ? null
+                          : () => context.push(tile.route!),
                     ),
                   ),
               ],
@@ -470,12 +523,19 @@ class _AdminStatisticsGrid extends StatelessWidget {
 }
 
 class _AdminStatData {
-  const _AdminStatData(this.value, this.label, this.icon, this.color);
+  const _AdminStatData(
+    this.value,
+    this.label,
+    this.icon,
+    this.color, [
+    this.route,
+  ]);
 
   final Object value;
   final String label;
   final IconData icon;
   final Color color;
+  final String? route;
 }
 
 List<EnrichedAppointment> _upcomingAppointments(

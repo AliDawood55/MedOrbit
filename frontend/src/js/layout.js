@@ -41,20 +41,68 @@ const Layout = (() => {
             .replace(/"/g, '&quot;');
     }
 
-    function initials(user) {
-        const name = (user && (user.name || user.email)) || '';
-        return name.trim().charAt(0).toUpperCase() || '?';
+   function userDisplayName(user) {
+    if (typeof API !== 'undefined' && typeof API.displayName === 'function') {
+        return API.displayName(user);
     }
 
+    const arabic = typeof I18n !== 'undefined' && I18n.getLang?.() === 'ar';
+    const primary = arabic
+        ? [user?.first_name_ar, user?.last_name_ar]
+        : [user?.first_name_en, user?.last_name_en];
+    const fallback = arabic
+        ? [user?.first_name_en, user?.last_name_en]
+        : [user?.first_name_ar, user?.last_name_ar];
+
+    return primary.filter(Boolean).join(' ').trim()
+        || fallback.filter(Boolean).join(' ').trim()
+        || user?.name
+        || user?.email
+        || '';
+}
+
+function initials(user) {
+    const name = userDisplayName(user);
+    return name.trim().charAt(0).toUpperCase() || '?';
+}
+
+function localized(ar, en) {
+    return (typeof I18n !== 'undefined' && I18n.getLang() === 'ar') ? ar : en;
+}
+
+function roleLabel(role) {
+    const labels = {
+        patient: ['مريض', 'Patient'],
+        doctor: ['طبيب', 'Doctor'],
+        clinic: ['منشأة صحية', 'Clinic'],
+        admin: ['مسؤول', 'Administrator'],
+        super_admin: ['مسؤول عام', 'Super administrator']
+    };
+
+    const pair = labels[role] || ['عضو', 'Member'];
+    return localized(pair[0], pair[1]);
+}
+
+function profileShortcut() {
+    return '<a href="profile.html" class="icon-btn account-shortcut" title="Account / الحساب" aria-label="Account">' +
+        '<i class="fas fa-user-circle" aria-hidden="true"></i>' +
+    '</a>';
+}
+
+// Operational accounts are not patient-facing AI or support consumers.
 function isAdminSession() {
-        const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
-        return role === 'admin' || role === 'super_admin';
-    }
+    const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
+    return role === 'admin' || role === 'super_admin';
+}
+     
 
     function visiblePagesForSession() {
-        if (!isAdminSession()) return PAGES;
-        return PAGES.filter((page) => page.href !== 'contact.html' && !page.children);
-    }
+    if (!isAdminSession()) return PAGES;
+
+    return PAGES.filter((page) =>
+        !['contact.html', 'index.html'].includes(page.href) && !page.children
+    );
+}
 
 function renderLink(p, page) {
         const active = (p.match ? p.match.includes(page) : page === p.href) ? ' active' : '';
@@ -130,9 +178,11 @@ function renderAuthArea(containerId = 'authArea') {
                 '<i class="fas fa-bell" aria-hidden="true"></i>' +
                 '<span class="notification-badge hidden" id="notificationBadge" aria-hidden="true"></span>' +
             '</a>' +
+            profileShortcut() +
             '<div class="user-chip" id="userChip">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
-                '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
+                '<span class="user-identity"><span class="user-name">' + escapeHtml(userDisplayName(user)) + '</span>' +
+                '<span class="role-badge">' + escapeHtml(roleLabel(user?.role)) + '</span></span>' +
                 '<i class="fas fa-chevron-down"></i>' +
                 '<div class="user-menu" id="userMenu">' +
                     '<a href="dashboard.html" class="user-menu-item" data-i18n="nav.dashboard"></a>' +
@@ -152,6 +202,7 @@ function renderAuthArea(containerId = 'authArea') {
                     (isAdmin ? '<a href="admin-contact-messages.html" class="user-menu-item" data-i18n="nav.contactMessages"></a>' : '') +
                     (isAdmin ? '<a href="admin-social.html" class="user-menu-item" data-i18n="nav.socialModeration"></a>' : '') +
                     (isSuperAdmin ? '<a href="admin-invitations.html" class="user-menu-item">Admin Invitations</a>' : '') +
+                    (isSuperAdmin ? '<a href="admin-users.html?role=admin" class="user-menu-item"><i class="fas fa-user-shield" aria-hidden="true"></i> ' + localized('قائمة المسؤولين', 'Administrators directory') + '</a>' : '') +
                     (isAdmin ? '<a href="analytics.html" class="user-menu-item" data-i18n="nav.analytics"></a>' : '') +
                     '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
                     (!isAdmin ? '<a href="contact.html" class="user-menu-item" data-i18n="nav.contactUs"></a>' : '') +
@@ -216,7 +267,7 @@ function renderDrawerNavItems() {
         return (
             '<div class="drawer-user">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
-                '<span class="user-name">' + escapeHtml((user && (user.name || user.email)) || '') + '</span>' +
+                '<span class="user-name">' + escapeHtml(userDisplayName(user)) + '</span>' +
             '</div>' +
             '<a href="dashboard.html" class="drawer-link" data-i18n="nav.dashboard"></a>' +
             (isPatient ? '<a href="find-doctors.html" class="drawer-link" data-i18n="nav.doctors"></a>' : '') +
@@ -235,6 +286,7 @@ function renderDrawerNavItems() {
             (isAdmin ? '<a href="admin-contact-messages.html" class="drawer-link" data-i18n="nav.contactMessages"></a>' : '') +
             (isAdmin ? '<a href="admin-social.html" class="drawer-link" data-i18n="nav.socialModeration"></a>' : '') +
             (isSuperAdmin ? '<a href="admin-invitations.html" class="drawer-link">Admin Invitations</a>' : '') +
+            (isSuperAdmin ? '<a href="admin-users.html?role=admin" class="drawer-link"><i class="fas fa-user-shield" aria-hidden="true"></i> ' + localized('قائمة المسؤولين', 'Administrators directory') + '</a>' : '') +
             (isAdmin ? '<a href="analytics.html" class="drawer-link" data-i18n="nav.analytics"></a>' : '') +
             '<a href="notifications.html" class="drawer-link drawer-notification-link"><i class="fas fa-bell" aria-hidden="true"></i><span data-i18n="nav.notifications"></span><span class="notification-badge hidden" id="drawerNotificationBadge" aria-hidden="true"></span></a>' +
             (!isAdmin ? '<a href="contact.html" class="drawer-link" data-i18n="nav.contactUs"></a>' : '') +
@@ -469,6 +521,18 @@ document.addEventListener('click', () => {
             document.getElementById('userChip')?.classList.remove('open');
             document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
         });
+      
+      window.addEventListener('languageChanged', () => {
+    renderAuthArea('authArea');
+
+    const drawerAuth = document.querySelector('.mobile-drawer-auth');
+    if (drawerAuth) {
+        drawerAuth.innerHTML = renderDrawerAuth();
+        if (typeof I18n !== 'undefined') {
+            I18n.apply();
+        }
+    }
+});
     }
 
 function renderAuthPromptBanner(containerId) {

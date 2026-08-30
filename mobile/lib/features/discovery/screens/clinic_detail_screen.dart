@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
-
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -13,6 +12,7 @@ import '../providers/discovery_provider.dart';
 import '../widgets/clinic_detail_sections.dart';
 import '../widgets/discovery_map.dart';
 import '../widgets/place_marker.dart';
+
 
 class ClinicDetailScreen extends ConsumerStatefulWidget {
   const ClinicDetailScreen({super.key, required this.clinicId});
@@ -54,8 +54,11 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
     final clinic = detail?.clinic;
     final error = state.clinicDetailError;
 
+
     return AppScaffold(
+
       appBar: AppBar(title: Text(strings.clinicDetailTitle)),
+
       useSafeArea: true,
       body: RefreshIndicator(
         onRefresh: _load,
@@ -70,9 +73,11 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
                   : error != null
                       ? Card(
                           child: ErrorRetryState(
+
                             title: strings.clinicDetailLoadErrorTitle,
                             message: error.message,
                             retryLabel: strings.retry,
+                            
                             onRetry: () {
                               _load();
                             },
@@ -83,8 +88,10 @@ class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen> {
                           ? Card(
                               child: EmptyState(
                                 icon: Icons.local_hospital_outlined,
+
                                 title: strings.clinicDetailNotFoundTitle,
                                 hint: strings.clinicDetailNotFoundHint,
+
                                 variant: EmptyStateVariant.compact,
                               ),
                             )

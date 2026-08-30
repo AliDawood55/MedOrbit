@@ -57,6 +57,68 @@ router.get('/users', authenticate, authorizeAdmin, async (req, res, next) => {
     }
 });
 
+// Operational summaries for the mobile administration console. These rows are
+// deliberately metadata-only: administrators can monitor platform activity
+// without this endpoint becoming a second clinical-record viewer.
+const ACTIVITY_QUERIES = {
+    appointments: `
+        SELECT a.id, a.appointment_number AS reference, a.status,
+               a.scheduled_date AS occurred_on, a.appointment_type AS detail,
+               pu.email AS patient_email, du.email AS doctor_email
+        FROM medorbit.appointments a
+        JOIN medorbit.patients p ON p.id=a.patient_id
+        JOIN medorbit.users pu ON pu.id=p.user_id
+        JOIN medorbit.doctors d ON d.id=a.doctor_id
+        JOIN medorbit.users du ON du.id=d.user_id
+        ORDER BY a.scheduled_date DESC, a.start_time DESC
+        LIMIT 100`,
+    records: `
+        SELECT r.id, r.record_number AS reference, r.record_type AS status,
+               r.created_at AS occurred_on, NULL::text AS detail,
+               pu.email AS patient_email, du.email AS doctor_email
+        FROM medorbit.medical_records r
+        JOIN medorbit.patients p ON p.id=r.patient_id
+        JOIN medorbit.users pu ON pu.id=p.user_id
+        JOIN medorbit.doctors d ON d.id=r.doctor_id
+        JOIN medorbit.users du ON du.id=d.user_id
+        ORDER BY r.created_at DESC
+        LIMIT 100`,
+    prescriptions: `
+        SELECT p.id, p.prescription_number AS reference, p.status,
+               p.prescription_date AS occurred_on, NULL::text AS detail,
+               pu.email AS patient_email, du.email AS doctor_email
+        FROM medorbit.prescriptions p
+        JOIN medorbit.patients pa ON pa.id=p.patient_id
+        JOIN medorbit.users pu ON pu.id=pa.user_id
+        JOIN medorbit.doctors d ON d.id=p.doctor_id
+        JOIN medorbit.users du ON du.id=d.user_id
+        ORDER BY p.prescription_date DESC, p.created_at DESC
+        LIMIT 100`,
+    reviews: `
+        SELECT r.id, ('Review · ' || r.rating || '/5') AS reference,
+               CASE WHEN r.is_visible THEN 'visible' ELSE 'hidden' END AS status,
+               r.created_at AS occurred_on, NULL::text AS detail,
+               pu.email AS patient_email, du.email AS doctor_email
+        FROM medorbit.doctor_reviews r
+        JOIN medorbit.patients p ON p.id=r.patient_id
+        JOIN medorbit.users pu ON pu.id=p.user_id
+        JOIN medorbit.doctors d ON d.id=r.doctor_id
+        JOIN medorbit.users du ON du.id=d.user_id
+        ORDER BY r.created_at DESC
+        LIMIT 100`
+};
+
+router.get('/activity/:kind', authenticate, authorizeAdmin, async (req, res, next) => {
+    try {
+        const query = ACTIVITY_QUERIES[req.params.kind];
+        if (!query) return error(res, 'Unsupported activity type', 400, 'VALIDATION_ERROR');
+        const result = await db.query(query);
+        return success(res, result.rows, 'Administrative activity retrieved');
+    } catch (err) {
+        return next(err);
+    }
+});
+
 async function setActiveState(req, res, next, isActive) {
     const client = await db.getClient();
     try {

@@ -88,6 +88,14 @@
                     </button>
                 </form>
 
+                <div class="auth-verification-action hidden" id="verificationAction">
+                    <p data-i18n="auth.verify.loginHint">يجب تفعيل بريدك الإلكتروني قبل الدخول.</p>
+                    <a class="btn btn-secondary auth-submit" id="verificationActionLink" href="verify-email.html">
+                        <i class="fas fa-envelope-circle-check" aria-hidden="true"></i>
+                        <span data-i18n="auth.verify.loginAction">إعادة إرسال رابط التفعيل</span>
+                    </a>
+                </div>
+
                 <div class="auth-links auth-links-stacked">
                     <span data-i18n="auth.noAccount">ليس لديك حساب؟</span>
                     <a href="register.html" data-i18n="auth.patientSignUp">إنشاء حساب مريض</a>
