@@ -7,6 +7,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/role_header_actions.dart';
 import '../providers/contact_provider.dart';
 
 class ContactScreen extends ConsumerStatefulWidget {
@@ -32,7 +33,10 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
     final strings = ref.watch(appStringsProvider);
     final state = ref.watch(contactControllerProvider);
     return AppScaffold(
-      appBar: AppBar(title: Text(strings.contactTitle)),
+      appBar: AppBar(
+        title: Text(strings.contactTitle),
+        actions: const [RoleHeaderActions(compact: true)],
+      ),
       keyboardAware: true,
       body: SafeArea(
         top: false,

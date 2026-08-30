@@ -107,6 +107,8 @@ const I18n = (() => {
             'auth.resetTitle': 'إعادة تعيين كلمة المرور',
             'auth.resetSubtitle': 'أدخل كلمة مرور جديدة لحسابك',
             'auth.verifyTitle': 'تفعيل البريد الإلكتروني',
+            'auth.verify.loginHint': 'يجب تفعيل بريدك الإلكتروني قبل الدخول.',
+            'auth.verify.loginAction': 'إعادة إرسال رابط التفعيل',
             'auth.orDivider': 'أو',
 
 'authModal.title': 'سجّل الدخول للمتابعة',
@@ -935,6 +937,8 @@ const I18n = (() => {
             'auth.resetTitle': 'Reset your password',
             'auth.resetSubtitle': 'Enter a new password for your account',
             'auth.verifyTitle': 'Email verification',
+            'auth.verify.loginHint': 'You need to verify your email before signing in.',
+            'auth.verify.loginAction': 'Resend verification link',
             'auth.orDivider': 'or',
 
 'authModal.title': 'Sign in to continue',

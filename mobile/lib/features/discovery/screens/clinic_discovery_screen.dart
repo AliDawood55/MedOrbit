@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+
 import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_text_field.dart';
@@ -14,6 +15,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
+
 import '../models/clinic_models.dart';
 import '../models/location_models.dart';
 import '../providers/discovery_provider.dart';
@@ -61,13 +63,16 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
   Widget build(BuildContext context) {
     final strings = ref.watch(appStringsProvider);
     final discovery = ref.watch(discoveryControllerProvider);
+
     final location = ref.watch(locationControllerProvider);
     final clinics = _nearbyMode ? discovery.nearbyClinics : discovery.clinics;
     final loading = _nearbyMode ? discovery.isLoadingNearbyClinics : discovery.isLoadingClinics;
     final error = _nearbyMode ? discovery.nearbyError : discovery.clinicListError;
 
     return AppScaffold(
+
       appBar: AppBar(title: Text(strings.clinicDiscoveryScreenTitle)),
+
       useSafeArea: true,
       keyboardAware: true,
       body: RefreshIndicator(
@@ -84,8 +89,10 @@ class _ClinicDiscoveryScreenState extends ConsumerState<ClinicDiscoveryScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   PageIntro(
+
                     title: strings.clinicDiscoveryTitle,
                     subtitle: strings.clinicDiscoverySubtitle,
+
                     icon: Icons.local_hospital_outlined,
                   ),
                   const SizedBox(height: AppTheme.spaceLg),

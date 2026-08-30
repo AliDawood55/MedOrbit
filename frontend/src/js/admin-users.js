@@ -36,8 +36,13 @@ const AdminUsers = (() => {
     }
 
     function localize() {
-        byId('adminUsersTitle').textContent = t('adminUsers.title');
-        byId('adminUsersSubtitle').textContent = t('adminUsers.subtitle');
+        const directoryMode = byId('userRoleFilter').value === 'admin';
+        byId('adminUsersTitle').textContent = directoryMode
+            ? (isAr() ? 'دليل المسؤولين' : 'Administrators directory')
+            : t('adminUsers.title');
+        byId('adminUsersSubtitle').textContent = directoryMode
+            ? (isAr() ? 'عرض حسابات المسؤولين النشطة وغير النشطة وإدارة صلاحياتها.' : 'Review administrator accounts and manage eligible account access.')
+            : t('adminUsers.subtitle');
         byId('userSearchLabel').textContent = isAr() ? 'ابحث عن المستخدمين' : 'Search users';
         byId('userSearchInput').placeholder = t('adminUsers.searchPlaceholder');
         byId('userRoleFilterLabel').textContent = isAr() ? 'الدور' : 'Role';
@@ -195,6 +200,13 @@ const AdminUsers = (() => {
             return;
         }
         try {
+            // The Super Admin header links here with ?role=admin. Keeping the
+            // filter in the normal management page means the directory uses
+            // the same access controls and API source as user management.
+            const requestedRole = new URLSearchParams(window.location.search).get('role');
+            if (['patient', 'doctor', 'admin', 'super_admin'].includes(requestedRole)) {
+                byId('userRoleFilter').value = requestedRole;
+            }
             localize();
             window.addEventListener('languageChanged', localize);
             byId('userSearchInput').addEventListener('input', debouncedSearch);

@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
+
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
+
 import '../models/doctor_models.dart';
 import '../providers/discovery_provider.dart';
 import '../widgets/doctor_filter_sheet.dart';
@@ -22,8 +24,11 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
   Widget build(BuildContext context) {
     final strings = ref.watch(appStringsProvider);
     final state = ref.watch(discoveryControllerProvider);
+
     return AppScaffold(
+
       appBar: AppBar(title: Text(strings.doctorDirectoryScreenTitle)),
+      
       useSafeArea: true,
       keyboardAware: true,
       body: RefreshIndicator(
@@ -35,7 +40,9 @@ class _DoctorDirectoryScreenState extends ConsumerState<DoctorDirectoryScreen> {
             ResponsiveContent(
               maxWidth: 960,
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+
                 PageIntro(title: strings.doctorDirectoryTitle, subtitle: strings.doctorDirectorySubtitle, icon: Icons.person_search_outlined),
+
                 const SizedBox(height: AppTheme.spaceLg),
                 Card(child: Padding(padding: const EdgeInsets.all(AppTheme.spaceLg), child: AppTextField(label: strings.searchDoctorsLabel, hintText: strings.searchDoctorsFieldHint, controller: _search, prefixIcon: const Icon(Icons.search_rounded), suffixIcon: _search.text.isEmpty ? null : IconButton(onPressed: _clear, icon: const Icon(Icons.close_rounded), tooltip: strings.clearSearch), onChanged: _onSearch))),
                 const SizedBox(height: AppTheme.spaceLg),
