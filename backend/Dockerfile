@@ -1,4 +1,4 @@
-# MedOrbit backend — Node 18
+# MedOrbit backend — Node 20
 #
 # bullseye-slim (glibc) instead of alpine (musl): package.json depends on the
 # native `bcrypt` module, which ships prebuilt binaries for glibc targets but

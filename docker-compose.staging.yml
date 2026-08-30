@@ -19,6 +19,35 @@
 #
 # See docs/AZURE_STAGING_DEPLOYMENT.md for the full VM setup + deploy guide.
 
+# STAGING IMAGE NAMESPACE — the same isolation argument as the separate
+# *_staging volumes above, applied to images. Compose derives a project name
+# from the directory, which is the same directory both compose files live in,
+# so without explicit names `docker compose -f docker-compose.staging.yml
+# build` produced medorbit-backend / medorbit-frontend / medorbit-ai-service —
+# byte-for-byte the tags the local stack uses, built from .env.staging. On a
+# machine running both, the staging build silently replaced the local images.
+# The container names were already distinct; the image names now are too.
+x-backend-image: &backend-image medorbit-backend-staging
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: backend/Dockerfile
+
+# Shared by the three Kafka workers; per-worker command, health port and
+# healthcheck stay spelled out below.
+x-worker-env: &worker-env
+  DB_HOST: postgres
+  DB_PORT: 5432
+  NODE_ENV: production
+  KAFKA_ENABLED: "true"
+  KAFKA_BROKERS: kafka:9092
+
+x-worker-depends: &worker-depends
+  postgres:
+    condition: service_healthy
+  kafka:
+    condition: service_healthy
+
 services:
   postgres:
     image: postgis/postgis:18-3.6
@@ -67,11 +96,15 @@ services:
       start_period: 30s
 
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-backend-staging
     restart: unless-stopped
+    # server.js registers no SIGTERM handler; as PID 1 Node ignores the signal
+    # entirely, so a redeploy waited out the 10s grace period and then killed
+    # the container. tini at PID 1 restores the default disposition. Matches
+    # the local stack; the workers below handle SIGTERM themselves.
+    init: true
     env_file:
       - .env.staging
     environment:
@@ -107,6 +140,7 @@ services:
       start_period: 15s
 
   ai-service:
+    image: medorbit-ai-service-staging
     build:
       context: .
       dockerfile: ai-service/Dockerfile
@@ -132,28 +166,24 @@ services:
       start_period: 15s
     volumes:
       - medorbit_hf_cache_staging:/root/.cache/huggingface
+      # Piper TTS voices (~60MB each) are downloaded on first use, not tracked
+      # in git, and are no longer shipped in the image (.dockerignore). Without
+      # this mount they would re-download into the container layer on every
+      # redeploy. Same directory the code uses as its own voice cache.
+      - ./ai-service/virtual_doctor/assets/tts_voices:/app/virtual_doctor/assets/tts_voices
 
   outbox-worker:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-outbox-worker-staging
     restart: unless-stopped
     env_file:
       - .env.staging
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      NODE_ENV: production
-      KAFKA_ENABLED: "true"
-      KAFKA_BROKERS: kafka:9092
+      <<: *worker-env
       WORKER_HEALTH_PORT: 3002
     command: ["node", "scripts/outbox-worker.js"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: *worker-depends
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
       interval: 10s
@@ -162,26 +192,18 @@ services:
       start_period: 30s
 
   event-consumer:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-event-consumer-staging
     restart: unless-stopped
     env_file:
       - .env.staging
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      NODE_ENV: production
-      KAFKA_ENABLED: "true"
-      KAFKA_BROKERS: kafka:9092
+      <<: *worker-env
       WORKER_HEALTH_PORT: 3003
     command: ["node", "scripts/event-consumer.js"]
     depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      <<: *worker-depends
       outbox-worker:
         condition: service_healthy
     healthcheck:
@@ -192,27 +214,19 @@ services:
       start_period: 30s
 
   recommendation-consumer:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: *backend-image
+    build: *backend-build
     container_name: medorbit-recommendation-consumer-staging
     restart: unless-stopped
     env_file:
       - .env.staging
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      NODE_ENV: production
-      KAFKA_ENABLED: "true"
-      KAFKA_BROKERS: kafka:9092
+      <<: *worker-env
       KAFKA_RECOMMENDATION_CONSUMER_GROUP: recommendation-profile-v1
       WORKER_HEALTH_PORT: 3004
     command: ["node", "scripts/recommendation-consumer.js"]
     depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+      <<: *worker-depends
       outbox-worker:
         condition: service_healthy
     healthcheck:
@@ -244,6 +258,7 @@ services:
     entrypoint: ["bash", "/usr/local/bin/bootstrap-database.sh"]
 
   db-migrate:
+    image: medorbit-backend-test-staging
     build:
       context: .
       dockerfile: backend/Dockerfile.test
@@ -264,6 +279,7 @@ services:
     command: ["status"]
 
   frontend:
+    image: medorbit-frontend-staging
     build:
       context: .
       dockerfile: frontend/Dockerfile

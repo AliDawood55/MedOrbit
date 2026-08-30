@@ -6,14 +6,59 @@ is healthy.
 
 ## What's in the stack
 
-| Service | Image / build | Port | Notes |
+| Service | Image / build | Published port | Notes |
 |---|---|---|---|
-| `postgres` | `postgis/postgis:18-3.6` | 5432 | Named volume `medorbit_pgdata` (PG18 — must match the `medorbit_backup.backup` source version) |
-| `backend` | `backend/Dockerfile` (Node 18) | 3001 | Express API |
+| `postgres` | `postgis/postgis:18-3.6` | `127.0.0.1:5433` → 5432 | Named volume `medorbit_pgdata` (PG18 — must match the `medorbit_backup.backup` source version). Loopback-only; container-to-container traffic uses `postgres:5432` |
+| `kafka` | `apache/kafka:3.9.0` | *none* | KRaft single node, named volume `medorbit_kafka_data`. Reachable only inside the Compose network |
+| `backend` | `backend/Dockerfile` (Node 20) | 3001 | Express API |
+| `outbox-worker` | `backend/Dockerfile` (Node 20) | *none* | Relays the transactional outbox to Kafka; health on internal 3002 |
+| `event-consumer` | `backend/Dockerfile` (Node 20) | *none* | Consumes domain events; health on internal 3003 |
+| `recommendation-consumer` | `backend/Dockerfile` (Node 20) | *none* | Builds recommendation profiles; health on internal 3004 |
 | `ai-service` | `ai-service/Dockerfile` (Python 3.12) | 8001 | FastAPI + NLU/RAG/LLM pipeline |
-| `frontend` | `frontend/Dockerfile` (nginx) | 8080 | Static files, no build step |
+| `frontend` | `frontend/Dockerfile` (nginx 1.27-alpine) | 8080 | Static files, no build step |
+
+The backend and the three workers are **one image**, `medorbit-backend` — the same
+Node application with different entrypoints. Compose names it explicitly so all
+four services share a single build and a single tag rather than four identical
+copies. The `test` and `tools` profiles likewise share `medorbit-backend-test`,
+built from `backend/Dockerfile.test`.
 
 Ollama is **not** in this list — see below.
+
+## Build context
+
+Every image builds from the **repository root** (the backend needs the root
+`package.json`/`package-lock.json` for its npm workspace, and `ai-service` needs
+the root `requirements.txt`). A single root `.dockerignore` decides what is sent
+for all of them — there are deliberately no per-Dockerfile ignore files, because
+BuildKit's `<dockerfile>.dockerignore` *replaces* the root file rather than
+merging with it, and no build here needs a path another build must exclude.
+
+BuildKit derives what to send from each Dockerfile's `COPY` instructions, and
+every Dockerfile here copies a *subtree* (`backend/`, `frontend/`, `ai-service/`)
+plus the two root manifests — none copies the repository root. That makes the
+ignore rules fall into two groups:
+
+**Rules that shrink a real transfer** (they sit under a copied subtree):
+
+| Excluded | Size | Why |
+|---|---|---|
+| `ai-service/virtual_doctor/assets/tts_voices` | ~121 MB | Downloaded Piper voices — see *Downloaded model caches* below |
+| `ai-service/virtual_doctor/generated` | ~7 MB | Generated PDF reports and the TTS wav cache — runtime output |
+| `ai-service/{data,tests,benchmarks}` | ~3 MB | Dev/training tooling, never imported at runtime |
+| `frontend/tests` | 128 KB | Needed by neither image, and nginx would otherwise serve them at `/tests/*` |
+
+Measured effect on the `ai-service` build context: **134.59 MB → 824 kB**. The
+backend and frontend contexts were already small (~1.75 MB and ~10 kB) and are
+essentially unchanged.
+
+**Rules that are defensive** (root-level, so nothing copies them today):
+`mobile/` (~2.4 GB of Flutter app and build output), `backups/` (~114 MB of
+database dumps), `.venv`, `node_modules`, `.git`, `.pytest_cache`. These do not
+shrink today's builds. They are kept so that the tree BuildKit scans stays
+bounded, and so a future `COPY . .` — or a fifth Dockerfile — cannot silently
+pull gigabytes into an image. Don't remove them on the grounds that the numbers
+above don't move.
 
 ## Ollama: intentionally not containerized
 
@@ -103,8 +148,9 @@ docker compose up -d --build
   tesseract-ocr-ara poppler-utils` plus `pip install -r requirements.txt`
   (fastapi, asyncpg, pillow, pdfplumber, etc.) adds a few minutes to the
   `ai-service` build the first time.
-- **`node:18-bullseye-slim`** plus `npm ci` for the backend is usually the
-  fastest of the three builds.
+- **`node:20-bullseye-slim`** plus `npm ci` for the backend is usually the
+  fastest of the three builds. It is built once and reused by the backend and
+  all three workers.
 - **`nginx:1.27-alpine`** for the frontend is near-instant — it's just static
   files.
 - Total first run: expect roughly 5–10 minutes depending on connection speed
@@ -144,6 +190,24 @@ Review and merge the recovered directories into `backend/uploads/` and
 `backend/storage/` before recreating the backend. Treat both directories as
 sensitive patient data: restrict host access and include them in operational
 backup/restore procedures.
+
+### Downloaded model caches
+
+Two model caches are deliberately **not** baked into any image — they are large,
+downloaded rather than tracked in git, and would otherwise be destroyed by every
+rebuild:
+
+| What | Where it persists | Size |
+|---|---|---|
+| Whisper (STT) weights | Named volume `medorbit_hf_cache` → `/root/.cache/huggingface` | ~1.5 GB for `medium` |
+| Piper (TTS) voices | Bind mount `ai-service/virtual_doctor/assets/tts_voices/` | ~60 MB per voice (ar + en) |
+
+Both download automatically on first use and are reused from then on. The Piper
+voices use a bind mount rather than a named volume because that directory is
+already the cache location `virtual_doctor/voice/tts.py` uses, so an existing
+local download is picked up as-is and an ai-service run directly on the host
+shares the same files. Neither directory needs backing up — a lost cache costs
+one re-download, not data.
 
 ## Verifying everything is healthy
 
