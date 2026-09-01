@@ -1,12 +1,15 @@
 const express=require('express');
 const rateLimit=require('express-rate-limit');
-const {authenticate,authorize}=require('../middleware/auth');
+const {authenticate}=require('../middleware/auth');
 const {success,error}=require('../utils/response');
 const messaging=require('../services/messaging.service');
 const {MessagingPolicyError}=require('../services/messagingPolicy.service');
 
 const router=express.Router();
-router.use(authenticate,authorize('patient','doctor'));
+// Messaging authorization is conversation-member based. Do not reject an
+// admin here: the service returns the same 404 for every non-member, which
+// keeps private conversation existence undisclosed.
+router.use(authenticate);
 const createLimiter=rateLimit({windowMs:15*60*1000,max:20,standardHeaders:true,legacyHeaders:false});
 const sendLimiter=rateLimit({windowMs:60*1000,max:120,standardHeaders:true,legacyHeaders:false});
 function handle(err,res,next){return err instanceof MessagingPolicyError?error(res,err.message,err.status,err.code):next(err);}
