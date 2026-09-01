@@ -215,7 +215,9 @@ const DoctorProfile = (() => {
             ['availability', 'fa-calendar-week', isAr() ? 'التوفر' : 'Availability'],
             ['clinics', 'fa-hospital', isAr() ? 'العيادات' : 'Clinics']
         ];
+        const social = renderSocialLinks(doctor.social_links);
         return renderHero(doctor)
+            + (social ? '<div class="doctor-profile-social">' + social + '</div>' : '')
             + '<section class="doctor-profile-body"><div class="profile-tabs" role="tablist">'
             + tabs.map((tab, index) => '<button type="button" class="profile-tab' + (index === 0 ? ' active' : '')
                 + '" data-tab="' + tab[0] + '" role="tab" aria-selected="' + (index === 0) + '"><i class="fas ' + tab[1] + '"></i>' + escapeHtml(tab[2]) + '</button>').join('')
@@ -226,6 +228,15 @@ const DoctorProfile = (() => {
             + '<div class="profile-tab-panel" data-panel="availability">' + renderSchedule(slots) + '</div>'
             + '<div class="profile-tab-panel" data-panel="clinics">' + renderClinics(clinics) + '</div>'
             + '</div></section>';
+    }
+
+    function renderSocialLinks(links) {
+        if (!links || typeof links !== 'object') return '';
+        const config = { website:['fa-globe','Website'], instagram:['fa-instagram','Instagram'], facebook:['fa-facebook','Facebook'], tiktok:['fa-tiktok','TikTok'], linkedin:['fa-linkedin','LinkedIn'], whatsapp:['fa-whatsapp','WhatsApp'], youtube:['fa-youtube','YouTube'], x:['fa-x-twitter','X'] };
+        return Object.entries(config).map(([key, [icon, label]]) => {
+            const href = String(links[key] || '').trim();
+            return /^https:\/\//i.test(href) ? '<a class="btn btn-ghost btn-sm" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer"><i class="fab ' + icon + '"></i> ' + escapeHtml(label) + '</a>' : '';
+        }).join('');
     }
 
     function wireTabs(container) {

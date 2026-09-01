@@ -1,3 +1,8 @@
+/**
+ * MedOrbit v2 - Account / Profile Page
+ * GET/PUT /api/users/me, PUT /api/users/me/preferences, POST /api/users/me/avatar,
+ * POST /api/auth/change-password — all via the shared API module (backend on :3001).
+ */
 const Profile = (() => {
 
     let profile = null;
@@ -38,7 +43,14 @@ const Profile = (() => {
         btn.disabled = loading;
     }
 
-async function load() {
+    function normalizeWhatsAppNumber(value) {
+        const number = String(value || '').replace(/[^\d]/g, '').replace(/^00/, '');
+        return number.length >= 8 && number.length <= 15 ? number : '';
+    }
+
+    // ================= LOAD =================
+
+    async function load() {
         document.getElementById('loadingState')?.classList.remove('hidden');
         document.getElementById('errorState')?.classList.add('hidden');
         document.getElementById('profileContent')?.classList.add('hidden');
@@ -107,10 +119,22 @@ async function load() {
         const genderInput = document.querySelector('input[name="gender"][value="' + (profile.gender || '') + '"]');
         if (genderInput) genderInput.checked = true;
 
+        const socialSection = document.getElementById('socialLinksSection');
+        const canUseSocialLinks = !['admin', 'super_admin', 'patient'].includes(profile.role);
+        socialSection?.classList.toggle('hidden', !canUseSocialLinks);
+        document.querySelectorAll('.social-link-non-patient').forEach((element) => element.classList.toggle('hidden', profile.role === 'patient'));
+        const links = profile.social_links || {};
+        const fields = ['admin', 'super_admin', 'patient'].includes(profile.role)
+            ? {}
+            : { socialWebsite: 'website', socialInstagram: 'instagram', socialTikTok: 'tiktok', socialLinkedIn: 'linkedin', socialWhatsApp: 'whatsapp', socialFacebook: 'facebook' };
+        Object.entries(fields).forEach(([id, key]) => { const input = document.getElementById(id); if (input) input.value = links[key] || ''; });
+
         renderLangOptions();
     }
 
-const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+    // ================= AVATAR UPLOAD =================
+
+    const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 
     async function handleAvatarSelect(file) {
         clearAlert('formAlert');
@@ -137,7 +161,9 @@ const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
         }
     }
 
-async function submitProfile(e) {
+    // ================= PROFILE FORM =================
+
+    async function submitProfile(e) {
         e.preventDefault();
         clearAlert('formAlert');
 
@@ -171,7 +197,8 @@ async function submitProfile(e) {
                 phone: body.phone, gender: body.gender, address: body.address, city: body.city
             });
 
-const cachedUser = API.getUser();
+            // Keep the header chip's cached name in sync without forcing a re-login.
+            const cachedUser = API.getUser();
             if (cachedUser) {
                 API.setSession({ user: { ...cachedUser, name: displayName() } });
             }
@@ -186,7 +213,9 @@ const cachedUser = API.getUser();
         }
     }
 
-function renderLangOptions() {
+    // ================= LANGUAGE PREFERENCE =================
+
+    function renderLangOptions() {
         const lang = isAr() ? 'ar' : 'en';
         ['ar', 'en'].forEach(code => {
             const opt = document.getElementById(code === 'ar' ? 'langOptionAr' : 'langOptionEn');
@@ -209,11 +238,44 @@ function renderLangOptions() {
             await API.users.updatePreferences({ language: lang });
         } catch (err) {
             console.error('Profile: failed to save language preference', err);
-
-}
+            // Non-critical — the UI already reflects the chosen language locally,
+            // it just won't be remembered as the account default server-side.
+        }
     }
 
-function wirePasswordStrength() {
+    async function submitSocialLinks(event) {
+        event.preventDefault();
+        clearAlert('formAlert');
+        const fields = ['patient', 'admin', 'super_admin'].includes(profile?.role)
+            ? {}
+            : { website: 'socialWebsite', instagram: 'socialInstagram', tiktok: 'socialTikTok', linkedin: 'socialLinkedIn', whatsapp: 'socialWhatsApp', facebook: 'socialFacebook' };
+        const social_links = {};
+        for (const [key, id] of Object.entries(fields)) {
+            const value = document.getElementById(id)?.value.trim();
+            if (!value) continue;
+            if (key === 'whatsapp') {
+                const number = normalizeWhatsAppNumber(value);
+                if (!number) { showAlert('formAlert', isAr() ? 'أدخل رقم واتساب صحيحاً مع رمز الدولة.' : 'Enter a valid WhatsApp number with its country code.'); return; }
+                social_links[key] = number;
+                continue;
+            }
+            if (!/^https:\/\//i.test(value)) { showAlert('formAlert', isAr() ? 'استخدم رابط HTTPS صحيحاً لكل حساب.' : 'Use a valid HTTPS URL for every social link.'); return; }
+            social_links[key] = value;
+        }
+        setLoading('saveSocialLinksBtn', true);
+        try {
+            await API.users.updatePreferences({ social_links });
+            profile.social_links = social_links;
+            showAlert('formAlert', isAr() ? 'تم حفظ روابط التواصل.' : 'Social links saved.', 'success');
+        } catch (err) {
+            console.error('Profile: social links update failed', err);
+            showAlert('formAlert', isAr() ? 'تعذر حفظ الروابط.' : 'Could not save social links.');
+        } finally { setLoading('saveSocialLinksBtn', false); }
+    }
+
+    // ================= CHANGE PASSWORD =================
+
+    function wirePasswordStrength() {
         const pwInput = document.getElementById('newPassword');
         const strengthEl = document.getElementById('pwStrength');
         if (!pwInput || !strengthEl) return;
@@ -265,7 +327,11 @@ function wirePasswordStrength() {
         try {
             await API.post('/auth/change-password', { currentPassword, newPassword });
 
-showAlert('passwordAlert', t('profile.passwordChanged'), 'success');
+            // The backend revokes every session (incl. this one's refresh token)
+            // on a successful password change — the current access token would
+            // keep working until it naturally expires, but silently. Force a
+            // clean re-login now instead of leaving that surprise for later.
+            showAlert('passwordAlert', t('profile.passwordChanged'), 'success');
             document.querySelectorAll('#passwordForm input, #passwordForm button').forEach(el => { el.disabled = true; });
 
             setTimeout(() => {
@@ -280,11 +346,14 @@ showAlert('passwordAlert', t('profile.passwordChanged'), 'success');
         }
     }
 
-function init() {
+    // ================= INIT =================
+
+    function init() {
         if (!API.requireAuth()) return;
 
         document.getElementById('retryLoadBtn')?.addEventListener('click', load);
         document.getElementById('profileForm')?.addEventListener('submit', submitProfile);
+        document.getElementById('socialLinksForm')?.addEventListener('submit', submitSocialLinks);
         document.getElementById('passwordForm')?.addEventListener('submit', submitPasswordChange);
 
         document.getElementById('avatarEditBtn')?.addEventListener('click', () => {

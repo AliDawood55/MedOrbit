@@ -1,3 +1,7 @@
+/**
+ * MedOrbit v2 - Clinic Profile
+ * GET /api/clinics/:id — info, hours, services, doctors, mini-map, route button.
+ */
 const ClinicProfile = (() => {
 
     const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -55,7 +59,18 @@ const ClinicProfile = (() => {
         return t ? String(t).slice(0, 5) : '';
     }
 
-async function load() {
+    function renderSocialLinks(links) {
+        if (!links || typeof links !== 'object') return '';
+        const config = { website:['fa-globe','Website'], instagram:['fa-instagram','Instagram'], facebook:['fa-facebook','Facebook'], tiktok:['fa-tiktok','TikTok'], linkedin:['fa-linkedin','LinkedIn'], whatsapp:['fa-whatsapp','WhatsApp'], youtube:['fa-youtube','YouTube'], x:['fa-x-twitter','X'] };
+        return Object.entries(config).map(([key, [icon, label]]) => {
+            const href = optionalText(links[key]);
+            return /^https:\/\//i.test(href) ? '<a class="btn btn-ghost btn-sm" href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer"><i class="fab ' + icon + '"></i> ' + escapeHtml(label) + '</a>' : '';
+        }).join('');
+    }
+
+    // ================= LOAD =================
+
+    async function load() {
         const id = getIdFromUrl();
         const content = document.getElementById('clinicContent');
         if (!content) return;
@@ -85,7 +100,9 @@ async function load() {
         }
     }
 
-function renderSkeleton() {
+    // ================= RENDER: STATES =================
+
+    function renderSkeleton() {
         return (
             '<div class="profile-header">' +
                 '<div class="skeleton" style="width:96px;height:96px;border-radius:18px;flex-shrink:0;"></div>' +
@@ -112,7 +129,9 @@ function renderSkeleton() {
         '</div>';
     }
 
-function renderProfile(clinic, doctors) {
+    // ================= RENDER: PROFILE =================
+
+    function renderProfile(clinic, doctors) {
         const ar = isAr();
         const clinicName = escapeHtml(name(clinic, 'name_ar', 'name_en'));
         const address = escapeHtml(name(clinic, 'address_ar', 'address_en'));
@@ -151,6 +170,7 @@ function renderProfile(clinic, doctors) {
                         (website ? '<span><i class="fas fa-globe"></i><a href="' + website + '" target="_blank" rel="noopener">' + website + '</a></span>' : '') +
                     '</div>' +
                     (verifiedBadge ? '<div class="profile-badges">' + verifiedBadge + '</div>' : '') +
+                    (renderSocialLinks(clinic.social_links) ? '<div class="profile-actions">' + renderSocialLinks(clinic.social_links) + '</div>' : '') +
                 '</div>' +
                 '<div class="profile-actions">' +
                     (directionsUrl ? '<a class="btn btn-primary btn-sm" href="' + directionsUrl + '" target="_blank" rel="noopener"><i class="fas fa-route"></i> ' + escapeHtml(t('clinic.getDirections')) + '</a>' : '') +
@@ -247,17 +267,29 @@ function renderProfile(clinic, doctors) {
         });
     }
 
-function logoFallback(img) {
+    // ================= IMAGE FALLBACK =================
+
+    // Swaps a broken clinic logo <img> for the same type-icon <i> already used
+    // when logo_url is absent. Invoked from a static
+    // onerror="ClinicProfile.__logoFallback(this)" attribute (no user-derived
+    // string is ever embedded in executable JS); the icon class travels only
+    // as an HTML-escaped data attribute.
+    function logoFallback(img) {
         const icon = document.createElement('i');
         icon.className = 'fas ' + (img.dataset.fallbackIcon || 'fa-notes-medical');
         img.replaceWith(icon);
     }
 
-function avatarFallback(img) {
+    // Swaps a broken doctor sub-item <img> for the same initials fallback
+    // already used when profile_image_url is absent. Same static-onerror
+    // pattern as logoFallback above.
+    function avatarFallback(img) {
         img.replaceWith(document.createTextNode(img.dataset.fallbackInitials || '?'));
     }
 
-function init() {
+    // ================= INIT =================
+
+    function init() {
         load();
     }
 

@@ -32,6 +32,10 @@ const logger = require('../utils/logger');
  */
 
 const router = express.Router();
+// Entitlements and voice cooldowns are scoped to the authenticated account,
+// regardless of its platform role. Ownership checks below still scope every
+// consultation and report to that account.
+router.use(authenticate);
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8001';
 

@@ -1,3 +1,10 @@
+/**
+ * MedOrbit v2 - Auth Pages Logic
+ * Shared across login.html, register.html, forgot-password.html,
+ * reset-password.html, and verify-email.html. Every request goes through
+ * the shared API module (no direct fetch here) so session storage and
+ * error shapes stay consistent everywhere.
+ */
 (function () {
 
     function showAlert(message, type = 'error') {
@@ -26,7 +33,44 @@
         return (typeof I18n !== 'undefined' ? I18n.getLang() : (document.documentElement.lang || 'ar')) === 'ar';
     }
 
-function authErrorMessage(err) {
+    function isClinicSignupIntent() {
+        return typeof AuthGate !== 'undefined' && AuthGate.isClinicApplicationIntent();
+    }
+
+    // This is deliberately a front-end draft. The secure account is still
+    // created through the existing patient-registration endpoint; the clinic
+    // details are submitted only after sign-in on clinic-application.html.
+    function configureClinicSignupForm() {
+        const clinicIntent = isClinicSignupIntent();
+        document.querySelectorAll('#signupSocialLinks .social-link-non-patient').forEach((element) => element.classList.toggle('hidden', !clinicIntent));
+        if (!clinicIntent) return;
+        document.getElementById('personalNameArRow')?.classList.add('hidden');
+        document.getElementById('personalNameEnRow')?.classList.add('hidden');
+        document.getElementById('clinicSignupFields')?.classList.remove('hidden');
+        document.getElementById('genderGroup')?.classList.add('hidden');
+        document.getElementById('clinicExtraPhonesGroup')?.classList.remove('hidden');
+        ['firstNameAr', 'lastNameAr', 'firstNameEn', 'lastNameEn'].forEach((id) => document.getElementById(id)?.removeAttribute('required'));
+        ['clinicSignupNameAr', 'clinicSignupNameEn', 'clinicSignupAddressAr', 'clinicSignupAddressEn'].forEach((id) => document.getElementById(id)?.setAttribute('required', 'required'));
+        document.getElementById('addClinicPhone')?.addEventListener('click', addClinicPhoneField);
+    }
+
+    function addClinicPhoneField() {
+        const container = document.getElementById('clinicExtraPhones');
+        if (!container) return;
+        const row = document.createElement('div');
+        row.className = 'input-wrapper';
+        row.style.marginBottom = '8px';
+        row.innerHTML = '<i class="fas fa-phone"></i><input type="tel" class="clinic-extra-phone" dir="ltr" placeholder="+970-59-1234567"><button type="button" class="icon-btn" aria-label="Remove phone"><i class="fas fa-xmark"></i></button>';
+        row.querySelector('button')?.addEventListener('click', () => row.remove());
+        container.appendChild(row);
+    }
+
+    /**
+     * Map known backend error codes to friendly bilingual messages.
+     * Unknown server responses use a generic message so implementation details
+     * never reach the account screens.
+     */
+    function authErrorMessage(err) {
         const ar = isAr();
         const map = {
             INVALID_CREDENTIALS: ar ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة' : 'Incorrect email or password',
@@ -48,41 +92,42 @@ function authErrorMessage(err) {
         showAlert(err?.status ? authErrorMessage(err) : connectionErrorMessage());
     }
 
-function intendedDestination() {
+    /**
+     * The destination the visitor was originally trying to reach, validated by
+     * the one shared sanitizer in auth-gate.js. Returns null for anything that
+     * is not a real in-app page, so a crafted ?redirect= can never turn a
+     * successful login into an off-site redirect.
+     */
+    function intendedDestination() {
         if (typeof AuthGate === 'undefined') return null;
         return AuthGate.readIntendedDestination();
     }
 
-function authFlowUrl(page) {
+    /** Carries the intended destination across an auth-flow page hop. */
+    function authFlowUrl(page) {
         const next = intendedDestination();
         const params = new URLSearchParams();
         if (next) params.set('redirect', next);
-        if (typeof AuthGate !== 'undefined' && AuthGate.isDoctorApplicationIntent()) {
-            params.set('intent', 'doctor');
-        }
+        if (typeof AuthGate !== 'undefined' && AuthGate.isDoctorApplicationIntent()) params.set('intent', 'doctor');
+        if (typeof AuthGate !== 'undefined' && AuthGate.isClinicApplicationIntent()) params.set('intent', 'clinic');
         const query = params.toString();
         return query ? page + '?' + query : page;
     }
 
-function verificationUrl(email) {
-    const target = authFlowUrl('verify-email.html');
-    return target + (target.includes('?') ? '&' : '?') +
-        'email=' + encodeURIComponent(email || '');
-}
-
-function showVerificationAction(email) {
-    const action = document.getElementById('verificationAction');
-    const link = document.getElementById('verificationActionLink');
-
-    if (link) {
-        link.href = verificationUrl(email);
+    function verificationUrl(email) {
+        const target = authFlowUrl('verify-email.html');
+        return target + (target.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email || '');
     }
 
-    action?.classList.remove('hidden');
-}
+    function showVerificationAction(email) {
+        const action = document.getElementById('verificationAction');
+        const link = document.getElementById('verificationActionLink');
+        if (link) link.href = verificationUrl(email);
+        action?.classList.remove('hidden');
+    }
 
-// ================= LOGIN =================
-async function handleLogin(e) {
+    // ================= LOGIN =================
+    async function handleLogin(e) {
         e.preventDefault();
         clearAlert();
 
@@ -120,26 +165,80 @@ async function handleLogin(e) {
         }
     }
 
-async function handleRegister(e) {
+    // ================= REGISTER =================
+    function optionalSocialLinks(prefix, patientOnly = false) {
+        const allFields = {
+            website: `${prefix}Website`, instagram: `${prefix}Instagram`,
+            tiktok: `${prefix}TikTok`, linkedin: `${prefix}LinkedIn`,
+            whatsapp: `${prefix}WhatsApp`, facebook: `${prefix}Facebook`
+        };
+        const fields = patientOnly ? { whatsapp: allFields.whatsapp } : allFields;
+        const links = {};
+        for (const [key, id] of Object.entries(fields)) {
+            const value = document.getElementById(id)?.value.trim();
+            if (!value) continue;
+            if (key === 'whatsapp') {
+                const number = value.replace(/[^\d]/g, '').replace(/^00/, '');
+                if (number.length < 8 || number.length > 15) {
+                    throw new Error(isAr() ? 'أدخل رقم واتساب صحيحاً مع رمز الدولة.' : 'Enter a valid WhatsApp number with its country code.');
+                }
+                links[key] = number;
+                continue;
+            }
+            if (!/^https:\/\//i.test(value)) {
+                throw new Error(isAr() ? 'استخدم رابط HTTPS صحيحاً لكل حساب عام.' : 'Use a valid HTTPS URL for every public link.');
+            }
+            links[key] = value;
+        }
+        return links;
+    }
+
+    async function handleRegister(e) {
         e.preventDefault();
         clearAlert();
 
-        const firstNameAr = document.getElementById('firstNameAr')?.value.trim();
-        const lastNameAr = document.getElementById('lastNameAr')?.value.trim();
-        const firstNameEn = document.getElementById('firstNameEn')?.value.trim();
-        const lastNameEn = document.getElementById('lastNameEn')?.value.trim();
+        const clinicIntent = isClinicSignupIntent();
+        const clinicNameAr = document.getElementById('clinicSignupNameAr')?.value.trim();
+        const clinicNameEn = document.getElementById('clinicSignupNameEn')?.value.trim();
+        const clinicAddressAr = document.getElementById('clinicSignupAddressAr')?.value.trim();
+        const clinicAddressEn = document.getElementById('clinicSignupAddressEn')?.value.trim();
+        const firstNameAr = clinicIntent ? clinicNameAr : document.getElementById('firstNameAr')?.value.trim();
+        const lastNameAr = clinicIntent ? 'Clinic' : document.getElementById('lastNameAr')?.value.trim();
+        const firstNameEn = clinicIntent ? clinicNameEn : document.getElementById('firstNameEn')?.value.trim();
+        const lastNameEn = clinicIntent ? 'Clinic' : document.getElementById('lastNameEn')?.value.trim();
         const email = document.getElementById('email')?.value.trim();
         const phone = document.getElementById('phone')?.value.trim();
+        const extraPhones = clinicIntent
+            ? Array.from(document.querySelectorAll('.clinic-extra-phone')).map((input) => input.value.trim()).filter(Boolean)
+            : [];
         const gender = document.querySelector('input[name="gender"]:checked')?.value;
         const password = document.getElementById('password')?.value;
+        let socialLinks;
 
-        if (!firstNameAr || !lastNameAr || !firstNameEn || !lastNameEn || !email || !password) {
+        try {
+            socialLinks = optionalSocialLinks('signup', !clinicIntent);
+        } catch (err) {
+            showAlert(err.message);
+            return;
+        }
+        const registrationSocialLinks = clinicIntent && socialLinks.whatsapp
+            ? { whatsapp: socialLinks.whatsapp }
+            : (clinicIntent ? {} : socialLinks);
+
+        if (!firstNameAr || !lastNameAr || !firstNameEn || !lastNameEn || !email || !password || (clinicIntent && (!clinicAddressAr || !clinicAddressEn))) {
             showAlert(isAr() ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields');
             return;
         }
 
         setLoading('registerBtn', true);
         try {
+            if (clinicIntent) {
+                sessionStorage.setItem('medorbit_clinic_application_draft', JSON.stringify({
+                    name_ar: clinicNameAr, name_en: clinicNameEn,
+                    address_ar: clinicAddressAr, address_en: clinicAddressEn,
+                    phone, extra_phones: extraPhones, email, social_links: socialLinks
+                }));
+            }
             await API.post('/auth/register', {
                 email,
                 password,
@@ -149,18 +248,18 @@ async function handleRegister(e) {
                 firstNameEn,
                 lastNameEn,
                 phone,
-                gender
+                gender,
+                socialLinks: registrationSocialLinks
             }, { auth: false });
 
             showAlert(isAr()
                 ? 'تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني ثم تسجيل الدخول.'
                 : 'Account created! Please check your email to verify it, then log in.', 'success');
 
-        // Keep the person in the verification flow instead of returning them
-        // to login before their email has been activated.
-        setTimeout(() => {
-            window.location.href = verificationUrl(email);
-        }, 900);
+            // Do not send a newly registered person back to login before they
+            // can activate their account. The verification page pre-fills the
+            // address and has a resend action if delivery is delayed.
+            setTimeout(() => { window.location.href = verificationUrl(email); }, 900);
         } catch (err) {
             alertForError(err);
         } finally {
@@ -168,7 +267,8 @@ async function handleRegister(e) {
         }
     }
 
-async function handleForgot(e) {
+    // ================= FORGOT PASSWORD =================
+    async function handleForgot(e) {
         e.preventDefault();
         clearAlert();
 
@@ -191,7 +291,8 @@ async function handleForgot(e) {
         }
     }
 
-function initResetPage() {
+    // ================= RESET PASSWORD =================
+    function initResetPage() {
         const token = new URLSearchParams(window.location.search).get('token');
         if (token) return;
 
@@ -233,7 +334,8 @@ function initResetPage() {
         }
     }
 
-function setVerifyState(state, text) {
+    // ================= VERIFY EMAIL =================
+    function setVerifyState(state, text) {
         const statusEl = document.getElementById('verifyStatus');
         const iconEl = document.getElementById('verifyIcon');
         if (statusEl) statusEl.textContent = text;
@@ -302,7 +404,8 @@ function setVerifyState(state, text) {
         }
     }
 
-function wirePasswordToggles() {
+    // ================= SHARED: password visibility toggle =================
+    function wirePasswordToggles() {
         document.querySelectorAll('.toggle-password').forEach((toggle) => {
             toggle.addEventListener('click', function () {
                 const input = this.closest('.input-wrapper')?.querySelector('input');
@@ -318,7 +421,8 @@ function wirePasswordToggles() {
         });
     }
 
-function wirePasswordStrength() {
+    // ================= SHARED: password strength meter =================
+    function wirePasswordStrength() {
         const pwInput = document.getElementById('password');
         const strengthEl = document.getElementById('pwStrength');
         if (!pwInput || !strengthEl) return;
@@ -338,7 +442,9 @@ function wirePasswordStrength() {
         });
     }
 
-document.addEventListener('DOMContentLoaded', () => {
+    // ================= INIT (per page, by element presence) =================
+    document.addEventListener('DOMContentLoaded', () => {
+        configureClinicSignupForm();
         document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
         document.getElementById('registerForm')?.addEventListener('submit', handleRegister);
         document.getElementById('forgotForm')?.addEventListener('submit', handleForgot);

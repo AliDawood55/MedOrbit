@@ -56,6 +56,49 @@ function getAccessToken() {
         window.dispatchEvent(new CustomEvent('auth:changed'));
     }
 
+    /**
+     * Updates the browser's one canonical signed-in identity with the profile
+     * returned by `/users/me` or a successful profile/avatar mutation.  The
+     * login payload is intentionally small, so treating it as the source of
+     * truth made headers keep an old name or photo until the next login.
+     */
+    function updateCurrentUser(profile) {
+        if (!profile || typeof profile !== 'object') return getUser();
+
+        const current = getUser() || {};
+        const avatar = profile.avatar_url || profile.profile_image_url || current.avatar_url || current.profile_image_url || null;
+        const merged = {
+            ...current,
+            ...profile,
+            ...(avatar ? { avatar_url: avatar, profile_image_url: avatar } : {})
+        };
+        localStorage.setItem(USER_KEY, JSON.stringify(merged));
+        window.dispatchEvent(new CustomEvent('profile:changed', { detail: { user: merged } }));
+        return merged;
+    }
+
+    /** Fetches and stores the server-authoritative profile for this tab. */
+    async function refreshCurrentUser(options) {
+        if (!isAuthenticated()) return null;
+        const response = await get('/users/me', null, options);
+        return updateCurrentUser(response?.data || null);
+    }
+
+    /** Locale-aware name used by every shared identity surface. */
+    function displayName(user, language) {
+        const value = user || {};
+        const lang = language || (typeof I18n !== 'undefined' ? I18n.getLang() : 'ar');
+        const primary = lang === 'ar'
+            ? [value.first_name_ar, value.last_name_ar]
+            : [value.first_name_en, value.last_name_en];
+        const fallback = lang === 'ar'
+            ? [value.first_name_en, value.last_name_en]
+            : [value.first_name_ar, value.last_name_ar];
+        return primary.filter(Boolean).join(' ').trim()
+            || fallback.filter(Boolean).join(' ').trim()
+            || String(value.name || value.email || '').trim();
+    }
+
     function clearSession() {
         localStorage.removeItem(ACCESS_KEY);
         localStorage.removeItem(REFRESH_KEY);
@@ -335,7 +378,23 @@ const doctors = {
 const clinics = {
         list: (query, options) => get('/clinics', query, options),
         nearby: (query, options) => get('/clinics/nearby', query, options),
-        get: (id, options) => get(`/clinics/${id}`, null, options)
+        get: (id, options) => get(`/clinics/${id}`, null, options),
+        directoryFilters: (options) => get('/clinics/directory-filters', null, options),
+        mine: (options) => get('/clinics/me', null, options),
+        updateMine: (payload, options) => put('/clinics/me', payload, options),
+        mineDoctors: (options) => get('/clinics/me/doctors', null, options),
+        eligibleDoctors: (options) => get('/clinics/eligible-doctors', null, options),
+        addMineDoctor: (payload, options) => post('/clinics/me/doctors', payload, options),
+        removeMineDoctor: (id, options) => del(`/clinics/me/doctors/${encodeURIComponent(id)}`, null, options)
+    };
+
+    const clinicApplications = {
+        mine: (options) => get('/clinic-applications/me', null, options),
+        submit: (payload, options) => post('/clinic-applications', payload, options),
+        withdraw: (id, options) => post(`/clinic-applications/${encodeURIComponent(id)}/withdraw`, {}, options),
+        adminList: (query, options) => get('/admin/clinic-applications', query, options),
+        approve: (id, options) => post(`/admin/clinic-applications/${encodeURIComponent(id)}/approve`, {}, options),
+        reject: (id, payload, options) => post(`/admin/clinic-applications/${encodeURIComponent(id)}/reject`, payload, options)
     };
 
 const users = {
@@ -450,7 +509,28 @@ function assetUrl(value) {
         return API_ORIGIN + '/' + source.replace(/^\/+/, '');
     }
 
-const feedback = {
+    /**
+     * Resolves the current photo and carries its profile update version where
+     * available, preventing a browser from reusing an old avatar response.
+     */
+    function profileAvatarUrl(user) {
+        const value = user && (user.avatar_url || user.profile_image_url);
+        const url = assetUrl(value);
+        if (!url) return '';
+        const version = user?.profile_updated_at || user?.avatar_updated_at || user?.avatar_version;
+        if (!version) return url;
+        const separator = url.includes('?') ? '&' : '?';
+        return url + separator + 'v=' + encodeURIComponent(String(version));
+    }
+
+    // Platform feedback (feedback.html) — POST /api/feedback,
+    // backend/src/routes/feedback.routes.js. Any authenticated user
+    // (patient or doctor), user_id resolved server-side from the JWT.
+    // GET /api/feedback/stats is public (home.html's feedback dashboard):
+    // { total, averageRating, ratingDistribution:[{rating,count}],
+    //   categoryAverages:{chatbot,clinics,booking,design},
+    //   recommend:{yes,no}, users:[{id,nameAr,nameEn,avatarUrl}] }
+    const feedback = {
         submit: (body, options) => post('/feedback', body, options),
         stats: (options) => get('/feedback/stats', null, options)
     };
@@ -513,9 +593,10 @@ const virtualDoctor = {
 
     return {
         request, get, post, put, del, patch, uploadFile,
-        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
+        sendChatMessage, makeCancellable, conversations, messaging, doctors, recommendations, patientProfiles, clinics, clinicApplications, users, appointments, notifications, analytics, care, social, feedback, contact, adminInvitations, adminUsers, billing, virtualDoctor,
         isAuthenticated, getUser, getAccessToken, getRefreshToken,
-        setSession, clearSession, requireAuth, logout, getOrigin, assetUrl, resolveServiceOrigin, clearCache
+        setSession, updateCurrentUser, refreshCurrentUser, displayName, profileAvatarUrl,
+        clearSession, requireAuth, logout, getOrigin, assetUrl, resolveServiceOrigin, clearCache
     };
 
 })();

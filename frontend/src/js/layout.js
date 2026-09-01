@@ -1,3 +1,15 @@
+/**
+ * MedOrbit v2 - Shared Layout Module
+ * Renders site navigation, the auth-aware header area, and the footer
+ * into placeholder elements so every page shares the same header/nav/footer
+ * without a build step (plain HTML placeholders + JS injection).
+ *
+ * Pages opt in by including empty containers with these IDs:
+ *   #navLinks    - site navigation links
+ *   #authArea    - login/register buttons OR the logged-in user menu
+ *   #siteFooter  - full footer (brand, nav, copyright)
+ * Any container that isn't present on a page is simply skipped.
+ */
 const Layout = (() => {
 
     const PAGES = [
@@ -5,7 +17,7 @@ const Layout = (() => {
         { href: 'feed.html', key: 'nav.feed', match: ['feed.html'] },
         { href: 'index.html', key: 'nav.chat', match: ['index.html'] },
         { href: 'find-doctors.html', key: 'nav.doctors', match: ['find-doctors.html', 'doctor.html'] },
-        { href: 'find-clinics.html', key: 'nav.clinics', match: ['find-clinics.html', 'clinic.html'] },
+        { href: 'find-clinics.html', key: 'nav.clinics', match: ['find-clinics.html', 'clinic.html', 'clinic-application.html', 'clinic-workspace.html'] },
         { href: 'contact.html', key: 'nav.contactUs', match: ['contact.html'] },
         {
             key: 'nav.aiTools',
@@ -41,75 +53,75 @@ const Layout = (() => {
             .replace(/"/g, '&quot;');
     }
 
-   function userDisplayName(user) {
-    if (typeof API !== 'undefined' && typeof API.displayName === 'function') {
-        return API.displayName(user);
+    function userDisplayName(user) {
+        if (typeof API !== 'undefined' && typeof API.displayName === 'function') {
+            return API.displayName(user);
+        }
+        const arabic = typeof I18n !== 'undefined' && I18n.getLang?.() === 'ar';
+        const primary = arabic
+            ? [user?.first_name_ar, user?.last_name_ar]
+            : [user?.first_name_en, user?.last_name_en];
+        const fallback = arabic
+            ? [user?.first_name_en, user?.last_name_en]
+            : [user?.first_name_ar, user?.last_name_ar];
+        return primary.filter(Boolean).join(' ').trim() || fallback.filter(Boolean).join(' ').trim() || user?.name || user?.email || '';
     }
 
-    const arabic = typeof I18n !== 'undefined' && I18n.getLang?.() === 'ar';
-    const primary = arabic
-        ? [user?.first_name_ar, user?.last_name_ar]
-        : [user?.first_name_en, user?.last_name_en];
-    const fallback = arabic
-        ? [user?.first_name_en, user?.last_name_en]
-        : [user?.first_name_ar, user?.last_name_ar];
+    function initials(user) {
+        const name = userDisplayName(user);
+        return name.trim().charAt(0).toUpperCase() || '?';
+    }
 
-    return primary.filter(Boolean).join(' ').trim()
-        || fallback.filter(Boolean).join(' ').trim()
-        || user?.name
-        || user?.email
-        || '';
-}
+    function localized(ar, en) {
+        return (typeof I18n !== 'undefined' && I18n.getLang() === 'ar') ? ar : en;
+    }
 
-function initials(user) {
-    const name = userDisplayName(user);
-    return name.trim().charAt(0).toUpperCase() || '?';
-}
+    function roleLabel(role) {
+        const labels = {
+            patient: ['مريض', 'Patient'],
+            doctor: ['طبيب', 'Doctor'],
+            admin: ['مسؤول', 'Administrator'],
+            super_admin: ['مسؤول عام', 'Super administrator']
+            ,clinic: ['منشأة صحية', 'Clinic']
+        };
+        const pair = labels[role] || ['عضو', 'Member'];
+        return localized(pair[0], pair[1]);
+    }
 
-function localized(ar, en) {
-    return (typeof I18n !== 'undefined' && I18n.getLang() === 'ar') ? ar : en;
-}
+    function profileShortcut() {
+        return '<a href="profile.html" class="icon-btn account-shortcut" title="Account / الحساب" aria-label="Account">' +
+            '<i class="fas fa-user-circle" aria-hidden="true"></i>' +
+        '</a>';
+    }
 
-function roleLabel(role) {
-    const labels = {
-        patient: ['مريض', 'Patient'],
-        doctor: ['طبيب', 'Doctor'],
-        clinic: ['منشأة صحية', 'Clinic'],
-        admin: ['مسؤول', 'Administrator'],
-        super_admin: ['مسؤول عام', 'Super administrator']
-    };
-
-    const pair = labels[role] || ['عضو', 'Member'];
-    return localized(pair[0], pair[1]);
-}
-
-function profileShortcut() {
-    return '<a href="profile.html" class="icon-btn account-shortcut" title="Account / الحساب" aria-label="Account">' +
-        '<i class="fas fa-user-circle" aria-hidden="true"></i>' +
-    '</a>';
-}
-
-// Operational accounts are not patient-facing AI or support consumers.
-function isAdminSession() {
-    const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
-    return role === 'admin' || role === 'super_admin';
-}
-     
+    // Operational accounts are not patient-facing AI or support consumers.
+    // This only controls navigation presentation; backend authorization stays
+    // responsible for every route and API request.
+    function isAdminSession() {
+        const role = typeof API !== 'undefined' ? API.getUser()?.role : null;
+        return role === 'admin' || role === 'super_admin';
+    }
 
     function visiblePagesForSession() {
-    if (!isAdminSession()) return PAGES;
+        if (!isAdminSession()) return PAGES;
+        // Administrators manage the platform; they do not have a patient/doctor
+        // chat session. Hide it instead of showing a link that redirects away.
+        return PAGES.filter((page) => !['contact.html', 'index.html'].includes(page.href) && !page.children);
+    }
 
-    return PAGES.filter((page) =>
-        !['contact.html', 'index.html'].includes(page.href) && !page.children
-    );
-}
+    // ================= NAV =================
 
-function renderLink(p, page) {
+    function renderLink(p, page) {
         const active = (p.match ? p.match.includes(page) : page === p.href) ? ' active' : '';
         return `<a href="${p.href}" class="nav-link${active}" data-i18n="${p.key}"></a>`;
     }
 
-function renderNav(containerId = 'navLinks', options = {}) {
+    /**
+     * @param {boolean} [options.flat] - render grouped items (e.g. AI Tools)
+     * as plain sibling links instead of a dropdown — used for the footer,
+     * where a click-to-open dropdown would be unusual UX.
+     */
+    function renderNav(containerId = 'navLinks', options = {}) {
         const el = document.getElementById(containerId);
         if (!el) return;
 
@@ -140,7 +152,7 @@ function renderNav(containerId = 'navLinks', options = {}) {
         if (!flat) {
             el.querySelectorAll('.nav-dropdown').forEach(dropdown => {
                 dropdown.addEventListener('click', (e) => {
-
+                    // Let clicks on the actual menu items (<a> hrefs) navigate normally.
                     if (e.target.closest('.nav-dropdown-item')) return;
                     e.stopPropagation();
                     const wasOpen = dropdown.classList.contains('open');
@@ -153,7 +165,9 @@ function renderNav(containerId = 'navLinks', options = {}) {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
-function renderAuthArea(containerId = 'authArea') {
+    // ================= AUTH AREA =================
+
+    function renderAuthArea(containerId = 'authArea') {
         const el = document.getElementById(containerId);
         if (!el) return;
 
@@ -172,6 +186,7 @@ function renderAuthArea(containerId = 'authArea') {
         const isSuperAdmin = user?.role === 'super_admin';
         const isDoctor = user?.role === 'doctor';
         const isPatient = user?.role === 'patient';
+        const isClinic = user?.role === 'clinic';
 
         el.innerHTML =
             '<a href="notifications.html" class="icon-btn notification-bell" id="notificationBell" title="Notifications / الإشعارات" aria-label="Notifications">' +
@@ -198,7 +213,9 @@ function renderAuthArea(containerId = 'authArea') {
                     (isDoctor ? '<a href="doctor-profile-edit.html" class="user-menu-item" data-i18n="nav.professionalProfile"></a>' : '') +
                     (isDoctor ? '<a href="doctor-posts.html" class="user-menu-item" data-i18n="nav.doctorPosts"></a>' : '') +
                     (isDoctor ? '<a href="my-patients.html" class="user-menu-item" data-i18n="nav.myPatients"></a>' : '') +
+                    (isClinic ? '<a href="clinic-workspace.html" class="user-menu-item"><i class="fas fa-hospital"></i> ' + localized('مساحة المنشأة', 'Clinic workspace') + '</a>' : '') +
                     (isAdmin ? '<a href="admin-doctor-applications.html" class="user-menu-item" data-i18n="nav.doctorApplications"></a>' : '') +
+                    (isAdmin ? '<a href="admin-clinic-applications.html" class="user-menu-item"><i class="fas fa-hospital"></i> ' + localized('طلبات المنشآت', 'Clinic applications') + '</a>' : '') +
                     (isAdmin ? '<a href="admin-contact-messages.html" class="user-menu-item" data-i18n="nav.contactMessages"></a>' : '') +
                     (isAdmin ? '<a href="admin-social.html" class="user-menu-item" data-i18n="nav.socialModeration"></a>' : '') +
                     (isSuperAdmin ? '<a href="admin-invitations.html" class="user-menu-item">Admin Invitations</a>' : '') +
@@ -207,8 +224,10 @@ function renderAuthArea(containerId = 'authArea') {
                     '<a href="notifications.html" class="user-menu-item" data-i18n="nav.notifications"></a>' +
                     (!isAdmin ? '<a href="contact.html" class="user-menu-item" data-i18n="nav.contactUs"></a>' : '') +
                     '<a href="profile.html" class="user-menu-item" data-i18n="nav.account"></a>' +
-
-'<a href="billing.html" class="user-menu-item" data-i18n="nav.billing"></a>' +
+                    // Unconditional, and deliberately so: a subscription
+                    // belongs to a user, not to a role. A patient, doctor,
+                    // admin and super_admin all subscribe on identical terms.
+                    (!isAdmin ? '<a href="billing.html" class="user-menu-item" data-i18n="nav.billing"></a>' : '') +
                     '<button type="button" class="user-menu-item" id="logoutBtn" data-i18n="auth.logout"></button>' +
                 '</div>' +
             '</div>';
@@ -230,7 +249,14 @@ function renderAuthArea(containerId = 'authArea') {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
-function renderDrawerNavItems() {
+    // ================= MOBILE DRAWER =================
+    // Injected entirely via JS (no per-page HTML needed) — every page with
+    // an .app-header automatically gets a hamburger trigger + slide-in
+    // drawer containing the nav, AI Tools group, and the user/auth menu.
+    // Shown only ≤1024px via CSS; this is the ONLY nav+auth surface at
+    // that width (the desktop nav/auth area is hidden by the same query).
+
+    function renderDrawerNavItems() {
         const page = currentPage();
         return visiblePagesForSession().map(p => {
             if (!p.children) {
@@ -264,6 +290,7 @@ function renderDrawerNavItems() {
         const isSuperAdmin = user?.role === 'super_admin';
         const isDoctor = user?.role === 'doctor';
         const isPatient = user?.role === 'patient';
+        const isClinic = user?.role === 'clinic';
         return (
             '<div class="drawer-user">' +
                 '<span class="user-avatar">' + escapeHtml(initials(user)) + '</span>' +
@@ -282,7 +309,9 @@ function renderDrawerNavItems() {
             (isDoctor ? '<a href="doctor-profile-edit.html" class="drawer-link" data-i18n="nav.professionalProfile"></a>' : '') +
             (isDoctor ? '<a href="doctor-posts.html" class="drawer-link" data-i18n="nav.doctorPosts"></a>' : '') +
             (isDoctor ? '<a href="my-patients.html" class="drawer-link" data-i18n="nav.myPatients"></a>' : '') +
+            (isClinic ? '<a href="clinic-workspace.html" class="drawer-link"><i class="fas fa-hospital"></i> ' + localized('مساحة المنشأة', 'Clinic workspace') + '</a>' : '') +
             (isAdmin ? '<a href="admin-doctor-applications.html" class="drawer-link" data-i18n="nav.doctorApplications"></a>' : '') +
+            (isAdmin ? '<a href="admin-clinic-applications.html" class="drawer-link"><i class="fas fa-hospital"></i> ' + localized('طلبات المنشآت', 'Clinic applications') + '</a>' : '') +
             (isAdmin ? '<a href="admin-contact-messages.html" class="drawer-link" data-i18n="nav.contactMessages"></a>' : '') +
             (isAdmin ? '<a href="admin-social.html" class="drawer-link" data-i18n="nav.socialModeration"></a>' : '') +
             (isSuperAdmin ? '<a href="admin-invitations.html" class="drawer-link">Admin Invitations</a>' : '') +
@@ -366,7 +395,9 @@ function renderDrawerNavItems() {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
-function renderFooter(containerId = 'siteFooter') {
+    // ================= FOOTER =================
+
+    function renderFooter(containerId = 'siteFooter') {
         const el = document.getElementById(containerId);
         if (!el) return;
 
@@ -388,7 +419,9 @@ function renderFooter(containerId = 'siteFooter') {
         renderNav('footerLinks', { flat: true });
     }
 
-function updateNotificationBadge(value) {
+    // ================= INIT =================
+
+    function updateNotificationBadge(value) {
         const count = Math.max(0, Number(value) || 0);
         lastUnreadCount = count;
         const label = count > 9 ? '9+' : String(count);
@@ -453,7 +486,12 @@ function updateNotificationBadge(value) {
         return notificationRequest;
     }
 
-function renderBackToTop() {
+    /**
+     * Floating "back to top" button — document pages only (app-shell pages
+     * scroll internally, not at the document level, so it has nothing to
+     * do there). Appears after scrolling past one viewport height.
+     */
+    function renderBackToTop() {
         if (!document.body.classList.contains('site-page')) return;
 
         const btn = document.createElement('button');
@@ -489,14 +527,28 @@ function renderBackToTop() {
         updateNotificationBadge(lastUnreadCount);
         refreshNotificationBadge({ force: true });
 
-document.getElementById('langToggle')?.addEventListener('click', () => {
+        // Header theme/language toggles — every page (not just index.html,
+        // which used to be the only one wiring these up in app.js).
+        document.getElementById('langToggle')?.addEventListener('click', () => {
             if (typeof I18n !== 'undefined') I18n.toggle();
+        });
+
+        // The role badge is dynamic account data rather than a data-i18n node.
+        // Rebuild the compact header identity immediately after a language
+        // change so "Administrator" and "مسؤول" never wait for navigation.
+        window.addEventListener('languageChanged', () => {
+            renderAuthArea('authArea');
         });
         document.getElementById('themeToggle')?.addEventListener('click', () => {
             if (typeof Theme !== 'undefined') Theme.toggle();
         });
 
-window.addEventListener('auth:changed', () => {
+        // Note: language switching does NOT need a re-render here — every
+        // element above carries data-i18n, so I18n.apply()'s own global
+        // pass re-translates them on every toggle. Re-rendering (and thus
+        // calling I18n.apply() again) on a 'languageChanged' event it
+        // itself triggers would recurse forever.
+        window.addEventListener('auth:changed', () => {
             renderAuthArea('authArea');
             if (API.isAuthenticated()) {
                 refreshNotificationBadge({ force: true });
@@ -517,25 +569,20 @@ window.addEventListener('auth:changed', () => {
 
         window.addEventListener('beforeunload', stopNotificationPolling);
 
-document.addEventListener('click', () => {
+        // Single global listener (not re-registered per renderNav call, since
+        // renderNav also runs for the footer) to close any open nav dropdown.
+        document.addEventListener('click', () => {
             document.getElementById('userChip')?.classList.remove('open');
             document.querySelectorAll('.nav-dropdown.open').forEach(d => d.classList.remove('open'));
         });
-      
-      window.addEventListener('languageChanged', () => {
-    renderAuthArea('authArea');
-
-    const drawerAuth = document.querySelector('.mobile-drawer-auth');
-    if (drawerAuth) {
-        drawerAuth.innerHTML = renderDrawerAuth();
-        if (typeof I18n !== 'undefined') {
-            I18n.apply();
-        }
-    }
-});
     }
 
-function renderAuthPromptBanner(containerId) {
+    /**
+     * Shows a "log in to save your history" banner on pages that stay public
+     * but offer more value to a logged-in user (the AI tools). No-op for
+     * already-authenticated visitors — the container stays hidden.
+     */
+    function renderAuthPromptBanner(containerId) {
         if (typeof API === 'undefined' || API.isAuthenticated()) return;
 
         const banner = document.getElementById(containerId);

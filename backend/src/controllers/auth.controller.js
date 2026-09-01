@@ -28,7 +28,8 @@ async function register(req, res, next) {
             firstNameEn,
             lastNameEn,
             phone,
-            gender
+            gender,
+            socialLinks
         } = req.body;
 
 
@@ -85,7 +86,8 @@ async function register(req, res, next) {
                 lastNameEn,
 
                 phone,
-                gender
+                gender,
+                socialLinks
 
             });
 

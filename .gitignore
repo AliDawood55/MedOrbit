@@ -300,3 +300,6 @@ mobile/windows/**/x64/
 mobile/windows/**/x86/
 mobile/windows/**/*.[Cc]ache
 !mobile/windows/**/*.[Cc]ache/
+
+# Local notes and attachments — never commit.
+/Appendix-Omar/

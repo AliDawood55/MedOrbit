@@ -3,13 +3,15 @@ const router = express.Router();
 
 const conversationRepository = require('../repositories/conversation.repository');
 const chatbotRepository = require('../repositories/chatbot.repository');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 
 // =====================================================
 // Conversation Routes
 // All routes require authentication
 // =====================================================
+
+router.use(authenticate, authorize('patient', 'doctor'));
 
 // GET /api/conversations — List user conversations
 router.get('/', authenticate, async (req, res, next) => {

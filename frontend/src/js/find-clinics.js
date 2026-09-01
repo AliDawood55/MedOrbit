@@ -14,6 +14,8 @@ const FindClinics = (() => {
 
     let mode = 'list';
     let currentType = '';
+    let currentCity = '';
+    let currentService = '';
     let currentPage = 1;
     let searchDebounceTimer = null;
     let activeController = null;
@@ -86,7 +88,9 @@ async function loadList(page = 1) {
             page,
             limit: PAGE_SIZE,
             search: document.getElementById('searchInput')?.value.trim(),
-            type: currentType || undefined
+            type: currentType || undefined,
+            city: currentCity || undefined,
+            service: currentService || undefined
         };
 
         try {
@@ -251,7 +255,24 @@ function renderSkeleton() {
         return html;
     }
 
-function init() {
+    // ================= INIT =================
+
+    const SERVICE_LABELS = {
+        cardiology: ['القلب', 'Cardiology'], orthopedics: ['العظام', 'Orthopedics'], dentistry: ['الأسنان', 'Dentistry'], dermatology: ['الجلدية', 'Dermatology'], pediatrics: ['الأطفال', 'Pediatrics'], gynecology: ['النسائية', 'Gynecology'], general_medicine: ['الطب العام', 'General medicine'], laboratory: ['المختبر', 'Laboratory'], radiology: ['الأشعة', 'Radiology'], emergency: ['الطوارئ', 'Emergency']
+    };
+
+    async function loadDirectoryFilters() {
+        try {
+            const response = await API.clinics.directoryFilters({ cacheTTL: LIST_CACHE_TTL });
+            const data = response.data || {};
+            const city = document.getElementById('cityFilter');
+            const service = document.getElementById('serviceFilter');
+            if (city) city.innerHTML = '<option value="">' + escapeHtml(isAr() ? 'كل المدن' : 'All cities') + '</option>' + (data.cities || []).map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+            if (service) service.innerHTML = '<option value="">' + escapeHtml(isAr() ? 'كل الخدمات' : 'All services') + '</option>' + (data.services || []).map((value) => { const label = SERVICE_LABELS[value]; return `<option value="${escapeHtml(value)}">${escapeHtml(label ? (isAr() ? label[0] : label[1]) : value)}</option>`; }).join('');
+        } catch (err) { console.warn('FindClinics: filters unavailable', err); }
+    }
+
+    function init() {
         const params = new URLSearchParams(window.location.search);
         const initialSearch = params.get('search');
         if (initialSearch) {
@@ -259,6 +280,7 @@ function init() {
             if (input) input.value = initialSearch;
         }
 
+        loadDirectoryFilters();
         loadList(1);
 
         document.getElementById('searchInput')?.addEventListener('input', () => {
@@ -284,6 +306,8 @@ function init() {
         });
 
         document.getElementById('nearMeBtn')?.addEventListener('click', loadNearby);
+        document.getElementById('cityFilter')?.addEventListener('change', (event) => { currentCity = event.target.value; loadList(1); });
+        document.getElementById('serviceFilter')?.addEventListener('change', (event) => { currentService = event.target.value; loadList(1); });
 
         document.getElementById('clinicsListContent')?.addEventListener('click', (e) => {
             if (e.target.closest('#retryBtn')) {
@@ -297,6 +321,7 @@ function init() {
         });
 
         window.addEventListener('languageChanged', () => {
+            loadDirectoryFilters();
             mode === 'nearby' ? loadNearby() : loadList(currentPage);
         });
     }

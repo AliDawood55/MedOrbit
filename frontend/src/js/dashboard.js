@@ -24,6 +24,19 @@ const Dashboard = (() => {
 
 const QUICK_GROUPS = [
         {
+            id: 'clinicWorkspace',
+            icon: 'fa-hospital',
+            titleKey: 'Clinic workspace',
+            clinicOnly: true,
+            tiles: [
+                { href: 'clinic-workspace.html', icon: 'fa-hospital-user', titleKey: 'Clinic workspace', descKey: 'Manage clinic details and doctors', clinicOnly: true },
+                { href: 'find-clinics.html', icon: 'fa-map-location-dot', titleKey: 'nav.clinics', descKey: 'Browse the public directory', clinicOnly: true },
+                { href: 'notifications.html', icon: 'fa-bell', titleKey: 'nav.notifications', descKey: 'dashboard.descNotifications', clinicOnly: true },
+                { href: 'profile.html#social-links', icon: 'fa-share-nodes', titleAr: 'الروابط العامة', titleEn: 'Public links', descAr: 'أضف موقعك وحسابات التواصل', descEn: 'Add website and social accounts', clinicOnly: true },
+                { href: 'profile.html', icon: 'fa-user-gear', titleKey: 'nav.account', descKey: 'dashboard.descProfile', clinicOnly: true }
+            ]
+        },
+        {
             id: 'care',
             icon: 'fa-briefcase-medical',
             titleKey: 'dashboard.groupCare',
@@ -56,6 +69,7 @@ const QUICK_GROUPS = [
                 { href: 'my-records.html', icon: 'fa-file-waveform', titleKey: 'nav.myRecords', descKey: 'dashboard.descMyRecords', patientOnly: true },
                 { href: 'my-prescriptions.html', icon: 'fa-prescription-bottle-medical', titleKey: 'nav.myPrescriptions', descKey: 'dashboard.descMyPrescriptions', patientOnly: true },
                 { href: 'my-reports.html', icon: 'fa-file-lines', titleKey: 'nav.myReports', descKey: 'dashboard.descMyReports' },
+                { href: 'profile.html#social-links', icon: 'fa-share-nodes', titleAr: 'الروابط العامة', titleEn: 'Public links', descAr: 'أضف موقعك وحسابات التواصل', descEn: 'Add website and social accounts' },
                 { href: 'profile.html', icon: 'fa-user-gear', titleKey: 'nav.account', descKey: 'dashboard.descProfile' }
             ]
         },
@@ -68,10 +82,12 @@ const QUICK_GROUPS = [
                 { href: 'notifications.html', icon: 'fa-bell', titleKey: 'nav.notifications', descKey: 'dashboard.descNotifications' },
                 { id: 'qaAnalytics', href: 'analytics.html', icon: 'fa-chart-line', titleKey: 'nav.analytics', descKey: 'dashboard.descAnalytics', adminOnly: true },
                 { href: 'admin-doctor-applications.html', icon: 'fa-user-check', titleKey: 'Doctor Applications', descKey: 'Review pending doctor applications', adminOnly: true },
+                { href: 'admin-clinic-applications.html', icon: 'fa-hospital', titleKey: 'Clinic Applications', descKey: 'Review pending clinic applications', adminOnly: true },
                 { href: 'admin-contact-messages.html', icon: 'fa-envelope-open-text', titleKey: 'Contact Messages', descKey: 'Review support messages', adminOnly: true },
                 { href: 'admin-social.html', icon: 'fa-shield-halved', titleKey: 'Social Moderation', descKey: 'Moderate posts and comments', adminOnly: true },
                 { href: 'admin-invitations.html', icon: 'fa-user-plus', titleKey: 'Admin Invitations', descKey: 'Invite and manage administrators', superAdminOnly: true },
-                { href: 'admin-users.html', icon: 'fa-users-gear', titleKey: 'nav.userManagement', descKey: 'adminUsers.dashDesc', adminOnly: true }
+                { href: 'admin-users.html', icon: 'fa-users-gear', titleKey: 'nav.userManagement', descKey: 'adminUsers.dashDesc', adminOnly: true },
+                { href: 'profile.html', icon: 'fa-user-gear', titleKey: 'nav.account', descKey: 'dashboard.descProfile', adminOnly: true }
             ]
         }
     ];
@@ -183,14 +199,28 @@ function displayName() {
         return ['admin', 'super_admin'].includes(profile?.role);
     }
 
-function applyRoleAwareness() {
+    function isClinic() { return profile?.role === 'clinic'; }
+
+    // ================= ROLE-AWARE SECTIONS =================
+
+    function applyRoleAwareness() {
+        const admin = isAdmin();
         const doctor = isDoctor();
+        const clinic = isClinic();
 
         const statTile = document.getElementById('statApptTile');
         const viewAll = document.getElementById('dashboardAppointmentsLink');
-        if (statTile) statTile.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
-        if (viewAll) viewAll.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
-        document.getElementById('dashboardBookAppointment')?.classList.toggle('hidden', doctor);
+        if (!admin) {
+            if (statTile) statTile.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
+            if (viewAll) viewAll.href = doctor ? 'my-schedule.html#appointments' : 'my-appointments.html';
+        }
+        document.getElementById('dashboardBookAppointment')?.classList.toggle('hidden', admin || doctor || clinic);
+        document.getElementById('statsRow')?.classList.toggle('hidden', clinic);
+        document.querySelector('.dashboard-main')?.classList.toggle('hidden', clinic);
+
+        // Platform operators do not have a personal care workspace.
+        document.getElementById('statsRow')?.classList.toggle('hidden', admin);
+        document.querySelector('.dashboard-main')?.classList.toggle('hidden', admin);
 
 document.getElementById('apptDoctorNotice')?.classList.add('hidden');
         document.getElementById('apptEmpty')?.classList.add('hidden');
@@ -198,7 +228,15 @@ document.getElementById('apptDoctorNotice')?.classList.add('hidden');
         document.getElementById('apptList')?.classList.add('hidden');
     }
 
-function tileVisible(tile) {
+    // ================= QUICK ACTION GROUPS: RENDER =================
+
+    function tileVisible(tile) {
+        if (tile.clinicOnly && !isClinic()) return false;
+        if (isClinic() && !tile.clinicOnly) return false;
+        // Admin and Super Admin can manage the platform and receive
+        // notifications, but never use patient/doctor care, AI, reporting,
+        // or feedback actions from this dashboard.
+        if (isAdmin() && !tile.adminOnly && !tile.superAdminOnly && tile.href !== 'notifications.html') return false;
         if (tile.adminOnly && !isAdmin()) return false;
         if (tile.superAdminOnly && profile?.role !== 'super_admin') return false;
         if (tile.patientOnly && profile?.role !== 'patient') return false;
@@ -213,8 +251,8 @@ return (
             '<a class="quick-tile hover-lift" href="' + tile.href + '"' + (tile.id ? ' id="' + tile.id + '"' : '') + '>' +
                 '<div class="quick-tile-icon"><i class="fas ' + tile.icon + '"></i></div>' +
                 '<div class="quick-tile-text">' +
-                    '<span class="quick-tile-title">' + escapeHtml(tk(tile.titleKey)) + '</span>' +
-                    '<span class="quick-tile-desc">' + escapeHtml(tk(tile.descKey)) + '</span>' +
+                    '<span class="quick-tile-title">' + escapeHtml(tile.titleAr ? t(tile.titleAr, tile.titleEn) : tk(tile.titleKey)) + '</span>' +
+                    '<span class="quick-tile-desc">' + escapeHtml(tile.descAr ? t(tile.descAr, tile.descEn) : tk(tile.descKey)) + '</span>' +
                 '</div>' +
             '</a>'
         );

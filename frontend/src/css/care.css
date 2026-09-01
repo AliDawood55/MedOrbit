@@ -1,3 +1,10 @@
+/* ===========================================
+   MedOrbit v2 - Doctor<->Patient Care Pages
+   Shared by doctor-posts.html, my-patients.html, patient-detail.html,
+   and my-doctor.html.
+   =========================================== */
+
+/* === Role-restricted notice (reused pattern, generic) === */
 .care-restricted {
     text-align: center;
     padding: 60px 20px;
@@ -27,6 +34,7 @@
     line-height: 1.7;
 }
 
+/* === Page header row (title + primary action) === */
 .care-header-row {
     display: flex;
     align-items: center;
@@ -71,6 +79,41 @@
     border-top: 1px solid var(--border);
 }
 
+/* Clinic application: uses the shared application header and spacing rather
+   than a one-off compact shell, so navigation stays usable on narrow screens. */
+.clinic-application-page .clinic-application-header {
+   position: sticky;
+   top: 0;
+   z-index: 20;
+}
+
+.clinic-application-page .clinic-application-content {
+   max-width: 960px;
+}
+
+.clinic-application-page .clinic-application-title {
+   align-items: flex-start;
+}
+
+.clinic-application-page .clinic-application-title h1 {
+   margin: 0 0 6px;
+}
+
+.clinic-application-page fieldset.form-group {
+   min-width: 0;
+   padding: 16px;
+   border: 1px solid var(--border);
+   border-radius: var(--r-md);
+   background: var(--bg-soft);
+}
+
+.clinic-application-page fieldset.form-group legend {
+   padding: 0 6px;
+   color: var(--text);
+   font-weight: 700;
+}
+
+/* === Search / filter bar (my-patients.html) === */
 .care-search-bar {
     display: flex;
     flex-wrap: wrap;
@@ -121,6 +164,7 @@
     cursor: pointer;
 }
 
+/* === Patient / doctor card grid === */
 .care-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -211,6 +255,8 @@
     margin-top: 10px;
 }
 
+/* === My Doctor list: keep actions contained inside the card regardless of
+   language/label length (RTL/LTR-neutral, scoped to #doctorsList only) === */
 #doctorsList .care-card-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
@@ -235,6 +281,7 @@
     text-align: center;
 }
 
+/* === Generic section card (patient-detail.html / my-doctor.html) === */
 .care-section {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -258,6 +305,7 @@
     font-size: 14px;
 }
 
+/* === Patient/doctor detail header === */
 .care-detail-header {
     display: flex;
     align-items: center;
@@ -303,6 +351,7 @@
     margin-top: 4px;
 }
 
+/* === Note timeline (session notes / shared notes) === */
 .note-timeline {
     position: relative;
     padding-inline-start: 26px;
@@ -363,6 +412,7 @@
     line-height: 1.6;
 }
 
+/* === Add-note form === */
 .care-note-form textarea {
     margin-bottom: 12px;
 }
@@ -394,6 +444,10 @@
     }
 }
 
+/* ===========================================
+   Wave C4 — My Doctor page scope
+   =========================================== */
+
 .my-doctor-page {
     max-width: 900px;
 }
@@ -421,6 +475,8 @@
     padding: 28px 16px;
 }
 
+/* Doctor cards are not themselves clickable — remove the lift affordance
+   used elsewhere and replace it with a calmer static hover. */
 .my-doctor-page #doctorsList .care-person-card:hover {
     transform: none;
     box-shadow: none;
@@ -468,6 +524,7 @@
     outline-offset: 2px;
 }
 
+/* Upcoming appointment rows are static display, not selectable cards. */
 .my-doctor-page #upcomingWithThemList .records-real-card {
     cursor: default;
 }
@@ -483,6 +540,7 @@
     word-break: break-word;
 }
 
+/* Shared notes: patient-readable presentation */
 .my-doctor-page #sharedNotesList .note-card-header {
     flex-wrap: wrap;
     gap: 4px 10px;
@@ -517,6 +575,10 @@
     }
 }
 
+/* ===========================================
+   Wave D1 — My Patients page scope
+   =========================================== */
+
 .my-patients-page {
     max-width: 1100px;
 }
@@ -527,12 +589,15 @@
     margin-top: 4px;
 }
 
+/* Patient cards are not themselves clickable — remove the lift affordance
+   used elsewhere and replace it with a calmer static hover. */
 #patientsContent .care-person-card:hover {
     transform: none;
     box-shadow: none;
     border-color: var(--border-strong);
 }
 
+/* Avoid a cramped single-patient card at wide viewports. */
 #patientsContent .care-card-grid {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
@@ -551,6 +616,8 @@
     flex-wrap: wrap;
 }
 
+/* Keep View Details / Message Patient contained inside the card regardless
+   of language/label length (mirrors the #doctorsList fix from c0717f4). */
 #patientsContent .care-person-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -573,6 +640,11 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ===========================================
+   Wave D2a — Patient Detail page scope
+   (shell + patient header + appointment history only)
+   =========================================== */
 
 .patient-detail-page {
     max-width: 900px;
@@ -602,6 +674,7 @@
     gap: 4px 8px;
 }
 
+/* Appointment history rows are static display, not selectable cards. */
 .patient-detail-page #appointmentHistoryList .records-real-card {
     cursor: default;
 }
@@ -625,6 +698,12 @@
     }
 }
 
+/* ===========================================
+   Wave D2b — Patient Detail page scope
+   (medical records timeline + record-authoring form only;
+   prescriptions section is untouched, deferred to D2c)
+   =========================================== */
+
 .patient-detail-page .care-records-section .care-section-title {
     margin: 0 0 16px;
 }
@@ -633,6 +712,7 @@
     margin-bottom: 20px;
 }
 
+/* Record timeline cards */
 .patient-detail-page #notesTimeline .note-card {
     border: 1px solid var(--border);
     min-width: 0;
@@ -653,6 +733,7 @@
     color: var(--text);
 }
 
+/* Record action containment: keep Edit/Delete inside the card at all widths */
 .patient-detail-page #notesTimeline .care-person-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -681,6 +762,7 @@
     }
 }
 
+/* Add Medical Record form */
 .patient-detail-page .care-records-section .care-form-actions {
     border-top: none;
     padding-top: 0;
@@ -702,6 +784,9 @@
     min-height: 90px;
 }
 
+/* Internal doctor notes: subtle differentiated surface using existing tokens
+   only — no privacy/security claims are made or implied here beyond the
+   existing label copy. */
 .patient-detail-page .care-form-group-internal {
     padding: 12px;
     background: var(--bg-soft);
@@ -713,6 +798,11 @@
     margin-bottom: 0;
 }
 
+/* ===========================================
+   Wave D2c — Patient Detail page scope
+   (prescriptions section only: history + authoring form)
+   =========================================== */
+
 .patient-detail-page .care-prescriptions-section .care-section-title {
     margin: 0 0 16px;
 }
@@ -721,6 +811,7 @@
     margin-bottom: 20px;
 }
 
+/* Prescription history rows are static display, not selectable cards. */
 .patient-detail-page .care-prescriptions-section #prescriptionsList .records-real-card {
     cursor: default;
 }
@@ -739,6 +830,7 @@
     word-break: break-word;
 }
 
+/* Prescription-authoring form */
 .patient-detail-page .care-prescriptions-section .care-note-form .care-form-title {
     margin-top: 8px;
 }
@@ -758,6 +850,7 @@
     min-height: 44px;
 }
 
+/* Medication item cards: one visually grouped unit per medication. */
 .patient-detail-page .care-prescriptions-section .rx-item-card {
     display: flex;
     flex-direction: column;
@@ -770,6 +863,9 @@
     min-width: 0;
 }
 
+/* Remove Medication: flow-based placement (not absolute) so it can never
+   overlap the fields below it at narrow widths, and always meets the
+   44px touch target regardless of viewport. */
 .patient-detail-page .care-prescriptions-section .rx-item-card .rx-item-remove {
     position: static;
     align-self: flex-end;

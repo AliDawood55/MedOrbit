@@ -13,6 +13,7 @@ const PUBLIC_HOME = 'home.html';
 
 const PROTECTED = [
         'admin-contact-messages.html',
+        'admin-clinic-applications.html',
         'admin-doctor-applications.html',
         'admin-invitation-accept.html',
         'admin-invitations.html',
@@ -25,6 +26,8 @@ const PROTECTED = [
 'billing-sandbox.html',
         'book-appointment.html',
         'clinic.html',
+        'clinic-application.html',
+        'clinic-workspace.html',
         'contact.html',
         'dashboard.html',
         'direct-messages.html',
@@ -53,15 +56,45 @@ const PROTECTED = [
         'symptom-checker.html'
     ];
 
-const ROLE_RESTRICTED = {
+    // Platform operators manage the service; they do not use personal-care
+    // pages. This is presentation routing only — backend routes remain the
+    // authorization authority for every request.
+    const PLATFORM_EXCLUDED_PAGES = new Set([
+        'avatar-preview.html', 'billing-sandbox.html', 'billing.html',
+        'book-appointment.html', 'contact.html', 'direct-messages.html',
+        'doctor-application.html', 'doctor-posts.html',
+        'doctor-profile-edit.html', 'drug-checker.html', 'feedback.html',
+        'index.html', 'my-appointments.html', 'my-doctor.html',
+        'my-patients.html', 'my-prescriptions.html', 'my-records.html',
+        'my-reports.html', 'my-schedule.html', 'patient-detail.html',
+        'patient-profile.html', 'report-summary.html', 'symptom-checker.html'
+    ]);
+
+    /**
+     * Roles each protected page is meant for, where the page and its backend
+     * routes already restrict by role. Documentation and test-matrix input
+     * ONLY — the gate deliberately does not enforce it, because authorization
+     * belongs to the backend and to the existing per-page checks. Being
+     * authenticated is not the same as being allowed; this module answers only
+     * the first question and must never be read as answering the second.
+     */
+    const ROLE_RESTRICTED = {
         'analytics.html': ['admin', 'super_admin'],
         'admin-contact-messages.html': ['admin', 'super_admin'],
+        'admin-clinic-applications.html': ['admin', 'super_admin'],
         'admin-doctor-applications.html': ['admin', 'super_admin'],
         'admin-social.html': ['admin', 'super_admin'],
         'admin-users.html': ['admin', 'super_admin'],
         'admin-invitations.html': ['super_admin'],
-
-'doctor-posts.html': ['doctor'],
+         // admin-invitation-accept.html is deliberately absent. Its backend
+        // route (POST /api/admin/invitations/accept) requires authenticate but
+        // NOT authorizeAdmin: the whole point of an invitation is that the
+        // invited account is not an admin yet. It is PROTECTED — you must be
+        // signed in as the invited account — and nothing more. Listing it here
+        // would describe a restriction the backend does not have, and would be
+        // the first step towards a frontend authorization system.
+         'doctor-posts.html': ['doctor'],
+         'clinic-workspace.html': ['clinic'],
         'doctor-profile-edit.html': ['doctor'],
         'my-patients.html': ['doctor'],
         'my-schedule.html': ['doctor'],
@@ -173,14 +206,23 @@ function isDoctorApplicationIntent() {
         return new URLSearchParams(window.location.search).get('intent') === 'doctor';
     }
 
+    function isClinicApplicationIntent() {
+        return new URLSearchParams(window.location.search).get('intent') === 'clinic';
+    }
+
     function defaultLandingPage(user) {
 
 if (user?.role === 'patient' && isDoctorApplicationIntent()) {
             return 'doctor-application.html';
         }
+        if (user?.role === 'patient' && isClinicApplicationIntent()) {
+            return 'clinic-application.html';
+        }
         switch (user?.role) {
             case 'doctor':
                 return 'my-schedule.html';
+            case 'clinic':
+                return 'clinic-workspace.html';
             case 'admin':
                 return 'analytics.html';
             case 'super_admin':
@@ -380,7 +422,16 @@ function denyToHome(reason) {
 window.location.replace(PUBLIC_HOME + '?' + params.toString());
     }
 
-async function resolveProtectedPage() {
+    function redirectPlatformOperatorFromPersonalCare() {
+        const role = String(verifiedUser?.role || '').trim().toLowerCase();
+        if (!['admin', 'super_admin'].includes(role) || !PLATFORM_EXCLUDED_PAGES.has(thisPage)) return false;
+        window.location.replace('dashboard.html?access=platform');
+        return true;
+    }
+
+    // ================= PROTECTED PAGE BOOT =================
+
+    async function resolveProtectedPage() {
 
 if (window.__medorbitNavigatingAway) return;
 
@@ -395,6 +446,7 @@ if (window.__medorbitNavigatingAway) return;
         const state = await withTimeout(verifySession(), VERIFY_TIMEOUT_MS);
 
         if (state === 'valid') {
+            if (redirectPlatformOperatorFromPersonalCare()) return;
             lowerShield();
             clearIntendedDestination();
             document.dispatchEvent(new CustomEvent('authgate:allowed', { detail: { user: verifiedUser } }));
@@ -775,7 +827,8 @@ window.__medorbitAuthGateReady = true;
         clearIntendedDestination: clearIntendedDestination,
         defaultLandingPage: defaultLandingPage,
         isDoctorApplicationIntent: isDoctorApplicationIntent,
-
+         isClinicApplicationIntent: isClinicApplicationIntent,
+         // session
         verifySession: verifySession,
         getVerifiedUser: () => verifiedUser,
         getSessionState: () => sessionState,

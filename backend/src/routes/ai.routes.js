@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const { findAuthorizedMedicalRecord } = require('../services/clinicalAuthorization.service');
 const { internalIdentityHeaders } = require('../services/aiBoundary.service');
 const { error } = require('../utils/response');
@@ -56,7 +56,7 @@ function normalizeMedicationList(value, fieldName) {
     return [...new Set(normalized)];
 }
 
-router.post('/triage', authenticate, async (req, res, next) => {
+router.post('/triage', authenticate, authorize('patient', 'doctor'), async (req, res, next) => {
     try {
         const headers = { 'Content-Type': 'application/json' };
         if (req.user) Object.assign(headers, internalIdentityHeaders({ userId: req.user.sub }));
@@ -79,7 +79,7 @@ router.post('/triage', authenticate, async (req, res, next) => {
 // gives clients one response envelope, server-side validation, a per-user AI
 // burst limit, and an internal service credential without yet changing the
 // existing direct AI endpoint before web/mobile clients have migrated.
-router.post('/drug-interactions', authenticate, drugInteractionsLimiter, async (req, res, next) => {
+router.post('/drug-interactions', authenticate, authorize('patient', 'doctor'), drugInteractionsLimiter, async (req, res, next) => {
     try {
         const medicationNames = normalizeMedicationList(req.body?.medication_names, 'medication_names');
         const medicationIds = normalizeMedicationList(req.body?.medication_ids, 'medication_ids');
@@ -123,7 +123,7 @@ router.post('/drug-interactions', authenticate, drugInteractionsLimiter, async (
     }
 });
 
-router.post('/summarize', authenticate, upload.single('file'), async (req, res, next) => {
+router.post('/summarize', authenticate, authorize('patient', 'doctor'), upload.single('file'), async (req, res, next) => {
     try {
         const requestedRecordId = req.body.record_id || null;
         if (requestedRecordId && !req.user) {

@@ -720,7 +720,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
         d.is_accepting_patients, d.education, d.certifications,d.sub_specialty,
         d.professional_headline,d.areas_of_expertise,d.professional_interests,d.languages_spoken,
         d.professional_bio_ar, d.professional_bio_en,
-        u.created_at,
+        u.created_at, to_jsonb(u)->'preferences'->'social_links' AS social_links,
         p.first_name_ar, p.last_name_ar, p.first_name_en, p.last_name_en,
         p.profile_image_url, p.city,
         true AS is_verified,

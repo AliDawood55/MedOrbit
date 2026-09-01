@@ -2,7 +2,8 @@ const router = require("express").Router();
 
 const {
     authenticate,
-    authorizeAdmin
+    authorizeAdmin,
+    authorize
 } = require("../middleware/auth");
 
 
@@ -283,6 +284,8 @@ router.get(
     "/reports/summaries",
 
     authenticate,
+
+    authorize("patient", "doctor"),
 
     async (req, res, next) => {
 
