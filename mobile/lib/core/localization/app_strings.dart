@@ -570,8 +570,8 @@ class AppStrings {
   String get savedPlacesEmptyTitle =>
       _t('لا توجد أماكن محفوظة', 'No saved places yet');
   String get savedPlacesEmptyHint => _t(
-    'يمكنك حفظ مكان من نتائج المحادثة الطبية وسيظهر هنا.',
-    'Save a place from medical chat results and it will appear here.',
+    'عندما تعرض المحادثة الطبية أماكن قريبة، ستظهر هنا.',
+    'Places returned by Medical Chat will appear here.',
   );
   String get savedPlaceFallbackName => _t('مكان رعاية', 'Care place');
   String savedPlaceDistance(double kilometers) => _t(
@@ -644,8 +644,16 @@ class AppStrings {
   String get contactMessageLabel => _t('رسالتك', 'Your message');
   String get contactSubjectRequired =>
       _t('الموضوع مطلوب.', 'A subject is required.');
+  String get contactSubjectTooLong => _t(
+    'يجب ألا يزيد الموضوع عن 160 حرفاً.',
+    'The subject must be 160 characters or fewer.',
+  );
   String get contactMessageRequired =>
       _t('الرسالة مطلوبة.', 'A message is required.');
+  String get contactMessageTooLong => _t(
+    'يجب ألا تزيد الرسالة عن 4000 حرف.',
+    'The message must be 4,000 characters or fewer.',
+  );
   String get contactSendAction => _t('إرسال الرسالة', 'Send message');
   String get contactSentSuccess =>
       _t('تم إرسال رسالتك بنجاح.', 'Your message was sent successfully.');
