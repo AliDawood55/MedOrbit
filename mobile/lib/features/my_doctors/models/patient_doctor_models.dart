@@ -58,6 +58,7 @@ class SharedDoctorNote {
   const SharedDoctorNote({
     required this.id,
     this.recordType,
+    this.chiefComplaint,
     this.diagnosis,
     this.treatmentPlan,
     this.clinicalNotes,
@@ -66,6 +67,7 @@ class SharedDoctorNote {
 
   final String id;
   final String? recordType;
+  final String? chiefComplaint;
   final String? diagnosis;
   final String? treatmentPlan;
   final String? clinicalNotes;
@@ -75,6 +77,7 @@ class SharedDoctorNote {
       SharedDoctorNote(
         id: _string(json['id']),
         recordType: _nullableString(json['record_type']),
+        chiefComplaint: _nullableString(json['chief_complaint']),
         diagnosis: _nullableString(json['diagnosis']),
         treatmentPlan: _nullableString(json['treatment_plan']),
         clinicalNotes: _nullableString(json['clinical_notes']),

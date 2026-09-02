@@ -67,10 +67,16 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                               controller: _subject,
                               textInputAction: TextInputAction.next,
                               prefixIcon: const Icon(Icons.subject_outlined),
-                              validator: (value) =>
-                                  value == null || value.trim().isEmpty
-                                  ? strings.contactSubjectRequired
-                                  : null,
+                              maxLength: 160,
+                              validator: (value) {
+                                final text = value?.trim() ?? '';
+                                if (text.isEmpty) {
+                                  return strings.contactSubjectRequired;
+                                }
+                                return text.length > 160
+                                    ? strings.contactSubjectTooLong
+                                    : null;
+                              },
                             ),
                             const SizedBox(height: AppTheme.spaceMd),
                             AppTextField(
@@ -80,10 +86,16 @@ class _ContactScreenState extends ConsumerState<ContactScreen> {
                               maxLines: 8,
                               textInputAction: TextInputAction.newline,
                               prefixIcon: const Icon(Icons.message_outlined),
-                              validator: (value) =>
-                                  value == null || value.trim().isEmpty
-                                  ? strings.contactMessageRequired
-                                  : null,
+                              maxLength: 4000,
+                              validator: (value) {
+                                final text = value?.trim() ?? '';
+                                if (text.isEmpty) {
+                                  return strings.contactMessageRequired;
+                                }
+                                return text.length > 4000
+                                    ? strings.contactMessageTooLong
+                                    : null;
+                              },
                             ),
                             const SizedBox(height: AppTheme.spaceLg),
                             if (state.sent)

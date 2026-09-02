@@ -117,6 +117,7 @@ class _NoteCard extends StatelessWidget {
             ),
           ],
           for (final entry in [
+            (strings.detailChiefComplaint, note.chiefComplaint),
             (strings.sharedNoteDiagnosis, note.diagnosis),
             (strings.sharedNoteTreatmentPlan, note.treatmentPlan),
             (strings.sharedNoteClinicalNotes, note.clinicalNotes),

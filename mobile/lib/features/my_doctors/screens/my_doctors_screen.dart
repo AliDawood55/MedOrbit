@@ -6,6 +6,7 @@ import '../../../core/locale/locale_controller.dart';
 import '../../../core/localization/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_formatting.dart';
+import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
@@ -109,9 +110,16 @@ class _DoctorCard extends StatelessWidget {
                     children: [
                       Text(
                         name.isEmpty ? strings.doctorLabel : name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      if (specialty != null) Text(specialty),
+                      if (specialty != null)
+                        Text(
+                          specialty,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),
@@ -123,13 +131,41 @@ class _DoctorCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: AppTheme.spaceMd),
-            OutlinedButton.icon(
-              onPressed: () => context.push(
-                '/my-doctors/${Uri.encodeComponent(doctor.id)}/notes',
-                extra: doctor,
-              ),
-              icon: const Icon(Icons.notes_rounded),
-              label: Text(strings.sharedDoctorNotesAction),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final viewDoctor = FilledButton.icon(
+                  onPressed: () =>
+                      context.push(RoutePaths.doctorDetailPath(doctor.id)),
+                  icon: const Icon(Icons.person_outline_rounded),
+                  label: Text(strings.viewDoctorAction),
+                );
+                final sharedNotes = OutlinedButton.icon(
+                  onPressed: () => context.push(
+                    RoutePaths.sharedDoctorNotesPath(doctor.id),
+                    extra: doctor,
+                  ),
+                  icon: const Icon(Icons.notes_rounded),
+                  label: Text(strings.sharedDoctorNotesAction),
+                );
+
+                if (constraints.maxWidth < AppTheme.compactBreakpoint) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      viewDoctor,
+                      const SizedBox(height: AppTheme.spaceSm),
+                      sharedNotes,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: viewDoctor),
+                    const SizedBox(width: AppTheme.spaceSm),
+                    Expanded(child: sharedNotes),
+                  ],
+                );
+              },
             ),
           ],
         ),
