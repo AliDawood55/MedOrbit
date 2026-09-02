@@ -42,6 +42,7 @@ void main() {
           {
             'id': 'note-1',
             'record_type': 'consultation',
+            'chief_complaint': 'Persistent headache',
             'diagnosis': 'Hypertension',
             'treatment_plan': 'Monitor blood pressure',
             'clinical_notes': 'Follow up in one month',
@@ -53,6 +54,7 @@ void main() {
       final notes = await MyDoctorsApi(fake.dio).listSharedNotes('doctor-1');
 
       expect(fake.path, '/patients/me/doctors/doctor-1/notes');
+      expect(notes.single.chiefComplaint, 'Persistent headache');
       expect(notes.single.diagnosis, 'Hypertension');
       expect(notes.single.clinicalNotes, 'Follow up in one month');
     },
