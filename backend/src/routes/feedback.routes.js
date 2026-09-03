@@ -187,5 +187,69 @@ router.get(
         }
     });
 
+// A signed-in visitor may open the review summary linked from the Home
+// dashboard. This exposes only submitted platform feedback, never clinical or
+// contact data, and keeps anonymous visitors on aggregate-only statistics.
+router.get(
+    "/reviews/:userId",
+
+    authenticate,
+
+    async (req, res, next) => {
+        try {
+            const userId = String(req.params.userId || "");
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+                return error(res, "A valid reviewer is required", 400, "VALIDATION_ERROR");
+            }
+
+            const result = await db.query(
+                `SELECT u.id,
+                        up.first_name_ar, up.last_name_ar,
+                        up.first_name_en, up.last_name_en,
+                        up.profile_image_url,
+                        f.id AS feedback_id, f.overall_rating,
+                        f.category_chatbot, f.category_clinics,
+                        f.category_booking, f.category_design,
+                        f.comment, f.would_recommend, f.created_at
+                   FROM medorbit.feedback f
+                   JOIN medorbit.users u ON u.id=f.user_id AND u.is_active=true
+              LEFT JOIN medorbit.user_profiles up ON up.user_id=u.id
+                  WHERE f.user_id=$1
+                  ORDER BY f.created_at DESC
+                  LIMIT 20`,
+                [userId],
+            );
+            if (!result.rows.length) {
+                return error(res, "Feedback reviewer was not found", 404, "NOT_FOUND");
+            }
+
+            const first = result.rows[0];
+            return success(res, {
+                reviewer: {
+                    id: first.id,
+                    nameAr: [first.first_name_ar, first.last_name_ar].filter(Boolean).join(" ") || null,
+                    nameEn: [first.first_name_en, first.last_name_en].filter(Boolean).join(" ") || null,
+                    avatarUrl: first.profile_image_url || null,
+                },
+                reviews: result.rows.map((row) => ({
+                    id: row.feedback_id,
+                    overallRating: row.overall_rating,
+                    categories: {
+                        chatbot: row.category_chatbot,
+                        clinics: row.category_clinics,
+                        booking: row.category_booking,
+                        design: row.category_design,
+                    },
+                    comment: row.comment,
+                    wouldRecommend: row.would_recommend,
+                    createdAt: row.created_at,
+                })),
+            }, "Feedback reviewer retrieved");
+        } catch (err) {
+            next(err);
+        }
+    },
+);
+
 
 module.exports = router;

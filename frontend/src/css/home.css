@@ -89,6 +89,20 @@
     font-size: 15px;
 }
 
+.hero-actions .facility-discovery-action {
+    border-color: color-mix(in srgb, var(--secondary) 48%, var(--border));
+    background: color-mix(in srgb, var(--secondary) 9%, var(--bg-card));
+    color: var(--secondary-dark, var(--secondary));
+}
+
+.hero-actions .facility-discovery-action:hover,
+.hero-actions .facility-discovery-action:focus-visible {
+    border-color: var(--secondary);
+    background: color-mix(in srgb, var(--secondary) 16%, var(--bg-card));
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--secondary) 16%, transparent);
+    outline: 0;
+}
+
 .hero-search {
     max-width: 560px;
     margin: 0 auto;

@@ -25,8 +25,18 @@ function applySessionState() {
         if (typeof I18n !== 'undefined') I18n.apply();
     }
 
+    function localizeFacilityDiscovery() {
+        const label = document.getElementById('heroFacilityDiscoveryLabel');
+        if (!label) return;
+        label.textContent = I18n?.getLang?.() === 'ar'
+            ? 'اكتشف المنشآت الصحية'
+            : 'Find healthcare facilities';
+    }
+
     applySessionState();
+    localizeFacilityDiscovery();
     window.addEventListener('auth:changed', applySessionState);
+    window.addEventListener('languageChanged', localizeFacilityDiscovery);
 
 document.getElementById('heroSearchForm')?.addEventListener('submit', (e) => {
         e.preventDefault();

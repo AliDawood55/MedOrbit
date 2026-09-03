@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-auth-gate="pending">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2563EB">
+  <title>MedOrbit – Feedback review</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="../src/css/main.css">
+  <link rel="stylesheet" href="../src/css/components.css">
+  <link rel="stylesheet" href="../src/css/layout.css">
+  <link rel="stylesheet" href="../src/css/feedback-review.css">
+  <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
+  <script src="../src/js/auth-bootstrap.js"></script>
+  <script src="../src/js/auth-gate.js"></script>
+</head>
+<body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="app-header">
+    <a class="header-brand" id="brandLink" href="home.html"><div class="brand-icon"><i class="fas fa-heartbeat"></i></div><div class="brand-text"><span class="brand-name">MedOrbit</span><p>Smart Healthcare AI</p></div></a>
+    <nav class="site-nav" id="navLinks"></nav>
+    <div class="header-actions"><div class="auth-area" id="authArea"></div><button class="icon-btn" id="themeToggle" title="Theme"><i class="fas fa-moon"></i></button><button class="icon-btn" id="langToggle" title="Language"><span id="langLabel">AR</span></button></div>
+  </header>
+  <main id="main-content" class="feedback-review-page page-container">
+    <a class="feedback-review-back" href="home.html" id="feedbackReviewBack"><i class="fas fa-arrow-left"></i><span>Back to home</span></a>
+    <section id="reviewerFeedback" class="feedback-review-state" aria-live="polite"><i class="fas fa-circle-notch fa-spin"></i><p>Loading feedback…</p></section>
+  </main>
+  <footer class="site-footer" id="siteFooter"></footer>
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="../src/utils/dom.js"></script><script src="../src/utils/format.js"></script><script src="../src/utils/store.js"></script>
+  <script src="../src/js/api.js"></script><script src="../src/js/i18n.js"></script><script src="../src/js/theme.js"></script><script src="../src/js/toast.js"></script><script src="../src/js/layout.js"></script><script src="../src/js/feedback-review.js"></script>
+</body>
+</html>

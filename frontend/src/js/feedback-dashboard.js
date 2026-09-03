@@ -243,10 +243,11 @@ function displayName(user) {
             : '<span class="feedback-marquee-avatar-placeholder"></span>';
 
         return (
-            '<div class="feedback-marquee-item">' +
+            '<a class="feedback-marquee-item" href="feedback-review.html?reviewer=' + encodeURIComponent(user.id) + '">' +
                 avatar +
                 '<span class="feedback-marquee-name">' + name + '</span>' +
-            '</div>'
+                '<i class="fas fa-arrow-up-right-from-square feedback-marquee-link-icon" aria-hidden="true"></i>' +
+            '</a>'
         );
     }
 

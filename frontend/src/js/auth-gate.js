@@ -38,6 +38,7 @@ const PROTECTED = [
         'drug-checker.html',
         'feed.html',
         'feedback.html',
+        'feedback-review.html',
         'find-clinics.html',
         'find-doctors.html',
         'index.html',
@@ -473,6 +474,12 @@ async function resolvePublicPage() {
 if (typeof API === 'undefined' || !hasStoredSession()) return;
 
         const state = await verifySession();
+        // Sign-in and registration are entry pages only. A verified session
+        // must not be able to open them again, regardless of account role.
+        if (state === 'valid' && (thisPage === 'login.html' || thisPage === 'register.html')) {
+            window.location.replace(PUBLIC_HOME);
+            return;
+        }
         if (state === 'invalid') {
 
 document.dispatchEvent(new CustomEvent('authgate:signedout'));

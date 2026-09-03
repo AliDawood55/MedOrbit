@@ -545,7 +545,8 @@ function assetUrl(value) {
     //   recommend:{yes,no}, users:[{id,nameAr,nameEn,avatarUrl}] }
     const feedback = {
         submit: (body, options) => post('/feedback', body, options),
-        stats: (options) => get('/feedback/stats', null, options)
+        stats: (options) => get('/feedback/stats', null, options),
+        reviewer: (userId, options) => get(`/feedback/reviews/${encodeURIComponent(userId)}`, null, options)
     };
 
     const contact = {

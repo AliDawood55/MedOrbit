@@ -120,6 +120,12 @@ const STAYS_PUBLIC = [
         const doctorToken = jwt(ids.doctor, 'doctor');
         const adminToken = jwt(ids.admin, 'admin');
         const superToken = jwt(ids.super, 'super_admin');
+        await pool.query(
+            `INSERT INTO medorbit.feedback
+                (user_id, overall_rating, category_chatbot, category_clinics, comment, would_recommend)
+             VALUES ($1, 5, 4, 5, 'Auth-gate test feedback', true)`,
+            [ids.patient],
+        );
 
         // ---------------------------------------------------------------
         // A. Product data is no longer anonymous
@@ -174,6 +180,13 @@ const STAYS_PUBLIC = [
         const statsAuthed = await request('GET', '/feedback/stats', patientToken);
         check('authenticated caller still receives the users list',
             statsAuthed.status === 200 && Array.isArray(statsAuthed.body?.data?.users));
+
+        const reviewGuest = await request('GET', `/feedback/reviews/${ids.patient}`, null);
+        check('guest cannot open an individual feedback review', reviewGuest.status === 401, `got ${reviewGuest.status}`);
+        const reviewAuthed = await request('GET', `/feedback/reviews/${ids.patient}`, doctorToken);
+        check('authenticated caller can open submitted review details only',
+            reviewAuthed.status === 200 && reviewAuthed.body?.data?.reviews?.[0]?.overallRating === 5,
+            `got ${reviewAuthed.status}`);
 
         // ---------------------------------------------------------------
         // D. A token is not a session — the server decides
@@ -322,6 +335,7 @@ const STAYS_PUBLIC = [
         // Invitations and audit rows reference users(id) with no ON DELETE, so
         // they have to go first or the users below silently survive the run.
         const userIds = Object.values(ids);
+        await pool.query('DELETE FROM medorbit.feedback WHERE user_id = ANY($1::uuid[])', [userIds]).catch(() => {});
         await pool.query(
             `DELETE FROM medorbit.admin_invitations
              WHERE email LIKE $1
