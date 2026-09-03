@@ -12,6 +12,7 @@ const adminEmail = `clinic-w1-admin-${crypto.randomUUID()}@example.test`;
 const superAdminEmail = `clinic-w1-super-${crypto.randomUUID()}@example.test`;
 const rejectedEmail = `clinic-w1-rejected-${crypto.randomUUID()}@example.test`;
 const doctorEmail = `clinic-w4-doctor-${crypto.randomUUID()}@example.test`;
+let doctorSpecialtyId;
 let failures = 0;
 
 function check(label, condition) {
@@ -99,6 +100,9 @@ async function cleanup() {
   await pool.query('DELETE FROM medorbit.notifications WHERE user_id=(SELECT id FROM medorbit.users WHERE email=$1)', [doctorEmail]);
   await pool.query('DELETE FROM medorbit.doctors WHERE user_id=(SELECT id FROM medorbit.users WHERE email=$1)', [doctorEmail]);
   await pool.query('DELETE FROM medorbit.users WHERE email=$1', [doctorEmail]);
+  if (doctorSpecialtyId) {
+    await pool.query('DELETE FROM medorbit.specialties WHERE id=$1', [doctorSpecialtyId]);
+  }
 }
 
 async function main() {
@@ -210,19 +214,31 @@ async function main() {
     check('only an admin-approved credential request changes the verified registration number',
       credentialRequest.status === 201 && credentialDecision.status === 200 && credentialState.rows.some((row) => row.registration_number === 'W3-REG-UPDATED' && row.notification_type === 'CLINIC_CREDENTIAL_CHANGE_APPROVED') && reviewerCredentialNotice.rows[0].count === 2);
 
+    doctorSpecialtyId = crypto.randomUUID();
+    await pool.query(
+      `INSERT INTO medorbit.specialties(id,name_ar,name_en,is_active)
+       VALUES($1,'القلب','Cardiology',true)`,
+      [doctorSpecialtyId],
+    );
     const doctorUser = (await pool.query(
       `INSERT INTO medorbit.users(email,password_hash,role,is_active,email_verified)
        VALUES($1,'test','doctor',true,true) RETURNING id,role,authorization_version`,
       [doctorEmail],
     )).rows[0];
     const doctor = (await pool.query(
-      `INSERT INTO medorbit.doctors(user_id,medical_license_number,approval_status,approved_at)
-       VALUES($1,$2,'approved',NOW()) RETURNING id`,
-      [doctorUser.id, `W4-${crypto.randomUUID()}`],
+      `INSERT INTO medorbit.doctors(user_id,medical_license_number,specialty_id,approval_status,approved_at)
+       VALUES($1,$2,$3,'approved',NOW()) RETURNING id`,
+      [doctorUser.id, `W4-${crypto.randomUUID()}`, doctorSpecialtyId],
     )).rows[0];
     const doctorSession = generateAccessToken({
       sub: doctorUser.id, role: doctorUser.role, authorizationVersion: doctorUser.authorization_version,
     });
+    await pool.query(`UPDATE medorbit.clinics SET services=ARRAY['dermatology'] WHERE id=$1`, [approvedClinic.id]);
+    const mismatchedSpecialty = await request('POST', '/clinics/me/doctor-invitations', {
+      doctor_id: doctor.id,
+    }, clinicSession);
+    await pool.query(`UPDATE medorbit.clinics SET services=ARRAY['cardiology'] WHERE id=$1`, [approvedClinic.id]);
+    const eligibleDoctors = await request('GET', '/clinics/eligible-doctors', null, clinicSession);
     let invitation = await request('POST', '/clinics/me/doctor-invitations', {
       doctor_id: doctor.id, message: 'Please join our verified clinic.',
     }, clinicSession);
@@ -259,15 +275,33 @@ async function main() {
        WHERE user_id=$1 AND reference_id=$2 AND notification_type='CLINIC_DOCTOR_INVITATION_ACCEPTED'`,
       [approvedAccount.id, invitation.body?.data?.id],
     );
-    check('clinic invitations can be cancelled while pending, require doctor acceptance, notify both parties, and expose the accepted workplace publicly',
-      invitation.status === 201 && duplicateInvitation.status === 409
+    const invitationLifecycleOk =
+      mismatchedSpecialty.status === 409 && mismatchedSpecialty.body?.error?.code === 'SPECIALTY_NOT_SERVED'
+        && eligibleDoctors.body?.data?.some((item) => item.id === doctor.id)
+        && invitation.status === 201 && duplicateInvitation.status === 409
         && cancelledInvitation.status === 200 && cancelledNotice.rows[0].count === 1
         && doctorInvitations.body?.data?.some((item) => item.id === invitation.body?.data?.id && item.status === 'pending')
         && preAcceptanceConversation.status === 201 && preAcceptanceMessage.status === 201
         && acceptedInvitation.status === 200
         && clinicDoctors.body?.data?.some((item) => item.id === doctor.id)
         && publicWorkplaces.body?.data?.some((item) => item.id === approvedClinic?.id)
-        && clinicResponseNotice.rows[0].count === 1);
+        && clinicResponseNotice.rows[0].count === 1;
+    check('clinic invitations can be cancelled while pending, require doctor acceptance, notify both parties, and expose the accepted workplace publicly', invitationLifecycleOk);
+    if (!invitationLifecycleOk) {
+      console.error({
+        mismatch: mismatchedSpecialty.status,
+        eligible: eligibleDoctors.body?.data?.map((item) => item.id),
+        invitation: invitation.status,
+        cancelled: cancelledInvitation.status,
+        doctorInvitation: doctorInvitations.body?.data?.map((item) => ({ id: item.id, status: item.status })),
+        conversation: preAcceptanceConversation.status,
+        message: preAcceptanceMessage.status,
+        accepted: acceptedInvitation.status,
+        clinicDoctors: clinicDoctors.body?.data?.map((item) => item.id),
+        workplaces: publicWorkplaces.body?.data?.map((item) => item.id),
+        clinicNotice: clinicResponseNotice.rows[0].count,
+      });
+    }
 
     const rejectedUser = (await pool.query(
       `INSERT INTO medorbit.users(email,password_hash,role,is_active,email_verified)

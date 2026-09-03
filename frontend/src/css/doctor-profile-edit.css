@@ -1,0 +1,64 @@
+/* Professional-profile editing needs predictable field alignment at every
+   browser width. These rules are scoped to this page so shared forms keep
+   their existing layouts. */
+.doctor-profile-edit-page .experience-grid {
+    align-items: start;
+}
+
+.doctor-profile-edit-page .experience-card,
+.doctor-profile-edit-page .form-grid,
+.doctor-profile-edit-page .form-field {
+    min-width: 0;
+}
+
+.doctor-profile-edit-page .form-grid {
+    align-items: start;
+}
+
+.doctor-profile-edit-page .form-field input,
+.doctor-profile-edit-page .form-field textarea,
+.doctor-profile-edit-page .form-field select,
+.doctor-profile-edit-page .tag-editor {
+    box-sizing: border-box;
+}
+
+.doctor-profile-edit-page .form-field input,
+.doctor-profile-edit-page .form-field select {
+    min-height: 46px;
+}
+
+.doctor-profile-edit-page .form-field textarea {
+    width: 100%;
+}
+
+.doctor-profile-edit-page .heading-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.doctor-profile-edit-page .profile-preview {
+    min-width: 0;
+}
+
+@media (max-width: 800px) {
+    .doctor-profile-edit-page .experience-heading {
+        align-items: stretch;
+    }
+
+    .doctor-profile-edit-page .heading-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 560px) {
+    .doctor-profile-edit-page .heading-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .doctor-profile-edit-page .heading-actions .btn {
+        width: 100%;
+    }
+}

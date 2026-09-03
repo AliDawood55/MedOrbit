@@ -168,8 +168,25 @@ router.get('/me/doctors', authenticate, authorize('clinic'), async (req, res, ne
   catch (err) { return next(err); }
 });
 
-router.get('/eligible-doctors', authenticate, authorize('clinic'), async (_req, res, next) => {
-  try { const result = await db.query(`SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,s.name_ar AS specialty_ar,s.name_en AS specialty_en FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id WHERE u.is_active=true AND d.approval_status='approved' ORDER BY p.first_name_en LIMIT 250`); return success(res,result.rows,'Eligible doctors retrieved'); }
+router.get('/eligible-doctors', authenticate, authorize('clinic'), async (req, res, next) => {
+  try {
+    const clinic = await ownedClinic(req.user.sub);
+    const result = await db.query(
+      `SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,
+              s.name_ar AS specialty_ar,s.name_en AS specialty_en
+         FROM medorbit.doctors d
+         JOIN medorbit.users u ON u.id=d.user_id
+         LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id
+         JOIN medorbit.specialties s ON s.id=d.specialty_id
+        WHERE u.is_active=true
+          AND d.approval_status='approved'
+          AND trim(both '_' from regexp_replace(lower(s.name_en), '[^a-z0-9]+', '_', 'g'))
+              = ANY(COALESCE($1::text[], ARRAY[]::text[]))
+        ORDER BY p.first_name_en LIMIT 250`,
+      [clinic.services || []],
+    );
+    return success(res, result.rows, 'Eligible doctors retrieved');
+  }
   catch (err) { return next(err); }
 });
 
@@ -189,8 +206,20 @@ router.post('/me/doctor-invitations', authenticate, authorize('clinic'), async (
     if (!doctorId) throw clinicError('Doctor id is required');
     await client.query('BEGIN');
     const clinic = await ownedClinic(req.user.sub, client, true);
-    const doctor = (await client.query(`SELECT d.id,d.user_id FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id WHERE d.id=$1 AND d.approval_status='approved' AND u.is_active=true`, [doctorId])).rows[0];
+    const doctor = (await client.query(
+      `SELECT d.id,d.user_id,s.name_en AS specialty_en
+         FROM medorbit.doctors d
+         JOIN medorbit.users u ON u.id=d.user_id
+         JOIN medorbit.specialties s ON s.id=d.specialty_id
+        WHERE d.id=$1 AND d.approval_status='approved' AND u.is_active=true`,
+      [doctorId],
+    )).rows[0];
     if (!doctor) throw clinicError('Approved doctor not found', 404, 'NOT_FOUND');
+    const specialtyService = String(doctor.specialty_en || '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    if (!specialtyService || !(clinic.services || []).includes(specialtyService)) {
+      throw clinicError('This doctor specialty is not served by your clinic', 409, 'SPECIALTY_NOT_SERVED');
+    }
     const active = await client.query('SELECT 1 FROM medorbit.doctor_clinic_assignments WHERE doctor_id=$1 AND clinic_id=$2 AND is_active=true', [doctor.id, clinic.id]);
     if (active.rows.length) throw clinicError('This doctor already works at your clinic', 409, 'ALREADY_ASSIGNED');
     const pending = await client.query("SELECT 1 FROM medorbit.clinic_doctor_invitations WHERE clinic_id=$1 AND doctor_id=$2 AND status='pending'", [clinic.id, doctor.id]);
