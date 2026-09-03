@@ -72,6 +72,15 @@ const NotificationsPage = (() => {
                 return 'clinic-workspace.html';
             }
         }
+        if (notification.reference_type === 'CLINIC_DOCTOR_INVITATION') {
+            if (notification.notification_type === 'CLINIC_DOCTOR_INVITATION' && role === 'doctor') {
+                return 'doctor-clinic-invitations.html';
+            }
+            if (['CLINIC_DOCTOR_INVITATION_ACCEPTED', 'CLINIC_DOCTOR_INVITATION_DECLINED'].includes(notification.notification_type)
+                && role === 'clinic') {
+                return 'clinic-workspace.html';
+            }
+        }
         if (notification.reference_type !== 'DOCTOR_APPLICATION') return null;
         if (notification.notification_type === 'DOCTOR_APPLICATION_SUBMITTED' && ['admin', 'super_admin'].includes(role)) {
             return 'admin-doctor-applications.html?status=pending&application=' + encodeURIComponent(notification.reference_id);

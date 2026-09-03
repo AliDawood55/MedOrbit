@@ -11,6 +11,7 @@ const email = `clinic-w1-${crypto.randomUUID()}@example.test`;
 const adminEmail = `clinic-w1-admin-${crypto.randomUUID()}@example.test`;
 const superAdminEmail = `clinic-w1-super-${crypto.randomUUID()}@example.test`;
 const rejectedEmail = `clinic-w1-rejected-${crypto.randomUUID()}@example.test`;
+const doctorEmail = `clinic-w4-doctor-${crypto.randomUUID()}@example.test`;
 let failures = 0;
 
 function check(label, condition) {
@@ -78,6 +79,10 @@ async function cleanup() {
   await pool.query('DELETE FROM medorbit.users WHERE email IN ($1,$2)', [adminEmail, superAdminEmail]);
   await pool.query('DELETE FROM medorbit.notifications WHERE user_id=(SELECT id FROM medorbit.users WHERE email=$1)', [rejectedEmail]);
   await pool.query('DELETE FROM medorbit.users WHERE email=$1', [rejectedEmail]);
+  await pool.query('DELETE FROM medorbit.audit_logs WHERE user_id=(SELECT id FROM medorbit.users WHERE email=$1)', [doctorEmail]);
+  await pool.query('DELETE FROM medorbit.notifications WHERE user_id=(SELECT id FROM medorbit.users WHERE email=$1)', [doctorEmail]);
+  await pool.query('DELETE FROM medorbit.doctors WHERE user_id=(SELECT id FROM medorbit.users WHERE email=$1)', [doctorEmail]);
+  await pool.query('DELETE FROM medorbit.users WHERE email=$1', [doctorEmail]);
 }
 
 async function main() {
@@ -152,6 +157,9 @@ async function main() {
     const approvedAccount = (await pool.query(
       'SELECT id,role,authorization_version FROM medorbit.users WHERE email=$1', [email],
     )).rows[0];
+    const approvedClinic = (await pool.query(
+      'SELECT id FROM medorbit.clinics WHERE owner_user_id=$1', [approvedAccount.id],
+    )).rows[0];
     const clinicSession = generateAccessToken({
       sub: approvedAccount.id, role: approvedAccount.role, authorizationVersion: approvedAccount.authorization_version,
     });
@@ -185,6 +193,44 @@ async function main() {
     );
     check('only an admin-approved credential request changes the verified registration number',
       credentialRequest.status === 201 && credentialDecision.status === 200 && credentialState.rows.some((row) => row.registration_number === 'W3-REG-UPDATED' && row.notification_type === 'CLINIC_CREDENTIAL_CHANGE_APPROVED') && reviewerCredentialNotice.rows[0].count === 2);
+
+    const doctorUser = (await pool.query(
+      `INSERT INTO medorbit.users(email,password_hash,role,is_active,email_verified)
+       VALUES($1,'test','doctor',true,true) RETURNING id,role,authorization_version`,
+      [doctorEmail],
+    )).rows[0];
+    const doctor = (await pool.query(
+      `INSERT INTO medorbit.doctors(user_id,medical_license_number,approval_status,approved_at)
+       VALUES($1,$2,'approved',NOW()) RETURNING id`,
+      [doctorUser.id, `W4-${crypto.randomUUID()}`],
+    )).rows[0];
+    const doctorSession = generateAccessToken({
+      sub: doctorUser.id, role: doctorUser.role, authorizationVersion: doctorUser.authorization_version,
+    });
+    const invitation = await request('POST', '/clinics/me/doctor-invitations', {
+      doctor_id: doctor.id, message: 'Please join our verified clinic.',
+    }, clinicSession);
+    const duplicateInvitation = await request('POST', '/clinics/me/doctor-invitations', {
+      doctor_id: doctor.id,
+    }, clinicSession);
+    const doctorInvitations = await request('GET', '/doctors/me/clinic-invitations', null, doctorSession);
+    const acceptedInvitation = await request(
+      'POST', `/doctors/me/clinic-invitations/${invitation.body?.data?.id}/respond`, { accepted: true }, doctorSession,
+    );
+    const clinicDoctors = await request('GET', '/clinics/me/doctors', null, clinicSession);
+    const publicWorkplaces = await request('GET', `/doctors/${doctor.id}/clinics`, null, clinicSession);
+    const clinicResponseNotice = await pool.query(
+      `SELECT count(*)::int AS count FROM medorbit.notifications
+       WHERE user_id=$1 AND reference_id=$2 AND notification_type='CLINIC_DOCTOR_INVITATION_ACCEPTED'`,
+      [approvedAccount.id, invitation.body?.data?.id],
+    );
+    check('clinic invitations require doctor acceptance, notify both parties, and expose the accepted workplace publicly',
+      invitation.status === 201 && duplicateInvitation.status === 409
+        && doctorInvitations.body?.data?.some((item) => item.id === invitation.body?.data?.id && item.status === 'pending')
+        && acceptedInvitation.status === 200
+        && clinicDoctors.body?.data?.some((item) => item.id === doctor.id)
+        && publicWorkplaces.body?.data?.some((item) => item.id === approvedClinic?.id)
+        && clinicResponseNotice.rows[0].count === 1);
 
     const rejectedUser = (await pool.query(
       `INSERT INTO medorbit.users(email,password_hash,role,is_active,email_verified)
