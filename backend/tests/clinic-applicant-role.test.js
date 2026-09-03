@@ -303,6 +303,29 @@ async function main() {
       });
     }
 
+    // A pharmacy is a directory facility, not a clinician employer. The
+    // backend must enforce that distinction even if its browser UI is bypassed.
+    await pool.query(
+      `UPDATE medorbit.clinics SET type='pharmacy' WHERE id=$1`,
+      [approvedClinic.id],
+    );
+    const pharmacyEligibleDoctors = await request(
+      'GET', '/clinics/eligible-doctors', null, clinicSession,
+    );
+    const pharmacyInvite = await request('POST', '/clinics/me/doctor-invitations', {
+      doctor_id: doctor.id,
+    }, clinicSession);
+    const pharmacyClinicDoctors = await request(
+      'GET', '/clinics/me/doctors', null, clinicSession,
+    );
+    check('pharmacies cannot invite or manage doctor relationships',
+      pharmacyEligibleDoctors.status === 403
+        && pharmacyEligibleDoctors.body?.error?.code === 'CLINIC_TYPE_RESTRICTED'
+        && pharmacyInvite.status === 403
+        && pharmacyInvite.body?.error?.code === 'CLINIC_TYPE_RESTRICTED'
+        && pharmacyClinicDoctors.status === 403
+        && pharmacyClinicDoctors.body?.error?.code === 'CLINIC_TYPE_RESTRICTED');
+
     const rejectedUser = (await pool.query(
       `INSERT INTO medorbit.users(email,password_hash,role,is_active,email_verified)
        VALUES($1,'test','clinic',true,true) RETURNING id`,

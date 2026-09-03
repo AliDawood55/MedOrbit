@@ -122,6 +122,19 @@ function clinicError(message, statusCode = 400, code = 'VALIDATION_ERROR') {
   const err = new Error(message); err.statusCode = statusCode; err.code = code; return err;
 }
 
+// Pharmacies are healthcare facilities, but they do not employ clinicians in
+// MedOrbit. Keeping this rule at the API boundary prevents a modified browser
+// request from bypassing the workspace UI.
+function assertDoctorManagementAllowed(clinic) {
+  if (String(clinic?.type || '').trim().toLowerCase() === 'pharmacy') {
+    throw clinicError(
+      'Pharmacies cannot invite or manage doctor relationships',
+      403,
+      'CLINIC_TYPE_RESTRICTED',
+    );
+  }
+}
+
 function normalizedEmail(value) {
   const email = String(value || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 255) {
@@ -164,13 +177,14 @@ router.put('/me', authenticate, authorize('clinic'), async (req, res, next) => {
 });
 
 router.get('/me/doctors', authenticate, authorize('clinic'), async (req, res, next) => {
-  try { const clinic = await ownedClinic(req.user.sub); const result = await db.query(`SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,s.name_ar AS specialty_ar,s.name_en AS specialty_en,dca.is_primary FROM medorbit.doctor_clinic_assignments dca JOIN medorbit.doctors d ON d.id=dca.doctor_id JOIN medorbit.users u ON u.id=d.user_id LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id WHERE dca.clinic_id=$1 AND dca.is_active=true AND u.is_active=true ORDER BY p.first_name_en`, [clinic.id]); return success(res,result.rows,'Clinic doctors retrieved'); }
+  try { const clinic = await ownedClinic(req.user.sub); assertDoctorManagementAllowed(clinic); const result = await db.query(`SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,s.name_ar AS specialty_ar,s.name_en AS specialty_en,dca.is_primary FROM medorbit.doctor_clinic_assignments dca JOIN medorbit.doctors d ON d.id=dca.doctor_id JOIN medorbit.users u ON u.id=d.user_id LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id WHERE dca.clinic_id=$1 AND dca.is_active=true AND u.is_active=true ORDER BY p.first_name_en`, [clinic.id]); return success(res,result.rows,'Clinic doctors retrieved'); }
   catch (err) { return next(err); }
 });
 
 router.get('/eligible-doctors', authenticate, authorize('clinic'), async (req, res, next) => {
   try {
     const clinic = await ownedClinic(req.user.sub);
+    assertDoctorManagementAllowed(clinic);
     const result = await db.query(
       `SELECT d.id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,
               s.name_ar AS specialty_ar,s.name_en AS specialty_en
@@ -193,6 +207,7 @@ router.get('/eligible-doctors', authenticate, authorize('clinic'), async (req, r
 router.get('/me/doctor-invitations', authenticate, authorize('clinic'), async (req, res, next) => {
   try {
     const clinic = await ownedClinic(req.user.sub);
+    assertDoctorManagementAllowed(clinic);
     const result = await db.query(`SELECT i.id,i.status,i.message,i.created_at,i.responded_at,d.id AS doctor_id,p.first_name_ar,p.last_name_ar,p.first_name_en,p.last_name_en,s.name_ar AS specialty_ar,s.name_en AS specialty_en FROM medorbit.clinic_doctor_invitations i JOIN medorbit.doctors d ON d.id=i.doctor_id JOIN medorbit.users u ON u.id=d.user_id LEFT JOIN medorbit.user_profiles p ON p.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id WHERE i.clinic_id=$1 ORDER BY i.created_at DESC`, [clinic.id]);
     return success(res, result.rows, 'Clinic doctor invitations retrieved');
   } catch (err) { return next(err); }
@@ -206,6 +221,7 @@ router.post('/me/doctor-invitations', authenticate, authorize('clinic'), async (
     if (!doctorId) throw clinicError('Doctor id is required');
     await client.query('BEGIN');
     const clinic = await ownedClinic(req.user.sub, client, true);
+    assertDoctorManagementAllowed(clinic);
     const doctor = (await client.query(
       `SELECT d.id,d.user_id,s.name_en AS specialty_en
          FROM medorbit.doctors d
@@ -238,6 +254,7 @@ router.post('/me/doctor-invitations/:id/cancel', authenticate, authorize('clinic
   try {
     await client.query('BEGIN');
     const clinic = await ownedClinic(req.user.sub, client, true);
+    assertDoctorManagementAllowed(clinic);
     const cancelled = await client.query(
       `UPDATE medorbit.clinic_doctor_invitations
           SET status='cancelled', responded_at=NOW(), updated_at=NOW()
@@ -284,13 +301,16 @@ router.post('/me/doctor-invitations/:id/cancel', authenticate, authorize('clinic
 
 // Legacy endpoint kept only to give older clients a clear upgrade message.
 // A clinic never creates an employment relationship unilaterally.
-router.post('/me/doctors', authenticate, authorize('clinic'), (_req, res) =>
-  error(res, 'Doctors must accept a clinic invitation before they are linked', 409, 'INVITATION_REQUIRED')
-);
+router.post('/me/doctors', authenticate, authorize('clinic'), async (req, res, next) => {
+  try {
+    assertDoctorManagementAllowed(await ownedClinic(req.user.sub));
+    return error(res, 'Doctors must accept a clinic invitation before they are linked', 409, 'INVITATION_REQUIRED');
+  } catch (err) { return next(err); }
+});
 
 router.delete('/me/doctors/:doctorId', authenticate, authorize('clinic'), async (req,res,next) => {
   const client=await db.getClient();
-  try { await client.query('BEGIN');const clinic=await ownedClinic(req.user.sub,client,true);const result=await client.query('UPDATE medorbit.doctor_clinic_assignments SET is_active=false,ended_at=NOW() WHERE clinic_id=$1 AND doctor_id=$2 AND is_active=true RETURNING *',[clinic.id,req.params.doctorId]);if(!result.rows.length){const err=new Error('Doctor link not found');err.statusCode=404;err.code='NOT_FOUND';throw err;}await createAudit({user_id:req.user.sub,user_role:req.user.role,action:'CLINIC_OWNER_REMOVED_DOCTOR',entity_type:'CLINIC_DOCTOR_ASSIGNMENT',old_values:result.rows[0]},client);await client.query('COMMIT');return success(res,result.rows[0],'Doctor removed from clinic'); }
+  try { await client.query('BEGIN');const clinic=await ownedClinic(req.user.sub,client,true);assertDoctorManagementAllowed(clinic);const result=await client.query('UPDATE medorbit.doctor_clinic_assignments SET is_active=false,ended_at=NOW() WHERE clinic_id=$1 AND doctor_id=$2 AND is_active=true RETURNING *',[clinic.id,req.params.doctorId]);if(!result.rows.length){const err=new Error('Doctor link not found');err.statusCode=404;err.code='NOT_FOUND';throw err;}await createAudit({user_id:req.user.sub,user_role:req.user.role,action:'CLINIC_OWNER_REMOVED_DOCTOR',entity_type:'CLINIC_DOCTOR_ASSIGNMENT',old_values:result.rows[0]},client);await client.query('COMMIT');return success(res,result.rows[0],'Doctor removed from clinic'); }
   catch(err){await client.query('ROLLBACK').catch(()=>{});return next(err);} finally {client.release();}
 });
 
