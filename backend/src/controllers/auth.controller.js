@@ -54,10 +54,10 @@ async function register(req, res, next) {
 
         }
 
-        if (role != null && role !== "patient") {
+        if (role != null && !["patient", "clinic"].includes(role)) {
             return error(
                 res,
-                "Public registration only supports patient accounts",
+                "Public registration only supports patient or clinic accounts",
                 400,
                 "INVALID_ROLE"
             );
@@ -79,6 +79,7 @@ async function register(req, res, next) {
 
                 email,
                 password,
+                role,
                 firstNameAr,
                 lastNameAr,
 

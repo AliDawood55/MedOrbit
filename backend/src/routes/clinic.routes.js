@@ -23,7 +23,7 @@ router.get('/', authenticate, async (req, res, next) => {
         c.website, c.operating_hours, c.services, c.insurance_accepted,
         c.type, c.logo_url, c.is_active, c.verification_status
       FROM medorbit.clinics c
-      WHERE c.is_active = true
+      WHERE c.is_active = true AND c.approval_status = 'approved'
     `;
 
     const params = [];
@@ -101,7 +101,7 @@ router.get('/directory-filters', authenticate, async (_req, res, next) => {
              ARRAY_REMOVE(ARRAY_AGG(DISTINCT service ORDER BY service), NULL) AS services
       FROM medorbit.clinics c
       LEFT JOIN LATERAL UNNEST(c.services) AS service ON true
-      WHERE c.is_active=true
+      WHERE c.is_active=true AND c.approval_status='approved'
     `);
     return success(res, result.rows[0] || { cities: [], services: [] }, 'Clinic directory filters retrieved');
   } catch (err) { return next(err); }
@@ -109,10 +109,10 @@ router.get('/directory-filters', authenticate, async (_req, res, next) => {
 
 async function ownedClinic(userId, queryable = db, lock = false) {
   const result = await queryable.query(
-    `SELECT * FROM medorbit.clinics WHERE owner_user_id=$1 AND is_active=true${lock ? ' FOR UPDATE' : ''}`,
+    `SELECT * FROM medorbit.clinics WHERE owner_user_id=$1 AND is_active=true AND approval_status='approved'${lock ? ' FOR UPDATE' : ''}`,
     [userId]
   );
-  if (!result.rows.length) { const err = new Error('Approved clinic workspace not found'); err.statusCode = 404; err.code = 'NOT_FOUND'; throw err; }
+  if (!result.rows.length) { const err = new Error('Clinic approval is required before using the workspace'); err.statusCode = 403; err.code = 'CLINIC_APPROVAL_REQUIRED'; throw err; }
   return result.rows[0];
 }
 
@@ -186,7 +186,7 @@ router.get('/nearby', authenticate, async (req, res, next) => {
           )::numeric, 2
         ) as distance_km
       FROM medorbit.clinics c
-      WHERE c.is_active = true
+      WHERE c.is_active = true AND c.approval_status = 'approved'
     `;
 
     const params = [lat, lng];
@@ -226,7 +226,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
     const { id } = req.params;
 
     const clinicResult = await db.query(
-      `SELECT c.*, to_jsonb(u)->'preferences'->'social_links' AS social_links FROM medorbit.clinics c LEFT JOIN medorbit.users u ON u.id=c.owner_user_id WHERE c.id = $1 AND c.is_active = true`,
+      `SELECT c.*, to_jsonb(u)->'preferences'->'social_links' AS social_links FROM medorbit.clinics c LEFT JOIN medorbit.users u ON u.id=c.owner_user_id WHERE c.id = $1 AND c.is_active = true AND c.approval_status = 'approved'`,
       [id]
     );
 

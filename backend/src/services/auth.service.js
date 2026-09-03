@@ -16,6 +16,33 @@ const OTP_EXPIRY_MINUTES = 10;
 
 const googleClient = new OAuth2Client(env.google.clientId);
 
+/**
+ * A clinic role alone never proves that the organisation is approved. The
+ * application is the pending/review record; an active approved clinic row is
+ * the only state that unlocks the clinic workspace and public directory.
+ */
+async function clinicAccountStatus(queryable, userId, role) {
+    if (role !== 'clinic') return null;
+    const result = await queryable.query(
+        `SELECT CASE
+            WHEN EXISTS (
+                SELECT 1 FROM medorbit.clinics
+                WHERE owner_user_id=$1
+                  AND is_active=true
+                  AND approval_status='approved'
+            ) THEN 'approved'
+            ELSE COALESCE((
+                SELECT status FROM medorbit.clinic_applications
+                WHERE user_id=$1
+                ORDER BY submitted_at DESC
+                LIMIT 1
+            ), 'needs_application')
+         END AS status`,
+        [userId]
+    );
+    return result.rows[0]?.status || 'needs_application';
+}
+
 async function issueSession(queryable, user, req = {}) {
     const authorizationVersion = user.authorization_version;
     const accessToken = generateAccessToken({
@@ -114,6 +141,14 @@ async function register(userData) {
         for (const [key, value] of Object.entries(socialLinks)) {
             const link = String(value || '').trim();
             if (!link || !allowedSocialLinkKeys.has(key)) continue;
+            if (key === 'whatsapp') {
+                const number = link.replace(/[^\d]/g, '').replace(/^00/, '');
+                if (number.length < 8 || number.length > 15) {
+                    throw authError('WhatsApp must be a valid international phone number', 400, 'VALIDATION_ERROR');
+                }
+                safeSocialLinks[key] = number;
+                continue;
+            }
             if (link.length > 500 || !/^https:\/\//i.test(link)) {
                 throw authError('Social links must use HTTPS URLs', 400, 'VALIDATION_ERROR');
             }
@@ -121,8 +156,9 @@ async function register(userData) {
         }
     }
 
-    if (role != null && role !== "patient") {
-        throw authError("Public registration only supports patient accounts", 400, "INVALID_ROLE");
+    const accountRole = role || 'patient';
+    if (!['patient', 'clinic'].includes(accountRole)) {
+        throw authError("Public registration only supports patient or clinic accounts", 400, "INVALID_ROLE");
     }
 
     // Validate password strength
@@ -152,9 +188,9 @@ async function register(userData) {
 
         const userResult = await client.query(
             `INSERT INTO medorbit.users (email, password_hash, role, email_verified, preferred_language)
-             VALUES ($1,$2,'patient',false,'ar')
+             VALUES ($1,$2,$3,false,'ar')
              RETURNING id,email,role`,
-            [normalizedEmail, passwordHash]
+            [normalizedEmail, passwordHash, accountRole]
         );
 
         const user = userResult.rows[0];
@@ -165,7 +201,9 @@ async function register(userData) {
             [user.id, sanitize(firstNameAr), sanitize(lastNameAr), sanitize(firstNameEn), sanitize(lastNameEn), phone || null, gender || null]
         );
 
-        await client.query(`INSERT INTO medorbit.patients (user_id) VALUES($1)`, [user.id]);
+        if (accountRole === 'patient') {
+            await client.query(`INSERT INTO medorbit.patients (user_id) VALUES($1)`, [user.id]);
+        }
 
         // `preferences` exists in current installations. The catalog check keeps
         // public registration compatible with an older restored database until
@@ -279,7 +317,8 @@ async function login(email, password, req) {
             id: user.id,
             email: user.email,
             role: user.role,
-            name: user.first_name_ar || user.last_name_en
+            name: user.first_name_ar || user.last_name_en,
+            clinic_account_status: await clinicAccountStatus(db, user.id, user.role)
         },
         accessToken,
         refreshToken
@@ -431,7 +470,8 @@ async function googleLogin(idToken, req) {
             id: user.id,
             email: user.email,
             role: user.role,
-            name: payload.name || payload.given_name || user.email
+            name: payload.name || payload.given_name || user.email,
+            clinic_account_status: await clinicAccountStatus(db, user.id, user.role)
         },
         accessToken,
         refreshToken
@@ -778,5 +818,6 @@ async function resendVerification(email) {
 
 module.exports = {
     register, login, googleLogin, refresh, logout, changePassword,
-    forgotPassword, resetPassword, verifyEmail, resendVerification
+    forgotPassword, resetPassword, verifyEmail, resendVerification,
+    clinicAccountStatus
 };

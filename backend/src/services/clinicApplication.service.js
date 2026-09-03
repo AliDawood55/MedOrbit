@@ -75,8 +75,8 @@ async function submit(user, body) {
     const account = (await client.query(
       'SELECT role,is_active,email_verified,deleted_at FROM medorbit.users WHERE id=$1 FOR UPDATE', [user.sub]
     )).rows[0];
-    if (!account || !account.is_active || !account.email_verified || account.deleted_at || account.role !== 'patient') {
-      fail('Only verified patient accounts may apply to operate a clinic', 403, 'FORBIDDEN');
+    if (!account || !account.is_active || !account.email_verified || account.deleted_at || account.role !== 'clinic') {
+      fail('Only verified clinic accounts may submit a clinic application', 403, 'FORBIDDEN');
     }
     const columns = Object.keys(data); const values = columns.map((key) => key === 'social_links' ? JSON.stringify(data[key]) : data[key]);
     const row = (await client.query(
@@ -105,7 +105,10 @@ async function decide(id, reviewer, approve, reason) {
       await client.query('COMMIT'); return dto(row);
     }
     const user = (await client.query('SELECT * FROM medorbit.users WHERE id=$1 FOR UPDATE', [application.user_id])).rows[0];
-    if (!user || !user.is_active || !user.email_verified || user.deleted_at || user.role !== 'patient') fail('Applicant is no longer eligible', 409, 'INVALID_TARGET');
+    // New applicants already have the clinic role. The patient alternative is
+    // retained only so a pending application created before this migration can
+    // still be reviewed rather than becoming permanently stuck.
+    if (!user || !user.is_active || !user.email_verified || user.deleted_at || !['clinic', 'patient'].includes(user.role)) fail('Applicant is no longer eligible', 409, 'INVALID_TARGET');
     const clinic = (await client.query(
       `INSERT INTO medorbit.clinics(name_ar,name_en,address_ar,address_en,city,region,phone,email,website,type,services,owner_user_id,approval_status,verification_status,approved_at,approved_by_user_id)
        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'approved','verified',NOW(),$13) RETURNING id`,

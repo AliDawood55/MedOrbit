@@ -215,7 +215,7 @@ function isDoctorApplicationIntent() {
 if (user?.role === 'patient' && isDoctorApplicationIntent()) {
             return 'doctor-application.html';
         }
-        if (user?.role === 'patient' && isClinicApplicationIntent()) {
+        if (user?.role === 'clinic' && user?.clinic_account_status !== 'approved') {
             return 'clinic-application.html';
         }
         switch (user?.role) {
@@ -446,6 +446,12 @@ if (window.__medorbitNavigatingAway) return;
         const state = await withTimeout(verifySession(), VERIFY_TIMEOUT_MS);
 
         if (state === 'valid') {
+            if (thisPage === 'clinic-workspace.html' &&
+                verifiedUser?.role === 'clinic' &&
+                verifiedUser?.clinic_account_status !== 'approved') {
+                window.location.replace('clinic-application.html');
+                return;
+            }
             if (redirectPlatformOperatorFromPersonalCare()) return;
             lowerShield();
             clearIntendedDestination();

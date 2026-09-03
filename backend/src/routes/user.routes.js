@@ -41,6 +41,21 @@ router.get(
             u.id,
             u.email,
             u.role,
+            CASE WHEN u.role = 'clinic' THEN
+              CASE WHEN EXISTS (
+                SELECT 1 FROM medorbit.clinics c
+                WHERE c.owner_user_id=u.id
+                  AND c.is_active=true
+                  AND c.approval_status='approved'
+              ) THEN 'approved'
+              ELSE COALESCE((
+                SELECT a.status FROM medorbit.clinic_applications a
+                WHERE a.user_id=u.id
+                ORDER BY a.submitted_at DESC
+                LIMIT 1
+              ), 'needs_application')
+              END
+            ELSE NULL END AS clinic_account_status,
             u.preferred_language,
             to_jsonb(u)->'preferences'->'social_links' AS social_links,
             u.created_at,

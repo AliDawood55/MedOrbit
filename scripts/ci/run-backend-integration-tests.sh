@@ -13,10 +13,15 @@ run_suite() {
   echo "===== Backend integration suite: ${label} ====="
   docker compose --profile test rm -sf backend-test ai-service-test >/dev/null 2>&1 || true
   docker compose --profile test up -d --no-build --wait backend-test ai-service-test
+  # The test database is a schema-only clone of local development data. Its
+  # migration ledger can legitimately lag behind new version-controlled
+  # migrations, so bring it to the image's schema before every suite.
+  docker compose --profile test exec -T backend-test node scripts/migrate.js up
   docker compose --profile test exec -T backend-test "$@"
 }
 
 run_suite "auth baseline" npm run test:auth:baseline
+run_suite "clinic applicant role boundary" node tests/clinic-applicant-role.test.js
 run_suite "S1A auth hardening" npm run test:s1a
 run_suite "S1B clinical authorization" npm run test:s1b
 run_suite "S1C admin foundation" npm run test:s1c

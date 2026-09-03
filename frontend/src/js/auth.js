@@ -44,6 +44,10 @@
         const clinicIntent = isClinicSignupIntent();
         document.querySelectorAll('#signupSocialLinks .social-link-non-patient').forEach((element) => element.classList.toggle('hidden', !clinicIntent));
         if (!clinicIntent) return;
+        // Clinic onboarding collects legal organisation details and completes
+        // through email verification. Do not silently create a patient account
+        // through the generic Google flow while this intent is active.
+        document.querySelector('.oauth-block')?.classList.add('hidden');
         document.getElementById('personalNameArRow')?.classList.add('hidden');
         document.getElementById('personalNameEnRow')?.classList.add('hidden');
         document.getElementById('clinicSignupFields')?.classList.remove('hidden');
@@ -242,7 +246,7 @@
             await API.post('/auth/register', {
                 email,
                 password,
-                role: 'patient',
+                role: clinicIntent ? 'clinic' : 'patient',
                 firstNameAr,
                 lastNameAr,
                 firstNameEn,
