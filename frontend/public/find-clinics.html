@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="../src/css/layout.css">
     <link rel="stylesheet" href="../src/css/listing.css">
     <link rel="stylesheet" href="../src/css/map.css">
+    <link rel="stylesheet" href="../src/css/find-clinics.css">
 
 <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
     <script src="../src/js/auth-bootstrap.js"></script>
@@ -86,6 +87,18 @@
                 <i class="fas fa-hospital-user"></i>
                 <span data-i18n="filter.hospital">المستشفيات</span>
             </button>
+            <button class="filter-chip" data-type="laboratory" aria-pressed="false">
+                <i class="fas fa-flask"></i>
+                <span id="laboratoryTypeLabel">المختبرات</span>
+            </button>
+            <button class="filter-chip" data-type="radiology" aria-pressed="false">
+                <i class="fas fa-x-ray"></i>
+                <span id="radiologyTypeLabel">مراكز الأشعة</span>
+            </button>
+            <button class="filter-chip directory-open-now" id="openNowBtn" aria-pressed="false">
+                <i class="fas fa-clock"></i>
+                <span id="openNowLabel">مفتوح الآن</span>
+            </button>
             <div class="filter-spacer"></div>
             <button class="btn btn-primary btn-sm" id="nearMeBtn">
                 <i class="fas fa-location-crosshairs"></i>
@@ -96,14 +109,13 @@
         <main id="main-content" class="app-main">
             <h1 class="sr-only" data-i18n="clinics.title">العيادات والمراكز الطبية</h1>
             <section class="list-panel chat-panel">
-                <div class="list-panel-header">
+                <div class="list-panel-header clinic-directory-toolbar">
                     <div class="search-field">
                         <i class="fas fa-search"></i>
                         <input type="text" id="searchInput" data-i18n-placeholder="clinics.searchPlaceholder" data-i18n-aria="clinics.searchPlaceholder" placeholder="ابحث بالاسم...">
                     </div>
-                    <select id="cityFilter" aria-label="City"><option value="">الكل المدن / All cities</option></select>
-                    <select id="serviceFilter" aria-label="Medical service"><option value="">كل الخدمات / All services</option></select>
-                    <a class="btn btn-ghost btn-sm" href="register.html?intent=clinic"><i class="fas fa-hospital"></i> تسجيل منشأة / Register a clinic</a>
+                    <select class="clinic-directory-select" id="cityFilter" aria-label="City"><option value="">كل المدن</option></select>
+                    <select class="clinic-directory-select" id="serviceFilter" aria-label="Medical service"><option value="">كل الخدمات</option></select>
                 </div>
                 <div class="list-panel-content" id="clinicsListContent">
 

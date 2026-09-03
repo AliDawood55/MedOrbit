@@ -1,0 +1,15 @@
+/* Facility directory: uses the MedOrbit blue/teal palette and remains usable
+   beside the map on desktop and as a normal stacked directory on mobile. */
+.clinic-directory-toolbar { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(130px, .55fr) minmax(150px, .6fr); gap: 10px; background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 5%, var(--bg-elevated)), color-mix(in srgb, var(--secondary) 5%, var(--bg-elevated))); }
+.clinic-directory-toolbar .search-field { min-width: 0; }
+.clinic-directory-select { width: 100%; min-height: 42px; padding: 0 34px 0 12px; border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border)); border-radius: var(--r-md); background: var(--bg-card); color: var(--text); font: inherit; cursor: pointer; transition: border-color var(--t-fast), box-shadow var(--t-fast); }
+[dir="rtl"] .clinic-directory-select { padding: 0 12px 0 34px; }
+.clinic-directory-select:hover, .clinic-directory-select:focus-visible { border-color: var(--primary); outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 13%, transparent); }
+.directory-open-now { border: 1px solid color-mix(in srgb, var(--secondary) 35%, var(--border)); }
+.directory-open-now.active { background: var(--secondary); box-shadow: 0 3px 10px color-mix(in srgb, var(--secondary) 30%, transparent); }
+.clinic-directory-status { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 12px; font-weight: 700; color: var(--text-mute); }
+.clinic-directory-status.is-open { color: var(--secondary); }.clinic-directory-status.is-closed { color: var(--danger, #DC2626); }
+.clinic-directory-card-actions { display: flex; gap: 8px; }.clinic-directory-card-actions .btn { flex: 1; }
+.clinic-directory-card-actions .btn-secondary { border-color: color-mix(in srgb, var(--secondary) 38%, var(--border)); color: var(--secondary); }
+@media (max-width: 980px) { .clinic-directory-toolbar { grid-template-columns: 1fr 1fr; }.clinic-directory-toolbar .search-field { grid-column: 1 / -1; } }
+@media (max-width: 600px) { .clinic-directory-toolbar { grid-template-columns: 1fr; padding: 12px; }.clinic-directory-toolbar .search-field { grid-column: auto; }.clinic-directory-select { min-height: 44px; }.clinic-directory-card-actions { flex-direction: column; }.clinic-directory-card-actions .btn { width: 100%; } }

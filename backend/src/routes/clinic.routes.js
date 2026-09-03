@@ -475,7 +475,7 @@ router.get('/nearby', authenticate, async (req, res, next) => {
       SELECT
         c.id, c.name_ar, c.name_en, c.address_ar, c.address_en,
         c.city, c.region, c.latitude, c.longitude, c.phone,
-        c.type, c.services, c.logo_url,
+        c.type, c.services, c.operating_hours, c.logo_url,
         ROUND(
           6371 * acos(
             cos(radians($1)) * cos(radians(c.latitude)) *
