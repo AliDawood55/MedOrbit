@@ -396,6 +396,7 @@ const clinics = {
          eligibleDoctors: (options) => get('/clinics/eligible-doctors', null, options),
          doctorInvitations: (options) => get('/clinics/me/doctor-invitations', null, options),
          inviteDoctor: (payload, options) => post('/clinics/me/doctor-invitations', payload, options),
+         cancelDoctorInvitation: (id, options) => post(`/clinics/me/doctor-invitations/${encodeURIComponent(id)}/cancel`, {}, options),
          addMineDoctor: (payload, options) => post('/clinics/me/doctors', payload, options),
         removeMineDoctor: (id, options) => del(`/clinics/me/doctors/${encodeURIComponent(id)}`, null, options)
     };

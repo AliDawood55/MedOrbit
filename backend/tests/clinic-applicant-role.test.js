@@ -50,6 +50,22 @@ function access(user) {
 }
 
 async function cleanup() {
+  // The invitation test also creates a direct clinic-doctor conversation.
+  // Remove it before deleting its members, because the conversation keeps a
+  // foreign-key reference to the initiating account.
+  await pool.query(
+    `DELETE FROM medorbit.direct_conversations
+      WHERE initiated_by_user_id IN (
+        SELECT id FROM medorbit.users WHERE email IN ($1, $2)
+      )
+         OR id IN (
+           SELECT cm.conversation_id
+             FROM medorbit.conversation_members cm
+             JOIN medorbit.users u ON u.id = cm.user_id
+            WHERE u.email IN ($1, $2)
+         )`,
+    [email, doctorEmail],
+  );
   await pool.query(
     `DELETE FROM medorbit.audit_logs WHERE user_id IN (
       SELECT id FROM medorbit.users WHERE email IN ($1,$2,$3,$4)
@@ -207,13 +223,32 @@ async function main() {
     const doctorSession = generateAccessToken({
       sub: doctorUser.id, role: doctorUser.role, authorizationVersion: doctorUser.authorization_version,
     });
-    const invitation = await request('POST', '/clinics/me/doctor-invitations', {
+    let invitation = await request('POST', '/clinics/me/doctor-invitations', {
       doctor_id: doctor.id, message: 'Please join our verified clinic.',
     }, clinicSession);
     const duplicateInvitation = await request('POST', '/clinics/me/doctor-invitations', {
       doctor_id: doctor.id,
     }, clinicSession);
+    const cancelledInvitation = await request(
+      'POST', `/clinics/me/doctor-invitations/${invitation.body?.data?.id}/cancel`, {}, clinicSession,
+    );
+    const cancelledNotice = await pool.query(
+      `SELECT count(*)::int AS count FROM medorbit.notifications
+       WHERE user_id=$1 AND reference_id=$2 AND notification_type='CLINIC_DOCTOR_INVITATION_CANCELLED'`,
+      [doctorUser.id, invitation.body?.data?.id],
+    );
+    invitation = await request('POST', '/clinics/me/doctor-invitations', {
+      doctor_id: doctor.id, message: 'Please join our verified clinic.',
+    }, clinicSession);
     const doctorInvitations = await request('GET', '/doctors/me/clinic-invitations', null, doctorSession);
+    const preAcceptanceConversation = await request('POST', '/messages/conversations', {
+      counterpartId: approvedClinic.id,
+    }, doctorSession);
+    const preAcceptanceMessage = await request(
+      'POST', `/messages/conversations/${preAcceptanceConversation.body?.data?.id}/messages`, {
+        body: 'Thank you. I would like to ask about the invitation.', client_message_id: crypto.randomUUID(),
+      }, doctorSession,
+    );
     const acceptedInvitation = await request(
       'POST', `/doctors/me/clinic-invitations/${invitation.body?.data?.id}/respond`, { accepted: true }, doctorSession,
     );
@@ -224,9 +259,11 @@ async function main() {
        WHERE user_id=$1 AND reference_id=$2 AND notification_type='CLINIC_DOCTOR_INVITATION_ACCEPTED'`,
       [approvedAccount.id, invitation.body?.data?.id],
     );
-    check('clinic invitations require doctor acceptance, notify both parties, and expose the accepted workplace publicly',
+    check('clinic invitations can be cancelled while pending, require doctor acceptance, notify both parties, and expose the accepted workplace publicly',
       invitation.status === 201 && duplicateInvitation.status === 409
+        && cancelledInvitation.status === 200 && cancelledNotice.rows[0].count === 1
         && doctorInvitations.body?.data?.some((item) => item.id === invitation.body?.data?.id && item.status === 'pending')
+        && preAcceptanceConversation.status === 201 && preAcceptanceMessage.status === 201
         && acceptedInvitation.status === 200
         && clinicDoctors.body?.data?.some((item) => item.id === doctor.id)
         && publicWorkplaces.body?.data?.some((item) => item.id === approvedClinic?.id)

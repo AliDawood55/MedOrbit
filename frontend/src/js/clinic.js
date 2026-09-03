@@ -152,6 +152,9 @@ const ClinicProfile = (() => {
         const directionsUrl = hasCoords
             ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(clinic.latitude) + ',' + encodeURIComponent(clinic.longitude)
             : null;
+        const viewerRole = API?.getUser?.()?.role;
+        const canMessageClinic = ['patient', 'doctor', 'clinic'].includes(viewerRole)
+            && viewerRole !== 'clinic';
 
         return (
             '<div class="profile-header">' +
@@ -175,6 +178,7 @@ const ClinicProfile = (() => {
                 '<div class="profile-actions">' +
                     (directionsUrl ? '<a class="btn btn-primary btn-sm" href="' + directionsUrl + '" target="_blank" rel="noopener"><i class="fas fa-route"></i> ' + escapeHtml(t('clinic.getDirections')) + '</a>' : '') +
                     (phone ? '<a class="btn btn-secondary btn-sm" href="tel:' + phone + '"><i class="fas fa-phone"></i> ' + (ar ? 'اتصال' : 'Call') + '</a>' : '') +
+                    (canMessageClinic ? '<a class="btn btn-secondary btn-sm" href="direct-messages.html?counterpart=' + encodeURIComponent(clinic.id) + '"><i class="fas fa-message"></i> ' + (ar ? 'مراسلة المنشأة' : 'Message clinic') + '</a>' : '') +
                 '</div>' +
             '</div>' +
 

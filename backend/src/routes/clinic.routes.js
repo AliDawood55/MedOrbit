@@ -202,6 +202,57 @@ router.post('/me/doctor-invitations', authenticate, authorize('clinic'), async (
   } catch (err) { await client.query('ROLLBACK').catch(() => {}); return next(err); } finally { client.release(); }
 });
 
+// A clinic may withdraw an unanswered invitation. It must never be able to
+// alter a doctor relationship after the doctor has accepted it.
+router.post('/me/doctor-invitations/:id/cancel', authenticate, authorize('clinic'), async (req, res, next) => {
+  const client = await db.getClient();
+  try {
+    await client.query('BEGIN');
+    const clinic = await ownedClinic(req.user.sub, client, true);
+    const cancelled = await client.query(
+      `UPDATE medorbit.clinic_doctor_invitations
+          SET status='cancelled', responded_at=NOW(), updated_at=NOW()
+        WHERE id=$1 AND clinic_id=$2 AND status='pending'
+        RETURNING *`,
+      [req.params.id, clinic.id],
+    );
+    if (!cancelled.rows.length) {
+      throw clinicError('Pending doctor invitation not found', 404, 'NOT_FOUND');
+    }
+    const doctor = await client.query(
+      'SELECT user_id FROM medorbit.doctors WHERE id=$1',
+      [cancelled.rows[0].doctor_id],
+    );
+    if (doctor.rows[0]) {
+      await client.query(
+        `INSERT INTO medorbit.notifications
+          (user_id,notification_type,title_en,title_ar,message_en,message_ar,reference_id,reference_type,channel)
+         VALUES($1,'CLINIC_DOCTOR_INVITATION_CANCELLED','Clinic invitation withdrawn','تم سحب دعوة المنشأة',$2,$3,$4,'CLINIC_DOCTOR_INVITATION','in_app')`,
+        [
+          doctor.rows[0].user_id,
+          `${clinic.name_en} withdrew its invitation.`,
+          `سحبت ${clinic.name_ar} دعوتها.`,
+          cancelled.rows[0].id,
+        ],
+      );
+    }
+    await createAudit({
+      user_id: req.user.sub,
+      user_role: req.user.role,
+      action: 'CLINIC_DOCTOR_INVITATION_CANCELLED',
+      entity_type: 'CLINIC_DOCTOR_INVITATION',
+      entity_id: cancelled.rows[0].id,
+      old_values: { status: 'pending' },
+      new_values: cancelled.rows[0],
+    }, client);
+    await client.query('COMMIT');
+    return success(res, cancelled.rows[0], 'Doctor invitation cancelled');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    return next(err);
+  } finally { client.release(); }
+});
+
 // Legacy endpoint kept only to give older clients a clear upgrade message.
 // A clinic never creates an employment relationship unilaterally.
 router.post('/me/doctors', authenticate, authorize('clinic'), (_req, res) =>

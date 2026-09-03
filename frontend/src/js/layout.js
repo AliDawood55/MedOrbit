@@ -684,25 +684,67 @@ const ClinicInvitationWorkspace = (() => {
     const name = (d) => (ar() ? [d.first_name_ar,d.last_name_ar] : [d.first_name_en,d.last_name_en]).filter(Boolean).join(' ') || [d.first_name_en,d.last_name_en].filter(Boolean).join(' ');
     function alert(error) { const host = $('workspaceAlert'); host.className = 'alert error'; host.textContent = error?.message || t('تعذر إرسال الدعوة', 'Could not send invitation'); }
     async function refresh() {
+        localizeSection();
         const response = await API.clinics.doctorInvitations();
-        $('clinicInvitations').innerHTML = (response.data || []).length ? response.data.map((item) => `<div class="control-list-item"><div><strong>${esc(name(item))}</strong><small>${esc(item.message || t('دعوة للانضمام إلى المنشأة', 'Invitation to join the clinic'))}</small></div><span class="contact-status ${item.status === 'accepted' ? 'verified' : 'pending'}">${esc(item.status)}</span></div>`).join('') : `<p class="text-muted">${t('لا توجد دعوات مرسلة.', 'No invitations sent yet.')}</p>`;
+        const label = (status) => ({
+            pending: t('قيد الانتظار', 'Pending'),
+            accepted: t('مقبولة', 'Accepted'),
+            declined: t('مرفوضة', 'Declined'),
+            cancelled: t('ملغاة', 'Cancelled'),
+        }[status] || status);
+        $('clinicInvitations').innerHTML = (response.data || []).length
+            ? response.data.map((item) => `<div class="control-list-item"><div><strong>${esc(name(item))}</strong><small>${esc(item.message || t('دعوة للانضمام إلى المنشأة', 'Invitation to join the clinic'))}</small></div><div class="clinic-invitation-status"><span class="contact-status ${item.status === 'accepted' ? 'verified' : 'pending'}">${esc(label(item.status))}</span>${item.status === 'pending' ? `<button type="button" class="btn btn-ghost btn-sm" data-cancel-invitation="${esc(item.id)}">${t('إلغاء الدعوة', 'Cancel invitation')}</button>` : ''}</div></div>`).join('')
+            : `<p class="text-muted">${t('لا توجد دعوات مرسلة.', 'No invitations sent yet.')}</p>`;
+        $('clinicInvitations').querySelectorAll('[data-cancel-invitation]').forEach((button) => {
+            button.onclick = async () => {
+                if (!window.confirm(t('هل تريد إلغاء هذه الدعوة؟', 'Cancel this invitation?'))) return;
+                try {
+                    await API.clinics.cancelDoctorInvitation(button.dataset.cancelInvitation);
+                    Toast.success(t('تم إلغاء الدعوة', 'Invitation cancelled'));
+                    await refresh();
+                } catch (error) { alert(error); }
+            };
+        });
+    }
+    function localizeSection() {
+        const section = $('clinicInvitations')?.closest('section');
+        const title = section?.querySelector('.care-section-title');
+        const description = section?.querySelector('.text-muted');
+        if (title) title.innerHTML = `<i class="fas fa-paper-plane"></i> ${t('دعوات الأطباء', 'Doctor invitations')}`;
+        if (description) description.textContent = t('يرسل النظام دعوة للطبيب، ولا يظهر في المنشأة إلا بعد القبول.', 'Doctors appear in your clinic only after accepting an invitation.');
     }
     function addSection() {
-        const doctors = $('clinicDoctors')?.closest('section'); if (!doctors || $('clinicInvitations')) return;
+        const doctors = $('clinicDoctors')?.closest('section'); if (!doctors) return;
+        if ($('clinicInvitations')) { localizeSection(); return; }
         const section = document.createElement('section'); section.className = 'care-section clinic-control-section';
         section.innerHTML = `<h2 class="care-section-title"><i class="fas fa-paper-plane"></i> ${t('دعوات الأطباء', 'Doctor invitations')}</h2><p class="text-muted">${t('يرسل النظام دعوة للطبيب، ولا يظهر في المنشأة إلا بعد القبول.', 'Doctors appear in your clinic only after accepting an invitation.')}</p><div id="clinicInvitations" class="control-list"></div>`;
         doctors.parentNode.insertBefore(section, doctors);
     }
     function replaceDirectLinkAction() {
         const button = $('addDoctor'); if (!button) return;
+        const originalSlot = button.closest('.form-group');
+        const originalRow = originalSlot?.closest('.form-row');
+        if (!$('clinicInvitationMessage') && originalRow) {
+            const messageGroup = document.createElement('div');
+            messageGroup.className = 'form-group clinic-invitation-message';
+            messageGroup.innerHTML = `<label for="clinicInvitationMessage">${t('رسالة للطبيب (اختيارية)', 'Message to the doctor (optional)')}</label><textarea id="clinicInvitationMessage" maxlength="1000" rows="3" placeholder="${t('اكتب رسالة مرافقة للدعوة...', 'Write a message to accompany the invitation...')}"></textarea>`;
+            originalRow.insertAdjacentElement('afterend', messageGroup);
+        }
+        if (originalSlot) {
+            const actions = document.createElement('div');
+            actions.className = 'care-form-actions clinic-invitation-actions';
+            const messageGroup = $('clinicInvitationMessage')?.closest('.form-group');
+            (messageGroup || originalRow)?.insertAdjacentElement('afterend', actions);
+            actions.appendChild(button);
+            originalSlot.remove();
+        }
         const label = button.closest('.form-row')?.querySelector('label[for="eligibleDoctor"]');
         if (label) label.textContent = t('إرسال دعوة لطبيب معتمد', 'Invite an approved doctor');
         button.textContent = t('إرسال دعوة', 'Send invitation');
         button.onclick = async () => {
             const select = $('eligibleDoctor'); if (!select.value) return;
-            const message = prompt(t('رسالة اختيارية للطبيب:', 'Optional message to the doctor:'));
-            if (message === null) return;
-            try { await API.clinics.inviteDoctor({ doctor_id: select.value, message }); await refresh(); Toast.success(t('تم إرسال الدعوة', 'Invitation sent')); }
+            const message = $('clinicInvitationMessage')?.value.trim() || null;
+            try { await API.clinics.inviteDoctor({ doctor_id: select.value, message }); if ($('clinicInvitationMessage')) $('clinicInvitationMessage').value = ''; await refresh(); Toast.success(t('تم إرسال الدعوة', 'Invitation sent')); }
             catch (error) { alert(error); }
         };
     }
@@ -754,6 +796,8 @@ const ClinicWorkspaceLocale = (() => {
         label('addressAr', 'العنوان بالعربية', 'Address (Arabic)'); label('addressEn', 'العنوان بالإنجليزية', 'Address (English)');
         label('services', 'الخدمات الطبية (افصل بفاصلة)', 'Medical services (separate with commas)');
         label('eligibleDoctor', 'إرسال دعوة لطبيب معتمد', 'Invite an approved doctor');
+        label('clinicInvitationMessage', 'رسالة للطبيب (اختيارية)', 'Message to the doctor (optional)');
+        $('clinicInvitationMessage')?.setAttribute('placeholder', text('اكتب رسالة مرافقة للدعوة...', 'Write a message to accompany the invitation...'));
         const save = $('clinicWorkspaceForm')?.querySelector('button[type="submit"]');
         if (save) save.textContent = text('حفظ التغييرات', 'Save changes');
         const contacts = sections.find(s => s.querySelector('#contactEmailForm'));
@@ -768,7 +812,72 @@ const ClinicWorkspaceLocale = (() => {
         const requestButton = $('credentialChangeForm')?.querySelector('button');
         if (requestButton) requestButton.textContent = text('طلب مراجعة', 'Request review');
     }
-    document.addEventListener('DOMContentLoaded', () => setTimeout(localize, 0));
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(localize, 0); setTimeout(localize, 100); });
     window.addEventListener('languageChanged', () => setTimeout(localize, 0));
     return { localize };
+})();
+
+// The legacy workspace loader renders doctor names only once. Refresh that
+// small, role-scoped data area after a language switch so names, the select
+// prompt, and the empty state always match the current locale.
+window.addEventListener('languageChanged', async () => {
+    const select = document.getElementById('eligibleDoctor');
+    const doctorsHost = document.getElementById('clinicDoctors');
+    if (!select || !doctorsHost || API?.getUser?.()?.role !== 'clinic') return;
+    const arabic = I18n?.getLang?.() === 'ar';
+    const t = (a, e) => arabic ? a : e;
+    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    const name = (doctor) => [arabic ? doctor.first_name_ar : doctor.first_name_en, arabic ? doctor.last_name_ar : doctor.last_name_en].filter(Boolean).join(' ') || [doctor.first_name_en, doctor.last_name_en].filter(Boolean).join(' ');
+    try {
+        const [eligible, linked] = await Promise.all([API.clinics.eligibleDoctors(), API.clinics.mineDoctors()]);
+        const chosen = select.value;
+        select.innerHTML = `<option value="">${t('اختر طبيباً', 'Select a doctor')}</option>` + (eligible.data || []).map((doctor) => `<option value="${esc(doctor.id)}">${esc(name(doctor))}</option>`).join('');
+        if ([...select.options].some((option) => option.value === chosen)) select.value = chosen;
+        doctorsHost.innerHTML = (linked.data || []).length
+            ? (linked.data || []).map((doctor) => `<div class="note-card"><div class="note-card-header"><strong>${esc(name(doctor))}</strong><button class="btn btn-ghost btn-sm" data-id="${esc(doctor.id)}">${t('إزالة', 'Remove')}</button></div><div class="note-card-body">${esc(arabic ? doctor.specialty_ar : doctor.specialty_en || '')}</div></div>`).join('')
+            : `<p class="text-muted">${t('لا يوجد أطباء مرتبطون بعد.', 'No clinic doctors yet.')}</p>`;
+        doctorsHost.querySelectorAll('[data-id]').forEach((button) => {
+            button.onclick = async () => { await API.clinics.removeMineDoctor(button.dataset.id); window.location.reload(); };
+        });
+    } catch (_) { /* The existing workspace loader retains its last safe data. */ }
+});
+
+// A clinic's approved service catalogue is structured data, not an arbitrary
+// comma-separated sentence. Keep the existing hidden field as the API payload
+// bridge while presenting clear, localised checkboxes to the owner.
+const ClinicWorkspaceServices = (() => {
+    const services = {
+        cardiology: ['القلب', 'Cardiology'], orthopedics: ['العظام', 'Orthopedics'], dentistry: ['الأسنان', 'Dentistry'],
+        dermatology: ['الجلدية', 'Dermatology'], pediatrics: ['الأطفال', 'Pediatrics'], gynecology: ['النسائية', 'Gynecology'],
+        general_medicine: ['الطب العام', 'General medicine'], laboratory: ['المختبر', 'Laboratory'], radiology: ['الأشعة', 'Radiology'], emergency: ['الطوارئ', 'Emergency'],
+    };
+    const $ = (id) => document.getElementById(id);
+    const arabic = () => I18n?.getLang?.() === 'ar';
+    function render(values = null) {
+        const input = $('services');
+        if (!input) return;
+        const selected = new Set(values ?? String(input.value || '').split(',').map((value) => value.trim()).filter(Boolean));
+        input.type = 'hidden';
+        let choices = $('clinicWorkspaceServices');
+        if (!choices) {
+            choices = document.createElement('div');
+            choices.id = 'clinicWorkspaceServices';
+            choices.className = 'clinic-service-grid';
+            input.insertAdjacentElement('afterend', choices);
+        }
+        choices.innerHTML = Object.entries(services).map(([key, label]) => `<label class="clinic-service-choice"><input type="checkbox" value="${key}" ${selected.has(key) ? 'checked' : ''}><span>${arabic() ? label[0] : label[1]}</span></label>`).join('');
+        choices.querySelectorAll('input').forEach((checkbox) => checkbox.addEventListener('change', () => {
+            input.value = [...choices.querySelectorAll('input:checked')].map((item) => item.value).join(',');
+        }));
+    }
+    async function init() {
+        if (!$('services') || API?.getUser?.()?.role !== 'clinic') return;
+        try {
+            const response = await API.clinics.mine();
+            render(response.data?.services || []);
+        } catch (_) { render(); }
+        window.addEventListener('languageChanged', () => render());
+    }
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(init, 0); });
+    return { render };
 })();
