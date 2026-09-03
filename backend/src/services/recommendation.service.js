@@ -60,8 +60,8 @@ function diversifyPosts(sorted, maxConsecutive = FEED_POLICY.maxConsecutiveDocto
     const remaining = [...sorted], output = [];
     while (remaining.length) {
         let index = 0;
-        if (output.length >= maxConsecutive && output.slice(-maxConsecutive).every((item) => item.doctor_id === output.at(-1).doctor_id)) {
-            const alternative = remaining.findIndex((item) => item.doctor_id !== output.at(-1).doctor_id);
+        if (output.length >= maxConsecutive && output.slice(-maxConsecutive).every((item) => item.author_user_id === output.at(-1).author_user_id)) {
+            const alternative = remaining.findIndex((item) => item.author_user_id !== output.at(-1).author_user_id);
             if (alternative >= 0) index = alternative;
         }
         output.push(remaining.splice(index,1)[0]);
@@ -108,20 +108,30 @@ async function getRankedFeed({ userId = null, limit = 10, cursor = null, queryab
     const asOf = decoded?.asOf || new Date(now).toISOString(), offset = decoded?.offset || 0;
     const profiles = await loadProfiles(userId,queryable);
     const rows = (await queryable.query(
-        `SELECT p.id,p.doctor_id,p.title_ar,p.title_en,p.body,p.category,p.published_at,p.created_at,p.updated_at,
+        `SELECT p.id,p.doctor_id,COALESCE(p.author_user_id,d.user_id) author_user_id,u.role author_role,
+                p.title_ar,p.title_en,p.body,p.category,p.published_at,p.created_at,p.updated_at,
                 d.id doctor_public_id,d.specialty_id,pr.first_name_ar,pr.last_name_ar,pr.first_name_en,pr.last_name_en,
+                c.name_ar clinic_name_ar,c.name_en clinic_name_en,
                 pr.profile_image_url,s.name_ar specialty_ar,s.name_en specialty_en,
                 (SELECT count(*)::int FROM medorbit.post_likes l WHERE l.post_id=p.id) like_count,
                 (SELECT count(*)::int FROM medorbit.post_comments c WHERE c.post_id=p.id AND c.deleted_at IS NULL AND c.moderation_status='approved') comment_count,
                 CASE WHEN $1::uuid IS NULL THEN false ELSE EXISTS(SELECT 1 FROM medorbit.post_likes l WHERE l.post_id=p.id AND l.user_id=$1) END liked_by_me,
-                CASE WHEN $1::uuid IS NULL THEN false WHEN d.user_id=$1 THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_follows f WHERE f.doctor_id=d.id AND f.user_id=$1) END following_doctor,
+                CASE WHEN $1::uuid IS NULL OR p.doctor_id IS NULL THEN false WHEN d.user_id=$1 THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_follows f WHERE f.doctor_id=d.id AND f.user_id=$1) END following_doctor,
                 CASE WHEN $1::uuid IS NULL THEN false ELSE EXISTS(SELECT 1 FROM medorbit.user_events e WHERE e.user_id=$1 AND e.entity_id=p.id AND e.event_type='post_view') END viewed_by_me,
-                CASE WHEN $1::uuid IS NULL THEN false ELSE d.user_id=$1 END is_own_doctor
+                CASE WHEN $1::uuid IS NULL THEN false ELSE COALESCE(p.author_user_id,d.user_id)=$1 END is_own_doctor
          FROM medorbit.doctor_posts p
-         JOIN medorbit.doctors d ON d.id=p.doctor_id JOIN medorbit.users u ON u.id=d.user_id
-         LEFT JOIN medorbit.user_profiles pr ON pr.user_id=u.id LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id
+         LEFT JOIN medorbit.doctors d ON d.id=p.doctor_id
+         JOIN medorbit.users u ON u.id=COALESCE(p.author_user_id,d.user_id)
+         LEFT JOIN medorbit.user_profiles pr ON pr.user_id=u.id
+         LEFT JOIN medorbit.specialties s ON s.id=d.specialty_id
+         LEFT JOIN medorbit.clinics c ON c.owner_user_id=u.id
          WHERE p.status='published' AND p.moderation_status='approved' AND p.deleted_at IS NULL AND p.published_at<=$2
-           AND d.approval_status='approved' AND u.role='doctor' AND u.is_active=true AND u.deleted_at IS NULL`,
+           AND u.is_active=true AND u.deleted_at IS NULL
+           AND (
+             (p.doctor_id IS NOT NULL AND d.approval_status='approved' AND u.role='doctor')
+             OR (p.doctor_id IS NULL AND u.role='patient')
+             OR (p.doctor_id IS NULL AND u.role='clinic' AND c.is_active=true AND c.approval_status='approved')
+           )`,
         [userId,asOf]
     )).rows;
     const ranked = diversifyPosts(rows.map((row) => ({...row,_rank:scorePost(row,profiles,asOf)})).sort(deterministicSort));
@@ -131,8 +141,11 @@ async function getRankedFeed({ userId = null, limit = 10, cursor = null, queryab
             id:row.id,title:row.title_ar||row.title_en||null,title_ar:row.title_ar,title_en:row.title_en,body:row.body,category:row.category,
             published_at:row.published_at,created_at:row.created_at,updated_at:row.updated_at,
             like_count:row.like_count,comment_count:row.comment_count,reason_code:row._rank.reasonCode,
+            author_role:row.author_role,
+            author_name_ar:row.author_role==='clinic' ? row.clinic_name_ar : null,
+            author_name_en:row.author_role==='clinic' ? row.clinic_name_en : null,
             ...(userId ? {liked_by_me:row.liked_by_me,following_doctor:row.following_doctor,is_own_doctor:row.is_own_doctor} : {}),
-            doctor:{id:row.doctor_public_id,first_name_ar:row.first_name_ar,last_name_ar:row.last_name_ar,
+            doctor:{id:row.doctor_id ? row.doctor_public_id : null,first_name_ar:row.first_name_ar,last_name_ar:row.last_name_ar,
                 first_name_en:row.first_name_en,last_name_en:row.last_name_en,profile_image_url:row.profile_image_url,
                 specialty_ar:row.specialty_ar,specialty_en:row.specialty_en},
         })),

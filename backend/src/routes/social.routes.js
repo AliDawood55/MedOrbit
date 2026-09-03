@@ -15,6 +15,31 @@ const adminSocialRoutes = express.Router();
 const mutationLimiter = rateLimit({ windowMs: 60_000, max: 30, standardHeaders: true, legacyHeaders: false });
 const commentLimiter = rateLimit({ windowMs: 60_000, max: 10, standardHeaders: true, legacyHeaders: false });
 
+function assertSocialParticipant(user) {
+    if (!['patient', 'doctor', 'clinic'].includes(user?.role)) {
+        const err = new Error('Administrator accounts can moderate content but cannot participate in the health feed');
+        err.statusCode = 403;
+        err.code = 'SOCIAL_PARTICIPATION_FORBIDDEN';
+        throw err;
+    }
+}
+
+async function assertApprovedCommunityAuthor(user, queryable = db) {
+    assertSocialParticipant(user);
+    if (user.role !== 'clinic') return;
+    const clinic = await queryable.query(
+        `SELECT id FROM medorbit.clinics
+         WHERE owner_user_id=$1 AND is_active=true AND approval_status='approved'`,
+        [user.sub],
+    );
+    if (!clinic.rows[0]) {
+        const err = new Error('Clinic approval is required before publishing to the health feed');
+        err.statusCode = 403;
+        err.code = 'CLINIC_APPROVAL_REQUIRED';
+        throw err;
+    }
+}
+
 feedRoutes.get('/posts', authenticate, async (req,res,next) => {
     try {
         const limit = Math.min(Math.max(Number.parseInt(req.query.limit,10) || 10,1),30);
@@ -39,9 +64,35 @@ feedRoutes.get('/posts/:id/comments', authenticate, async (req,res,next) => {
     } catch (err) { return next(err); }
 });
 
+// Patient and approved-clinic posts share the established doctor_posts,
+// moderation, likes, and comments model. Doctor professional posts continue
+// to use /doctors/me/posts so they retain their clinical profile linkage.
+feedRoutes.post('/posts', mutationLimiter, authenticate, async (req,res,next) => {
+    try {
+        await assertApprovedCommunityAuthor(req.user);
+        if (!['patient', 'clinic'].includes(req.user.role)) {
+            return error(res, 'Doctors publish professional posts from their workspace', 409, 'DOCTOR_WORKSPACE_POST_REQUIRED');
+        }
+        const body = String(req.body?.body || '').trim();
+        const category = String(req.body?.category || 'health_tip');
+        if (!body || body.length > 10000) return error(res, 'Post body must be between 1 and 10000 characters', 400, 'VALIDATION_ERROR');
+        if (!['health_tip','announcement','clinic_news','article'].includes(category)) return error(res, 'Invalid category', 400, 'VALIDATION_ERROR');
+        const title = String(req.body?.title || body.slice(0, 140)).trim().slice(0, 150) || body.slice(0, 140);
+        const created = await db.query(
+            `INSERT INTO medorbit.doctor_posts
+                (author_user_id,title_ar,title_en,category,body,is_published,status,moderation_status,published_at)
+             VALUES($1,$2,$2,$3,$4,true,'published','approved',NOW())
+             RETURNING id,title_ar,title_en,category,body,status,moderation_status,published_at,created_at,updated_at`,
+            [req.user.sub, title, category, body],
+        );
+        return success(res, created.rows[0], 'Community post published', 201);
+    } catch (err) { return next(err); }
+});
+
 feedRoutes.post('/posts/:id/like', mutationLimiter, authenticate, async (req,res,next) => {
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         if (!await findEligiblePost(req.params.id,client)) { await client.query('ROLLBACK'); return error(res,'Post not found',404,'NOT_FOUND'); }
         const inserted=await client.query(`INSERT INTO medorbit.post_likes(post_id,user_id) VALUES($1,$2) ON CONFLICT(post_id,user_id) DO NOTHING RETURNING id`,[req.params.id,req.user.sub]);
@@ -55,6 +106,7 @@ feedRoutes.post('/posts/:id/like', mutationLimiter, authenticate, async (req,res
 feedRoutes.delete('/posts/:id/like', mutationLimiter, authenticate, async (req,res,next) => {
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         const removed=await client.query('DELETE FROM medorbit.post_likes WHERE post_id=$1 AND user_id=$2 RETURNING id',[req.params.id,req.user.sub]);
         if (removed.rows[0]) await recordUserEvent({userId:req.user.sub,eventType:'post_unlike',entityType:'doctor_post',entityId:req.params.id},client);
@@ -69,6 +121,7 @@ feedRoutes.post('/posts/:id/comments', commentLimiter, authenticate, async (req,
     if (!body || body.length>1000) return error(res,'Comment must be between 1 and 1000 characters',400,'VALIDATION_ERROR');
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         if (!await findEligiblePost(req.params.id,client)) { await client.query('ROLLBACK'); return error(res,'Post not found',404,'NOT_FOUND'); }
         const created=await client.query(`INSERT INTO medorbit.post_comments(post_id,user_id,body) VALUES($1,$2,$3) RETURNING id,body,created_at,updated_at`,[req.params.id,req.user.sub,body]);
@@ -80,6 +133,7 @@ feedRoutes.post('/posts/:id/comments', commentLimiter, authenticate, async (req,
 
 feedRoutes.delete('/comments/:id', mutationLimiter, authenticate, async (req,res,next) => {
     try {
+        assertSocialParticipant(req.user);
         const result=await db.query(`UPDATE medorbit.post_comments SET deleted_at=NOW(),updated_at=NOW() WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL RETURNING id`,[req.params.id,req.user.sub]);
         if(!result.rows[0]) return error(res,'Comment not found',404,'NOT_FOUND');
         return success(res,{id:result.rows[0].id},'Comment deleted');
@@ -89,6 +143,7 @@ feedRoutes.delete('/comments/:id', mutationLimiter, authenticate, async (req,res
 feedRoutes.post('/posts/:id/view', mutationLimiter, authenticate, async (req,res,next) => {
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         if (!await findEligiblePost(req.params.id,client)) { await client.query('ROLLBACK'); return error(res,'Post not found',404,'NOT_FOUND'); }
         const day=new Date().toISOString().slice(0,10);
@@ -101,6 +156,7 @@ feedRoutes.post('/posts/:id/view', mutationLimiter, authenticate, async (req,res
 socialDoctorRoutes.post('/:id/follow', mutationLimiter, authenticate, async (req,res,next) => {
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         const followable=await findFollowableDoctor(req.params.id,client);
         if(!followable){ await client.query('ROLLBACK'); return error(res,'Doctor not found',404,'NOT_FOUND'); }
@@ -116,6 +172,7 @@ socialDoctorRoutes.post('/:id/follow', mutationLimiter, authenticate, async (req
 socialDoctorRoutes.delete('/:id/follow', mutationLimiter, authenticate, async (req,res,next) => {
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         const removed=await client.query('DELETE FROM medorbit.user_follows WHERE user_id=$1 AND doctor_id=$2 RETURNING id',[req.user.sub,req.params.id]);
         if(removed.rows[0]) await recordUserEvent({userId:req.user.sub,eventType:'doctor_unfollow',entityType:'doctor',entityId:req.params.id},client);
@@ -128,6 +185,7 @@ socialDoctorRoutes.delete('/:id/follow', mutationLimiter, authenticate, async (r
 socialDoctorRoutes.post('/:id/view', mutationLimiter, authenticate, async (req,res,next) => {
     const client=await db.getClient();
     try {
+        assertSocialParticipant(req.user);
         await client.query('BEGIN');
         if(!await findFollowableDoctor(req.params.id,client)){ await client.query('ROLLBACK'); return error(res,'Doctor not found',404,'NOT_FOUND'); }
         const day=new Date().toISOString().slice(0,10);
@@ -142,8 +200,8 @@ adminSocialRoutes.get('/posts',authenticate,authorizeAdmin,async(req,res,next)=>
     try{
         const moderation=req.query.moderation_status || null;
         const result=await db.query(`SELECT p.id,p.title_ar,p.title_en,p.body,p.category,p.status,p.moderation_status,p.published_at,p.created_at,
-          d.id doctor_id,pr.first_name_ar,pr.last_name_ar,pr.first_name_en,pr.last_name_en
-          FROM medorbit.doctor_posts p JOIN medorbit.doctors d ON d.id=p.doctor_id JOIN medorbit.users u ON u.id=d.user_id
+          d.id doctor_id,u.role author_role,pr.first_name_ar,pr.last_name_ar,pr.first_name_en,pr.last_name_en
+          FROM medorbit.doctor_posts p LEFT JOIN medorbit.doctors d ON d.id=p.doctor_id JOIN medorbit.users u ON u.id=COALESCE(p.author_user_id,d.user_id)
           LEFT JOIN medorbit.user_profiles pr ON pr.user_id=u.id WHERE p.deleted_at IS NULL AND ($1::varchar IS NULL OR p.moderation_status=$1)
           ORDER BY p.created_at DESC LIMIT 100`,[moderation]);
         return success(res,result.rows.map((post)=>({
@@ -155,7 +213,7 @@ adminSocialRoutes.get('/posts',authenticate,authorizeAdmin,async(req,res,next)=>
 
 adminSocialRoutes.post('/posts/:id/moderate',authenticate,authorizeAdmin,async(req,res,next)=>{
     const action=String(req.body.action || '');
-    if(!['approve','reject','hide'].includes(action)) return error(res,'Invalid moderation action',400,'VALIDATION_ERROR');
+    if(!['reject','hide'].includes(action)) return error(res,'Invalid moderation action',400,'VALIDATION_ERROR');
     const client=await db.getClient();
     try{
         await client.query('BEGIN');
@@ -183,7 +241,7 @@ adminSocialRoutes.get('/comments',authenticate,authorizeAdmin,async(req,res,next
 
 adminSocialRoutes.post('/comments/:id/moderate',authenticate,authorizeAdmin,async(req,res,next)=>{
     const action=String(req.body.action || '');
-    if(!['approve','reject','hide'].includes(action)) return error(res,'Invalid moderation action',400,'VALIDATION_ERROR');
+    if(!['reject','hide'].includes(action)) return error(res,'Invalid moderation action',400,'VALIDATION_ERROR');
     try{
         const status=action==='approve'?'approved':action==='reject'?'rejected':'hidden';
         const result=await db.query(`UPDATE medorbit.post_comments SET moderation_status=$2,updated_at=NOW() WHERE id=$1 AND deleted_at IS NULL RETURNING id,moderation_status`,[req.params.id,status]);

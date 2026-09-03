@@ -82,16 +82,24 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<'
         return { signal: controller.signal, clear: () => clearTimeout(timer) };
     }
 
-function avatarInitial(d) {
-        return esc((doctorName(d) || 'D').trim().charAt(0).toUpperCase() || 'D');
+    function authorName(post) {
+        if (post.author_role === 'clinic') {
+            return (isAr() ? post.author_name_ar || post.author_name_en : post.author_name_en || post.author_name_ar) || '';
+        }
+        return doctorName(post.doctor || {});
     }
 
-    function avatarMarkup(d) {
-        if (d.profile_image_url) {
+    function avatarInitial(post) {
+        return esc((authorName(post) || 'M').trim().charAt(0).toUpperCase() || 'M');
+    }
 
-return `<img src="${esc(API.assetUrl(d.profile_image_url))}" alt="" data-avatar-fallback="${avatarInitial(d)}">`;
+    function avatarMarkup(post) {
+        const author = post.doctor || {};
+        if (author.profile_image_url) {
+
+return `<img src="${esc(API.assetUrl(author.profile_image_url))}" alt="" data-avatar-fallback="${avatarInitial(post)}">`;
         }
-        return avatarInitial(d);
+        return avatarInitial(post);
     }
 
     function attachAvatarFallbacks(container) {
@@ -116,17 +124,17 @@ return `<img src="${esc(API.assetUrl(d.profile_image_url))}" alt="" data-avatar-
         const following = !!p.following_doctor;
         const ownDoctor = !!p.is_own_doctor;
         const title = isAr() ? (p.title_ar || p.title_en) : (p.title_en || p.title_ar);
-        const specialty = doctorSpecialty(p.doctor);
+        const specialty = p.author_role === 'doctor' ? doctorSpecialty(p.doctor) : '';
 
         return (
             `<article class="card feed-card" data-post="${esc(p.id)}">` +
                 `<div class="feed-card-header">` +
-                    `<span class="feed-avatar">${avatarMarkup(p.doctor)}</span>` +
+                    `<span class="feed-avatar">${avatarMarkup(p)}</span>` +
                     `<div class="feed-card-header-main">` +
-                        `<div class="feed-doctor-name">${esc(doctorName(p.doctor))}</div>` +
+                        `<div class="feed-doctor-name">${esc(authorName(p))}</div>` +
                         `<div class="feed-meta">${specialty ? esc(specialty) + ' · ' : ''}${esc(formatDate(p.published_at))}</div>` +
                     `</div>` +
-                    (ownDoctor ? '' :
+                    (ownDoctor || p.author_role !== 'doctor' ? '' :
                         `<button type="button" class="btn btn-secondary btn-sm feed-follow-btn${following ? ' following' : ''}" data-follow="${esc(p.doctor.id)}" aria-pressed="${following}">` +
                             followButtonInner(following) +
                         `</button>`) +
@@ -443,13 +451,16 @@ function composerDisplayName(profile) {
         submitBtn.disabled = true;
 
         try {
-            await API.care.createPost({
+            const payload = {
                 category: categorySelect.value,
                 body: bodyValue,
-
-title: bodyValue.slice(0, 140),
-                isPublished: true
-            });
+                title: bodyValue.slice(0, 140),
+            };
+            if (composerProfile?.role === 'doctor') {
+                await API.care.createPost({ ...payload, isPublished: true });
+            } else {
+                await API.social.createPost(payload);
+            }
 
             bodyInput.value = '';
             categorySelect.selectedIndex = 0;
@@ -472,13 +483,13 @@ title: bodyValue.slice(0, 140),
         if (!API.isAuthenticated()) return;
 
 const cachedUser = API.getUser();
-        if (cachedUser && cachedUser.role !== 'doctor') return;
+        if (cachedUser && !['patient', 'doctor', 'clinic'].includes(cachedUser.role)) return;
 
         const state = await AuthGate.verifySession();
         if (state !== 'valid') return;
 
         const profile = AuthGate.getVerifiedUser();
-        if (!profile || profile.role !== 'doctor') return;
+        if (!profile || !['patient', 'doctor', 'clinic'].includes(profile.role)) return;
 
         composerProfile = profile;
         renderComposerIdentity();

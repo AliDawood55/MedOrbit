@@ -25,11 +25,16 @@ async function findManageablePost(postId, userId, queryable = db) {
 async function findEligiblePost(postId, queryable = db) {
     const result = await queryable.query(
         `SELECT p.* FROM medorbit.doctor_posts p
-         JOIN medorbit.doctors d ON d.id=p.doctor_id
-         JOIN medorbit.users u ON u.id=d.user_id
+         LEFT JOIN medorbit.doctors d ON d.id=p.doctor_id
+         JOIN medorbit.users u ON u.id=COALESCE(p.author_user_id,d.user_id)
+         LEFT JOIN medorbit.clinics c ON c.owner_user_id=u.id
          WHERE p.id=$1 AND p.status='published' AND p.moderation_status='approved'
-           AND p.deleted_at IS NULL AND d.approval_status='approved'
-           AND u.role='doctor' AND u.is_active=true AND u.deleted_at IS NULL`,
+           AND p.deleted_at IS NULL AND u.is_active=true AND u.deleted_at IS NULL
+           AND (
+             (p.doctor_id IS NOT NULL AND d.approval_status='approved' AND u.role='doctor')
+             OR (p.doctor_id IS NULL AND u.role='patient')
+             OR (p.doctor_id IS NULL AND u.role='clinic' AND c.is_active=true AND c.approval_status='approved')
+           )`,
         [postId]
     );
     return result.rows[0] || null;

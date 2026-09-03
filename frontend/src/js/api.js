@@ -496,6 +496,7 @@ const recommendations = {
 
     const social = {
         feed: (query, options) => get('/feed/posts', query, options),
+        createPost: (body, options) => post('/feed/posts', body, options),
         comments: (postId, options) => get(`/feed/posts/${postId}/comments`, null, options),
         addComment: (postId, body, options) => post(`/feed/posts/${postId}/comments`, body, options),
         like: (postId, options) => post(`/feed/posts/${postId}/like`, {}, options),

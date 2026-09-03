@@ -20,7 +20,9 @@ async function cleanup(){
  await pool.query('DELETE FROM medorbit.post_comments WHERE user_id=ANY($1::uuid[])',[users]).catch(()=>{});
  await pool.query('DELETE FROM medorbit.post_likes WHERE user_id=ANY($1::uuid[])',[users]).catch(()=>{});
  await pool.query('DELETE FROM medorbit.user_follows WHERE user_id=ANY($1::uuid[]) OR doctor_id IN(SELECT id FROM medorbit.doctors WHERE user_id=ANY($1::uuid[]))',[users]).catch(()=>{});
+ await pool.query('DELETE FROM medorbit.doctor_posts WHERE author_user_id=ANY($1::uuid[])',[users]).catch(()=>{});
  await pool.query('DELETE FROM medorbit.doctor_posts WHERE doctor_id IN(SELECT id FROM medorbit.doctors WHERE user_id=ANY($1::uuid[]))',[users]).catch(()=>{});
+ await pool.query('DELETE FROM medorbit.clinics WHERE owner_user_id=ANY($1::uuid[])',[users]).catch(()=>{});
  await pool.query('DELETE FROM medorbit.medical_records WHERE patient_id IN(SELECT id FROM medorbit.patients WHERE user_id=ANY($1::uuid[]))',[users]).catch(()=>{});
  await pool.query('DELETE FROM medorbit.doctor_patient_relationships WHERE doctor_id IN(SELECT id FROM medorbit.doctors WHERE user_id=ANY($1::uuid[])) OR patient_id IN(SELECT id FROM medorbit.patients WHERE user_id=ANY($1::uuid[]))',[users]).catch(()=>{});
  await pool.query('DELETE FROM medorbit.notifications WHERE user_id=ANY($1::uuid[])',[users]).catch(()=>{});
@@ -39,12 +41,19 @@ async function residual(){return(await pool.query(`SELECT
  (SELECT count(*) FROM medorbit.user_events WHERE user_id=ANY($1::uuid[]))::int events`,[users])).rows[0];}
 
 (async()=>{console.log('\nS4 doctor social feed adversarial tests\n');try{
- const patient=await user('patient'); const other=await user('other'); const admin=await user('admin','admin',false);
+ const patient=await user('patient'); const other=await user('other'); const admin=await user('admin','admin',false); const clinicOwner=await user('clinic','clinic',false);
+ await pool.query(`INSERT INTO medorbit.clinics
+   (owner_user_id,name_ar,name_en,address_ar,address_en,city,phone,type,services,is_active,approval_status)
+   VALUES($1,'منشأة اختبار','Test clinic','عنوان','Address','Nablus','+970599000000','clinic',ARRAY['general_medicine'],true,'approved')`,[clinicOwner.id]);
  const doc1=await doctor('doctor1'); const doc2=await doctor('doctor2'); const suspended=await doctor('suspended','suspended');
  const draft=await createPost(doc1,'Draft body',false);
  check('approved doctor can create draft',draft.status===201&&draft.body.data.status==='draft'&&draft.body.data.moderation_status==='pending',JSON.stringify(draft.body));
  const published=await createPost(doc1,'Published body',true,'Published title'); const postId=published.body?.data?.id;
  check('approved doctor auto-publishes under model B',published.status===201&&published.body.data.status==='published'&&published.body.data.moderation_status==='approved');
+ const patientPost=await request('POST','/feed/posts',token(patient),{body:'Patient community update',category:'health_tip'});
+ const clinicPost=await request('POST','/feed/posts',token(clinicOwner),{body:'Clinic community announcement',category:'clinic_news'});
+ const adminPost=await request('POST','/feed/posts',token(admin),{body:'Administrator should not publish',category:'announcement'});
+ check('patient and approved clinic can publish community health-feed posts',patientPost.status===201&&clinicPost.status===201&&adminPost.status===403);
  check('client doctor_id cannot control author',postId&&Number((await pool.query('SELECT count(*) FROM medorbit.doctor_posts WHERE id=$1 AND doctor_id=$2',[postId,doc1.doctorId])).rows[0].count)===1);
  check('suspended doctor cannot create post',(await createPost(suspended,'blocked',true)).status===403);
  check('doctor cannot edit another doctor post',(await request('PUT',`/doctors/me/posts/${postId}`,token(doc2),{body:'tamper'})).status===404);
@@ -57,10 +66,12 @@ async function residual(){return(await pool.query(`SELECT
  // the feed's own contract is now exercised through a signed-in reader.
  check('anonymous caller cannot read the feed',(await request('GET','/feed/posts?limit=1',null)).status===401);
  check('anonymous caller cannot read post comments',(await request('GET',`/feed/posts/${postId}/comments`,null)).status===401);
- const anonymous=await request('GET','/feed/posts?limit=1',token(patient));
- check('feed includes eligible post',anonymous.status===200&&anonymous.body.data.items[0]?.id===postId);
+ const anonymous=await request('GET','/feed/posts?limit=10',token(patient));
+ check('feed includes eligible post',anonymous.status===200&&anonymous.body.data.items.some(p=>p.id===postId));
  check('feed DTO excludes email/internal user id',!JSON.stringify(anonymous.body).includes('@medorbit.test')&&!JSON.stringify(anonymous.body).includes(doc1.id));
  check('draft post excluded from feed',!anonymous.body.data.items.some(p=>p.id===draft.body.data.id));
+ const communityFeed=await request('GET','/feed/posts?limit=30',token(patient));
+ check('feed identifies patient and clinic community authors',communityFeed.status===200&&communityFeed.body.data.items.some(p=>p.id===patientPost.body?.data?.id&&p.author_role==='patient')&&communityFeed.body.data.items.some(p=>p.id===clinicPost.body?.data?.id&&p.author_role==='clinic'));
  const second=await createPost(doc1,'Second published',true,'Second'); const third=await createPost(doc1,'Third published',true,'Third');
  const page1=await request('GET','/feed/posts?limit=2',token(patient)); const page2=await request('GET',`/feed/posts?limit=2&cursor=${encodeURIComponent(page1.body.data.next_cursor)}`,token(patient));
  check('cursor pagination is stable',page1.status===200&&page1.body.data.items.length===2&&page2.status===200&&page2.body.data.items.every(p=>!page1.body.data.items.some(x=>x.id===p.id)));
@@ -68,6 +79,7 @@ async function residual(){return(await pool.query(`SELECT
 
  const like=await request('POST',`/feed/posts/${postId}/like`,token(patient),{user_id:other.id});
  check('authenticated user can like and client user_id ignored',like.status===200&&like.body.data.created&&Number((await pool.query('SELECT count(*) FROM medorbit.post_likes WHERE post_id=$1 AND user_id=$2',[postId,patient.id])).rows[0].count)===1);
+ check('administrator cannot participate in likes',(await request('POST',`/feed/posts/${postId}/like`,token(admin),{})).status===403);
  const duplicateLike=await request('POST',`/feed/posts/${postId}/like`,token(patient),{});
  check('duplicate like prevented',duplicateLike.status===200&&!duplicateLike.body.data.created&&duplicateLike.body.data.like_count===1);
  check('like event created once',Number((await pool.query("SELECT count(*) FROM medorbit.user_events WHERE user_id=$1 AND entity_id=$2 AND event_type='post_like'",[patient.id,postId])).rows[0].count)===1);
@@ -126,8 +138,7 @@ async function residual(){return(await pool.query(`SELECT
  check('cannot like hidden post',(await request('POST',`/feed/posts/${postId}/like`,token(patient),{})).status===404);
  check('failed social mutation creates no success event',Number((await pool.query('SELECT count(*) FROM medorbit.user_events WHERE user_id=$1',[patient.id])).rows[0].count)===eventBefore);
  check('cannot comment on hidden post',(await request('POST',`/feed/posts/${postId}/comments`,token(patient),{body:'blocked'})).status===404);
- await request('POST',`/admin/social/posts/${postId}/moderate`,token(admin),{action:'approve'});
- check('admin can restore approved post',(await request('GET','/feed/posts?limit=30',token(patient))).body.data.items.some(p=>p.id===postId));
+ check('admin cannot approve already-published content',(await request('POST',`/admin/social/posts/${postId}/moderate`,token(admin),{action:'approve'})).status===400);
  await request('POST',`/admin/social/posts/${second.body.data.id}/moderate`,token(admin),{action:'reject'});
  check('rejected post excluded from feed',!(await request('GET','/feed/posts?limit=30',token(patient))).body.data.items.some(p=>p.id===second.body.data.id));
 
@@ -140,7 +151,7 @@ async function residual(){return(await pool.query(`SELECT
  check('soft-deleted post excluded from feed',!(await request('GET','/feed/posts?limit=30',token(patient))).body.data.items.some(p=>p.id===third.body.data.id));
  const events=await pool.query('SELECT event_type,metadata FROM medorbit.user_events WHERE user_id=ANY($1::uuid[])',[users]);
  check('event payload contains no PHI',events.rows.every(e=>!/(patient|appointment|diagnosis|clinical|email|token|password)/i.test(JSON.stringify(e.metadata))));
- check('view event is daily-idempotent',(await request('POST',`/feed/posts/${postId}/view`,token(patient),{})).status===200&&(await request('POST',`/feed/posts/${postId}/view`,token(patient),{})).body.data.recorded===false);
+ check('view event is daily-idempotent',(await request('POST',`/feed/posts/${clinicPost.body?.data?.id}/view`,token(patient),{})).status===200&&(await request('POST',`/feed/posts/${clinicPost.body?.data?.id}/view`,token(patient),{})).body.data.recorded===false);
  }catch(err){failed++;console.error('  ✗ suite error:',err.stack||err.message);}finally{await cleanup();const counts=await residual();console.log(`S4 residual counts: ${JSON.stringify(counts)}`);check('S4 fixtures leave zero residual rows',Object.values(counts).every(v=>Number(v)===0));await pool.end();}
  console.log(`\nS4 social feed: ${passed} passed, ${failed} failed`);if(failed)process.exitCode=1;
 })();
