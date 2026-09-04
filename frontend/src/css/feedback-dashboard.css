@@ -147,7 +147,14 @@
     font-weight: 700;
     color: var(--text);
     text-align: center;
-    margin-bottom: 16px;
+    margin-bottom: 4px;
+}
+
+.feedback-dash-users-hint {
+    margin: 0 0 16px;
+    color: var(--text-mute);
+    font-size: 12.5px;
+    text-align: center;
 }
 
 .feedback-marquee {

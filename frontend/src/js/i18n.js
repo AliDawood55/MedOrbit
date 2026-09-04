@@ -169,6 +169,7 @@ const I18n = (() => {
             'home.searchPlaceholder': 'ابحث عن طبيب، تخصص، أو عيادة...',
             'home.searchDoctors': 'أطباء',
             'home.searchClinics': 'عيادات',
+            'home.findFacilities': 'اكتشف المنشآت الصحية',
             'home.featuresTitle': 'كل ما تحتاجه لرعاية صحية أفضل',
             'home.featuresSubtitle': 'منصة واحدة تجمع بين الذكاء الاصطناعي والبيانات الطبية الموثوقة',
             'home.feature1Title': 'مساعد ذكي على مدار الساعة',
@@ -579,6 +580,7 @@ const I18n = (() => {
             'feedbackDash.stars': 'نجوم',
             'feedbackDash.empty': 'لا توجد تقييمات بعد — كن أول من يشاركنا رأيه',
             'feedbackDash.usersTitle': 'شكراً لكل من شاركنا رأيه',
+            'feedbackDash.usersHint': 'اختر أي مستخدم لعرض تقييمه وتعليقه.',
             'feedbackDash.live': 'مباشر',
 
 'dashboard.searchPlaceholder': 'ابحث في لوحة التحكم...',
@@ -1011,6 +1013,7 @@ const I18n = (() => {
             'home.searchPlaceholder': 'Search doctor, specialty, or clinic...',
             'home.searchDoctors': 'Doctors',
             'home.searchClinics': 'Clinics',
+            'home.findFacilities': 'Find healthcare facilities',
             'home.featuresTitle': 'Everything you need for better healthcare',
             'home.featuresSubtitle': 'One platform combining AI and trustworthy medical data',
             'home.feature1Title': '24/7 smart assistant',
@@ -1421,6 +1424,7 @@ const I18n = (() => {
             'feedbackDash.stars': 'stars',
             'feedbackDash.empty': 'No feedback yet — be the first to share yours',
             'feedbackDash.usersTitle': 'Thanks to everyone who shared their feedback',
+            'feedbackDash.usersHint': 'Select a profile to view its rating and review.',
             'feedbackDash.live': 'Live',
 
 'dashboard.searchPlaceholder': 'Search the dashboard...',
