@@ -72,6 +72,14 @@ async function cleanup(){
  check('existing user_events and audit_logs remain active',Number((await pool.query(`SELECT count(*) FROM medorbit.user_events WHERE user_id=ANY($1::uuid[])`,[users])).rows[0].count)>0&&Number((await pool.query(`SELECT count(*) FROM medorbit.audit_logs WHERE user_id=ANY($1::uuid[])`,[users])).rows[0].count)>0);
  await pool.query(`DELETE FROM medorbit.outbox_events WHERE id=ANY($1::uuid[])`,[outboxIds]);outboxIds.length=0;
 
+ // The integration database can contain unfinished events created by an
+ // earlier suite. The publisher checks below use batchSize=1 and must claim
+ // this test's row. Remove only unrelated non-final rows from the disposable
+ // test database; stale `publishing` rows are otherwise reclaimed by the
+ // worker before it selects this test's pending event.
+ await pool.query(`DELETE FROM medorbit.outbox_events
+   WHERE status<>'published' AND COALESCE(headers->>'testRun','')<>$1`,[marker]);
+
  const producer=new FakeProducer(),successRow=await txEvent();const publisher=new OutboxPublisher({pool,producer,workerId:`${marker}-publisher`,batchSize:1});await publisher.connect();check('Kafka producer connects explicitly',producer.connected);check('pending row is claimed',await publisher.runOnce()===1);check('successful publish marks published',(await pool.query(`SELECT status,published_at FROM medorbit.outbox_events WHERE id=$1`,[successRow.id])).rows[0].status==='published');check('published row is not republished',await publisher.runOnce()===0&&producer.sent.length===1);
  const failRow=await txEvent(),failing=new FakeProducer();failing.fail=true;const failPublisher=new OutboxPublisher({pool,producer:failing,workerId:`${marker}-fail`,batchSize:1,maxAttempts:3});await failPublisher.runOnce();let failedRow=(await pool.query(`SELECT * FROM medorbit.outbox_events WHERE id=$1`,[failRow.id])).rows[0];check('Kafka failure marks failed and increments attempts',failedRow.status==='failed'&&failedRow.attempt_count===1);check('retry available_at moves forward',new Date(failedRow.available_at)>new Date(failedRow.updated_at));check('last_error is bounded and sanitized',!failedRow.last_error.includes('hidden')&&failedRow.last_error.length<=500);
  failing.fail=false;await pool.query(`UPDATE medorbit.outbox_events SET available_at=NOW() WHERE id=$1`,[failRow.id]);await failPublisher.runOnce();check('successful retry later publishes',(await pool.query(`SELECT status FROM medorbit.outbox_events WHERE id=$1`,[failRow.id])).rows[0].status==='published');
