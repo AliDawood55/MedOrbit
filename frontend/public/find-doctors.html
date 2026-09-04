@@ -64,13 +64,47 @@
                 <i class="fas fa-search"></i>
                 <input type="text" id="searchInput" data-i18n-placeholder="doctors.searchPlaceholder" placeholder="ابحث بالاسم...">
             </div>
-            <button type="button" class="filter-toggle-btn" id="filterToggleBtn">
+            <button type="button" class="filter-toggle-btn" id="filterToggleBtn" aria-controls="filterCollapsible" aria-expanded="false">
                 <i class="fas fa-sliders"></i> <span data-i18n="doctors.filters">تصفية</span>
             </button>
-            <div class="filter-toolbar-collapsible" id="filterCollapsible">
-                <select id="specialtyFilter"></select>
-            </div>
         </div>
+        <section class="doctor-filter-panel" id="filterCollapsible" aria-label="Doctor filters">
+                <label class="doctor-filter-control" for="specialtyFilter">
+                    <span data-i18n="doctors.specialty">التخصص</span>
+                    <select id="specialtyFilter"></select>
+                </label>
+                <label class="doctor-filter-control doctor-filter-checkbox" for="acceptingFilter">
+                    <input type="checkbox" id="acceptingFilter">
+                    <span data-i18n="doctors.acceptingOnly">المتاحون لاستقبال مرضى جدد فقط</span>
+                </label>
+                <label class="doctor-filter-control" for="ratingFilter">
+                    <span data-i18n="doctors.rating">التقييم</span>
+                    <select id="ratingFilter">
+                        <option value="" data-i18n="doctors.anyRating">أي تقييم</option>
+                        <option value="4.5" data-i18n="doctors.rating45">4.5 فأعلى</option>
+                        <option value="4" data-i18n="doctors.rating4">4.0 فأعلى</option>
+                        <option value="3" data-i18n="doctors.rating3">3.0 فأعلى</option>
+                    </select>
+                </label>
+                <fieldset class="doctor-filter-range">
+                    <legend data-i18n="doctors.experienceRange">سنوات الخبرة</legend>
+                    <div class="doctor-filter-range-inputs">
+                        <label><span data-i18n="doctors.from">من</span><input id="minExperienceFilter" type="number" min="0" max="80" inputmode="numeric"></label>
+                        <label><span data-i18n="doctors.to">إلى</span><input id="maxExperienceFilter" type="number" min="0" max="80" inputmode="numeric"></label>
+                    </div>
+                </fieldset>
+                <fieldset class="doctor-filter-range">
+                    <legend data-i18n="doctors.priceRange">رسوم الكشف</legend>
+                    <div class="doctor-filter-range-inputs">
+                        <label><span data-i18n="doctors.from">من</span><input id="minFeeFilter" type="number" min="0" max="100000" step="0.01" inputmode="decimal"></label>
+                        <label><span data-i18n="doctors.to">إلى</span><input id="maxFeeFilter" type="number" min="0" max="100000" step="0.01" inputmode="decimal"></label>
+                    </div>
+                </fieldset>
+                <button type="button" class="doctor-filter-reset" id="clearFiltersBtn">
+                    <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                    <span data-i18n="doctors.clearFilters">مسح التصفية</span>
+                </button>
+        </section>
 
         <div id="doctorsContent">
 

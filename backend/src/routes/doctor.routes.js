@@ -634,9 +634,36 @@ router.delete('/me/availability/:slotId', authenticate, authorize('doctor'), asy
 // GET /api/doctors - List all doctors with filters
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const { specialty, region, minRating, minFee, maxFee, search, page = 1, limit = 10 } = req.query;
+    const { specialty, region, minRating, minFee, maxFee, minExperience, maxExperience, accepting, search, page = 1, limit = 10 } = req.query;
+    const readNumber = (value, label, min, max, integer = false) => {
+      if (value === undefined || value === '') return null;
+      const number = Number(value);
+      if (!Number.isFinite(number) || number < min || number > max || (integer && !Number.isInteger(number))) {
+        return { error: `${label} must be between ${min} and ${max}` };
+      }
+      return number;
+    };
+    const parsedMinRating = readNumber(minRating, 'Minimum rating', 0, 5);
+    const parsedMinFee = readNumber(minFee, 'Minimum fee', 0, 100000);
+    const parsedMaxFee = readNumber(maxFee, 'Maximum fee', 0, 100000);
+    const parsedMinExperience = readNumber(minExperience, 'Minimum experience', 0, 80, true);
+    const parsedMaxExperience = readNumber(maxExperience, 'Maximum experience', 0, 80, true);
+    const invalidFilter = [parsedMinRating, parsedMinFee, parsedMaxFee, parsedMinExperience, parsedMaxExperience]
+      .find((value) => value?.error);
+    if (invalidFilter) return error(res, invalidFilter.error, 400, 'VALIDATION_ERROR');
+    if ((parsedMinFee !== null && parsedMaxFee !== null && parsedMinFee > parsedMaxFee)
+      || (parsedMinExperience !== null && parsedMaxExperience !== null && parsedMinExperience > parsedMaxExperience)) {
+      return error(res, 'Minimum filter value cannot exceed maximum value', 400, 'VALIDATION_ERROR');
+    }
+    let acceptingValue = null;
+    if (accepting !== undefined && accepting !== '') {
+      if (accepting !== 'true' && accepting !== 'false') {
+        return error(res, 'accepting must be true or false', 400, 'VALIDATION_ERROR');
+      }
+      acceptingValue = accepting === 'true';
+    }
     const pageNumber=Math.max(Number.parseInt(page,10)||1,1),limitNumber=Math.min(Math.max(Number.parseInt(limit,10)||10,1),50);
-    if(req.user && !specialty && !region && !minRating && !minFee && !maxFee && !search){
+    if(req.user && !specialty && !region && parsedMinRating === null && parsedMinFee === null && parsedMaxFee === null && parsedMinExperience === null && parsedMaxExperience === null && acceptingValue === null && !search){
       const ranked=await getRankedDoctors({userId:req.user.sub,limit:pageNumber*limitNumber});
       const total=Number((await db.query(`SELECT count(*) FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id
         WHERE u.role='doctor' AND u.is_active=true AND u.deleted_at IS NULL AND d.approval_status='approved'`)).rows[0].count);
@@ -677,21 +704,39 @@ router.get('/', authenticate, async (req, res, next) => {
       paramIndex++;
     }
 
-    if (minRating) {
+    if (parsedMinRating !== null) {
       query += ` AND d.average_rating >= $${paramIndex}`;
-      params.push(parseFloat(minRating));
+      params.push(parsedMinRating);
       paramIndex++;
     }
 
-    if (minFee) {
+    if (parsedMinFee !== null) {
       query += ` AND d.consultation_fee >= $${paramIndex}`;
-      params.push(Number(minFee));
+      params.push(parsedMinFee);
       paramIndex++;
     }
 
-    if (maxFee) {
+    if (parsedMaxFee !== null) {
       query += ` AND d.consultation_fee <= $${paramIndex}`;
-      params.push(Number(maxFee));
+      params.push(parsedMaxFee);
+      paramIndex++;
+    }
+
+    if (parsedMinExperience !== null) {
+      query += ` AND d.years_of_experience >= $${paramIndex}`;
+      params.push(parsedMinExperience);
+      paramIndex++;
+    }
+
+    if (parsedMaxExperience !== null) {
+      query += ` AND d.years_of_experience <= $${paramIndex}`;
+      params.push(parsedMaxExperience);
+      paramIndex++;
+    }
+
+    if (acceptingValue !== null) {
+      query += ` AND d.is_accepting_patients = $${paramIndex}`;
+      params.push(acceptingValue);
       paramIndex++;
     }
 
