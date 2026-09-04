@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     Layout.init();
-    const intent = new URLSearchParams(window.location.search).get('intent');
-    if (intent === 'doctor') {
+    const isDoctorApplicationIntent = new URLSearchParams(window.location.search).get('intent') === 'doctor';
+    const isClinicApplicationIntent = new URLSearchParams(window.location.search).get('intent') === 'clinic';
+    if (isDoctorApplicationIntent) {
         document.getElementById('doctorApplicationIntro')?.classList.remove('hidden');
     }
-    if (intent === 'clinic') {
+    if (isClinicApplicationIntent) {
         document.getElementById('clinicApplicationIntro')?.classList.remove('hidden');
     }
 
