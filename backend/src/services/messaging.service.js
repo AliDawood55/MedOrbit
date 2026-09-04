@@ -52,6 +52,7 @@ async function getConversationDto(conversationId, userId, queryable = db) {
                 om.member_role AS other_role,op.profile_image_url AS other_avatar_url,
                 COALESCE(NULLIF(trim(concat_ws(' ',op.first_name_en,op.last_name_en)),''),
                          NULLIF(trim(concat_ws(' ',op.first_name_ar,op.last_name_ar)),''),
+                         NULLIF(CASE WHEN om.member_role='clinic' THEN COALESCE(oc.name_en,oc.name_ar) END,''),
                          'MedOrbit user') AS other_display_name,
                 lm.id AS last_message_id,left(lm.body,120) AS last_message_preview,
                 lm.sender_user_id AS last_sender_user_id,lm.created_at AS last_message_created_at,
@@ -70,6 +71,8 @@ async function getConversationDto(conversationId, userId, queryable = db) {
          JOIN medorbit.conversation_members om
            ON om.conversation_id=c.id AND om.user_id<>$2 AND om.left_at IS NULL
          LEFT JOIN medorbit.user_profiles op ON op.user_id=om.user_id
+         LEFT JOIN medorbit.clinics oc ON oc.owner_user_id=om.user_id
+           AND oc.is_active=true AND oc.approval_status='approved'
          LEFT JOIN LATERAL (
            SELECT id,body,sender_user_id,created_at
            FROM medorbit.direct_messages
@@ -147,9 +150,9 @@ async function createConversation({ userId, role, counterpartId }) {
         }
 
         const relationship = await findActiveRelationship(actor, counterpart, client);
-        const conversationType = actor.kind === 'doctor' && counterpart.kind === 'doctor'
-            ? 'doctor_doctor'
-            : 'patient_doctor';
+        const conversationType = actor.kind === 'clinic' || counterpart.kind === 'clinic'
+            ? (actor.kind === 'patient' || counterpart.kind === 'patient' ? 'patient_clinic' : 'clinic_doctor')
+            : (actor.kind === 'doctor' && counterpart.kind === 'doctor' ? 'doctor_doctor' : 'patient_doctor');
         let requestStatus = 'accepted';
         if (actor.kind === 'doctor' && counterpart.kind === 'patient' && !relationship) {
             await assertRequestAllowed(actor, counterpart, key, client);

@@ -119,7 +119,7 @@ function describeError(err,fallback){
             const text=document.createElement('span');text.className='conversation-copy';
             const row=document.createElement('span');row.className='conversation-name-row';
             const name=document.createElement('span');name.className='conversation-name';name.textContent=conversation.other_display_name;
-            const role=document.createElement('span');role.className='role-badge';role.textContent=conversation.other_role==='doctor'?copy('طبيب','Doctor'):copy('مريض','Patient');
+            const role=document.createElement('span');role.className='role-badge';role.textContent=conversation.other_role==='doctor'?copy('طبيب','Doctor'):conversation.other_role==='clinic'?copy('منشأة','Clinic'):copy('مريض','Patient');
             row.append(name,role);
             const preview=document.createElement('span');preview.className='conversation-preview';
             preview.textContent=conversation.request_status==='pending'?copy('طلب مراسلة بانتظار الرد','Message request awaiting response'):(conversation.last_message_preview||copy('ابدأ المحادثة','Start the conversation'));
@@ -305,7 +305,7 @@ sending=false;
         selected=conversation;
         document.body.classList.add('messages-thread-open');
         byId('threadName').textContent=conversation.other_display_name;
-        byId('threadRole').textContent=conversation.other_role==='doctor'?copy('طبيب','Doctor'):copy('مريض','Patient');
+        byId('threadRole').textContent=conversation.other_role==='doctor'?copy('طبيب','Doctor'):conversation.other_role==='clinic'?copy('منشأة','Clinic'):copy('مريض','Patient');
         renderRequestState();
         renderConversations();
         hideJumpLatest();
@@ -555,7 +555,7 @@ async function bootstrap(){
             const state=await AuthGate.verifySession();
             if(state!=='valid')return;
             currentUser=AuthGate.getVerifiedUser();
-            if(!['patient','doctor'].includes(currentUser?.role)){location.href='dashboard.html';return;}
+            if(!['patient','doctor','clinic'].includes(currentUser?.role)){location.href='dashboard.html';return;}
             if(currentUser.role==='doctor')ownDoctorId=(await API.doctors.myProfile()).data.id;
             const counterpart=new URLSearchParams(location.search).get('counterpart');
             let preferred=new URLSearchParams(location.search).get('id');

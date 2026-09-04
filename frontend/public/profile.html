@@ -27,6 +27,7 @@
          session, and the watchdog leaves for Home if the gate never arrives. -->
     <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}html[data-auth-gate="pending"] body,html[data-auth-gate="blocked"] body{overflow:hidden!important;background:var(--bg,#F9FAFB)!important}</style>
     <script>(function(){document.documentElement.setAttribute('data-auth-gate','pending');function f(){if(window.__medorbitAuthGateReady||window.__medorbitNavigatingAway)return;location.replace('home.html?auth=unavailable&next='+encodeURIComponent(location.pathname.split('/').pop()+location.search));}window.addEventListener('load',function(){setTimeout(f,0);});setTimeout(f,20000);})();</script>
+    <script src="../src/js/auth-bootstrap.js"></script>
     <!-- Global authentication gate: must load in <head>, before any
          protected markup is parsed (see frontend/src/js/auth-gate.js). -->
     <script src="../src/js/auth-gate.js"></script>

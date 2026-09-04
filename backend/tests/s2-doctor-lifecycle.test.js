@@ -53,9 +53,12 @@ async function createDoctor(key, options = {}) {
     user.license = options.license || `${marker}-${key}-license`;
     await pool.query(
         `INSERT INTO medorbit.doctors
-           (id,user_id,medical_license_number,specialty_id,approval_status,approved_at,is_accepting_patients)
-         VALUES($1,$2,$3,$4,$5,NOW(),true)`,
-        [user.doctorId, user.id, user.license, ids.specialty, options.status || 'approved']
+           (id,user_id,medical_license_number,specialty_id,approval_status,approved_at,is_accepting_patients,
+            years_of_experience,consultation_fee,average_rating,total_ratings)
+         VALUES($1,$2,$3,$4,$5,NOW(),$6,$7,$8,$9,$10)`,
+        [user.doctorId, user.id, user.license, ids.specialty, options.status || 'approved',
+            options.accepting ?? true, options.experience ?? null, options.fee ?? null,
+            options.rating ?? null, options.totalRatings ?? 0]
     );
     return user;
 }
@@ -121,8 +124,16 @@ async function residualCounts() {
         const otherPatient = await createUser('other');
         const admin = await createUser('admin', 'admin', false);
         const superAdmin = await createUser('super', 'super_admin', false);
-        const existingDoctor = await createDoctor('existing');
-        const unrelatedDoctor = await createDoctor('unrelated');
+        const existingDoctor = await createDoctor('existing', { accepting: true, experience: 3, fee: 20, rating: 3.2, totalRatings: 4 });
+        const unrelatedDoctor = await createDoctor('unrelated', { accepting: true, experience: 12, fee: 85, rating: 4.7, totalRatings: 10 });
+        const unavailableDoctor = await createDoctor('unavailable', { accepting: false, experience: 12, fee: 85, rating: 4.7, totalRatings: 10 });
+
+        const directoryFilter = await request('GET', '/doctors?accepting=true&minExperience=10&maxExperience=15&minRating=4.5&minFee=80&maxFee=90', access(otherPatient));
+        check('doctor directory applies accepting, experience, rating, and fee ranges', directoryFilter.status === 200
+            && directoryFilter.body.data.doctors.some((doctor) => doctor.id === unrelatedDoctor.doctorId)
+            && !directoryFilter.body.data.doctors.some((doctor) => doctor.id === existingDoctor.doctorId)
+            && !directoryFilter.body.data.doctors.some((doctor) => doctor.id === unavailableDoctor.doctorId));
+        check('doctor directory rejects invalid filter ranges', (await request('GET', '/doctors?minExperience=20&maxExperience=10', access(otherPatient))).status === 400);
 
         check('unauthenticated cannot submit', (await request('POST','/doctor-applications',null,{})).status === 401);
         check('doctor cannot submit', (await submit(existingDoctor,'doctor-apply')).status === 403);

@@ -366,7 +366,9 @@ const doctors = {
         mySchedule: (options) => get('/doctors/me/schedule', null, options),
         addAvailability: (body, options) => post('/doctors/me/availability', body, options),
         updateAvailability: (id, body, options) => put(`/doctors/me/availability/${id}`, body, options),
-        deleteAvailability: (id, options) => del(`/doctors/me/availability/${id}`, options)
+        deleteAvailability: (id, options) => del(`/doctors/me/availability/${id}`, options),
+        clinicInvitations: (options) => get('/doctors/me/clinic-invitations', null, options),
+        respondToClinicInvitation: (id, accepted, options) => post(`/doctors/me/clinic-invitations/${encodeURIComponent(id)}/respond`, { accepted }, options)
     };
 
     const patientProfiles = {
@@ -380,11 +382,22 @@ const clinics = {
         nearby: (query, options) => get('/clinics/nearby', query, options),
         get: (id, options) => get(`/clinics/${id}`, null, options),
         directoryFilters: (options) => get('/clinics/directory-filters', null, options),
-        mine: (options) => get('/clinics/me', null, options),
-        updateMine: (payload, options) => put('/clinics/me', payload, options),
-        mineDoctors: (options) => get('/clinics/me/doctors', null, options),
-        eligibleDoctors: (options) => get('/clinics/eligible-doctors', null, options),
-        addMineDoctor: (payload, options) => post('/clinics/me/doctors', payload, options),
+         mine: (options) => get('/clinics/me', null, options),
+         updateMine: (payload, options) => put('/clinics/me', payload, options),
+         contactEmails: (options) => get('/clinics/me/contact-emails', null, options),
+         addContactEmail: (payload, options) => post('/clinics/me/contact-emails', payload, options),
+         removeContactEmail: (id, options) => del(`/clinics/me/contact-emails/${encodeURIComponent(id)}`, null, options),
+         verifyContactEmail: (token, options) => post('/clinics/contact-emails/verify', { token }, options),
+         credentialChangeRequests: (options) => get('/clinics/me/credential-change-requests', null, options),
+         requestCredentialChange: (payload, options) => post('/clinics/me/credential-change-requests', payload, options),
+         adminCredentialChangeRequests: (query, options) => get('/clinics/admin/credential-change-requests', query, options),
+         decideCredentialChange: (id, payload, options) => post(`/clinics/admin/credential-change-requests/${encodeURIComponent(id)}/decide`, payload, options),
+         mineDoctors: (options) => get('/clinics/me/doctors', null, options),
+         eligibleDoctors: (options) => get('/clinics/eligible-doctors', null, options),
+         doctorInvitations: (options) => get('/clinics/me/doctor-invitations', null, options),
+         inviteDoctor: (payload, options) => post('/clinics/me/doctor-invitations', payload, options),
+         cancelDoctorInvitation: (id, options) => post(`/clinics/me/doctor-invitations/${encodeURIComponent(id)}/cancel`, {}, options),
+         addMineDoctor: (payload, options) => post('/clinics/me/doctors', payload, options),
         removeMineDoctor: (id, options) => del(`/clinics/me/doctors/${encodeURIComponent(id)}`, null, options)
     };
 
@@ -483,6 +496,7 @@ const recommendations = {
 
     const social = {
         feed: (query, options) => get('/feed/posts', query, options),
+        createPost: (body, options) => post('/feed/posts', body, options),
         comments: (postId, options) => get(`/feed/posts/${postId}/comments`, null, options),
         addComment: (postId, body, options) => post(`/feed/posts/${postId}/comments`, body, options),
         like: (postId, options) => post(`/feed/posts/${postId}/like`, {}, options),
@@ -532,7 +546,8 @@ function assetUrl(value) {
     //   recommend:{yes,no}, users:[{id,nameAr,nameEn,avatarUrl}] }
     const feedback = {
         submit: (body, options) => post('/feedback', body, options),
-        stats: (options) => get('/feedback/stats', null, options)
+        stats: (options) => get('/feedback/stats', null, options),
+        reviewer: (userId, options) => get(`/feedback/reviews/${encodeURIComponent(userId)}`, null, options)
     };
 
     const contact = {

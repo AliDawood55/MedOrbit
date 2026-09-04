@@ -95,7 +95,7 @@ function renderSpecialtyOptions() {
         }
     }
 
-async function loadDoctors(page = 1) {
+    async function loadDoctors(page = 1) {
         currentPage = page;
 
         const content = document.getElementById('doctorsContent');
@@ -112,7 +112,13 @@ if (activeController) activeController.abort();
             page,
             limit: PAGE_SIZE,
             search: document.getElementById('searchInput')?.value.trim(),
-            specialty: document.getElementById('specialtyFilter')?.value
+            specialty: document.getElementById('specialtyFilter')?.value,
+            accepting: document.getElementById('acceptingFilter')?.checked ? 'true' : undefined,
+            minRating: document.getElementById('ratingFilter')?.value,
+            minExperience: document.getElementById('minExperienceFilter')?.value,
+            maxExperience: document.getElementById('maxExperienceFilter')?.value,
+            minFee: document.getElementById('minFeeFilter')?.value,
+            maxFee: document.getElementById('maxFeeFilter')?.value
         };
 
         try {
@@ -313,6 +319,21 @@ async function init() {
             }
         }
 
+        const queryFilters = {
+            acceptingFilter: params.get('accepting') === 'true',
+            ratingFilter: params.get('minRating'),
+            minExperienceFilter: params.get('minExperience'),
+            maxExperienceFilter: params.get('maxExperience'),
+            minFeeFilter: params.get('minFee'),
+            maxFeeFilter: params.get('maxFee')
+        };
+        Object.entries(queryFilters).forEach(([id, value]) => {
+            const input = document.getElementById(id);
+            if (!input || value == null || value === '') return;
+            if (input.type === 'checkbox') input.checked = value === true;
+            else input.value = value;
+        });
+
         loadDoctors(1);
         if (API.isAuthenticated()) loadRecommendedDoctors();
 
@@ -326,8 +347,23 @@ async function init() {
             loadDoctors(1);
         });
 
+        ['acceptingFilter', 'ratingFilter', 'minExperienceFilter', 'maxExperienceFilter', 'minFeeFilter', 'maxFeeFilter']
+            .forEach((id) => document.getElementById(id)?.addEventListener('change', () => loadDoctors(1)));
+
+        document.getElementById('clearFiltersBtn')?.addEventListener('click', () => {
+            document.getElementById('specialtyFilter').value = '';
+            document.getElementById('acceptingFilter').checked = false;
+            ['ratingFilter', 'minExperienceFilter', 'maxExperienceFilter', 'minFeeFilter', 'maxFeeFilter']
+                .forEach((id) => { document.getElementById(id).value = ''; });
+            loadDoctors(1);
+        });
+
         document.getElementById('filterToggleBtn')?.addEventListener('click', () => {
-            document.getElementById('filterCollapsible')?.classList.toggle('open');
+            const panel = document.getElementById('filterCollapsible');
+            const button = document.getElementById('filterToggleBtn');
+            const isOpen = panel?.classList.toggle('open') === true;
+            button?.classList.toggle('open', isOpen);
+            button?.setAttribute('aria-expanded', String(isOpen));
         });
 
         document.getElementById('doctorsContent')?.addEventListener('click', (e) => {

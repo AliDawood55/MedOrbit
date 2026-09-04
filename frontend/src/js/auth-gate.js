@@ -38,6 +38,7 @@ const PROTECTED = [
         'drug-checker.html',
         'feed.html',
         'feedback.html',
+        'feedback-review.html',
         'find-clinics.html',
         'find-doctors.html',
         'index.html',
@@ -215,7 +216,7 @@ function isDoctorApplicationIntent() {
 if (user?.role === 'patient' && isDoctorApplicationIntent()) {
             return 'doctor-application.html';
         }
-        if (user?.role === 'patient' && isClinicApplicationIntent()) {
+        if (user?.role === 'clinic' && user?.clinic_account_status !== 'approved') {
             return 'clinic-application.html';
         }
         switch (user?.role) {
@@ -446,6 +447,12 @@ if (window.__medorbitNavigatingAway) return;
         const state = await withTimeout(verifySession(), VERIFY_TIMEOUT_MS);
 
         if (state === 'valid') {
+            if (thisPage === 'clinic-workspace.html' &&
+                verifiedUser?.role === 'clinic' &&
+                verifiedUser?.clinic_account_status !== 'approved') {
+                window.location.replace('clinic-application.html');
+                return;
+            }
             if (redirectPlatformOperatorFromPersonalCare()) return;
             lowerShield();
             clearIntendedDestination();
@@ -467,6 +474,12 @@ async function resolvePublicPage() {
 if (typeof API === 'undefined' || !hasStoredSession()) return;
 
         const state = await verifySession();
+        // Sign-in and registration are entry pages only. A verified session
+        // must not be able to open them again, regardless of account role.
+        if (state === 'valid' && (thisPage === 'login.html' || thisPage === 'register.html')) {
+            window.location.replace(PUBLIC_HOME);
+            return;
+        }
         if (state === 'invalid') {
 
 document.dispatchEvent(new CustomEvent('authgate:signedout'));

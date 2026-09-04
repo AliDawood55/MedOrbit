@@ -201,7 +201,7 @@ const DoctorProfile = (() => {
             const clinicName = localized(clinic, 'name_ar', 'name_en');
             const address = localized(clinic, 'address_ar', 'address_en');
             return '<a class="clinic-profile-card" href="clinic.html?id=' + encodeURIComponent(clinic.id) + '"><i class="fas fa-hospital"></i><span><strong>'
-                + escapeHtml(clinicName) + '</strong><small>' + escapeHtml([address, clinic.city].filter(Boolean).join(' · ')) + '</small></span></a>';
+                + escapeHtml(clinicName) + '</strong><small class="current-workplace-label">' + escapeHtml(isAr() ? 'مكان العمل الحالي' : 'Current workplace') + '</small><small>' + escapeHtml([address, clinic.city].filter(Boolean).join(' · ')) + '</small></span></a>';
         }).join('') + '</div>'
             + (clinics.some((clinic) => clinic.latitude != null && clinic.longitude != null)
                 ? '<div id="doctorMiniMap" class="mini-map profile-map"></div>' : '');

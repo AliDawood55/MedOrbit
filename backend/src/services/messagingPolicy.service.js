@@ -34,7 +34,20 @@ async function resolveMessagingActor(userId, role, queryable = db) {
         if (result.rows[0]) return { ...result.rows[0], kind: 'doctor' };
     }
 
-    throw new MessagingPolicyError('Messaging is available only to eligible patients and approved doctors');
+    if (role === 'clinic') {
+        const result = await queryable.query(
+            `SELECT c.id AS clinic_id,u.id AS user_id,u.role
+             FROM medorbit.users u
+             JOIN medorbit.clinics c ON c.owner_user_id=u.id
+             WHERE u.id=$1 AND u.role='clinic' AND u.is_active=true
+               AND u.email_verified=true AND u.deleted_at IS NULL
+               AND c.is_active=true AND c.approval_status='approved'`,
+            [userId]
+        );
+        if (result.rows[0]) return { ...result.rows[0], kind: 'clinic' };
+    }
+
+    throw new MessagingPolicyError('Messaging is available only to eligible patients, approved doctors, and verified clinics');
 }
 
 async function resolveCounterpart(actor, counterpartId, queryable = db) {
@@ -49,6 +62,14 @@ async function resolveCounterpart(actor, counterpartId, queryable = db) {
             [counterpartId]
         );
         if (result.rows[0]) return result.rows[0];
+        const clinic = await queryable.query(
+            `SELECT c.id AS clinic_id,u.id AS user_id,'clinic'::text AS kind
+             FROM medorbit.clinics c JOIN medorbit.users u ON u.id=c.owner_user_id
+             WHERE c.id=$1 AND c.is_active=true AND c.approval_status='approved'
+               AND u.is_active=true AND u.email_verified=true AND u.deleted_at IS NULL`,
+            [counterpartId]
+        );
+        if (clinic.rows[0]) return clinic.rows[0];
         throw new MessagingPolicyError('Eligible doctor not found', 404, 'NOT_FOUND');
     }
 
@@ -76,10 +97,20 @@ async function resolveCounterpart(actor, counterpartId, queryable = db) {
     );
     if (patient.rows[0]) return patient.rows[0];
 
+    const clinic = await queryable.query(
+        `SELECT c.id AS clinic_id,u.id AS user_id,'clinic'::text AS kind
+         FROM medorbit.clinics c JOIN medorbit.users u ON u.id=c.owner_user_id
+         WHERE c.id=$1 AND u.id<>$2 AND c.is_active=true AND c.approval_status='approved'
+           AND u.is_active=true AND u.email_verified=true AND u.deleted_at IS NULL`,
+        [counterpartId, actor.user_id]
+    );
+    if (clinic.rows[0]) return clinic.rows[0];
+
     throw new MessagingPolicyError('Eligible recipient not found', 404, 'NOT_FOUND');
 }
 
 async function findActiveRelationship(actor, counterpart, queryable = db) {
+    if (actor.kind === 'clinic' || counterpart.kind === 'clinic') return null;
     if (actor.kind === counterpart.kind) return null;
     const doctorId = actor.kind === 'doctor' ? actor.doctor_id : counterpart.doctor_id;
     const patientId = actor.kind === 'patient' ? actor.patient_id : counterpart.patient_id;
@@ -121,10 +152,15 @@ async function getConversationAccess(
                   JOIN medorbit.users cu ON cu.id=cm.user_id
                   LEFT JOIN medorbit.doctors cd
                     ON cd.user_id=cu.id AND cm.member_role='doctor'
+                  LEFT JOIN medorbit.clinics cc
+                    ON cc.owner_user_id=cu.id AND cm.member_role='clinic'
                   WHERE cm.conversation_id=c.id AND cm.left_at IS NULL
                     AND (cu.is_active=false OR cu.deleted_at IS NOT NULL
                          OR (cm.member_role='doctor' AND
-                             (cu.role<>'doctor' OR cd.approval_status IS DISTINCT FROM 'approved')))
+                             (cu.role<>'doctor' OR cd.approval_status IS DISTINCT FROM 'approved'))
+                         OR (cm.member_role='clinic' AND
+                             (cu.role<>'clinic' OR cc.id IS NULL OR cc.is_active=false
+                              OR cc.approval_status<>'approved')))
                 ) AS participants_eligible
          FROM medorbit.direct_conversations c
          JOIN medorbit.conversation_members m

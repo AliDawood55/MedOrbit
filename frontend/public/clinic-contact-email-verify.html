@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Verify clinic contact email – MedOrbit</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="../src/css/main.css">
+  <link rel="stylesheet" href="../src/css/components.css">
+  <link rel="stylesheet" href="../src/css/layout.css">
+  <link rel="stylesheet" href="../src/css/forms.css">
+  <style>html[data-auth-gate="pending"] body>*:not([data-auth-ui]),html[data-auth-gate="blocked"] body>*:not([data-auth-ui]){visibility:hidden!important}</style>
+  <script>document.documentElement.setAttribute('data-auth-gate','pending')</script>
+  <script src="../src/js/auth-bootstrap.js"></script>
+  <script src="../src/js/auth-gate.js"></script>
+</head>
+<body class="site-page" data-theme="light">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="app-header"><a class="header-brand" href="home.html"><span class="brand-name">MedOrbit</span></a><nav class="site-nav" id="navLinks"></nav><div class="header-actions"><div class="auth-area" id="authArea"></div></div></header>
+  <main class="page-container" id="main-content" style="max-width:640px;padding-top:8rem"><section class="care-section"><h1>Verify clinic contact email</h1><p id="message" class="text-muted">Verifying your secure contact-email link…</p><a class="btn btn-primary hidden" id="workspaceLink" href="clinic-workspace.html">Open clinic workspace</a></section></main>
+  <footer class="site-footer" id="siteFooter"></footer>
+  <script src="../src/utils/store.js"></script><script src="../src/js/api.js"></script><script src="../src/js/i18n.js"></script><script src="../src/js/theme.js"></script><script src="../src/js/layout.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',async()=>{Layout.init();const message=document.getElementById('message'),link=document.getElementById('workspaceLink'),token=new URLSearchParams(location.search).get('token');if(!token){message.textContent='This verification link is invalid.';return}try{const response=await API.clinics.verifyContactEmail(token);message.textContent=`Verified ${response.data.email}. You can close this page or return to your clinic workspace.`;link.classList.remove('hidden')}catch(error){message.textContent=error.message||'This verification link is invalid or expired.'}})</script>
+</body>
+</html>

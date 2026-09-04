@@ -44,13 +44,17 @@
         const clinicIntent = isClinicSignupIntent();
         document.querySelectorAll('#signupSocialLinks .social-link-non-patient').forEach((element) => element.classList.toggle('hidden', !clinicIntent));
         if (!clinicIntent) return;
+        // Clinic onboarding collects legal organisation details and completes
+        // through email verification. Do not silently create a patient account
+        // through the generic Google flow while this intent is active.
+        document.querySelector('.oauth-block')?.classList.add('hidden');
         document.getElementById('personalNameArRow')?.classList.add('hidden');
         document.getElementById('personalNameEnRow')?.classList.add('hidden');
         document.getElementById('clinicSignupFields')?.classList.remove('hidden');
         document.getElementById('genderGroup')?.classList.add('hidden');
         document.getElementById('clinicExtraPhonesGroup')?.classList.remove('hidden');
         ['firstNameAr', 'lastNameAr', 'firstNameEn', 'lastNameEn'].forEach((id) => document.getElementById(id)?.removeAttribute('required'));
-        ['clinicSignupNameAr', 'clinicSignupNameEn', 'clinicSignupAddressAr', 'clinicSignupAddressEn'].forEach((id) => document.getElementById(id)?.setAttribute('required', 'required'));
+        ['clinicSignupName', 'clinicSignupAddress'].forEach((id) => document.getElementById(id)?.setAttribute('required', 'required'));
         document.getElementById('addClinicPhone')?.addEventListener('click', addClinicPhoneField);
     }
 
@@ -60,7 +64,8 @@
         const row = document.createElement('div');
         row.className = 'input-wrapper';
         row.style.marginBottom = '8px';
-        row.innerHTML = '<i class="fas fa-phone"></i><input type="tel" class="clinic-extra-phone" dir="ltr" placeholder="+970-59-1234567"><button type="button" class="icon-btn" aria-label="Remove phone"><i class="fas fa-xmark"></i></button>';
+        const removeLabel = isAr() ? 'إزالة الرقم' : 'Remove phone number';
+        row.innerHTML = `<i class="fas fa-phone"></i><input type="tel" class="clinic-extra-phone" dir="ltr" placeholder="+970-59-1234567"><button type="button" class="icon-btn" aria-label="${removeLabel}"><i class="fas fa-xmark"></i></button>`;
         row.querySelector('button')?.addEventListener('click', () => row.remove());
         container.appendChild(row);
     }
@@ -198,10 +203,15 @@
         clearAlert();
 
         const clinicIntent = isClinicSignupIntent();
-        const clinicNameAr = document.getElementById('clinicSignupNameAr')?.value.trim();
-        const clinicNameEn = document.getElementById('clinicSignupNameEn')?.value.trim();
-        const clinicAddressAr = document.getElementById('clinicSignupAddressAr')?.value.trim();
-        const clinicAddressEn = document.getElementById('clinicSignupAddressEn')?.value.trim();
+        const clinicName = document.getElementById('clinicSignupName')?.value.trim();
+        const clinicAddress = document.getElementById('clinicSignupAddress')?.value.trim();
+        // Registration collects information in the visitor's selected language.
+        // The clinic-application workflow keeps the canonical bilingual fields
+        // for directory data, so seed both with this initial account value.
+        const clinicNameAr = clinicIntent ? clinicName : null;
+        const clinicNameEn = clinicIntent ? clinicName : null;
+        const clinicAddressAr = clinicIntent ? clinicAddress : null;
+        const clinicAddressEn = clinicIntent ? clinicAddress : null;
         const firstNameAr = clinicIntent ? clinicNameAr : document.getElementById('firstNameAr')?.value.trim();
         const lastNameAr = clinicIntent ? 'Clinic' : document.getElementById('lastNameAr')?.value.trim();
         const firstNameEn = clinicIntent ? clinicNameEn : document.getElementById('firstNameEn')?.value.trim();
@@ -225,7 +235,7 @@
             ? { whatsapp: socialLinks.whatsapp }
             : (clinicIntent ? {} : socialLinks);
 
-        if (!firstNameAr || !lastNameAr || !firstNameEn || !lastNameEn || !email || !password || (clinicIntent && (!clinicAddressAr || !clinicAddressEn))) {
+        if (!firstNameAr || !lastNameAr || !firstNameEn || !lastNameEn || !email || !password || (clinicIntent && !clinicAddress)) {
             showAlert(isAr() ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill in all required fields');
             return;
         }
@@ -242,7 +252,7 @@
             await API.post('/auth/register', {
                 email,
                 password,
-                role: 'patient',
+                role: clinicIntent ? 'clinic' : 'patient',
                 firstNameAr,
                 lastNameAr,
                 firstNameEn,

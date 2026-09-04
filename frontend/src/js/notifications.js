@@ -57,6 +57,30 @@ const NotificationsPage = (() => {
             && ['admin', 'super_admin'].includes(role)) {
             return 'admin-contact-messages.html?message=' + encodeURIComponent(notification.reference_id);
         }
+        if (notification.reference_type === 'CLINIC_APPLICATION'
+            && notification.notification_type === 'CLINIC_APPLICATION_SUBMITTED'
+            && ['admin', 'super_admin'].includes(role)) {
+            return 'admin-clinic-applications.html?status=pending&application=' + encodeURIComponent(notification.reference_id);
+        }
+        if (notification.reference_type === 'CLINIC_CREDENTIAL_CHANGE') {
+            if (notification.notification_type === 'CLINIC_CREDENTIAL_CHANGE_REQUESTED'
+                && ['admin', 'super_admin'].includes(role)) {
+                return 'admin-clinic-credential-requests.html?status=pending';
+            }
+            if (['CLINIC_CREDENTIAL_CHANGE_APPROVED', 'CLINIC_CREDENTIAL_CHANGE_REJECTED'].includes(notification.notification_type)
+                && role === 'clinic') {
+                return 'clinic-workspace.html';
+            }
+        }
+        if (notification.reference_type === 'CLINIC_DOCTOR_INVITATION') {
+            if (notification.notification_type === 'CLINIC_DOCTOR_INVITATION' && role === 'doctor') {
+                return 'doctor-clinic-invitations.html';
+            }
+            if (['CLINIC_DOCTOR_INVITATION_ACCEPTED', 'CLINIC_DOCTOR_INVITATION_DECLINED'].includes(notification.notification_type)
+                && role === 'clinic') {
+                return 'clinic-workspace.html';
+            }
+        }
         if (notification.reference_type !== 'DOCTOR_APPLICATION') return null;
         if (notification.notification_type === 'DOCTOR_APPLICATION_SUBMITTED' && ['admin', 'super_admin'].includes(role)) {
             return 'admin-doctor-applications.html?status=pending&application=' + encodeURIComponent(notification.reference_id);

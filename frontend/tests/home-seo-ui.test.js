@@ -20,6 +20,8 @@ function assert(condition, message) {
 
 const nginxConf = fs.readFileSync(NGINX_CONF, 'utf8');
 const homeHtml = fs.readFileSync(path.join(PUBLIC_DIR, 'home.html'), 'utf8');
+const homeScript = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', 'pages', 'home.js'), 'utf8');
+const feedbackDashboardScript = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', 'feedback-dashboard.js'), 'utf8');
 const htmlFiles = fs.readdirSync(PUBLIC_DIR).filter((f) => f.endsWith('.html'));
 
 const indexEntries = [...nginxConf.matchAll(/\/public\/([\w.-]+\.html)\s+"index, follow"/g)].map((m) => m[1]);
@@ -91,6 +93,12 @@ if (fs.existsSync(FAVICON)) {
     const withoutNamespaceDecls = svgContent.replace(/xmlns(?::\w+)?=["']https?:\/\/[^"']*["']/gi, '');
     assert(!/https?:\/\//i.test(withoutNamespaceDecls), 'favicon.svg contains no external http/https resource references (xmlns namespace URIs excluded)');
 }
+
+assert(/<a(?=[^>]*\bid=["']heroFacilityDiscoveryBtn["'])(?=[^>]*\bhref=["']find-clinics\.html["'])[^>]*>/.test(homeHtml), 'home has a dedicated healthcare-facility discovery action');
+assert(/data-i18n=["']home\.findFacilities["']/.test(homeHtml), 'facility discovery action uses localized text');
+assert(!/heroFacilityDiscoveryLabel/.test(homeScript), 'facility discovery does not rely on manually mixed-language copy');
+assert(/feedback-review\.html\?reviewer=/.test(feedbackDashboardScript), 'feedback profiles link to their review and rating details');
+assert(/feedbackDash\.usersHint/.test(homeHtml), 'feedback area explains that reviewer profiles are selectable');
 
 const protectedFiles = htmlFiles.filter((f) => f !== 'home.html');
 for (const file of protectedFiles) {

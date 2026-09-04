@@ -213,9 +213,11 @@ const Layout = (() => {
                     (isDoctor ? '<a href="doctor-profile-edit.html" class="user-menu-item" data-i18n="nav.professionalProfile"></a>' : '') +
                     (isDoctor ? '<a href="doctor-posts.html" class="user-menu-item" data-i18n="nav.doctorPosts"></a>' : '') +
                     (isDoctor ? '<a href="my-patients.html" class="user-menu-item" data-i18n="nav.myPatients"></a>' : '') +
+                    (isDoctor ? '<a href="doctor-clinic-invitations.html" class="user-menu-item"><i class="fas fa-hospital-user"></i> ' + localized('دعوات المنشآت', 'Clinic invitations') + '</a>' : '') +
                     (isClinic ? '<a href="clinic-workspace.html" class="user-menu-item"><i class="fas fa-hospital"></i> ' + localized('مساحة المنشأة', 'Clinic workspace') + '</a>' : '') +
                     (isAdmin ? '<a href="admin-doctor-applications.html" class="user-menu-item" data-i18n="nav.doctorApplications"></a>' : '') +
                     (isAdmin ? '<a href="admin-clinic-applications.html" class="user-menu-item"><i class="fas fa-hospital"></i> ' + localized('طلبات المنشآت', 'Clinic applications') + '</a>' : '') +
+                    (isAdmin ? '<a href="admin-clinic-credential-requests.html" class="user-menu-item"><i class="fas fa-shield-halved"></i> ' + localized('طلبات تغيير الترخيص', 'Clinic credential requests') + '</a>' : '') +
                     (isAdmin ? '<a href="admin-contact-messages.html" class="user-menu-item" data-i18n="nav.contactMessages"></a>' : '') +
                     (isAdmin ? '<a href="admin-social.html" class="user-menu-item" data-i18n="nav.socialModeration"></a>' : '') +
                     (isSuperAdmin ? '<a href="admin-invitations.html" class="user-menu-item">Admin Invitations</a>' : '') +
@@ -309,9 +311,11 @@ const Layout = (() => {
             (isDoctor ? '<a href="doctor-profile-edit.html" class="drawer-link" data-i18n="nav.professionalProfile"></a>' : '') +
             (isDoctor ? '<a href="doctor-posts.html" class="drawer-link" data-i18n="nav.doctorPosts"></a>' : '') +
             (isDoctor ? '<a href="my-patients.html" class="drawer-link" data-i18n="nav.myPatients"></a>' : '') +
+            (isDoctor ? '<a href="doctor-clinic-invitations.html" class="drawer-link"><i class="fas fa-hospital-user"></i> ' + localized('دعوات المنشآت', 'Clinic invitations') + '</a>' : '') +
             (isClinic ? '<a href="clinic-workspace.html" class="drawer-link"><i class="fas fa-hospital"></i> ' + localized('مساحة المنشأة', 'Clinic workspace') + '</a>' : '') +
             (isAdmin ? '<a href="admin-doctor-applications.html" class="drawer-link" data-i18n="nav.doctorApplications"></a>' : '') +
             (isAdmin ? '<a href="admin-clinic-applications.html" class="drawer-link"><i class="fas fa-hospital"></i> ' + localized('طلبات المنشآت', 'Clinic applications') + '</a>' : '') +
+            (isAdmin ? '<a href="admin-clinic-credential-requests.html" class="drawer-link"><i class="fas fa-shield-halved"></i> ' + localized('طلبات تغيير الترخيص', 'Clinic credential requests') + '</a>' : '') +
             (isAdmin ? '<a href="admin-contact-messages.html" class="drawer-link" data-i18n="nav.contactMessages"></a>' : '') +
             (isAdmin ? '<a href="admin-social.html" class="drawer-link" data-i18n="nav.socialModeration"></a>' : '') +
             (isSuperAdmin ? '<a href="admin-invitations.html" class="drawer-link">Admin Invitations</a>' : '') +
@@ -597,4 +601,283 @@ const Layout = (() => {
     }
 
     return { init, renderNav, renderAuthArea, renderFooter, renderAuthPromptBanner };
+})();
+
+// Clinic workspace controls live here because the static workspace page uses
+// the shared layout bundle. The guard keeps this dormant on every other page.
+const ClinicWorkspaceControls = (() => {
+    const $ = (id) => document.getElementById(id);
+    const isArabic = () => I18n?.getLang?.() === 'ar';
+    const t = (ar, en) => isArabic() ? ar : en;
+    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+
+    function showError(error) {
+        const alert = $('workspaceAlert');
+        if (!alert) return;
+        alert.className = 'alert error';
+        alert.textContent = error?.message || t('تعذر إكمال العملية', 'Could not complete this action');
+    }
+
+    function renderContacts(rows) {
+        const host = $('contactEmails');
+        host.innerHTML = rows.length ? rows.map((row) => {
+            const verified = row.status === 'verified';
+            return `<div class="control-list-item"><div><strong dir="ltr">${esc(row.email)}</strong><small>${verified ? t('بريد تواصل موثق', 'Verified contact') : t('بانتظار التحقق من البريد', 'Verification pending')}</small></div><div><span class="contact-status ${verified ? 'verified' : 'pending'}"><i class="fas fa-${verified ? 'circle-check' : 'clock'}"></i> ${verified ? t('موثق', 'Verified') : t('قيد الانتظار', 'Pending')}</span><button class="btn btn-ghost btn-sm" type="button" data-contact-id="${esc(row.id)}">${t('إزالة', 'Remove')}</button></div></div>`;
+        }).join('') : `<p class="text-muted">${t('لا توجد رسائل تواصل مضافة.', 'No additional clinic contact emails yet.')}</p>`;
+        host.querySelectorAll('[data-contact-id]').forEach((button) => button.addEventListener('click', async () => {
+            if (!confirm(t('هل تريد إزالة هذا البريد؟', 'Remove this contact email?'))) return;
+            try { await API.clinics.removeContactEmail(button.dataset.contactId); await refresh(); Toast.success(t('تمت إزالة البريد', 'Contact email removed')); }
+            catch (error) { showError(error); }
+        }));
+    }
+
+    function renderRequests(rows) {
+        $('credentialRequests').innerHTML = rows.length ? rows.map((row) => `<div class="control-list-item"><div><strong>${esc(row.current_registration_number || '—')} → ${esc(row.requested_registration_number)}</strong><small>${esc(row.reason)}</small>${row.decision_note ? `<small>${esc(row.decision_note)}</small>` : ''}</div><span class="request-status">${esc(row.status)}</span></div>`).join('') : `<p class="text-muted">${t('لا توجد طلبات تغيير.', 'No credential change requests.')}</p>`;
+    }
+
+    async function refresh() {
+        const [clinicResponse, contactsResponse, requestsResponse] = await Promise.all([
+            API.clinics.mine(), API.clinics.contactEmails(), API.clinics.credentialChangeRequests(),
+        ]);
+        $('verifiedRegistration').textContent = clinicResponse.data?.registration_number || t('رقم التسجيل غير متاح', 'Registration number unavailable');
+        renderContacts(contactsResponse.data || []);
+        renderRequests(requestsResponse.data || []);
+    }
+
+    function bind() {
+        $('contactEmailForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            try {
+                await API.clinics.addContactEmail({ email: $('contactEmail').value.trim() });
+                $('contactEmail').value = '';
+                await refresh();
+                Toast.success(t('تم إرسال رابط التحقق', 'Verification link sent'));
+            } catch (error) { showError(error); }
+        });
+        $('credentialChangeForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            try {
+                await API.clinics.requestCredentialChange({ registration_number: $('requestedRegistration').value.trim(), reason: $('credentialReason').value.trim() });
+                $('requestedRegistration').value = ''; $('credentialReason').value = '';
+                await refresh();
+                Toast.success(t('تم إرسال الطلب للمراجعة', 'Request sent for review'));
+            } catch (error) { showError(error); }
+        });
+        window.addEventListener('languageChanged', () => refresh().catch(showError));
+    }
+
+    async function init() {
+        if (!$('contactEmailForm') || !API?.isAuthenticated?.() || API.getUser()?.role !== 'clinic') return;
+        bind();
+        try { await refresh(); } catch (error) { showError(error); }
+    }
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', () => { ClinicWorkspaceControls.init(); });
+
+const ClinicInvitationWorkspace = (() => {
+    const $ = (id) => document.getElementById(id);
+    const ar = () => I18n?.getLang?.() === 'ar';
+    const t = (a, e) => ar() ? a : e;
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    const name = (d) => (ar() ? [d.first_name_ar,d.last_name_ar] : [d.first_name_en,d.last_name_en]).filter(Boolean).join(' ') || [d.first_name_en,d.last_name_en].filter(Boolean).join(' ');
+    function alert(error) { const host = $('workspaceAlert'); host.className = 'alert error'; host.textContent = error?.message || t('تعذر إرسال الدعوة', 'Could not send invitation'); }
+    async function refresh() {
+        localizeSection();
+        const response = await API.clinics.doctorInvitations();
+        const label = (status) => ({
+            pending: t('قيد الانتظار', 'Pending'),
+            accepted: t('مقبولة', 'Accepted'),
+            declined: t('مرفوضة', 'Declined'),
+            cancelled: t('ملغاة', 'Cancelled'),
+        }[status] || status);
+        $('clinicInvitations').innerHTML = (response.data || []).length
+            ? response.data.map((item) => `<div class="control-list-item"><div><strong>${esc(name(item))}</strong><small>${esc(item.message || t('دعوة للانضمام إلى المنشأة', 'Invitation to join the clinic'))}</small></div><div class="clinic-invitation-status"><span class="contact-status ${item.status === 'accepted' ? 'verified' : 'pending'}">${esc(label(item.status))}</span>${item.status === 'pending' ? `<button type="button" class="btn btn-ghost btn-sm" data-cancel-invitation="${esc(item.id)}">${t('إلغاء الدعوة', 'Cancel invitation')}</button>` : ''}</div></div>`).join('')
+            : `<p class="text-muted">${t('لا توجد دعوات مرسلة.', 'No invitations sent yet.')}</p>`;
+        $('clinicInvitations').querySelectorAll('[data-cancel-invitation]').forEach((button) => {
+            button.onclick = async () => {
+                if (!window.confirm(t('هل تريد إلغاء هذه الدعوة؟', 'Cancel this invitation?'))) return;
+                try {
+                    await API.clinics.cancelDoctorInvitation(button.dataset.cancelInvitation);
+                    Toast.success(t('تم إلغاء الدعوة', 'Invitation cancelled'));
+                    await refresh();
+                } catch (error) { alert(error); }
+            };
+        });
+    }
+    function localizeSection() {
+        const section = $('clinicInvitations')?.closest('section');
+        const title = section?.querySelector('.care-section-title');
+        const description = section?.querySelector('.text-muted');
+        if (title) title.innerHTML = `<i class="fas fa-paper-plane"></i> ${t('دعوات الأطباء', 'Doctor invitations')}`;
+        if (description) description.textContent = t('يرسل النظام دعوة للطبيب، ولا يظهر في المنشأة إلا بعد القبول.', 'Doctors appear in your clinic only after accepting an invitation.');
+    }
+    function addSection() {
+        const doctors = $('clinicDoctors')?.closest('section'); if (!doctors) return;
+        if ($('clinicInvitations')) { localizeSection(); return; }
+        const section = document.createElement('section'); section.className = 'care-section clinic-control-section';
+        section.innerHTML = `<h2 class="care-section-title"><i class="fas fa-paper-plane"></i> ${t('دعوات الأطباء', 'Doctor invitations')}</h2><p class="text-muted">${t('يرسل النظام دعوة للطبيب، ولا يظهر في المنشأة إلا بعد القبول.', 'Doctors appear in your clinic only after accepting an invitation.')}</p><div id="clinicInvitations" class="control-list"></div>`;
+        doctors.parentNode.insertBefore(section, doctors);
+    }
+    function replaceDirectLinkAction() {
+        const button = $('addDoctor'); if (!button) return;
+        const originalSlot = button.closest('.form-group');
+        const originalRow = originalSlot?.closest('.form-row');
+        if (!$('clinicInvitationMessage') && originalRow) {
+            const messageGroup = document.createElement('div');
+            messageGroup.className = 'form-group clinic-invitation-message';
+            messageGroup.innerHTML = `<label for="clinicInvitationMessage">${t('رسالة للطبيب (اختيارية)', 'Message to the doctor (optional)')}</label><textarea id="clinicInvitationMessage" maxlength="1000" rows="3" placeholder="${t('اكتب رسالة مرافقة للدعوة...', 'Write a message to accompany the invitation...')}"></textarea>`;
+            originalRow.insertAdjacentElement('afterend', messageGroup);
+        }
+        if (originalSlot) {
+            const actions = document.createElement('div');
+            actions.className = 'care-form-actions clinic-invitation-actions';
+            const messageGroup = $('clinicInvitationMessage')?.closest('.form-group');
+            (messageGroup || originalRow)?.insertAdjacentElement('afterend', actions);
+            actions.appendChild(button);
+            originalSlot.remove();
+        }
+        const label = button.closest('.form-row')?.querySelector('label[for="eligibleDoctor"]');
+        if (label) label.textContent = t('إرسال دعوة لطبيب معتمد', 'Invite an approved doctor');
+        button.textContent = t('إرسال دعوة', 'Send invitation');
+        button.onclick = async () => {
+            const select = $('eligibleDoctor'); if (!select.value) return;
+            const message = $('clinicInvitationMessage')?.value.trim() || null;
+            try { await API.clinics.inviteDoctor({ doctor_id: select.value, message }); if ($('clinicInvitationMessage')) $('clinicInvitationMessage').value = ''; await refresh(); Toast.success(t('تم إرسال الدعوة', 'Invitation sent')); }
+            catch (error) { alert(error); }
+        };
+    }
+    async function init() {
+        if (!$('clinicDoctors') || API.getUser()?.role !== 'clinic') return;
+        addSection();
+        // ClinicWorkspace installs its legacy direct-link handler during the
+        // same DOM event; defer once to replace it safely with invitations.
+        setTimeout(() => { replaceDirectLinkAction(); refresh().catch(alert); }, 0);
+        window.addEventListener('languageChanged', () => { replaceDirectLinkAction(); refresh().catch(alert); });
+    }
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', () => { ClinicInvitationWorkspace.init(); });
+
+// The workspace keeps the stored Arabic and English clinic attributes, but its
+// interface itself must speak one language at a time. This replaces the early
+// bilingual placeholder labels after the shared language system is ready.
+const ClinicWorkspaceLocale = (() => {
+    const $ = (id) => document.getElementById(id);
+    const ar = () => I18n?.getLang?.() === 'ar';
+    const text = (arabic, english) => ar() ? arabic : english;
+    const label = (id, arabic, english) => {
+        const element = $(id);
+        const target = element?.closest('.form-group')?.querySelector('label');
+        if (target) target.textContent = text(arabic, english);
+    };
+    function localize() {
+        if (!$('clinicWorkspaceForm')) return;
+        const heading = document.querySelector('.care-header-row h1');
+        const intro = document.querySelector('.care-header-row p');
+        const publicLink = $('publicClinicLink');
+        if (heading) heading.textContent = text('مساحة المنشأة', 'Clinic workspace');
+        if (intro) intro.textContent = text('حدّث معلومات منشأتك وأرسل دعوات للأطباء المعتمدين.', 'Update your clinic information and invite approved doctors.');
+        if (publicLink) publicLink.textContent = text('الصفحة العامة', 'Public profile');
+        const sections = [...document.querySelectorAll('.care-section')];
+        const setTitle = (section, icon, arabic, english) => {
+            const title = section?.querySelector('.care-section-title');
+            if (title) title.innerHTML = `<i class="${icon}"></i> ${text(arabic, english)}`;
+        };
+        setTitle(sections[0], 'fas fa-hospital', 'بيانات المنشأة', 'Clinic details');
+        setTitle(sections.find(s => s.querySelector('#contactEmailForm')), 'fas fa-envelope-circle-check', 'رسائل التواصل', 'Contact emails');
+        setTitle(sections.find(s => s.querySelector('#credentialChangeForm')), 'fas fa-shield-halved', 'الترخيص الموثق', 'Verified registration');
+        setTitle(sections.find(s => s.querySelector('#clinicDoctors')), 'fas fa-user-doctor', 'أطباء المنشأة', 'Clinic doctors');
+        label('nameAr', 'اسم المنشأة بالعربية', 'Clinic name (Arabic)');
+        label('nameEn', 'اسم المنشأة بالإنجليزية', 'Clinic name (English)');
+        label('city', 'المدينة', 'City'); label('phone', 'الهاتف', 'Phone');
+        label('addressAr', 'العنوان بالعربية', 'Address (Arabic)'); label('addressEn', 'العنوان بالإنجليزية', 'Address (English)');
+        label('services', 'الخدمات الطبية (افصل بفاصلة)', 'Medical services (separate with commas)');
+        label('eligibleDoctor', 'إرسال دعوة لطبيب معتمد', 'Invite an approved doctor');
+        label('clinicInvitationMessage', 'رسالة للطبيب (اختيارية)', 'Message to the doctor (optional)');
+        $('clinicInvitationMessage')?.setAttribute('placeholder', text('اكتب رسالة مرافقة للدعوة...', 'Write a message to accompany the invitation...'));
+        const save = $('clinicWorkspaceForm')?.querySelector('button[type="submit"]');
+        if (save) save.textContent = text('حفظ التغييرات', 'Save changes');
+        const contacts = sections.find(s => s.querySelector('#contactEmailForm'));
+        const credential = sections.find(s => s.querySelector('#credentialChangeForm'));
+        if (contacts) contacts.querySelector('.text-muted').textContent = text('تظهر عناوين البريد التي تم التحقق منها فقط كوسائل تواصل للمنشأة. يرسل النظام رابط تحقق لكل عنوان جديد.', 'Only verified addresses become clinic contacts. A verification link is sent to every new address.');
+        if (credential) credential.querySelector('.text-muted').textContent = text('رقم التسجيل محمي. أرسل سبباً واضحاً ليقوم المسؤول بمراجعة أي تغيير.', 'The registration number is protected. Send a reasoned request for an administrator to review any change.');
+        const contactButton = $('contactEmailForm')?.querySelector('button');
+        if (contactButton) contactButton.textContent = text('إضافة بريد', 'Add email');
+        $('contactEmail')?.setAttribute('placeholder', text('contact@clinic.example', 'contact@clinic.example'));
+        label('requestedRegistration', 'رقم التسجيل المطلوب', 'Requested registration number');
+        label('credentialReason', 'سبب الطلب', 'Reason for request');
+        const requestButton = $('credentialChangeForm')?.querySelector('button');
+        if (requestButton) requestButton.textContent = text('طلب مراجعة', 'Request review');
+    }
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(localize, 0); setTimeout(localize, 100); });
+    window.addEventListener('languageChanged', () => setTimeout(localize, 0));
+    return { localize };
+})();
+
+// The legacy workspace loader renders doctor names only once. Refresh that
+// small, role-scoped data area after a language switch so names, the select
+// prompt, and the empty state always match the current locale.
+window.addEventListener('languageChanged', async () => {
+    const select = document.getElementById('eligibleDoctor');
+    const doctorsHost = document.getElementById('clinicDoctors');
+    if (!select || !doctorsHost || API?.getUser?.()?.role !== 'clinic') return;
+    const arabic = I18n?.getLang?.() === 'ar';
+    const t = (a, e) => arabic ? a : e;
+    const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    const name = (doctor) => [arabic ? doctor.first_name_ar : doctor.first_name_en, arabic ? doctor.last_name_ar : doctor.last_name_en].filter(Boolean).join(' ') || [doctor.first_name_en, doctor.last_name_en].filter(Boolean).join(' ');
+    try {
+        const [eligible, linked] = await Promise.all([API.clinics.eligibleDoctors(), API.clinics.mineDoctors()]);
+        const chosen = select.value;
+        select.innerHTML = `<option value="">${t('اختر طبيباً', 'Select a doctor')}</option>` + (eligible.data || []).map((doctor) => `<option value="${esc(doctor.id)}">${esc(name(doctor))}</option>`).join('');
+        if ([...select.options].some((option) => option.value === chosen)) select.value = chosen;
+        doctorsHost.innerHTML = (linked.data || []).length
+            ? (linked.data || []).map((doctor) => `<div class="note-card"><div class="note-card-header"><strong>${esc(name(doctor))}</strong><button class="btn btn-ghost btn-sm" data-id="${esc(doctor.id)}">${t('إزالة', 'Remove')}</button></div><div class="note-card-body">${esc(arabic ? doctor.specialty_ar : doctor.specialty_en || '')}</div></div>`).join('')
+            : `<p class="text-muted">${t('لا يوجد أطباء مرتبطون بعد.', 'No clinic doctors yet.')}</p>`;
+        doctorsHost.querySelectorAll('[data-id]').forEach((button) => {
+            button.onclick = async () => { await API.clinics.removeMineDoctor(button.dataset.id); window.location.reload(); };
+        });
+    } catch (_) { /* The existing workspace loader retains its last safe data. */ }
+});
+
+// A clinic's approved service catalogue is structured data, not an arbitrary
+// comma-separated sentence. Keep the existing hidden field as the API payload
+// bridge while presenting clear, localised checkboxes to the owner.
+const ClinicWorkspaceServices = (() => {
+    const services = {
+        cardiology: ['القلب', 'Cardiology'], orthopedics: ['العظام', 'Orthopedics'], dentistry: ['الأسنان', 'Dentistry'],
+        dermatology: ['الجلدية', 'Dermatology'], pediatrics: ['الأطفال', 'Pediatrics'], gynecology: ['النسائية', 'Gynecology'],
+        general_medicine: ['الطب العام', 'General medicine'], laboratory: ['المختبر', 'Laboratory'], radiology: ['الأشعة', 'Radiology'], emergency: ['الطوارئ', 'Emergency'],
+    };
+    const $ = (id) => document.getElementById(id);
+    const arabic = () => I18n?.getLang?.() === 'ar';
+    function render(values = null) {
+        const input = $('services');
+        if (!input) return;
+        const selected = new Set(values ?? String(input.value || '').split(',').map((value) => value.trim()).filter(Boolean));
+        input.type = 'hidden';
+        let choices = $('clinicWorkspaceServices');
+        if (!choices) {
+            choices = document.createElement('div');
+            choices.id = 'clinicWorkspaceServices';
+            choices.className = 'clinic-service-grid';
+            input.insertAdjacentElement('afterend', choices);
+        }
+        choices.innerHTML = Object.entries(services).map(([key, label]) => `<label class="clinic-service-choice"><input type="checkbox" value="${key}" ${selected.has(key) ? 'checked' : ''}><span>${arabic() ? label[0] : label[1]}</span></label>`).join('');
+        choices.querySelectorAll('input').forEach((checkbox) => checkbox.addEventListener('change', () => {
+            input.value = [...choices.querySelectorAll('input:checked')].map((item) => item.value).join(',');
+        }));
+    }
+    async function init() {
+        if (!$('services') || API?.getUser?.()?.role !== 'clinic') return;
+        try {
+            const response = await API.clinics.mine();
+            render(response.data?.services || []);
+        } catch (_) { render(); }
+        window.addEventListener('languageChanged', () => render());
+    }
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(init, 0); });
+    return { render };
 })();

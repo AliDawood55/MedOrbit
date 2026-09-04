@@ -6,7 +6,10 @@ const FindClinics = (() => {
         clinic: { labelKey: 'filter.clinic', icon: 'fa-hospital', category: 'clinic' },
         dental: { labelKey: 'filter.dental', icon: 'fa-tooth', category: 'dental' },
         hospital: { labelKey: 'filter.hospital', icon: 'fa-hospital-user', category: 'hospital' },
-        pharmacy: { labelKey: 'filter.pharmacy', icon: 'fa-pills', category: 'pharmacy' }
+        pharmacy: { labelKey: 'filter.pharmacy', icon: 'fa-pills', category: 'pharmacy' },
+        laboratory: { icon: 'fa-flask', category: 'healthcare', labels: ['المختبرات', 'Laboratories'] },
+        radiology: { icon: 'fa-x-ray', category: 'healthcare', labels: ['مراكز الأشعة', 'Radiology centres'] },
+        emergency: { icon: 'fa-truck-medical', category: 'healthcare', labels: ['مراكز الطوارئ', 'Emergency centres'] }
     });
     const GENERIC_FACILITY = Object.freeze({
         labelKey: 'filter.healthcare', icon: 'fa-notes-medical', category: 'healthcare'
@@ -16,6 +19,7 @@ const FindClinics = (() => {
     let currentType = '';
     let currentCity = '';
     let currentService = '';
+    let currentOpenNow = false;
     let currentPage = 1;
     let searchDebounceTimer = null;
     let activeController = null;
@@ -95,7 +99,8 @@ async function loadList(page = 1) {
 
         try {
             const res = await API.clinics.list(query, { signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
-            const { clinics, pagination } = res.data;
+            const { clinics: responseClinics, pagination } = res.data;
+            const clinics = filteredByOpenNow(responseClinics || []);
 
             if (!clinics || clinics.length === 0) {
                 content.innerHTML = renderEmpty();
@@ -159,7 +164,7 @@ const unsubscribe = Location.onChange(handleLocationUpdate);
                 type: currentType || undefined
             }, { signal: activeController.signal, cacheTTL: LIST_CACHE_TTL });
 
-            const clinics = res.data.clinics || [];
+            const clinics = filteredByOpenNow(res.data.clinics || []);
 
             if (clinics.length === 0) {
                 content.innerHTML = renderEmpty();
@@ -206,12 +211,18 @@ function renderSkeleton() {
         const cName = escapeHtml(clinicName(c));
         const address = escapeHtml(clinicAddress(c));
         const type = typePresentation(c.type);
-        const typeLabel = escapeHtml(t(type.labelKey));
+        const facilityTypeLabel = escapeHtml(typeLabel(type));
         const distText = showDistance && c.distance_km != null ? Number(c.distance_km).toFixed(2) + (isAr() ? ' كم' : ' km') : '';
         const phone = escapeHtml(optionalText(c.phone));
         const verifiedBadge = c.verification_status === 'verified'
             ? '<span class="badge badge-success"><i class="fas fa-circle-check"></i> ' + escapeHtml(t('clinic.verified')) + '</span>'
             : '';
+        const opening = openingState(c);
+        const copy = localCopy();
+        const hoursStatus = '<div class="clinic-directory-status ' + (opening === 'open' ? 'is-open' : opening === 'closed' ? 'is-closed' : '') + '"><i class="fas fa-clock"></i>' + escapeHtml(opening === 'open' ? copy.open : opening === 'closed' ? copy.closed : copy.hoursUnavailable) + '</div>';
+        const directionsUrl = c.latitude != null && c.longitude != null
+            ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(c.latitude + ',' + c.longitude)
+            : null;
 
         return (
             '<div class="entity-card" style="margin-bottom:10px;" data-clinic-id="' + escapeHtml(c.id) + '">' +
@@ -221,17 +232,19 @@ function renderSkeleton() {
                         '<div class="entity-card-title">' + cName + '</div>' +
                         (address ? '<div class="entity-card-subtitle" style="color:var(--text-mute);font-weight:500;">' + address + '</div>' : '') +
                         (verifiedBadge ? '<div class="entity-card-badges">' + verifiedBadge + '</div>' : '') +
+                        hoursStatus +
                         '<div class="entity-card-meta">' +
-                            '<span><i class="fas ' + type.icon + '"></i>' + typeLabel + '</span>' +
+                            '<span><i class="fas ' + type.icon + '"></i>' + facilityTypeLabel + '</span>' +
                             (distText ? '<span><i class="fas fa-route"></i>' + distText + '</span>' : '') +
                             (phone ? '<span><i class="fas fa-phone"></i>' + phone + '</span>' : '') +
                         '</div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="entity-card-footer">' +
+                '<div class="entity-card-footer clinic-directory-card-actions">' +
                     '<a class="btn btn-primary btn-sm" href="clinic.html?id=' + encodeURIComponent(c.id) + '">' +
                         '<i class="fas fa-circle-info"></i> ' + escapeHtml(t('clinics.viewDetails')) +
                     '</a>' +
+                    (directionsUrl ? '<a class="btn btn-secondary btn-sm" href="' + directionsUrl + '" target="_blank" rel="noopener"><i class="fas fa-route"></i> ' + escapeHtml(copy.directions) + '</a>' : '') +
                 '</div>' +
             '</div>'
         );
@@ -267,9 +280,59 @@ function renderSkeleton() {
             const data = response.data || {};
             const city = document.getElementById('cityFilter');
             const service = document.getElementById('serviceFilter');
-            if (city) city.innerHTML = '<option value="">' + escapeHtml(isAr() ? 'كل المدن' : 'All cities') + '</option>' + (data.cities || []).map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
-            if (service) service.innerHTML = '<option value="">' + escapeHtml(isAr() ? 'كل الخدمات' : 'All services') + '</option>' + (data.services || []).map((value) => { const label = SERVICE_LABELS[value]; return `<option value="${escapeHtml(value)}">${escapeHtml(label ? (isAr() ? label[0] : label[1]) : value)}</option>`; }).join('');
+            if (city) city.innerHTML = '<option value="">' + escapeHtml(localCopy().allCities) + '</option>' + (data.cities || []).map((value) => `<option value="${escapeHtml(value)}" ${value === currentCity ? 'selected' : ''}>${escapeHtml(value)}</option>`).join('');
+            if (service) service.innerHTML = '<option value="">' + escapeHtml(localCopy().allServices) + '</option>' + (data.services || []).map((value) => { const label = SERVICE_LABELS[value]; return `<option value="${escapeHtml(value)}" ${value === currentService ? 'selected' : ''}>${escapeHtml(label ? (isAr() ? label[0] : label[1]) : value)}</option>`; }).join('');
         } catch (err) { console.warn('FindClinics: filters unavailable', err); }
+    }
+
+    function typeLabel(presentation) {
+        return presentation.labels ? presentation.labels[isAr() ? 0 : 1] : t(presentation.labelKey);
+    }
+
+    function localCopy() {
+        return isAr()
+            ? { openNow: 'مفتوح الآن', open: 'مفتوح الآن', closed: 'مغلق الآن', hoursUnavailable: 'ساعات العمل غير متوفرة', directions: 'الاتجاهات', laboratories: 'المختبرات', radiology: 'مراكز الأشعة', allCities: 'كل المدن', allServices: 'كل الخدمات' }
+            : { openNow: 'Open now', open: 'Open now', closed: 'Closed now', hoursUnavailable: 'Hours unavailable', directions: 'Get directions', laboratories: 'Laboratories', radiology: 'Radiology centres', allCities: 'All cities', allServices: 'All services' };
+    }
+
+    function applyDirectoryLabels() {
+        const copy = localCopy();
+        const labels = [
+            ['openNowLabel', copy.openNow],
+            ['laboratoryTypeLabel', copy.laboratories],
+            ['radiologyTypeLabel', copy.radiology]
+        ];
+        labels.forEach(([id, value]) => { const element = document.getElementById(id); if (element) element.textContent = value; });
+    }
+
+    function timeInClinicTimezone() {
+        const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Hebron', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+        const value = (name) => parts.find((part) => part.type === name)?.value;
+        const weekdays = { Sun: 'sun', Mon: 'mon', Tue: 'tue', Wed: 'wed', Thu: 'thu', Fri: 'fri', Sat: 'sat' };
+        return { day: weekdays[value('weekday')], minutes: Number(value('hour')) * 60 + Number(value('minute')) };
+    }
+
+    function minutesFromTime(value) {
+        const match = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+        if (!match) return null;
+        const hours = Number(match[1]); const minutes = Number(match[2]);
+        return hours <= 23 && minutes <= 59 ? hours * 60 + minutes : null;
+    }
+
+    // Only a structured schedule can qualify as open. We use the clinic
+    // directory's Palestine timezone and correctly support overnight hours.
+    function openingState(clinic) {
+        const schedule = clinic?.operating_hours;
+        if (!schedule || typeof schedule !== 'object' || Array.isArray(schedule)) return 'unknown';
+        const now = timeInClinicTimezone(); const slot = schedule[now.day];
+        if (!slot || slot.is_off) return 'closed';
+        const open = minutesFromTime(slot.open); const close = minutesFromTime(slot.close);
+        if (open == null || close == null || open === close) return 'unknown';
+        return (close > open ? now.minutes >= open && now.minutes < close : now.minutes >= open || now.minutes < close) ? 'open' : 'closed';
+    }
+
+    function filteredByOpenNow(clinics) {
+        return currentOpenNow ? clinics.filter((clinic) => openingState(clinic) === 'open') : clinics;
     }
 
     function init() {
@@ -280,6 +343,7 @@ function renderSkeleton() {
             if (input) input.value = initialSearch;
         }
 
+        applyDirectoryLabels();
         loadDirectoryFilters();
         loadList(1);
 
@@ -288,9 +352,9 @@ function renderSkeleton() {
             searchDebounceTimer = setTimeout(() => loadList(1), 400);
         });
 
-        document.querySelectorAll('.filter-chip').forEach(chip => {
+        document.querySelectorAll('.filter-chip[data-type]').forEach(chip => {
             chip.addEventListener('click', () => {
-                document.querySelectorAll('.filter-chip').forEach(c => {
+                document.querySelectorAll('.filter-chip[data-type]').forEach(c => {
                     c.classList.remove('active');
                     c.setAttribute('aria-pressed', 'false');
                 });
@@ -303,6 +367,13 @@ function renderSkeleton() {
                     loadList(1);
                 }
             });
+        });
+
+        document.getElementById('openNowBtn')?.addEventListener('click', (event) => {
+            currentOpenNow = !currentOpenNow;
+            event.currentTarget.classList.toggle('active', currentOpenNow);
+            event.currentTarget.setAttribute('aria-pressed', String(currentOpenNow));
+            mode === 'nearby' ? loadNearby() : loadList(1);
         });
 
         document.getElementById('nearMeBtn')?.addEventListener('click', loadNearby);
@@ -321,6 +392,7 @@ function renderSkeleton() {
         });
 
         window.addEventListener('languageChanged', () => {
+            applyDirectoryLabels();
             loadDirectoryFilters();
             mode === 'nearby' ? loadNearby() : loadList(currentPage);
         });

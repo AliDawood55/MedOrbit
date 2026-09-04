@@ -21,6 +21,7 @@ const {
   boundedInteger
 } = require('../utils/profileFields');
 const scheduling = require('../services/scheduling.service');
+const { createAudit } = require('../services/audit.service');
 
 const router = express.Router();
 
@@ -29,6 +30,35 @@ async function resolveDoctorId(userId) {
   const result = await db.query('SELECT id FROM medorbit.doctors WHERE user_id = $1', [userId]);
   return result.rows[0]?.id || null;
 }
+
+// A clinic can only become a doctor's workplace after the doctor accepts its
+// invitation. These endpoints deliberately resolve the doctor from the JWT.
+router.get('/me/clinic-invitations', authenticate, authorize('doctor'), async (req, res, next) => {
+  try {
+    const doctorId = await resolveDoctorId(req.user.sub);
+    const result = await db.query(`SELECT i.id,i.status,i.message,i.created_at,c.id AS clinic_id,c.name_ar,c.name_en,c.city,c.address_ar,c.address_en FROM medorbit.clinic_doctor_invitations i JOIN medorbit.clinics c ON c.id=i.clinic_id WHERE i.doctor_id=$1 ORDER BY i.created_at DESC`, [doctorId]);
+    return success(res, result.rows, 'Clinic invitations retrieved');
+  } catch (err) { return next(err); }
+});
+
+router.post('/me/clinic-invitations/:id/respond', authenticate, authorize('doctor'), async (req, res, next) => {
+  const client = await db.getClient();
+  try {
+    if (typeof req.body?.accepted !== 'boolean') return error(res, 'accepted must be true or false', 400, 'VALIDATION_ERROR');
+    await client.query('BEGIN');
+    const doctorId = await resolveDoctorId(req.user.sub);
+    const invitation = (await client.query(`SELECT i.*,c.owner_user_id,c.name_ar,c.name_en FROM medorbit.clinic_doctor_invitations i JOIN medorbit.clinics c ON c.id=i.clinic_id WHERE i.id=$1 AND i.doctor_id=$2 FOR UPDATE`, [req.params.id, doctorId])).rows[0];
+    if (!invitation || invitation.status !== 'pending') { const err = new Error('Pending clinic invitation not found'); err.statusCode = 404; err.code = 'NOT_FOUND'; throw err; }
+    const status = req.body.accepted ? 'accepted' : 'declined';
+    const row = (await client.query(`UPDATE medorbit.clinic_doctor_invitations SET status=$1,responded_at=NOW(),updated_at=NOW() WHERE id=$2 RETURNING *`, [status, invitation.id])).rows[0];
+    if (req.body.accepted) {
+      await client.query(`INSERT INTO medorbit.doctor_clinic_assignments(doctor_id,clinic_id,is_active,joined_at,ended_at,source,invitation_id) VALUES($1,$2,true,NOW(),NULL,'clinic_invitation',$3) ON CONFLICT(doctor_id,clinic_id) DO UPDATE SET is_active=true,joined_at=NOW(),ended_at=NULL,source='clinic_invitation',invitation_id=EXCLUDED.invitation_id`, [doctorId, invitation.clinic_id, invitation.id]);
+    }
+    await client.query(`INSERT INTO medorbit.notifications(user_id,notification_type,title_en,title_ar,message_en,message_ar,reference_id,reference_type,channel) VALUES($1,$2,'Clinic invitation response','رد على دعوة المنشأة الصحية',$3,$4,$5,'CLINIC_DOCTOR_INVITATION','in_app')`, [invitation.owner_user_id, req.body.accepted ? 'CLINIC_DOCTOR_INVITATION_ACCEPTED' : 'CLINIC_DOCTOR_INVITATION_DECLINED', req.body.accepted ? 'A doctor accepted your clinic invitation.' : 'A doctor declined your clinic invitation.', req.body.accepted ? 'قبل الطبيب دعوة منشأتك الصحية.' : 'رفض الطبيب دعوة منشأتك الصحية.', invitation.id]);
+    await createAudit({ user_id:req.user.sub,user_role:req.user.role,action:req.body.accepted?'DOCTOR_ACCEPTED_CLINIC_INVITATION':'DOCTOR_DECLINED_CLINIC_INVITATION',entity_type:'CLINIC_DOCTOR_INVITATION',entity_id:invitation.id,new_values:row }, client);
+    await client.query('COMMIT'); return success(res, row, req.body.accepted ? 'Clinic invitation accepted' : 'Clinic invitation declined');
+  } catch (err) { await client.query('ROLLBACK').catch(() => {}); return next(err); } finally { client.release(); }
+});
 
 // One authoritative assignment query for both public doctor projections.
 // Keep the compact /:id/clinics endpoint for client compatibility, but derive
@@ -42,7 +72,8 @@ async function findActiveClinicsByDoctorId(doctorId) {
       dca.consultation_fee_override, dca.is_primary
     FROM medorbit.doctor_clinic_assignments dca
     JOIN medorbit.clinics c ON c.id = dca.clinic_id
-    WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true`,
+    WHERE dca.doctor_id = $1 AND dca.is_active = true AND c.is_active = true
+      AND c.approval_status = 'approved'`,
     [doctorId]
   );
   return result.rows;
@@ -603,9 +634,36 @@ router.delete('/me/availability/:slotId', authenticate, authorize('doctor'), asy
 // GET /api/doctors - List all doctors with filters
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const { specialty, region, minRating, minFee, maxFee, search, page = 1, limit = 10 } = req.query;
+    const { specialty, region, minRating, minFee, maxFee, minExperience, maxExperience, accepting, search, page = 1, limit = 10 } = req.query;
+    const readNumber = (value, label, min, max, integer = false) => {
+      if (value === undefined || value === '') return null;
+      const number = Number(value);
+      if (!Number.isFinite(number) || number < min || number > max || (integer && !Number.isInteger(number))) {
+        return { error: `${label} must be between ${min} and ${max}` };
+      }
+      return number;
+    };
+    const parsedMinRating = readNumber(minRating, 'Minimum rating', 0, 5);
+    const parsedMinFee = readNumber(minFee, 'Minimum fee', 0, 100000);
+    const parsedMaxFee = readNumber(maxFee, 'Maximum fee', 0, 100000);
+    const parsedMinExperience = readNumber(minExperience, 'Minimum experience', 0, 80, true);
+    const parsedMaxExperience = readNumber(maxExperience, 'Maximum experience', 0, 80, true);
+    const invalidFilter = [parsedMinRating, parsedMinFee, parsedMaxFee, parsedMinExperience, parsedMaxExperience]
+      .find((value) => value?.error);
+    if (invalidFilter) return error(res, invalidFilter.error, 400, 'VALIDATION_ERROR');
+    if ((parsedMinFee !== null && parsedMaxFee !== null && parsedMinFee > parsedMaxFee)
+      || (parsedMinExperience !== null && parsedMaxExperience !== null && parsedMinExperience > parsedMaxExperience)) {
+      return error(res, 'Minimum filter value cannot exceed maximum value', 400, 'VALIDATION_ERROR');
+    }
+    let acceptingValue = null;
+    if (accepting !== undefined && accepting !== '') {
+      if (accepting !== 'true' && accepting !== 'false') {
+        return error(res, 'accepting must be true or false', 400, 'VALIDATION_ERROR');
+      }
+      acceptingValue = accepting === 'true';
+    }
     const pageNumber=Math.max(Number.parseInt(page,10)||1,1),limitNumber=Math.min(Math.max(Number.parseInt(limit,10)||10,1),50);
-    if(req.user && !specialty && !region && !minRating && !minFee && !maxFee && !search){
+    if(req.user && !specialty && !region && parsedMinRating === null && parsedMinFee === null && parsedMaxFee === null && parsedMinExperience === null && parsedMaxExperience === null && acceptingValue === null && !search){
       const ranked=await getRankedDoctors({userId:req.user.sub,limit:pageNumber*limitNumber});
       const total=Number((await db.query(`SELECT count(*) FROM medorbit.doctors d JOIN medorbit.users u ON u.id=d.user_id
         WHERE u.role='doctor' AND u.is_active=true AND u.deleted_at IS NULL AND d.approval_status='approved'`)).rows[0].count);
@@ -646,21 +704,39 @@ router.get('/', authenticate, async (req, res, next) => {
       paramIndex++;
     }
 
-    if (minRating) {
+    if (parsedMinRating !== null) {
       query += ` AND d.average_rating >= $${paramIndex}`;
-      params.push(parseFloat(minRating));
+      params.push(parsedMinRating);
       paramIndex++;
     }
 
-    if (minFee) {
+    if (parsedMinFee !== null) {
       query += ` AND d.consultation_fee >= $${paramIndex}`;
-      params.push(Number(minFee));
+      params.push(parsedMinFee);
       paramIndex++;
     }
 
-    if (maxFee) {
+    if (parsedMaxFee !== null) {
       query += ` AND d.consultation_fee <= $${paramIndex}`;
-      params.push(Number(maxFee));
+      params.push(parsedMaxFee);
+      paramIndex++;
+    }
+
+    if (parsedMinExperience !== null) {
+      query += ` AND d.years_of_experience >= $${paramIndex}`;
+      params.push(parsedMinExperience);
+      paramIndex++;
+    }
+
+    if (parsedMaxExperience !== null) {
+      query += ` AND d.years_of_experience <= $${paramIndex}`;
+      params.push(parsedMaxExperience);
+      paramIndex++;
+    }
+
+    if (acceptingValue !== null) {
+      query += ` AND d.is_accepting_patients = $${paramIndex}`;
+      params.push(acceptingValue);
       paramIndex++;
     }
 

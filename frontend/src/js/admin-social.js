@@ -11,7 +11,6 @@ const AdminSocial = (() => {
     const pendingActions = new Set();
 
     const CONFIRM_TEXT = {
-        approve: { post: 'Approve this post?', comment: 'Approve this comment?' },
         hide: { post: 'Hide this post?', comment: 'Hide this comment?' },
         reject: { post: 'Reject this post?', comment: 'Reject this comment?' },
     };
@@ -29,8 +28,7 @@ const AdminSocial = (() => {
     }
 
     const actions = (type, id) => (
-        `<div class="moderation-actions"><button class="btn btn-primary btn-sm" data-${type}="${escapeHtml(id)}" data-action="approve">Approve</button>` +
-        `<button class="btn btn-secondary btn-sm" data-${type}="${escapeHtml(id)}" data-action="hide">Hide</button>` +
+        `<div class="moderation-actions"><button class="btn btn-secondary btn-sm" data-${type}="${escapeHtml(id)}" data-action="hide">Hide</button>` +
         `<button class="btn btn-secondary btn-sm" data-${type}="${escapeHtml(id)}" data-action="reject">Reject</button></div>`
     );
 
