@@ -97,7 +97,9 @@ async function cleanup(){
  const page1=await getRankedFeed({userId:patient.id,limit:2}),page2=await getRankedFeed({userId:patient.id,limit:2,cursor:page1.next_cursor});
  check('cursor page has no duplicates',!page2.items.some(x=>page1.items.some(y=>y.id===x.id)));
  check('stable cursor pages have no missing eligible posts',new Set([...page1.items,...page2.items].map(x=>x.id)).size===personalized.items.length);
- const diversified=diversifyPosts([{doctor_id:'a',_rank:{score:5}},{doctor_id:'a',_rank:{score:4}},{doctor_id:'a',_rank:{score:3}},{doctor_id:'b',_rank:{score:2}}]);check('diversity prevents a three-author streak when alternative exists',diversified.slice(0,3).map(x=>x.doctor_id).join('')==='aab');
+ // Feed authors may be doctors, clinics, or patients. The ranking query
+ // normalizes all of them to author_user_id before diversification.
+ const diversified=diversifyPosts([{author_user_id:'a',_rank:{score:5}},{author_user_id:'a',_rank:{score:4}},{author_user_id:'a',_rank:{score:3}},{author_user_id:'b',_rank:{score:2}}]);check('diversity prevents a three-author streak when alternative exists',diversified.slice(0,3).map(x=>x.author_user_id).join('')==='aab');
  check('reason code reflects ranking input',['FOLLOWED_DOCTOR','INTEREST_SPECIALTY','INTEREST_CATEGORY','TRENDING','RECENT'].includes(personalized.items[0].reason_code));
 
  const doctorRank=await getRankedDoctors({userId:patient.id,limit:20});check('doctor discovery includes only eligible doctors',doctorRank.every(x=>x.id!==suspended.doctorId));
