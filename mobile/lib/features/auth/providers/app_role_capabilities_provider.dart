@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_provider.dart';
 
-enum AppUserRole { patient, doctor, admin, superAdmin, unknown }
+enum AppUserRole { patient, doctor, clinic, admin, superAdmin, unknown }
 
 /// Presentation capabilities derived from the canonical authenticated user.
 ///
@@ -21,6 +21,7 @@ class AppRoleCapabilities {
     final role = switch (rawRole?.trim().toLowerCase()) {
       'patient' => AppUserRole.patient,
       'doctor' => AppUserRole.doctor,
+      'clinic' => AppUserRole.clinic,
       'admin' => AppUserRole.admin,
       'super_admin' => AppUserRole.superAdmin,
       _ => AppUserRole.unknown,
@@ -33,6 +34,7 @@ class AppRoleCapabilities {
 
   bool get isPatient => role == AppUserRole.patient;
   bool get isDoctor => role == AppUserRole.doctor;
+  bool get isClinic => role == AppUserRole.clinic;
   bool get isAdmin =>
       role == AppUserRole.admin || role == AppUserRole.superAdmin;
   bool get isSuperAdmin => role == AppUserRole.superAdmin;
@@ -43,6 +45,7 @@ class AppRoleCapabilities {
   bool get canUsePublicDiscovery => isAuthenticated;
   bool get canUseNotifications => isAuthenticated;
   bool get canUseAccountProfile => isAuthenticated;
+  bool get canEditSocialLinks => isAuthenticated && !isAdmin;
   bool get canUseBilling => isAuthenticated;
   bool get canUseAiChat => isAuthenticated;
 

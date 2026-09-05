@@ -21,6 +21,7 @@ class UserProfileModel {
     this.city,
     this.preferredLanguage,
     this.createdAt,
+    this.socialLinks = const {},
   });
 
   final String id;
@@ -42,6 +43,11 @@ class UserProfileModel {
   /// `'ar' | 'en'` by convention; the backend does not constrain this column.
   final String? preferredLanguage;
   final DateTime? createdAt;
+
+  /// Public contact links returned as `social_links` from `/users/me`.
+  /// Values are backend-validated HTTPS URLs except WhatsApp, which is an
+  /// international number stored without punctuation.
+  final Map<String, String> socialLinks;
 
   String displayName(bool isArabic) {
     final first = localizedField(
@@ -81,6 +87,22 @@ class UserProfileModel {
       createdAt: json['created_at'] is String
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
+      socialLinks: _socialLinks(json['social_links']),
     );
   }
+}
+
+Map<String, String> _socialLinks(Object? value) {
+  if (value is! Map) return const {};
+  return Map.unmodifiable(
+    Map<String, String>.fromEntries(
+      value.entries
+          .where((entry) => entry.key is String && entry.value is String)
+          .map(
+            (entry) =>
+                MapEntry(entry.key as String, (entry.value as String).trim()),
+          )
+          .where((entry) => entry.value.isNotEmpty),
+    ),
+  );
 }

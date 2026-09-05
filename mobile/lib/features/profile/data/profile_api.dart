@@ -35,6 +35,16 @@ class ProfileApi {
     _envelopeSuccess(response.data);
   }
 
+  /// Stores the backend-validated public contact links under the account
+  /// preferences document. Admin roles are refused by the server.
+  Future<void> updateSocialLinks(Map<String, String> socialLinks) async {
+    final response = await _dio.put<Map<String, dynamic>>(
+      '/users/me/preferences',
+      data: {'social_links': socialLinks},
+    );
+    _envelopeSuccess(response.data);
+  }
+
   /// `POST /users/me/avatar`, multipart field name `avatar` (must match
   /// exactly — the backend's `multer` middleware is configured with
   /// `upload.single("avatar")`). Returns the new relative avatar path

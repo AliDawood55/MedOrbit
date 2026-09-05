@@ -20,6 +20,7 @@ import '../widgets/change_password_sheet.dart';
 import '../widgets/preferences_section.dart';
 import '../widgets/profile_avatar_section.dart';
 import '../widgets/profile_form_section.dart';
+import '../widgets/social_links_section.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -100,6 +101,24 @@ class ProfileScreen extends ConsumerWidget {
                       onSave: (draft) =>
                           _handleSave(context, notifier, draft, strings),
                     ),
+                    if (capabilities.canEditSocialLinks) ...[
+                      const SizedBox(height: AppTheme.spaceLg),
+                      SocialLinksSection(
+                        key: ValueKey(
+                          'social-links-${profile.id}-${profile.socialLinks}',
+                        ),
+                        initialLinks: profile.socialLinks,
+                        strings: strings,
+                        isSaving: state.isSavingSocialLinks,
+                        error: state.socialLinksError,
+                        onSave: (links) => _handleSaveSocialLinks(
+                          context,
+                          notifier,
+                          links,
+                          strings,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppTheme.spaceLg),
                     SectionHeader(title: strings.profileGroupServices),
                     const SizedBox(height: AppTheme.spaceSm),
@@ -258,6 +277,20 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _handleSaveSocialLinks(
+  BuildContext context,
+  ProfileController notifier,
+  Map<String, String> links,
+  AppStrings strings,
+) async {
+  final ok = await notifier.saveSocialLinks(links);
+  if (ok && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(strings.profileSaveSuccess)));
   }
 }
 

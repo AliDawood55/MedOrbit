@@ -1165,6 +1165,34 @@ class AppStrings {
     'Could not reach the service. Check your connection and try again.',
   );
 
+  String get socialLinksTitle => _t('روابط التواصل', 'Social links');
+  String get socialLinksSubtitle => _t(
+    'أضف وسائل التواصل العامة التي تريد مشاركتها.',
+    'Add the public contact links you want to share.',
+  );
+  String get socialLinksWhatsApp => _t('واتساب', 'WhatsApp');
+  String get socialLinksWhatsAppHint => _t(
+    'رقم دولي، مثل 970591234567',
+    'International number, e.g. 970591234567',
+  );
+  String get socialLinksWebsite => _t('الموقع الإلكتروني', 'Website');
+  String socialLinksPlatform(String key) => switch (key) {
+    'instagram' => 'Instagram',
+    'facebook' => 'Facebook',
+    'tiktok' => 'TikTok',
+    'linkedin' => 'LinkedIn',
+    'x' => 'X',
+    'youtube' => 'YouTube',
+    _ => key,
+  };
+  String get socialLinksSave => _t('حفظ روابط التواصل', 'Save social links');
+  String get socialLinksInvalidUrl =>
+      _t('استخدم رابط HTTPS صالحًا.', 'Use a valid HTTPS URL.');
+  String get socialLinksInvalidWhatsApp => _t(
+    'أدخل رقم واتساب دوليًا صالحًا.',
+    'Enter a valid international WhatsApp number.',
+  );
+
   String get profileSectionLanguage => _t('لغة الواجهة', 'Interface Language');
   String get profileLanguageDesc => _t(
     'تُطبَّق فوراً وتُحفظ لحسابك',

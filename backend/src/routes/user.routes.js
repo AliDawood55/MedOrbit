@@ -285,12 +285,10 @@ router.put(
 
 
       const { language, social_links: socialLinks } = req.body;
-      if (socialLinks !== undefined && ['admin', 'super_admin', 'patient'].includes(req.user.role)) {
+      if (socialLinks !== undefined && ['admin', 'super_admin'].includes(req.user.role)) {
         return error(res, 'This account type cannot publish social links', 403, 'FORBIDDEN');
       }
-      const allowedLinks = req.user.role === 'patient'
-        ? ['whatsapp']
-        : ['website', 'instagram', 'facebook', 'tiktok', 'linkedin', 'whatsapp', 'x', 'youtube'];
+      const allowedLinks = ['website', 'instagram', 'facebook', 'tiktok', 'linkedin', 'whatsapp', 'x', 'youtube'];
       let safeSocialLinks = null;
       if (socialLinks !== undefined) {
         if (!socialLinks || typeof socialLinks !== 'object' || Array.isArray(socialLinks)) return error(res, 'Invalid social links', 400, 'VALIDATION_ERROR');
