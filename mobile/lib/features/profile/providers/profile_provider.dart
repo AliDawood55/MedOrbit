@@ -43,6 +43,8 @@ class ProfileState {
     this.saveError,
     this.isSyncingLanguage = false,
     this.languageSyncFailed = false,
+    this.isSavingSocialLinks = false,
+    this.socialLinksError,
     this.isChangingPassword = false,
     this.passwordError,
     this.passwordChanged = false,
@@ -61,6 +63,8 @@ class ProfileState {
   /// that the account-level sync didn't stick, so a retry affordance can be
   /// shown without ever reverting the language the user is looking at.
   final bool languageSyncFailed;
+  final bool isSavingSocialLinks;
+  final ProfileErrorKind? socialLinksError;
 
   final bool isChangingPassword;
   final PasswordChangeErrorKind? passwordError;
@@ -80,6 +84,9 @@ class ProfileState {
     bool clearSaveError = false,
     bool? isSyncingLanguage,
     bool? languageSyncFailed,
+    bool? isSavingSocialLinks,
+    ProfileErrorKind? socialLinksError,
+    bool clearSocialLinksError = false,
     bool? isChangingPassword,
     PasswordChangeErrorKind? passwordError,
     bool clearPasswordError = false,
@@ -94,6 +101,10 @@ class ProfileState {
       saveError: clearSaveError ? null : (saveError ?? this.saveError),
       isSyncingLanguage: isSyncingLanguage ?? this.isSyncingLanguage,
       languageSyncFailed: languageSyncFailed ?? this.languageSyncFailed,
+      isSavingSocialLinks: isSavingSocialLinks ?? this.isSavingSocialLinks,
+      socialLinksError: clearSocialLinksError
+          ? null
+          : (socialLinksError ?? this.socialLinksError),
       isChangingPassword: isChangingPassword ?? this.isChangingPassword,
       passwordError: clearPasswordError
           ? null
@@ -172,6 +183,32 @@ class ProfileController extends StateNotifier<ProfileState> {
       state = state.copyWith(
         isSyncingLanguage: false,
         languageSyncFailed: true,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> saveSocialLinks(Map<String, String> links) async {
+    if (state.isSavingSocialLinks) return false;
+    state = state.copyWith(
+      isSavingSocialLinks: true,
+      clearSocialLinksError: true,
+    );
+    try {
+      await _api.updateSocialLinks(links);
+      final refreshed = await _api.getMe();
+      if (_disposed) return true;
+      state = state.copyWith(
+        isSavingSocialLinks: false,
+        profile: AsyncValue.data(refreshed),
+      );
+      _refreshHomeProfile();
+      return true;
+    } catch (error) {
+      if (_disposed) return false;
+      state = state.copyWith(
+        isSavingSocialLinks: false,
+        socialLinksError: _categorize(error),
       );
       return false;
     }

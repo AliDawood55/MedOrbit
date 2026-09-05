@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_theme.dart';
 
@@ -32,6 +33,7 @@ class AppTextField extends StatelessWidget {
     this.maxLength,
     this.readOnly = false,
     this.onTap,
+    this.inputFormatters,
   });
 
   final String label;
@@ -61,6 +63,7 @@ class AppTextField extends StatelessWidget {
   final int? maxLength;
   final bool readOnly;
   final VoidCallback? onTap;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +86,7 @@ class AppTextField extends StatelessWidget {
       minLines: obscureText ? 1 : minLines,
       maxLines: obscureText ? 1 : maxLines,
       maxLength: maxLength,
+      inputFormatters: inputFormatters,
       readOnly: readOnly,
       onTap: onTap,
       decoration: InputDecoration(

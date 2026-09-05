@@ -22,7 +22,13 @@ void main() {
 
   test('every authenticated role keeps the shared product navigation', () {
     expect(primaryNavigationRoutes, sharedPrimary);
-    for (final role in ['patient', 'doctor', 'admin', 'super_admin']) {
+    for (final role in [
+      'patient',
+      'doctor',
+      'clinic',
+      'admin',
+      'super_admin',
+    ]) {
       final capabilities = AppRoleCapabilities.fromRole(role);
       expect(capabilities.canUseSharedHome, isTrue, reason: role);
       expect(capabilities.canUseSocialFeed, isTrue, reason: role);
@@ -34,7 +40,13 @@ void main() {
   });
 
   group('Feed presentation matrix', () {
-    for (final role in ['patient', 'doctor', 'admin', 'super_admin']) {
+    for (final role in [
+      'patient',
+      'doctor',
+      'clinic',
+      'admin',
+      'super_admin',
+    ]) {
       test('$role sees Feed in primary navigation and shared Home', () {
         final capabilities = AppRoleCapabilities.fromRole(role);
         expect(capabilities.canUseSocialFeed, isTrue);
@@ -143,6 +155,28 @@ void main() {
     expect(routes, isNot(contains(RoutePaths.records)));
     expect(routes, isNot(contains(RoutePaths.prescriptions)));
     expect(routes, isNot(contains(RoutePaths.adminDashboard)));
+  });
+
+  test(
+    'clinic has shared navigation and public-link editing without staff tools',
+    () {
+      final capabilities = AppRoleCapabilities.fromRole('clinic');
+      final routes = serviceRoutesFor(capabilities);
+      expect(capabilities.isClinic, isTrue);
+      expect(capabilities.canEditSocialLinks, isTrue);
+      expect(capabilities.canUseSocialFeed, isTrue);
+      expect(primaryNavigationRoutes, contains(RoutePaths.socialFeed));
+      expect(routes, isNot(contains(RoutePaths.doctorWorkspace)));
+      expect(routes, isNot(contains(RoutePaths.adminDashboard)));
+    },
+  );
+
+  test('administrator accounts cannot edit public social links', () {
+    expect(AppRoleCapabilities.fromRole('admin').canEditSocialLinks, isFalse);
+    expect(
+      AppRoleCapabilities.fromRole('super_admin').canEditSocialLinks,
+      isFalse,
+    );
   });
 
   test('admin receives operations and primary chat without clinical tools', () {

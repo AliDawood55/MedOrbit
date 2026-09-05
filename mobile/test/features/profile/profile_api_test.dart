@@ -35,6 +35,10 @@ void main() {
           'address': 'Rafidia',
           'city': 'Nablus',
           'preferred_language': 'ar',
+          'social_links': {
+            'website': 'https://clinic.example',
+            'whatsapp': '970591234567',
+          },
           'created_at': '2026-01-05T09:00:00.000Z',
         },
       }),
@@ -49,6 +53,8 @@ void main() {
     expect(profile.phone, '+970-59-1234567');
     expect(profile.city, 'Nablus');
     expect(profile.preferredLanguage, 'ar');
+    expect(profile.socialLinks['website'], 'https://clinic.example');
+    expect(profile.socialLinks['whatsapp'], '970591234567');
   });
 
   test(
@@ -100,6 +106,30 @@ void main() {
       expect(fake.requests.single.method, 'PUT');
       expect(fake.requests.single.path, '/users/me/preferences');
       expect(fake.requests.single.data, {'language': 'en'});
+    },
+  );
+
+  test(
+    'updateSocialLinks() PUTs the validated link map to preferences',
+    () async {
+      final fake = _FakeDio([
+        _ok({'success': true, 'data': null}),
+      ]);
+      final api = ProfileApi(fake.dio);
+
+      await api.updateSocialLinks({
+        'website': 'https://clinic.example',
+        'whatsapp': '970591234567',
+      });
+
+      expect(fake.requests.single.method, 'PUT');
+      expect(fake.requests.single.path, '/users/me/preferences');
+      expect(fake.requests.single.data, {
+        'social_links': {
+          'website': 'https://clinic.example',
+          'whatsapp': '970591234567',
+        },
+      });
     },
   );
 
