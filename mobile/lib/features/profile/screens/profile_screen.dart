@@ -149,7 +149,7 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       onTap: () => context.push(RoutePaths.billing),
                     ),
-                    if (capabilities.canUseAiChat) ...[
+                    if (capabilities.canUseConsumerAi) ...[
                       const SizedBox(height: AppTheme.spaceMd),
                       FeatureCard(
                         title: strings.quickMedicalChatLabel,

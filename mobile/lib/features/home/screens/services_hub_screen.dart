@@ -15,7 +15,7 @@ List<String> serviceRoutesFor(AppRoleCapabilities capabilities) {
   return [
     RoutePaths.notifications,
     RoutePaths.billing,
-    if (capabilities.canUseAiChat) RoutePaths.chatbot,
+    if (capabilities.canUseConsumerAi) RoutePaths.chatbot,
     if (capabilities.canUseCareMessages) RoutePaths.messages,
     if (capabilities.canUseConsumerAi) ...[
       RoutePaths.virtualDoctor,
@@ -132,9 +132,7 @@ List<_ServiceGroup> _groups(AppStrings s, AppRoleCapabilities capabilities) {
     ]),
   ];
 
-  if (capabilities.canUseAiChat ||
-      capabilities.canUseCareMessages ||
-      capabilities.canUseConsumerAi) {
+  if (capabilities.canUseConsumerAi || capabilities.canUseCareMessages) {
     groups.add(
       _ServiceGroup(s.servicesCommunicationGroup, [
         if (capabilities.canUseCareMessages)
@@ -145,7 +143,7 @@ List<_ServiceGroup> _groups(AppStrings s, AppRoleCapabilities capabilities) {
             AppTheme.info,
             RoutePaths.messages,
           ),
-        if (capabilities.canUseAiChat)
+        if (capabilities.canUseConsumerAi)
           _ServiceEntry(
             s.quickMedicalChatLabel,
             s.quickMedicalChatDescription,

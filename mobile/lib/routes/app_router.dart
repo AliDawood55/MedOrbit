@@ -206,7 +206,7 @@ String? capabilityRedirect(AuthStatus status, String? role, String location) {
   final aiChatOnly =
       location == RoutePaths.chatbot ||
       location.startsWith('${RoutePaths.conversations}/');
-  if (aiChatOnly && !capabilities.canUseAiChat) return RoutePaths.home;
+  if (aiChatOnly && !capabilities.canUseConsumerAi) return RoutePaths.home;
 
   final consumerOnly =
       location == RoutePaths.virtualDoctor ||

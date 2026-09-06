@@ -249,7 +249,7 @@ class _SharedProductSection extends StatelessWidget {
         AppTheme.violet,
         RoutePaths.billing,
       ),
-      if (capabilities.canUseAiChat)
+      if (capabilities.canUseConsumerAi)
         _HomeEntry(
           strings.quickMedicalChatLabel,
           strings.quickMedicalChatDescription,

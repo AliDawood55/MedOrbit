@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
 from chatbot.nlu.normalizer import TextNormalizer
-from chatbot.nlu.synonyms import SynonymEngine
+from chatbot.nlu.synonyms import SPECIALTY_CANONICAL_KEYS, SynonymEngine
 from chatbot.nlu.tokens import Tokenizer
 from chatbot.nlu.safety import MedicalSafetyLayer
 from chatbot.nlu.slots import SlotFiller
@@ -185,7 +185,7 @@ class NLUPipeline:
 
         for ngram in ngrams:
             canonical = self.synonyms.resolve(ngram)
-            for spec_key in self.synonyms.arabic_synonyms.keys():
+            for spec_key in SPECIALTY_CANONICAL_KEYS:
                 if canonical == spec_key or ngram == spec_key:
                     if spec_key not in entities["specialties"]:
                         entities["specialties"].append(spec_key)

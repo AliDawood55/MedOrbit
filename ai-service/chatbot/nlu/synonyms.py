@@ -3,6 +3,19 @@ import os
 import re
 from typing import Dict, List, Tuple
 
+# The real medical-specialty canonical forms found in medical_synonyms.json.
+# arabic_synonyms.json and the rest of medical_synonyms.json hold generic
+# profession/facility/symptom/admin vocabulary (e.g. "doctor", "pharmacy",
+# "headache", "hello") that must never populate entities["specialty"] just
+# because SynonymEngine happens to resolve a word to one of those canonical
+# forms. Keep this in sync with medical_synonyms.json's specialty entries.
+SPECIALTY_CANONICAL_KEYS = frozenset({
+    "cardiology", "dermatology", "neurology", "orthopedics", "pediatrics",
+    "ophthalmology", "ent", "psychiatry", "gastroenterology",
+    "endocrinology", "nephrology", "oncology", "urology", "pulmonology",
+    "rheumatology", "radiology", "surgery", "gynecology",
+})
+
 
 class SynonymEngine:
     """

@@ -344,6 +344,56 @@ class TestEntityExtractor(unittest.TestCase):
         result = self.extractor.extract("I need a cardiologist")
         self.assertEqual(result["specialty"], "cardiology")
 
+    def test_extract_specialty_none_for_bare_doctor_arabic(self):
+        # "طبيب"/"دكتور" name the profession, not a specialty — this was
+        # leaking through as the literal string "doctor" and breaking the
+        # backend's specialty search (see chatbot.service.js find_doctor).
+        result = self.extractor.extract("بدي طبيب")
+        self.assertIsNone(result["specialty"])
+
+    def test_extract_specialty_none_for_bare_doctor_english(self):
+        result = self.extractor.extract("I need a doctor")
+        self.assertIsNone(result["specialty"])
+
+    def test_extract_specialty_false_positive_appointment(self):
+        # "موعد" ("appointment") resolves to the English canonical
+        # "appointment", which contains "ent" as a raw substring — must not
+        # match the ENT specialty.
+        result = self.extractor.extract("موعد")
+        self.assertIsNone(result["specialty"])
+
+    def test_extract_specialty_false_positive_flu(self):
+        # "انفلونزا" ("flu") contains "انف" ("nose") as a raw substring —
+        # must not match the ENT specialty.
+        result = self.extractor.extract("انفلونزا")
+        self.assertIsNone(result["specialty"])
+
+    def test_extract_specialty_false_positive_insurance(self):
+        # "بوليصة" ("insurance policy") contains "بول" ("urine") as a raw
+        # substring — must not match the urology specialty.
+        result = self.extractor.extract("بوليصة")
+        self.assertIsNone(result["specialty"])
+
+    def test_extract_specialty_false_positive_labs(self):
+        # "معامل" ("labs") contains "عام" ("general") as a raw substring —
+        # must not match general_practice.
+        result = self.extractor.extract("معامل")
+        self.assertIsNone(result["specialty"])
+
+    def test_extract_specialty_ent_real_match(self):
+        # The legitimate match this fix must not break: a real ENT word as
+        # its own token still resolves to the ENT specialty.
+        result = self.extractor.extract("عندي التهاب اذن")
+        self.assertEqual(result["specialty"], "ent")
+
+    def test_extract_specialty_urology_real_match(self):
+        result = self.extractor.extract("بدي دكتور بول")
+        self.assertEqual(result["specialty"], "urology")
+
+    def test_extract_specialty_general_practice_real_match(self):
+        result = self.extractor.extract("بدي طب عام")
+        self.assertEqual(result["specialty"], "general_practice")
+
     def test_extract_type_clinic_arabic(self):
         result = self.extractor.extract("أقرب عيادة")
         self.assertEqual(result["type"], "clinic")

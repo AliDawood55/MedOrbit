@@ -124,6 +124,26 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
     }
   }
 
+  /// True for suggestion text that clearly needs a location to answer, e.g.
+  /// "أقرب صيدلية" / "nearest pharmacy" — mirrors the backend's default
+  /// suggestion set in `chatbot.service.js#getSuggestions`.
+  bool _needsLocation(String text) {
+    final normalized = text.trim().toLowerCase();
+    final hasArabicNearest = normalized.contains('أقرب');
+    final hasEnglishNearest = normalized.contains('nearest') ||
+        normalized.contains('near me');
+    if (!hasArabicNearest && !hasEnglishNearest) return false;
+    const placeKeywords = [
+      'عيادة',
+      'صيدلية',
+      'مستشفى',
+      'clinic',
+      'pharmacy',
+      'hospital',
+    ];
+    return placeKeywords.any(normalized.contains);
+  }
+
   Future<void> _chooseLocation() async {
     final state = ref.read(locationControllerProvider);
     await showModalBottomSheet<void>(
@@ -424,7 +444,15 @@ class _ChatbotScreenState extends ConsumerState<ChatbotScreen> {
                   const SizedBox(height: AppTheme.spaceMd),
                   SuggestionChips(
                     suggestions: chat.suggestions,
-                    onSelected: (text) {
+                    onSelected: (text) async {
+                      // Backend's default suggestion set ("nearest clinic/
+                      // pharmacy/hospital") always needs a location; sending
+                      // without one just gets the "attach your location"
+                      // fallback reply. Get the location up front instead.
+                      if (_needsLocation(text) && !_attachLocation) {
+                        await _chooseLocation();
+                      }
+                      if (!mounted) return;
                       _input.text = text;
                       setState(() {});
                     },

@@ -137,7 +137,9 @@ class ChatbotService {
             // find_nearest — Query PostgreSQL for nearby places
             if (ai.intent === 'find_nearest') {
                 if (!latitude || !longitude) {
-                    reply = '📍 يرجى تفعيل الموقع أولاً حتى أتمكن من البحث عن الأماكن القريبة.';
+                    reply = this.detectLanguage(message) === 'ar'
+                        ? '📍 لم يتم إرفاق موقعك مع هذه الرسالة. اضغط على أيقونة الموقع بجانب مربع الكتابة لإرفاق موقعك، ثم أرسل السؤال مرة أخرى.'
+                        : "📍 Your location wasn't attached to this message. Tap the location icon next to the message box to attach it, then send your question again.";
                 } else {
                     const type = entities.type || ai.entities?.type || 'clinic';
 
@@ -207,6 +209,13 @@ class ChatbotService {
                     } else {
                         reply = `❌ لم أجد أطباء في تخصص "${specialty}" حالياً.`;
                     }
+                } else {
+                    // The user wants a doctor but named no specialty (e.g. just
+                    // "طبيب"/"doctor") — ask instead of running an unfiltered
+                    // search that would dump every doctor in the reply.
+                    reply = this.detectLanguage(message) === 'ar'
+                        ? '🩺 بالتأكيد. ما التخصص الذي تحتاجه؟ مثلاً: قلب، أطفال، جلدية، عظام.'
+                        : "🩺 Sure — what specialty do you need? For example: cardiology, pediatrics, dermatology, orthopedics.";
                 }
             }
 

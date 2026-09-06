@@ -117,11 +117,22 @@ class _PostCommentsSheetState extends ConsumerState<PostCommentsSheet> {
     final isArabic = strings.isArabic;
     final origin = ref.watch(activeOriginProvider);
 
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final maxSheetHeight = MediaQuery.sizeOf(context).height * 0.75;
+    final availableHeight = MediaQuery.sizeOf(context).height - keyboardInset;
+    // With the keyboard open, 75% of the *full* screen height plus the
+    // bottom padding below (which clears the keyboard) can exceed the space
+    // actually left above the keyboard, overflowing the sheet. Shrink to
+    // whatever's left instead once the keyboard is showing.
+    final sheetHeight = keyboardInset > 0
+        ? availableHeight.clamp(0.0, maxSheetHeight)
+        : maxSheetHeight;
+
     return Padding(
       // Keeps the composer above the keyboard.
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.75,
+        height: sheetHeight,
         child: Column(
           children: [
             Padding(
