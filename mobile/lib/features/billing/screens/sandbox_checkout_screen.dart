@@ -90,7 +90,11 @@ class _SandboxCheckoutScreenState extends ConsumerState<SandboxCheckoutScreen> {
           .read(billingControllerProvider.notifier)
           .refreshAfterSandboxCheckout(result.entitlements);
       if (!mounted) return;
-      context.go(RoutePaths.billing);
+      if (context.canPop()) {
+        context.pop();
+      } else {
+        context.go(RoutePaths.billing);
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {

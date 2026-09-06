@@ -818,7 +818,7 @@ class _StatisticsGrid extends StatelessWidget {
                 label: strings.upcomingAppointmentsStat,
                 icon: Icons.event_available_outlined,
                 color: AppTheme.primary,
-                onTap: () => context.go(RoutePaths.appointments),
+                onTap: () => context.push(RoutePaths.appointments),
                 onRetry: onRetryAppointments,
                 strings: strings,
               ),
@@ -831,7 +831,7 @@ class _StatisticsGrid extends StatelessWidget {
                 label: strings.prescriptionsStat,
                 icon: Icons.medication_outlined,
                 color: AppTheme.accent,
-                onTap: () => context.go(RoutePaths.prescriptions),
+                onTap: () => context.push(RoutePaths.prescriptions),
                 onRetry: onRetryPrescriptions,
                 strings: strings,
               ),
@@ -844,7 +844,7 @@ class _StatisticsGrid extends StatelessWidget {
                 label: strings.medicalRecordsStat,
                 icon: Icons.description_outlined,
                 color: AppTheme.secondary,
-                onTap: () => context.go(RoutePaths.records),
+                onTap: () => context.push(RoutePaths.records),
                 onRetry: onRetryRecords,
                 strings: strings,
               ),
@@ -955,6 +955,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.event_available_outlined,
             color: AppTheme.info,
             path: RoutePaths.appointments,
+            push: true,
           ),
           _QuickAction(
             label: strings.myDoctorTitle,
@@ -1046,6 +1047,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.medication_outlined,
             color: AppTheme.accent,
             path: RoutePaths.prescriptions,
+            push: true,
           ),
           _QuickAction(
             label: strings.navRecords,
@@ -1053,6 +1055,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.description_outlined,
             color: AppTheme.secondary,
             path: RoutePaths.records,
+            push: true,
           ),
           _QuickAction(
             label: strings.myReportsTitle,
@@ -1083,6 +1086,7 @@ class _QuickActions extends StatelessWidget {
             icon: Icons.comment_outlined,
             color: AppTheme.violet,
             path: RoutePaths.feedback,
+            push: true,
           ),
           _QuickAction(
             label: strings.contactTitle,
@@ -1362,7 +1366,7 @@ class _AppointmentPreviewCard extends StatelessWidget {
           : Icons.local_hospital_outlined,
       color: AppTheme.primary,
       trailing: StatusBadge(label: statusLabel, color: statusColor),
-      onTap: () => context.go(RoutePaths.appointments),
+      onTap: () => context.push(RoutePaths.appointments),
     );
   }
 }
@@ -1468,7 +1472,7 @@ class _PrescriptionPreviewCard extends StatelessWidget {
       icon: Icons.medication_outlined,
       color: AppTheme.accent,
       trailing: StatusBadge(label: statusLabel, color: statusColor),
-      onTap: () => context.go(RoutePaths.prescriptions),
+      onTap: () => context.push(RoutePaths.prescriptions),
     );
   }
 }
@@ -1575,7 +1579,7 @@ class _MedicalRecordPreviewCard extends StatelessWidget {
         label: strings.typeRecord,
         color: AppTheme.secondary,
       ),
-      onTap: () => context.go(RoutePaths.records),
+      onTap: () => context.push(RoutePaths.records),
     );
   }
 }

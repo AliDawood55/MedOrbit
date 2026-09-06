@@ -130,14 +130,11 @@ class _DoctorsSection extends StatelessWidget {
               .map(
                 (doctor) => Padding(
                   padding: const EdgeInsets.only(bottom: AppTheme.spaceMd),
-                  child: DoctorCareCard(
+                  child: _DoctorCareCardItem(
                     doctor: doctor,
                     isArabic: isArabic,
                     strings: strings,
-                    avatarOrigin: origin,
-                    onViewDoctor: () => context.push(RoutePaths.doctorDetailPath(doctor.id)),
-                    onBookAppointment: () =>
-                        context.push(RoutePaths.appointmentBookingPath(doctorId: doctor.id)),
+                    origin: origin,
                   ),
                 ),
               )
@@ -154,6 +151,53 @@ class _DoctorsSection extends StatelessWidget {
           variant: ErrorRetryVariant.compact,
         ),
       ),
+    );
+  }
+}
+
+class _DoctorCareCardItem extends StatefulWidget {
+  const _DoctorCareCardItem({
+    required this.doctor,
+    required this.isArabic,
+    required this.strings,
+    required this.origin,
+  });
+
+  final MyDoctorModel doctor;
+  final bool isArabic;
+  final AppStrings strings;
+  final String origin;
+
+  @override
+  State<_DoctorCareCardItem> createState() => _DoctorCareCardItemState();
+}
+
+class _DoctorCareCardItemState extends State<_DoctorCareCardItem> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on these buttons was enough to trigger
+  // it. Reset once the pushed route pops back to us.
+  bool _isNavigating = false;
+
+  void _navigate(String path) {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context.push(path).whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DoctorCareCard(
+      doctor: widget.doctor,
+      isArabic: widget.isArabic,
+      strings: widget.strings,
+      avatarOrigin: widget.origin,
+      onViewDoctor: () => _navigate(RoutePaths.doctorDetailPath(widget.doctor.id)),
+      onBookAppointment: () =>
+          _navigate(RoutePaths.appointmentBookingPath(doctorId: widget.doctor.id)),
     );
   }
 }
