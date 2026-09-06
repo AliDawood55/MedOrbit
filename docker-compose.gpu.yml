@@ -1,4 +1,5 @@
-# MedOrbit — optional GPU overlay for ai-service (Whisper on CUDA).
+# MedOrbit — optional GPU overlay for ai-service (Whisper on CUDA) and ollama
+# (qwen2:7b / nomic-embed-text on CUDA).
 #
 # USAGE
 #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
@@ -21,14 +22,29 @@
 # (check with `docker info --format '{{json .Runtimes}}'` for an "nvidia" entry).
 #
 # VRAM BUDGET — read before enabling on a small card.
-# Ollama runs on the HOST, not in this compose project, so Docker cannot see or
-# arbitrate its VRAM use. On a 4GB card, qwen2:7b alone occupies ~2.3GB
-# (partially offloaded; the model is 4.4GB and does not fit), which leaves
-# roughly 1.7GB for Whisper. `medium` in float16 needs ~1.5GB and will contend;
-# int8_float16 needs ~0.8GB and fits comfortably, which is why it is the
-# default here rather than plain float16.
+# Ollama is now a compose service (see docker-compose.yml) and, with this
+# overlay applied, shares the same GPU as ai-service's Whisper model — Docker
+# still can't arbitrate VRAM between two containers reserving the same device.
+# On a 4GB card, qwen2:7b alone occupies ~2.3GB (partially offloaded; the
+# model is 4.4GB and does not fit), which leaves roughly 1.7GB for Whisper.
+# `medium` in float16 needs ~1.5GB and will contend; int8_float16 needs ~0.8GB
+# and fits comfortably, which is why it is the default here rather than plain
+# float16. Without this overlay (`docker compose up -d`, no `-f`), both
+# services fall back to CPU — functional, just slower.
 
 services:
+  ollama:
+    # No extra config needed beyond the device reservation: the official
+    # image auto-detects CUDA and uses the GPU whenever one is visible to the
+    # container, falling back to CPU otherwise.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   ai-service:
     build:
       # Pulls in nvidia-cublas-cu12 + nvidia-cudnn-cu12 (~2GB). Without this

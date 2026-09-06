@@ -1,8 +1,7 @@
 # MedOrbit — local Docker Compose stack
 #
-# Services: postgres (postgis/postgis), backend (Node/Express), ai-service
-# (FastAPI), frontend (nginx, static files). Ollama is intentionally NOT a
-# service here — see the ai-service block below.
+# Services: postgres (postgis/postgis), ollama (LLM runtime), backend
+# (Node/Express), ai-service (FastAPI), frontend (nginx, static files).
 #
 # All application env vars come from the single .env at the project root
 # (docker-compose reads it automatically for ${VAR} interpolation below, and
@@ -19,11 +18,15 @@
 # db:migrate`. The bootstrap service is a no-op for an initialized database and
 # refuses a suspicious partial medorbit schema rather than guessing.
 #
-# OLLAMA — deliberately NOT a service here. The model is ~4GB and is meant to
-# run once on the host, shared by everything on that machine, not rebuilt
-# per-project. ai-service reaches it via Docker Desktop's built-in
-# host.docker.internal DNS name (Windows/Mac); extra_hosts below adds the
-# same mapping on Linux, where it isn't automatic.
+# OLLAMA — a first-class Compose service (`ollama` below), not a host-side
+# dependency. `docker compose up -d` alone brings up the LLM runtime and pulls
+# the two required models (`ollama-model-init`, a one-shot idempotent init
+# container) with no manual `ollama serve`/`ollama pull` step. ai-service talks
+# to it at the compose DNS name `http://ollama:11434`, never
+# `host.docker.internal`. Model weights persist in the named volume
+# `ollama_data` so `docker compose down` (without `-v`) never re-downloads
+# them. GPU use is opt-in via the `docker-compose.gpu.yml` overlay — the base
+# file here stays CPU-only so CI (which has no GPU) keeps working.
 
 # SHARED BACKEND IMAGE — backend, outbox-worker, event-consumer and
 # recommendation-consumer are the same Node application started with different
@@ -99,6 +102,65 @@ services:
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: medorbit-ollama
+    restart: unless-stopped
+    environment:
+      # Listen on all interfaces inside the container so other compose
+      # services can reach it — the image defaults to 127.0.0.1, which only
+      # the ollama CLI running in the same container could reach.
+      OLLAMA_HOST: 0.0.0.0
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      # The image has no curl/wget. `ollama list` is the bundled CLI talking
+      # to the local server over the same HTTP API — a real readiness probe,
+      # not a container-runs-at-all check, with nothing extra to install.
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  ollama-model-init:
+    # One-shot: waits for Ollama, pulls qwen2:7b and nomic-embed-text only if
+    # missing, then exits 0. `service_completed_successfully` below is what
+    # lets ai-service wait on "models ready", not just "server up".
+    image: ollama/ollama:latest
+    container_name: medorbit-ollama-model-init
+    restart: "no"
+    environment:
+      OLLAMA_HOST: ollama:11434
+      # Sourced from the root .env (same variables ai-service reads), with
+      # the same defaults used throughout the codebase as a fallback.
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2:7b}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        for m in "$${OLLAMA_MODEL:-qwen2:7b}" "$${OLLAMA_EMBED_MODEL:-nomic-embed-text}"; do
+          # A bare model name with no explicit tag (e.g. "nomic-embed-text")
+          # is pulled AND listed by Ollama as "<name>:latest" — a name that
+          # already carries a tag (e.g. "qwen2:7b") is listed as-is. Match
+          # both forms, or the ":latest" case always looks "missing" and
+          # re-pulls on every single startup. (An `if` condition is exempt
+          # from `set -e`, unlike a failing command inside a `$(...)`
+          # assignment — don't refactor this into one.)
+          if ollama list | awk '{print $$1}' | grep -qx -e "$$m" -e "$$m:latest"; then
+            echo "model already present, skipping pull: $$m"
+          else
+            echo "pulling model: $$m"
+            ollama pull "$$m"
+          fi
+        done
 
   kafka:
     image: apache/kafka:3.9.0
@@ -372,20 +434,16 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      # host.docker.internal reaches the HOST machine from inside the
-      # container — this is where `ollama serve` is expected to already be
-      # running (see README note in the Ollama section above).
-      OLLAMA_URL: http://host.docker.internal:11434/api/generate
-    extra_hosts:
-      # Docker Desktop (Windows/Mac) provides host.docker.internal
-      # automatically; this line is what makes the same name resolve on
-      # Linux, where it otherwise doesn't exist. Harmless no-op on Desktop.
-      - "host.docker.internal:host-gateway"
+      # "ollama" is the compose service's DNS name — the ai-service container
+      # no longer reaches out to the host at all for the LLM runtime.
+      OLLAMA_URL: http://ollama:11434/api/generate
     ports:
       - "8001:8001"
     depends_on:
       postgres:
         condition: service_healthy
+      ollama-model-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -472,3 +530,5 @@ volumes:
     name: medorbit_kafka_data
   medorbit_hf_cache:
     name: medorbit_hf_cache
+  ollama_data:
+    name: medorbit_ollama_data
