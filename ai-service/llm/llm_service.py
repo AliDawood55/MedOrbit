@@ -8,7 +8,10 @@ import requests
 logger = logging.getLogger(__name__)
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
-MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen2:7b")
+# qwen2.5:3b rather than a 7B model: on a 4GB GPU a 7B Q4 model only offloads
+# 13/29 layers (CPU-bound generation, ~11 tok/s), while qwen2.5:3b (~2GB)
+# fully offloads on the same hardware.
+MODEL_NAME = os.environ.get("OLLAMA_MODEL", "qwen2.5:3b")
 
 
 def generate_response(message: str, context: str, lang: str = "ar", entities: Optional[dict] = None) -> str:

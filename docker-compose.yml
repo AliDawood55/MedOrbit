@@ -112,6 +112,10 @@ services:
       # services can reach it — the image defaults to 127.0.0.1, which only
       # the ollama CLI running in the same container could reach.
       OLLAMA_HOST: 0.0.0.0
+      # Ollama's default keep_alive unloads an idle model after 5 minutes,
+      # so the next request pays a full reload (tens of seconds) on top of
+      # generation time. -1 keeps it resident indefinitely.
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:--1}
     volumes:
       - ollama_data:/root/.ollama
     ports:
@@ -127,9 +131,10 @@ services:
       start_period: 20s
 
   ollama-model-init:
-    # One-shot: waits for Ollama, pulls qwen2:7b and nomic-embed-text only if
-    # missing, then exits 0. `service_completed_successfully` below is what
-    # lets ai-service wait on "models ready", not just "server up".
+    # One-shot: waits for Ollama, pulls the configured chat model and
+    # nomic-embed-text only if missing, then exits 0.
+    # `service_completed_successfully` below is what lets ai-service wait on
+    # "models ready", not just "server up".
     image: ollama/ollama:latest
     container_name: medorbit-ollama-model-init
     restart: "no"
@@ -137,7 +142,11 @@ services:
       OLLAMA_HOST: ollama:11434
       # Sourced from the root .env (same variables ai-service reads), with
       # the same defaults used throughout the codebase as a fallback.
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2:7b}
+      # qwen2.5:3b is the default rather than qwen2:7b because a 7B Q4 model
+      # (4.4GB) does not fit in a 4GB card — only 13/29 layers offload,
+      # leaving generation CPU-bound at ~11 tok/s. qwen2.5:3b (~2GB) fully
+      # offloads on the same hardware.
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
     depends_on:
       ollama:
@@ -146,7 +155,7 @@ services:
     command:
       - |
         set -e
-        for m in "$${OLLAMA_MODEL:-qwen2:7b}" "$${OLLAMA_EMBED_MODEL:-nomic-embed-text}"; do
+        for m in "$${OLLAMA_MODEL:-qwen2.5:3b}" "$${OLLAMA_EMBED_MODEL:-nomic-embed-text}"; do
           # A bare model name with no explicit tag (e.g. "nomic-embed-text")
           # is pulled AND listed by Ollama as "<name>:latest" — a name that
           # already carries a tag (e.g. "qwen2:7b") is listed as-is. Match
