@@ -6,6 +6,10 @@
 	# API and Socket.IO stay on the same HTTPS origin as the web client.
 	reverse_proxy /api/* backend:3001
 	reverse_proxy /socket.io/* backend:3001
+	# Profile avatars and other persisted application uploads are returned by
+	# Express at /uploads. Keep them on the same public HTTPS origin so web and
+	# mobile clients never need access to the backend's loopback-only port.
+	reverse_proxy /uploads/* backend:3001
 
 	# The static client is the fallback for every remaining web path.
 	reverse_proxy frontend:8080
