@@ -73,6 +73,26 @@ jobs:
       - name: Start Fresh Database
         run: docker compose up -d --wait postgres
 
+      # The official Postgres image restarts the server once during first-time
+      # init (it swaps a temporary Unix-socket-only instance for the real
+      # TCP-listening one), and `--wait` can report healthy during that narrow
+      # gap — so db-bootstrap intermittently hits "Connection refused". Poll for
+      # real TCP readiness first, printing each attempt like the health checks
+      # further down.
+      - name: Wait for Postgres to accept TCP connections
+        run: |
+          for i in $(seq 1 24); do
+            if docker compose exec -T postgres sh -c \
+              'pg_isready -h postgres -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'; then
+              echo "Postgres accepting TCP connections after ${i} attempt(s) (~$(( (i - 1) * 5 ))s)"
+              exit 0
+            fi
+            echo "Attempt ${i}/24: postgres not accepting TCP connections yet, retrying in 5s..."
+            sleep 5
+          done
+          echo "Postgres did not accept TCP connections within 120s"
+          exit 1
+
       - name: Bootstrap Base Schema
         run: docker compose --profile tools run --rm --no-deps db-bootstrap
 
