@@ -34,7 +34,7 @@ String clinicTypeLabel(String? type, AppStrings strings) => strings.clinicTypeLa
   };
 }
 
-class ClinicResultCard extends ConsumerWidget {
+class ClinicResultCard extends ConsumerStatefulWidget {
   const ClinicResultCard({
     super.key,
     required this.clinic,
@@ -47,7 +47,32 @@ class ClinicResultCard extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClinicResultCard> createState() => _ClinicResultCardState();
+}
+
+class _ClinicResultCardState extends ConsumerState<ClinicResultCard> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on this card was enough to trigger it.
+  // [onTap] may be an externally-supplied callback with no way to observe
+  // when it finishes, so this uses a fixed cooldown rather than awaiting a
+  // push's Future.
+  bool _isNavigating = false;
+
+  void _handleTap(VoidCallback action) {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    action();
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clinic = widget.clinic;
+    final nearbyMode = widget.nearbyMode;
     final strings = ref.watch(appStringsProvider);
     final theme = Theme.of(context);
     final direction = Directionality.of(context);
@@ -62,12 +87,16 @@ class ClinicResultCard extends ConsumerWidget {
     final rating = clinic.averageRating ?? clinic.rating;
     final distanceKm = clinic.distanceKm;
     final (verificationLabel, verificationColor) = clinicVerificationVisual(clinic, strings);
+    void tap() => _handleTap(
+          widget.onTap ??
+              () => context.push(RoutePaths.clinicDetailPath(clinic.id)),
+        );
 
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey('clinic-card-${clinic.id}'),
-        onTap: onTap ?? () => context.push(RoutePaths.clinicDetailPath(clinic.id)),
+        onTap: tap,
         child: Padding(
           padding: const EdgeInsets.all(AppTheme.spaceLg),
           child: Column(
@@ -129,7 +158,7 @@ class ClinicResultCard extends ConsumerWidget {
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
-                  onPressed: onTap ?? () => context.push(RoutePaths.clinicDetailPath(clinic.id)),
+                  onPressed: tap,
                   iconAlignment: IconAlignment.end,
                   icon: Icon(AppTheme.directionalForwardIconOf(context), size: AppTheme.iconSm),
                   label: Text(strings.discoveryDetailsAction),

@@ -24,6 +24,21 @@ class MessagingInboxScreen extends ConsumerStatefulWidget {
 
 class _MessagingInboxScreenState extends ConsumerState<MessagingInboxScreen>
     with WidgetsBindingObserver {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on any of the "New message" buttons or
+  // a conversation tile was enough to trigger it.
+  bool _isNavigating = false;
+
+  void _navigate(String path) {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context.push(path).whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -66,7 +81,7 @@ class _MessagingInboxScreenState extends ConsumerState<MessagingInboxScreen>
         actions: [
           IconButton(
             tooltip: strings.messagesNew,
-            onPressed: () => context.push(RoutePaths.messagesNew),
+            onPressed: () => _navigate(RoutePaths.messagesNew),
             icon: const Icon(Icons.edit_square),
           ),
         ],
@@ -90,7 +105,7 @@ class _MessagingInboxScreenState extends ConsumerState<MessagingInboxScreen>
                     subtitle: strings.messagesSubtitle,
                     icon: Icons.forum_outlined,
                     trailing: FilledButton.icon(
-                      onPressed: () => context.push(RoutePaths.messagesNew),
+                      onPressed: () => _navigate(RoutePaths.messagesNew),
                       icon: const Icon(Icons.add_comment_outlined),
                       label: Text(strings.messagesNew),
                     ),
@@ -115,7 +130,7 @@ class _MessagingInboxScreenState extends ConsumerState<MessagingInboxScreen>
                         title: strings.messagesInboxEmptyTitle,
                         hint: strings.messagesInboxEmptyHint,
                         action: FilledButton.icon(
-                          onPressed: () => context.push(RoutePaths.messagesNew),
+                          onPressed: () => _navigate(RoutePaths.messagesNew),
                           icon: const Icon(Icons.add_comment_outlined),
                           label: Text(strings.messagesNew),
                         ),
@@ -137,7 +152,7 @@ class _MessagingInboxScreenState extends ConsumerState<MessagingInboxScreen>
                         strings: strings,
                         isArabic: isArabic,
                         assetOrigin: assetOrigin,
-                        onTap: () => context.push(
+                        onTap: () => _navigate(
                           RoutePaths.messageThreadPath(conversation.id),
                         ),
                       ),

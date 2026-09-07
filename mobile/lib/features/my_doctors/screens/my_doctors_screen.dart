@@ -80,7 +80,7 @@ class MyDoctorsScreen extends ConsumerWidget {
   }
 }
 
-class _DoctorCard extends StatelessWidget {
+class _DoctorCard extends StatefulWidget {
   const _DoctorCard({
     required this.doctor,
     required this.strings,
@@ -91,7 +91,30 @@ class _DoctorCard extends StatelessWidget {
   final bool isArabic;
 
   @override
+  State<_DoctorCard> createState() => _DoctorCardState();
+}
+
+class _DoctorCardState extends State<_DoctorCard> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on either button below was enough to
+  // trigger it.
+  bool _isNavigating = false;
+
+  void _navigate(String path, {Object? extra}) {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context.push(path, extra: extra).whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final doctor = widget.doctor;
+    final strings = widget.strings;
+    final isArabic = widget.isArabic;
     final name = doctor.fullName(isArabic);
     final specialty = doctor.specialty(isArabic);
     return Card(
@@ -135,12 +158,12 @@ class _DoctorCard extends StatelessWidget {
               builder: (context, constraints) {
                 final viewDoctor = FilledButton.icon(
                   onPressed: () =>
-                      context.push(RoutePaths.doctorDetailPath(doctor.id)),
+                      _navigate(RoutePaths.doctorDetailPath(doctor.id)),
                   icon: const Icon(Icons.person_outline_rounded),
                   label: Text(strings.viewDoctorAction),
                 );
                 final sharedNotes = OutlinedButton.icon(
-                  onPressed: () => context.push(
+                  onPressed: () => _navigate(
                     RoutePaths.sharedDoctorNotesPath(doctor.id),
                     extra: doctor,
                   ),

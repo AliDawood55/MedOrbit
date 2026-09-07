@@ -25,6 +25,22 @@ class DoctorPatientsScreen extends ConsumerStatefulWidget {
 class _DoctorPatientsScreenState extends ConsumerState<DoctorPatientsScreen> {
   final _search = TextEditingController();
   Timer? _debounce;
+
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on a patient row was enough to trigger
+  // it.
+  bool _isNavigating = false;
+
+  void _openPatient(String path) {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context.push(path).whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -136,7 +152,7 @@ class _DoctorPatientsScreenState extends ConsumerState<DoctorPatientsScreen> {
           ].whereType<String>().join(' · '),
         ),
         trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(RoutePaths.doctorPatientPath(p.id)),
+        onTap: () => _openPatient(RoutePaths.doctorPatientPath(p.id)),
       ),
     );
   }

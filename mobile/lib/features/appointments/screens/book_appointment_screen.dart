@@ -34,6 +34,13 @@ class BookAppointmentScreen extends ConsumerStatefulWidget {
 }
 
 class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is navigated to twice before the first navigation has finished
+  // registering — a fast double-tap on "View my appointments" was enough to
+  // trigger it.
+  bool _isNavigating = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +49,12 @@ class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
           .read(bookingControllerProvider.notifier)
           .init(doctorId: widget.doctorId);
     });
+  }
+
+  void _viewAppointments() {
+    if (_isNavigating) return;
+    _isNavigating = true;
+    context.go(RoutePaths.appointments);
   }
 
   @override
@@ -66,8 +79,7 @@ class _BookAppointmentScreenState extends ConsumerState<BookAppointmentScreen> {
                   child: BookingSuccessSheet(
                     strings: strings,
                     appointment: result,
-                    onViewAppointments: () =>
-                        context.go(RoutePaths.appointments),
+                    onViewAppointments: _viewAppointments,
                     onBookAnother: notifier.startOver,
                   ),
                 ),

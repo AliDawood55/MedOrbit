@@ -9,6 +9,7 @@ is healthy.
 | Service | Image / build | Published port | Notes |
 |---|---|---|---|
 | `postgres` | `postgis/postgis:18-3.6` | `127.0.0.1:5433` → 5432 | Named volume `medorbit_pgdata` (PG18 — must match the `medorbit_backup.backup` source version). Loopback-only; container-to-container traffic uses `postgres:5432` |
+| `ollama` | `ollama/ollama:latest` | 11434 | LLM runtime, named volume `ollama_data`. `ollama-model-init` (profile-less, one-shot) pulls `qwen2:7b`/`nomic-embed-text` on first start and exits |
 | `kafka` | `apache/kafka:3.9.0` | *none* | KRaft single node, named volume `medorbit_kafka_data`. Reachable only inside the Compose network |
 | `backend` | `backend/Dockerfile` (Node 20) | 3001 | Express API |
 | `outbox-worker` | `backend/Dockerfile` (Node 20) | *none* | Relays the transactional outbox to Kafka; health on internal 3002 |
@@ -22,8 +23,6 @@ Node application with different entrypoints. Compose names it explicitly so all
 four services share a single build and a single tag rather than four identical
 copies. The `test` and `tools` profiles likewise share `medorbit-backend-test`,
 built from `backend/Dockerfile.test`.
-
-Ollama is **not** in this list — see below.
 
 ## Build context
 
@@ -60,34 +59,40 @@ bounded, and so a future `COPY . .` — or a fifth Dockerfile — cannot silentl
 pull gigabytes into an image. Don't remove them on the grounds that the numbers
 above don't move.
 
-## Ollama: intentionally not containerized
+## Ollama: a Compose service
 
-The model (`qwen2:7b`) is roughly 4GB. Baking it into a container image (or
-even a compose-managed volume) means re-downloading/rebuilding it per
-project/per machine for no benefit — it's a general-purpose local model, not
-something specific to this stack.
+Ollama runs as the `ollama` service, not on the host. `docker compose up -d`
+starts it, waits for its HTTP API to answer (`ollama list`, not curl — the
+image has no shell HTTP client), then runs `ollama-model-init` — a one-shot
+container that pulls `qwen2:7b` and `nomic-embed-text` only if they aren't
+already in the `ollama_data` volume, and exits. `ai-service` doesn't start
+until that init container has exited successfully, so by the time it's
+running, both models are guaranteed present. Model weights persist in the
+named volume `ollama_data:/root/.ollama` — `docker compose down` (without
+`-v`) never re-downloads them.
 
-Instead: run Ollama on the **host** machine as usual (`ollama serve`, or
-however you already run it), and the `ai-service` container reaches it via
-Docker Desktop's built-in `host.docker.internal` DNS name, which resolves to
-the host machine from inside any container. This is wired up in
-`docker-compose.yml`:
+`ai-service` reaches it at the compose DNS name, not the host:
 
 ```yaml
 environment:
-  OLLAMA_URL: http://host.docker.internal:11434/api/generate
-extra_hosts:
-  - "host.docker.internal:host-gateway"   # makes this work on Linux too
+  OLLAMA_URL: http://ollama:11434/api/generate
 ```
 
-`host.docker.internal` works out of the box on Docker Desktop for Windows/Mac
-(what this project targets); the `extra_hosts` line is just a portability
-safety net for Linux hosts, where that name isn't automatically defined.
+**GPU is opt-in**, not required. On a machine with an NVIDIA GPU and the
+NVIDIA Container Toolkit installed, add the GPU overlay:
 
-**You must have Ollama running on your host before chat/summarization
-features that call the LLM will work.** The stack will still start and the
-health checks will still pass without it — only those specific features will
-fail at request time until Ollama is up.
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+```
+
+Without it, Ollama runs on CPU — slower, but the stack still starts and
+chat/summarization features still work. See `docker-compose.gpu.yml` for the
+VRAM-sharing note when both Ollama and Whisper reserve the same small card.
+
+The Windows-host Ollama installation (if you have one from before this
+change) is no longer used by the Docker stack and does not need to keep
+running. It hasn't been touched or uninstalled — stop it manually whenever
+you're satisfied the containerized version works.
 
 ## Database bootstrap and optional data restore
 
@@ -218,6 +223,13 @@ docker compose ps
 # Postgres: should show "healthy" once ready
 docker exec medorbit-postgres pg_isready -U postgres -d medorbit
 
+# Ollama: HTTP API reachable
+curl http://localhost:11434/api/version
+
+# Ollama: both required models present (ollama-model-init should already
+# have pulled them — this just confirms it)
+docker exec medorbit-ollama ollama list
+
 # Backend
 curl http://localhost:3001/api/health
 
@@ -231,6 +243,8 @@ curl -I http://localhost:8080/public/index.html   # expect HTTP/1.1 200 OK
 # Logs, if something looks wrong
 docker compose logs -f backend
 docker compose logs -f ai-service
+docker compose logs -f ollama
+docker compose logs ollama-model-init   # one-shot; check this if models never appear
 ```
 
 Open `http://localhost:8080/` in a browser (redirects to

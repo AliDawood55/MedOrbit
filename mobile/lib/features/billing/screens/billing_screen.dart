@@ -29,6 +29,12 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
     with WidgetsBindingObserver {
   final _plansKey = GlobalKey();
 
+  /// Blocks a repeat tap on a plan while [_checkout] is in flight. Without it a
+  /// double-tap starts a second checkout session (a duplicate sandbox token)
+  /// and pushes the sandbox route twice, tripping the Navigator's
+  /// `!keyReservation.contains(key)` assertion.
+  bool _isNavigating = false;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +59,16 @@ class _BillingScreenState extends ConsumerState<BillingScreen>
   }
 
   Future<void> _checkout(BillingPlan plan) async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+    try {
+      await _runCheckout(plan);
+    } finally {
+      if (mounted) _isNavigating = false;
+    }
+  }
+
+  Future<void> _runCheckout(BillingPlan plan) async {
     final notifier = ref.read(billingControllerProvider.notifier);
     final uri = await notifier.beginCheckout(plan.code);
     if (uri == null || !mounted) return;

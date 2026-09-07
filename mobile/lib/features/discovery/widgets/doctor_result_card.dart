@@ -8,7 +8,7 @@ import '../../../routes/route_paths.dart';
 import '../../../shared/widgets/status_badge.dart';
 import '../models/doctor_models.dart';
 
-class DoctorResultCard extends ConsumerWidget {
+class DoctorResultCard extends ConsumerStatefulWidget {
   const DoctorResultCard({super.key, required this.doctor, this.onTap, this.reasonLabel});
 
   final Doctor doctor;
@@ -19,7 +19,32 @@ class DoctorResultCard extends ConsumerWidget {
   final String? reasonLabel;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DoctorResultCard> createState() => _DoctorResultCardState();
+}
+
+class _DoctorResultCardState extends ConsumerState<DoctorResultCard> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on this card was enough to trigger it.
+  // [onTap] may be an externally-supplied callback with no way to observe
+  // when it finishes (e.g. a local selection callback, not always a push),
+  // so this uses a fixed cooldown rather than awaiting a push's Future.
+  bool _isNavigating = false;
+
+  void _handleTap(VoidCallback action) {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    action();
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final doctor = widget.doctor;
+    final reasonLabel = widget.reasonLabel;
     final strings = ref.watch(appStringsProvider);
     final direction = Directionality.of(context);
     final name = doctorDisplayName(doctor, direction, strings);
@@ -36,7 +61,10 @@ class DoctorResultCard extends ConsumerWidget {
       if (doctor.consultationDuration != null)
         Directionality(textDirection: TextDirection.ltr, child: _Fact(icon: Icons.schedule_outlined, value: strings.consultationDurationValue(doctor.consultationDuration!))),
     ];
-    final tap = onTap ?? () => context.push(RoutePaths.doctorDetailPath(doctor.id));
+    void tap() => _handleTap(
+          widget.onTap ??
+              () => context.push(RoutePaths.doctorDetailPath(doctor.id)),
+        );
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -63,7 +91,7 @@ class DoctorResultCard extends ConsumerWidget {
                       null => Theme.of(context).colorScheme.onSurfaceVariant,
                     },
                   ),
-                  if (reasonLabel != null) StatusBadge(label: reasonLabel!, color: AppTheme.info),
+                  if (reasonLabel != null) StatusBadge(label: reasonLabel, color: AppTheme.info),
                 ],
               ),
               const SizedBox(height: AppTheme.spaceMd),

@@ -179,7 +179,7 @@ void main() {
     );
   });
 
-  test('admin receives operations and primary chat without clinical tools', () {
+  test('admin receives operations tools without clinical or AI-chat tools', () {
     final capabilities = AppRoleCapabilities.fromRole('admin');
     final routes = serviceRoutesFor(capabilities);
     expect(capabilities.canUseAdminTools, isTrue);
@@ -188,13 +188,16 @@ void main() {
       routes,
       containsAll([
         RoutePaths.billing,
-        RoutePaths.chatbot,
         RoutePaths.adminDashboard,
         RoutePaths.adminAnalytics,
         RoutePaths.adminUsers,
         RoutePaths.adminModeration,
       ]),
     );
+    // The backend's /chat/message endpoint is patient/doctor-only
+    // (authorize('patient', 'doctor')), so the chatbot entry point must not
+    // be offered to admin accounts.
+    expect(routes, isNot(contains(RoutePaths.chatbot)));
     expect(routes, isNot(contains(RoutePaths.messages)));
     expect(routes, isNot(contains(RoutePaths.virtualDoctor)));
     expect(routes, isNot(contains(RoutePaths.appointments)));
@@ -272,7 +275,7 @@ void main() {
       );
     });
 
-    test('admin gets primary chat but not care messaging or AI tools', () {
+    test('admin gets neither care messaging nor AI tools', () {
       expect(
         capabilityRedirect(
           AuthStatus.authenticated,
@@ -281,13 +284,16 @@ void main() {
         ),
         RoutePaths.home,
       );
+      // /chat/message is authorize('patient', 'doctor')-only on the backend,
+      // so admin/super_admin must be redirected away rather than let in to
+      // fail on every send.
       expect(
         capabilityRedirect(
           AuthStatus.authenticated,
           'super_admin',
           RoutePaths.chatbot,
         ),
-        isNull,
+        RoutePaths.home,
       );
       expect(
         capabilityRedirect(

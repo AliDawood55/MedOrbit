@@ -32,6 +32,21 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen>
   late final TabController _tabController;
   String? _cancellingAppointmentId;
 
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on the booking FAB was enough to
+  // trigger it.
+  bool _isNavigating = false;
+
+  void _bookAppointment() {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context.push(RoutePaths.appointmentBooking).whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -182,7 +197,7 @@ class _AppointmentsScreenState extends ConsumerState<AppointmentsScreen>
     return AppScaffold(
       appBar: AppBar(title: Text(strings.appName)),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(RoutePaths.appointmentBooking),
+        onPressed: _bookAppointment,
         icon: const Icon(Icons.add_rounded),
         label: Text(strings.bookNewAppointment),
       ),

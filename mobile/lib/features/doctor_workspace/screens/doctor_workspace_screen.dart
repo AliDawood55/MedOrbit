@@ -80,7 +80,7 @@ class DoctorWorkspaceScreen extends ConsumerWidget {
                                   borderRadius: BorderRadius.circular(
                                     AppTheme.radiusLg,
                                   ),
-                                  onTap: () => context.go(e.$3),
+                                  onTap: () => context.push(e.$3),
                                   child: Padding(
                                     padding: const EdgeInsets.all(
                                       AppTheme.spaceLg,

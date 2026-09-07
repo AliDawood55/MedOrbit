@@ -5,7 +5,7 @@ from typing import Dict, Optional
 
 from chatbot.utils.text_normalizer import normalize_text
 from chatbot.nlu.normalizer import TextNormalizer
-from chatbot.nlu.synonyms import SynonymEngine
+from chatbot.nlu.synonyms import SPECIALTY_CANONICAL_KEYS, SynonymEngine
 from chatbot.nlu.tokens import Tokenizer
 from chatbot.nlu.context_resolver import ContextResolver
 
@@ -65,8 +65,18 @@ class EntityExtractor:
 
         tokens = self.tokenizer.tokenize(normalized)
         ngrams = self.tokenizer.extract_ngrams(tokens, min_n=1, max_n=3)
+        ngram_set = set(ngrams)
 
         resolved_text = self.synonyms.resolve_text(normalized)
+        # For the specialty match below: exact-equality lookup against the
+        # resolved text's own tokens, not `canonical in resolved_text`
+        # substring search — a short specialty abbreviation like "ent" is a
+        # literal substring of unrelated English words ("appointment"),
+        # which was matching as a false specialty. resolve_text() already
+        # performs its word replacements with `\b`-bounded regexes, so
+        # tokenizing its output the same way the message itself is tokenized
+        # keeps every remaining word-boundary-safe.
+        resolved_tokens = set(self.tokenizer.tokenize(resolved_text, keep_stop_words=True))
 
         extracted = self._empty_result(text)
         extracted["language"] = "arabic" if lang == "ar" else "english"
@@ -78,14 +88,22 @@ class EntityExtractor:
                 for words in langs.values():
                     for word in words:
                         word_norm = normalize_text(word)
-                        if word_norm in normalized or word_norm in ' '.join(ngrams):
+                        # Exact match against a whole token or contiguous
+                        # n-gram, not `word_norm in normalized` substring
+                        # search — a short Arabic trigger word like "انف"
+                        # (nose) is a literal substring of unrelated words
+                        # such as "انفلونزا" (flu), and "بول" (urine) is a
+                        # literal substring of "بوليصة" (insurance policy).
+                        if word_norm in ngram_set:
                             if key not in extracted["specialties"]:
                                 extracted["specialties"].append(key)
                             if not extracted["specialty"]:
                                 extracted["specialty"] = key
 
         for canonical in self.synonyms.get_all_canonical_forms():
-            if canonical in resolved_text:
+            if canonical not in SPECIALTY_CANONICAL_KEYS:
+                continue
+            if canonical in resolved_tokens:
                 if canonical not in extracted["specialties"]:
                     extracted["specialties"].append(canonical)
                 if not extracted["specialty"]:

@@ -9,7 +9,7 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_retry_state.dart';
 import '../../../shared/widgets/page_sections.dart';
 import '../../../shared/widgets/primary_button.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../../auth/providers/app_role_capabilities_provider.dart';
 import '../models/doctor_models.dart';
 import '../providers/discovery_provider.dart';
 import '../widgets/doctor_detail_sections.dart';
@@ -150,19 +150,44 @@ class _DoctorDetailScreenState extends ConsumerState<DoctorDetailScreen> {
   }
 }
 
-class _MessageDoctorCta extends ConsumerWidget {
+class _MessageDoctorCta extends ConsumerStatefulWidget {
   const _MessageDoctorCta({required this.doctorId, required this.strings});
   final String doctorId;
   final AppStrings strings;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final role = ref.watch(authControllerProvider).user?.role.toLowerCase();
-    if (role == 'admin' || role == 'super_admin') return const SizedBox.shrink();
+  ConsumerState<_MessageDoctorCta> createState() => _MessageDoctorCtaState();
+}
+
+class _MessageDoctorCtaState extends ConsumerState<_MessageDoctorCta> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on this button was enough to trigger it.
+  bool _isNavigating = false;
+
+  void _openMessage() {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context.push(RoutePaths.newMessagePath(widget.doctorId)).whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Anything less than this (admin/super_admin, and clinic accounts) is
+    // redirected home by app_router.dart's `careOnly` capabilityRedirect —
+    // pushing this route for them would collide with the already-live
+    // /home page in the shell stack and trip the Navigator's
+    // "!keyReservation.contains(key)" assertion, the same failure class as
+    // the tap-guard above but from a redirect, not a duplicate push.
+    final capabilities = ref.watch(appRoleCapabilitiesProvider);
+    if (!capabilities.canUseCareMessages) return const SizedBox.shrink();
     return OutlinedButton.icon(
-      onPressed: () => context.push(RoutePaths.newMessagePath(doctorId)),
+      onPressed: _openMessage,
       icon: const Icon(Icons.forum_outlined),
-      label: Text(strings.messagesMessageDoctor),
+      label: Text(widget.strings.messagesMessageDoctor),
     );
   }
 }
@@ -172,30 +197,60 @@ class _MessageDoctorCta extends ConsumerWidget {
 /// with a localized explanation otherwise. The three accepting-patients states
 /// are kept distinct (true / false / unknown) — `false` is never shown as
 /// "unknown".
-class _BookingCta extends StatelessWidget {
+class _BookingCta extends ConsumerStatefulWidget {
   const _BookingCta({required this.strings, required this.doctor, required this.doctorId});
   final AppStrings strings;
   final Doctor doctor;
   final String doctorId;
 
   @override
+  ConsumerState<_BookingCta> createState() => _BookingCtaState();
+}
+
+class _BookingCtaState extends ConsumerState<_BookingCta> {
+  // Guards against the go_router Navigator's
+  // "'!keyReservation.contains(key)'" assertion, which fires when the same
+  // route is pushed twice before the first push's page has finished
+  // registering — a fast double-tap on this button was enough to trigger it.
+  bool _isNavigating = false;
+
+  void _book() {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+    context
+        .push(RoutePaths.appointmentBookingPath(doctorId: widget.doctorId))
+        .whenComplete(() {
+      if (mounted) setState(() => _isNavigating = false);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (doctor.isAcceptingPatients == true) {
+    // /appointments/book is `patientOnly` in app_router.dart's
+    // capabilityRedirect. Pushing it for a non-patient account gets
+    // immediately redirected back to /home, which is already a live page in
+    // the shell stack — the redirect's push collides with that page's key
+    // and trips the Navigator's "!keyReservation.contains(key)" assertion on
+    // a *single* tap, a different failure mode than the double-tap the guard
+    // above prevents.
+    final capabilities = ref.watch(appRoleCapabilitiesProvider);
+    if (!capabilities.canUsePatientCare) return const SizedBox.shrink();
+
+    if (widget.doctor.isAcceptingPatients == true) {
       return PrimaryButton(
-        label: strings.bookNewAppointment,
-        onPressed: () =>
-            context.push(RoutePaths.appointmentBookingPath(doctorId: doctorId)),
+        label: widget.strings.bookNewAppointment,
+        onPressed: _book,
       );
     }
-    final message = doctor.isAcceptingPatients == false
-        ? strings.doctorBookingUnavailableNotAccepting
-        : strings.doctorBookingUnavailableUnknown;
+    final message = widget.doctor.isAcceptingPatients == false
+        ? widget.strings.doctorBookingUnavailableNotAccepting
+        : widget.strings.doctorBookingUnavailableUnknown;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         InlineMessage(message: message, tone: InlineMessageTone.warning),
         const SizedBox(height: AppTheme.spaceMd),
-        PrimaryButton(label: strings.bookNewAppointment, onPressed: null),
+        PrimaryButton(label: widget.strings.bookNewAppointment, onPressed: null),
       ],
     );
   }
